@@ -252,8 +252,10 @@ import {
 } from "./tranches";
 import type { CauseMort, TreeState } from "./trees";
 import {
+  cnBois,
   dureeChandelleSemaines,
   fractionsRacinairesParHorizon,
+  LITTER_RETURN_FRACTION,
   prochainDommageHydraulique,
   rootRadiusM,
   STRESS_LETHAL,
@@ -315,11 +317,6 @@ const DERNIERE_SEMAINE = 51;
  * ne se déprécie (bleuissement, insectes) : environ un an *(à calibrer)*.
  */
 const CHABLIS_RECUPERABLE_SEMAINES = 52;
-/**
- * Part de l'azote acquis dans l'année qui retourne au sol avec les feuilles ;
- * le reste est retenu dans le bois *(à calibrer — rétranslocation ch3-B)*.
- */
-const LITTER_RETURN_FRACTION = 0.5;
 
 /** Un arbre mort pendant le tick : de quoi le raconter **et** l'animer là où il est. */
 export interface MortDeLaSemaine {
@@ -2260,11 +2257,25 @@ export function tick(state: GameState, weather: WeekWeather): TickResult {
     });
     const next = result.tree;
     limitingFactors[t] = result.limitingFactor;
+    const acquired = Math.max(0, acquiredNG[t] ?? 0);
+    // **Le bois neuf se construit avec de l'azote** (#247), au C/N du bois de
+    // l'espèce, et l'arbre le paie sur ce qu'il vient d'acquérir : le besoin
+    // (`treeNitrogenNeedGWeek`) couvre le feuillage et le bois neuf. À court,
+    // le bois est simplement plus pauvre. Le reste va au feuillage.
+    let azoteMisAuBois = 0;
+    // Ce que le bois prend à l'azote acquis pour le feuillage.
+    let prisAuFeuillage = 0;
     if (tree.alive && next.heightM > tree.heightM) {
       const espece = getEspece(tree.especeId);
-      nppKgC +=
+      const boisNeufKgC =
         treeTotalCarbonKg(espece, next.diametreCm, next.heightM) -
         treeTotalCarbonKg(espece, tree.diametreCm, tree.heightM);
+      nppKgC += boisNeufKgC;
+      const besoinBois = Math.max(0, (boisNeufKgC * 1000) / cnBois(espece));
+      // Un fixateur règle sa fixation sur sa demande : il tire de l'air l'azote
+      // de son bois en plus de celui de son feuillage.
+      azoteMisAuBois = espece.azote.fixateur ? besoinBois : Math.min(acquired, besoinBois);
+      prisAuFeuillage = espece.azote.fixateur ? 0 : azoteMisAuBois;
     }
     // La vigueur suit le facteur limitant, lissée sur quelques mois : c'est
     // l'état de santé que les ravageurs lisent, pas la hauteur.
@@ -2279,7 +2290,6 @@ export function tick(state: GameState, weather: WeekWeather): TickResult {
       waterSatisfaction[t] ?? 1,
       getEspece(tree.especeId).eau.seuilStressSecheresse,
     );
-    const acquired = acquiredNG[t] ?? 0;
     // Élagage naturel (docs/realisme.md B10) : sous l'ombre, les branches
     // basses cessent de payer leur respiration et meurent. La base du houppier
     // **monte**, et ne redescend jamais — une branche morte ne repousse pas. C'est
@@ -2305,8 +2315,9 @@ export function tick(state: GameState, weather: WeekWeather): TickResult {
       dommageHydraulique,
       houppierPerdu,
       baseHouppierM,
-      uptakeYearG: next.uptakeYearG + Math.max(0, acquired),
+      uptakeYearG: next.uptakeYearG + acquired - prisAuFeuillage,
       reserveAzoteG: Math.max(0, (tree.reserveAzoteG ?? 0) - (tirageReserveG[t] ?? 0)),
+      azoteBoisG: (tree.azoteBoisG ?? 0) + azoteMisAuBois,
     };
   });
 
@@ -2858,7 +2869,13 @@ export function tick(state: GameState, weather: WeekWeather): TickResult {
   let litterfallSumG = broutageAzoteG + herbeLitiereNG;
   let fixationSumG = 0;
   let leafNppKgC = 0; // le feuillage tombé a été produit dans l'année (NPP feuilles)
-  const depositLitter = (tree: TreeState, amountG: number) => {
+  /**
+   * Verser de l'azote à la litière sous le houppier. `feuilles` dit s'il tombe
+   * avec des feuilles, donc avec leur carbone, leur calcium, leur phosphore et
+   * leur potassium. Sinon c'est l'azote seul de la réserve ou du bois d'un
+   * arbre qui meurt : leur carbone est déjà compté au bois mort (#247).
+   */
+  const depositLitter = (tree: TreeState, amountG: number, feuilles = true) => {
     if (amountG <= 0) return;
     const espece = getEspece(tree.especeId);
     const crownR = crownRadiusM(tree.heightM, espece.lumiere.houppierRatio, tree.diametreCm);
@@ -2869,6 +2886,16 @@ export function tick(state: GameState, weather: WeekWeather): TickResult {
     const share = amountG / n;
     const shareC = share * espece.litiere.cnRatio;
     const kSpecies = litterDecayRate(espece.litiere.cnRatio);
+    if (!feuilles) {
+      forEachDiscCell(dims, tree.x, tree.y, crownR, (i) => {
+        const oldN = litterNG[i] ?? 0;
+        litterK[i] = (oldN * (litterK[i] ?? 0) + share * kSpecies) / (oldN + share);
+        litterNG[i] = oldN + share;
+      });
+      if (espece.azote.fixateur) fixationSumG += amountG;
+      else litterfallSumG += amountG;
+      return;
+    }
     // **La pompe à bases** (bases.ts, critère C15). Le calcium qui tombe ici,
     // l'arbre est allé le chercher — et il l'a cherché là où sont ses racines.
     // On débite donc le sous-sol de la part profonde de son système racinaire,
@@ -2913,6 +2940,14 @@ export function tick(state: GameState, weather: WeekWeather): TickResult {
     leafNppKgC += (amountG * espece.litiere.cnRatio) / 1000;
     if (espece.azote.fixateur) fixationSumG += amountG;
     else litterfallSumG += amountG;
+  };
+  /**
+   * Ce qu'un arbre qui meurt rend au sol : ses feuilles entières, sans rien
+   * résorber, plus sa réserve et l'azote de son bois (#247).
+   */
+  const rendreAuSol = (tree: TreeState) => {
+    depositLitter(tree, tree.uptakeYearG);
+    depositLitter(tree, (tree.reserveAzoteG ?? 0) + (tree.azoteBoisG ?? 0), false);
   };
 
   // La chute des feuilles s'étale sur un mois au lieu de tomber en une
@@ -3045,7 +3080,7 @@ export function tick(state: GameState, weather: WeekWeather): TickResult {
       // en jeu comme chandelle, sans plus rien à donner. Un arbre qui meurt ne
       // résorbe rien : ses feuilles et sa réserve vont entières à la litière
       // (#247) — il n'en rendait que la moitié des feuilles.
-      depositLitter(tree, tree.uptakeYearG + (tree.reserveAzoteG ?? 0));
+      rendreAuSol(tree);
       deadWoodKgC += treeTotalCarbonKg(getEspece(tree.especeId), tree.diametreCm, tree.heightM);
       morts.push({
         id: tree.id,
@@ -3055,7 +3090,14 @@ export function tick(state: GameState, weather: WeekWeather): TickResult {
         cause: tree.causeMort ?? "secheresse",
         heightM: tree.heightM,
       });
-      survivors.push({ ...tree, mortSemaine: state.week });
+      // Son azote est rendu : la chandelle n'en porte plus.
+      survivors.push({
+        ...tree,
+        mortSemaine: state.week,
+        uptakeYearG: 0,
+        reserveAzoteG: 0,
+        azoteBoisG: 0,
+      });
       continue;
     }
     // Chandelle : un tronc mort tient debout des années avant de s'abattre.
@@ -3152,7 +3194,7 @@ export function tick(state: GameState, weather: WeekWeather): TickResult {
         debout.push(tree);
         continue;
       }
-      depositLitter(tree, tree.uptakeYearG + (tree.reserveAzoteG ?? 0));
+      rendreAuSol(tree);
       poserBois(cellule, masse * 1000, recu.radians);
       morts.push({
         id: tree.id,
@@ -3329,6 +3371,12 @@ export function tick(state: GameState, weather: WeekWeather): TickResult {
             fruitsKg: 0,
             fruitProgress: 0,
             uptakeYearG: 0,
+            // Le bois qui a brûlé emporte son azote en fumée ; la souche garde
+            // le sien, au prorata du carbone qui reste.
+            azoteBoisG:
+              ((tree.azoteBoisG ?? 0) *
+                treeTotalCarbonKg(espece, tree.diametreCm, HAUTEUR_REJET_M)) /
+              Math.max(1e-9, treeTotalCarbonKg(espece, tree.diametreCm, tree.heightM)),
             hauteurElagueeM: 0,
             pousseTendreM: 0,
             vigueur: 1,

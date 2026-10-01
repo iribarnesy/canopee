@@ -231,12 +231,19 @@ describe("C15 : la profondeur s'appauvrit sous un peuplement, et pas sans lui", 
     // Le contraste le plus instructif de l'atlas, et il est contre-intuitif :
     // sur la même station, le pin descend deux fois plus bas que le hêtre
     // (80 cm de racines contre 42 à cinquante ans) et porte plus de tiges — et
-    // il pompe cinquante fois moins, parce que sa litière est à 3,8 mg/g de
-    // calcium contre 7,5. La profondeur donne l'**accès** ; la teneur donne la
-    // quantité.
+    // il pompe moins, parce que sa litière est à 3,8 mg/g de calcium contre
+    // 7,5. La profondeur donne l'**accès** ; la teneur donne la quantité.
+    //
+    // **Il pompait cinquante fois moins, et la teneur n'y était pour rien**
+    // (#247) : un persistant ne perdait jamais ses aiguilles, son azote de
+    // l'année s'empilait jusqu'à sa mort, et il ne rendait presque pas de
+    // litière. Depuis qu'il renouvelle son feuillage, le rapport est de 0,58 :
+    // la teneur (×0,51) et la masse de litière le font, la profondeur de ses
+    // racines le relève un peu. Le seuil à un dixième épinglait le défaut ; ce
+    // qui reste vrai, et que l'essai affirme, est le sens.
     const hetre = parcelle(LIMON_RICHE, "fagus_sylvatica", 50);
     const pin = parcelle(LIMON_RICHE, "pinus_sylvestris", 50);
     expect(pin.tiges).toBeGreaterThan(hetre.tiges);
-    expect(pin.preleve).toBeLessThan(0.1 * hetre.preleve);
+    expect(pin.preleve).toBeLessThan(hetre.preleve);
   });
 });

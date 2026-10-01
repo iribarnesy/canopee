@@ -23,6 +23,7 @@ import {
 import type { EspeceV0 } from "./especes";
 import { getEspece } from "./especes";
 import { EFFET_CHASSE, HAUTEUR_BROUTAGE_M } from "./gibier";
+import { cellIndexAt } from "./grid";
 import {
   HERBACEES,
   INDEX_CULTURES,
@@ -38,6 +39,7 @@ import { KG_PER_HA_TO_G_PER_M2, litterDecayRate } from "./nitrogen";
 import { altitudeParCellule } from "./relief";
 import type { GameState } from "./state";
 import { tassementApresLabour } from "./tassement";
+import type { TreeState } from "./trees";
 import { diametreInitialCm, tirerVigueurIndividuelle, volumeTigeM3 } from "./trees";
 import {
   aireM2DeLaZone,
@@ -1175,6 +1177,16 @@ function applyPlanter(
   };
 }
 
+/**
+ * L'azote du bois qui reste à un arbre rabattu à `hauteurM`, au prorata de son
+ * carbone (#247). Ce qui part avec le bois coupé est exporté.
+ */
+function azoteBoisRestant(tree: TreeState, espece: EspeceV0, hauteurM: number): number {
+  const avant = treeTotalCarbonKg(espece, tree.diametreCm, tree.heightM);
+  if (avant <= 0) return 0;
+  return ((tree.azoteBoisG ?? 0) * treeTotalCarbonKg(espece, tree.diametreCm, hauteurM)) / avant;
+}
+
 function applyCouper(
   state: GameState,
   action: Extract<GameAction, { type: "couper" }>,
@@ -1251,6 +1263,27 @@ function applyCouper(
 
     const aerienKgC = treeAboveCarbonKg(espece, tree.diametreCm, tree.heightM);
     /**
+     * L'azote de l'arbre, et où il va (#247). Les feuilles suivent l'aérien. La
+     * réserve et l'azote du bois se partagent au prorata du carbone : la part
+     * aérienne part avec le fût et le houppier, celle des racines reste au sol
+     * sous la souche. Une chandelle a déjà tout rendu à sa mort.
+     */
+    const partAerienne =
+      aerienKgC / Math.max(1e-9, treeTotalCarbonKg(espece, tree.diametreCm, tree.heightM));
+    const azotePerenneG = dejaEnBoisMort ? 0 : (tree.reserveAzoteG ?? 0) + (tree.azoteBoisG ?? 0);
+    const azoteAerienG = (dejaEnBoisMort ? 0 : tree.uptakeYearG) + partAerienne * azotePerenneG;
+    const azoteRacinesG = (1 - partAerienne) * azotePerenneG;
+    const souche = cellIndexAt(dims, tree.x, tree.y);
+    // Les racines restent dans les quatre devenirs : leur azote va à la litière
+    // de la souche, sans carbone (le leur est déjà au bois mort).
+    if (azoteRacinesG > 0) {
+      const oldN = litterNG[souche] ?? 0;
+      const k = litterDecayRate(espece.litiere.cnRatio);
+      litterK[souche] =
+        (oldN * (litterK[souche] ?? 0) + azoteRacinesG * k) / (oldN + azoteRacinesG);
+      litterNG[souche] = oldN + azoteRacinesG;
+    }
+    /**
      * Carbone qui quitte réellement la parcelle avec le fût.
      *
      * Pour une tige vive, c'est tout son aérien. Pour une chandelle, c'est ce
@@ -1292,6 +1325,14 @@ function applyCouper(
     const { radians: aval } = versLAval(altitudes, dims, tree.x, tree.y);
     const directionRad = aval + Math.PI / 2;
     if (action.devenir === "laisser") {
+      // Tout reste : l'azote de l'aérien rejoint celui des racines.
+      if (azoteAerienG > 0) {
+        const oldN = litterNG[souche] ?? 0;
+        const k = litterDecayRate(espece.litiere.cnRatio);
+        litterK[souche] =
+          (oldN * (litterK[souche] ?? 0) + azoteAerienG * k) / (oldN + azoteAerienG);
+        litterNG[souche] = oldN + azoteAerienG;
+      }
       const empreinte = empreinteDeChute(tree.x, tree.y, tree.heightM, directionRad, dims);
       const longueur = empreinte.reduce((somme, c) => somme + c.longueurM, 0);
       if (longueur > 0) {
@@ -1360,19 +1401,19 @@ function applyCouper(
       stockBrf = {
         carboneG:
           stockBrf.carboneG + treeAboveCarbonKg(espece, tree.diametreCm, tree.heightM) * 1000,
-        // L'azote que l'arbre porte vraiment : ses feuilles de l'année et sa
-        // réserve (#247). Le broyat en comptait une année de besoin en plus,
-        // qui n'existait nulle part dans l'arbre.
-        azoteG: stockBrf.azoteG + tree.uptakeYearG + (tree.reserveAzoteG ?? 0),
+        // L'azote que l'aérien porte vraiment : ses feuilles, et la part
+        // aérienne de sa réserve et de son bois (#247). Le broyat en comptait
+        // une année de besoin, qui n'existait nulle part dans l'arbre.
+        azoteG: stockBrf.azoteG + azoteAerienG,
       };
     } else {
       // Épandre : l'azote du feuillage de l'année + le houppier broyé (BRF)
       // retournent en litière sous l'ancienne couronne (docs/regles.md §4.2).
       // Pour un fixateur, c'est de l'azote **nouveau** — la mécanique fondatrice
       // « couper les légumineuses et les épandre » (§16). C'est l'azote que
-      // l'arbre porte vraiment, feuilles et réserve : un arbre coupé vert ne
-      // résorbe rien, et le broyat comptait une année de besoin inventée (#247).
-      const depositG = tree.uptakeYearG + (tree.reserveAzoteG ?? 0);
+      // l'aérien porte vraiment : feuilles, réserve et bois. Un arbre coupé vert
+      // ne résorbe rien, et le broyat comptait une année de besoin inventée (#247).
+      const depositG = azoteAerienG;
       // On **épand** le broyat sur la zone (pas en tas au pied) : rayon large,
       // pour que les racines des voisins y accèdent.
       const crownR = Math.max(
@@ -2207,6 +2248,7 @@ function applyTrogner(
       ...tree,
       heightM: hauteurTete,
       teteTrogneM: hauteurTete,
+      azoteBoisG: azoteBoisRestant(tree, espece, hauteurTete),
       recepages: tree.recepages + 1,
       hauteurElagueeM: Math.min(tree.hauteurElagueeM, hauteurTete),
       // La tête est rabattue : ce qui repartira part d'elle, et une base de
@@ -2532,6 +2574,8 @@ function applyReceper(
       fruitsKg: 0,
       fruitProgress: 0,
       uptakeYearG: 0,
+      // La tige emporte l'azote de son bois ; la souche garde le sien (#247).
+      azoteBoisG: azoteBoisRestant(tree, espece, RECEPAGE_HAUTEUR_M),
       recepages: tree.recepages + 1,
     };
   }

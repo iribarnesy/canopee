@@ -163,6 +163,13 @@ export interface TreeState {
    * sauvegarde d'avant, elle vaut zéro.
    */
   reserveAzoteG?: number;
+  /**
+   * **Azote du bois**, g (#247) : ce que l'arbre a mis dans son bois neuf, au
+   * C/N du bois de son espèce (`cnBois`), ou moins s'il manquait d'azote. Il
+   * retourne au sol à sa mort, part au broyat ou à la vente avec le bois qu'on
+   * coupe. Absent sur une sauvegarde d'avant, il vaut zéro.
+   */
+  azoteBoisG?: number;
   /** fruits mûrs en attente de récolte, kg (perdus après la fenêtre, §10) */
   fruitsKg: number;
   /** avancement de la croissance des fruits de l'année ∈ [0,1] */
@@ -1201,6 +1208,48 @@ function metabolicSizeGWeek(heightM: number): number {
 /** Besoin d'azote de l'arbre, g/semaine : exigence de l'espèce × taille. */
 export function treeNitrogenNeedGWeek(espece: EspeceV0, heightM: number): number {
   return espece.azote.demandeRelative * metabolicSizeGWeek(heightM);
+}
+
+/**
+ * Part de l'azote foliaire qui tombe avec la feuille. L'autre moitié est
+ * résorbée avant la chute et part en réserve (#247) : la résorption de l'azote
+ * vaut environ 50 % chez les ligneux (Aerts 1996, *J. Ecol.* 84:597).
+ */
+export const LITTER_RETURN_FRACTION = 0.5;
+
+/**
+ * Concentration en azote du bois, rapportée à celle de la feuille verte de la
+ * même espèce. Thurner et al. 2025 (*Biogeosciences* 22:1475) compilent les
+ * tissus des arbres boréaux et tempérés. Rapports des médianes à la feuille :
+ *
+ * | | tige | branches | racines |
+ * |---|---|---|---|
+ * | feuillus caducs | 0,077 | 0,19 | 0,29 |
+ * | résineux persistants | 0,065 | 0,24 | 0,31 |
+ *
+ * Les deux groupes donnent presque les mêmes rapports. La concentration du bois
+ * suit donc celle de la feuille, et l'espèce n'a rien à déclarer de plus que
+ * sa litière. On pondère par une répartition tige 65 % / branches 14 % /
+ * racines 21 % *(à confirmer)* : 0,79 × (0,82 × 0,071 + 0,18 × 0,215) +
+ * 0,21 × 0,297 ≈ 0,14.
+ *
+ * Contrôle croisé sur des pineraies mûres. Les stocks d'azote viennent de
+ * Jagodziński et al. 2018 (*Forests* 9:593), les masses de Węgiel et Polowy
+ * 2020 (*Forests* 11:240). Le bois aérien porte 1,4 mg N/g et les aiguilles
+ * 12,3, soit 0,11. La règle donne 0,10 pour l'aérien.
+ *
+ * Le bois des jeunes arbres est plus riche (même source) : la règle ne le
+ * suit pas *(à calibrer)*.
+ */
+export const AZOTE_BOIS_SUR_FEUILLE = 0.14;
+
+/**
+ * C/N du bois de l'espèce. La feuille verte a le C/N de sa litière avant la
+ * résorption, et le bois en a 1/`AZOTE_BOIS_SUR_FEUILLE` fois moins d'azote.
+ * Pin 214, hêtre 179, aulne 54.
+ */
+export function cnBois(espece: EspeceV0): number {
+  return (espece.litiere.cnRatio * LITTER_RETURN_FRACTION) / AZOTE_BOIS_SUR_FEUILLE;
 }
 
 /**
