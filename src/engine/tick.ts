@@ -1170,6 +1170,27 @@ export function tick(state: GameState, weather: WeekWeather): TickResult {
     climateSum += climate;
     // La litière se décompose selon son C/N (aulne vite, pin lentement, ch2-B) ;
     // son carbone part pour partie en humus (humification), le reste en CO2.
+    // L'humus se minéralise et les dépôts tombent **avant** que la litière se
+    // décompose : à l'échelle de la semaine, les micro-organismes passent avant
+    // les racines pour l'azote minéral (Kaye et Hart 1997). La décomposition
+    // lisait le stock après que les plantes l'avaient vidé la semaine d'avant,
+    // et une prairie affamée n'en laissait jamais rien aux décomposeurs (#247).
+    // L'humus est **le** stock d'azote organique du sol : ce qui s'en minéralise
+    // part en CO₂ pour le carbone et revient aux plantes pour l'azote, au
+    // rapport C/N de l'humus. Les deux cycles ne peuvent plus diverger — et
+    // c'est ce couplage qui donne son sens à « construire du sol » (§12).
+    // L'acidité freine la vie du sol : un humus mor tient son azote.
+    const humusLoss =
+      (humusCG[i] ?? 0) *
+      ((HUMUS_DECAY_PER_YEAR / 52) * climate * facteurPhBiologie(state.soil.ph[i] ?? 7));
+    humusCG[i] = (humusCG[i] ?? 0) - humusLoss;
+    emittedG += humusLoss;
+    humusPerteCG[i] = humusLoss;
+    const mineralized = humusLoss / cnHumus;
+    // Dépôts atmosphériques : pour moitié lessivés par la pluie, pour moitié
+    // secs (poussières, gaz absorbés).
+    const depositionG = depositionSemaineG * (0.5 + 0.5 * partPluie);
+    depositionSumG += depositionG;
     // Faim d'azote (C9) : un substrat à C/N élevé oblige les décomposeurs à
     // puiser dans l'azote minéral du sol. Rien ne se perd — l'azote passe du
     // pool minéral au pool en décomposition, et reviendra plus tard.
@@ -1180,7 +1201,7 @@ export function tick(state: GameState, weather: WeekWeather): TickResult {
     // nouveau se servaient dans son azote jusqu'à la vider, son C/N filant vers
     // l'infini (#247). La part décomposée est donc ramenée à ce que l'azote
     // disponible, celui de la litière et celui du sol, permet de digérer.
-    const disponible = mineralNG[i] ?? 0;
+    const disponible = (mineralNG[i] ?? 0) + mineralized + depositionG;
     const manqueSiTout = -azoteNetDecomposition(litterCG[i] ?? 0, litterNG[i] ?? 0);
     const decayFraction = Math.min(
       1,
@@ -1223,22 +1244,6 @@ export function tick(state: GameState, weather: WeekWeather): TickResult {
     }
     const humifieLitiere = humifier(i, LITTER_HUMIFICATION * decayedC, true);
     emittedG += decayedC - humifieLitiere;
-    // L'humus est **le** stock d'azote organique du sol : ce qui s'en minéralise
-    // part en CO₂ pour le carbone et revient aux plantes pour l'azote, au
-    // rapport C/N de l'humus. Les deux cycles ne peuvent plus diverger — et
-    // c'est ce couplage qui donne son sens à « construire du sol » (§12).
-    // L'acidité freine la vie du sol : un humus mor tient son azote.
-    const humusLoss =
-      (humusCG[i] ?? 0) *
-      ((HUMUS_DECAY_PER_YEAR / 52) * climate * facteurPhBiologie(state.soil.ph[i] ?? 7));
-    humusCG[i] = (humusCG[i] ?? 0) - humusLoss;
-    emittedG += humusLoss;
-    humusPerteCG[i] = humusLoss;
-    const mineralized = humusLoss / cnHumus;
-    // Dépôts atmosphériques : pour moitié lessivés par la pluie, pour moitié
-    // secs (poussières, gaz absorbés).
-    const depositionG = depositionSemaineG * (0.5 + 0.5 * partPluie);
-    depositionSumG += depositionG;
     mineralNG[i] = (mineralNG[i] ?? 0) + mineralized + transfere + depositionG;
 
     // ── Les deux formes de l'azote minéral (#280) ──────────────────────────
@@ -1256,8 +1261,11 @@ export function tick(state: GameState, weather: WeekWeather): TickResult {
     const rendu = mineralized + Math.max(0, transfere);
     ammoniacalNG[i] = (ammoniacalNG[i] ?? 0) + rendu;
     if (transfere < 0) {
-      const avant = (mineralNG[i] ?? 0) - rendu - depositionG - transfere;
-      if (avant > 0) ammoniacalNG[i] = (ammoniacalNG[i] ?? 0) * (1 + transfere / avant);
+      // Les décomposeurs puisent dans tout ce qui est là cette semaine, y compris
+      // ce que l'humus et les dépôts viennent de rendre — c'est la priorité
+      // qu'ils ont sur les racines.
+      const puise = (mineralNG[i] ?? 0) - transfere;
+      if (puise > 0) ammoniacalNG[i] = (ammoniacalNG[i] ?? 0) * (1 + transfere / puise);
     }
     // **La nitrification**, et elle ne connaît pas sa cible : la part
     // ammoniacale qui restera en sortie d'hiver tombe du froid et du pH de
