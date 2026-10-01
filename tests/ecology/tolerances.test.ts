@@ -77,46 +77,50 @@ describe("azote (même limon, riche vs pauvre)", () => {
   ];
   const riche = runYears(LIMON_RICHE, YEARS, { plantations });
   const pauvre = runYears(LIMON_PAUVRE_N, YEARS, { plantations });
+  // Le même hêtre, à côté d'un **frugal** au lieu d'un fixateur (#247).
+  const avecPin = [
+    { especeId: "fagus_sylvatica", count: 150 },
+    { especeId: "pinus_sylvestris", count: 150 },
+  ];
+  const richePin = runYears(LIMON_RICHE, YEARS, { plantations: avecPin });
+  const pauvrePin = runYears(LIMON_PAUVRE_N, YEARS, { plantations: avecPin });
 
-  it("le hêtre (exigeant, non fixateur) paie la pauvreté, le fixateur non", () => {
+  it("le hêtre (exigeant) paie la pauvreté, le pin (frugal) non", () => {
     const perte = (especeId: string) =>
-      1 - meanHeight(pauvre, especeId, 300) / meanHeight(riche, especeId, 300);
+      1 - meanHeight(pauvrePin, especeId, 300) / meanHeight(richePin, especeId, 300);
     const hetre = perte("fagus_sylvatica");
-    const aulne = perte("alnus_glutinosa");
+    const pin = perte("pinus_sylvestris");
     // **l'énoncé est un contraste, pas une valeur absolue.** L'ancien seuil
     // exigeait que le hêtre perde plus de 20 % de sa hauteur sur sol pauvre ;
     // il en perdait 21,0 %, soit une marge de 1,3 % — le seuil n'était pas une
     // contrainte sur le moteur, c'était une photographie. Le correctif des
     // mycorhizes (#115), qui a rendu au sol pauvre l'azote qu'il perdait, l'a
-    // fait tomber à 18,0 % et l'essai avec lui.
+    // fait tomber à 18,0 % et l'essai avec lui. Le lot de la litière herbacée
+    // (#201) l'a resserré une seconde fois, à 9,95 points, et le seuil a été
+    // posé à 0,06 : quatre points de marge, et toujours interdit le cas qui
+    // compte, un hêtre qui ne sentirait pas la pauvreté.
     //
-    // Ce que l'essai veut dire vit dans la comparaison avec l'**aulne**, planté au
-    // même moment dans les deux mêmes stations : un fixateur ne dépend pas de
-    // l'azote du sol, donc il ne doit rien payer. Mesuré, hêtre 18,0 %, aulne
-    // −0,5 % (il fait même un cheveu de mieux sur sol pauvre, où il est moins
-    // concurrencé). L'écart des deux pénalités annule tout ce qui n'est pas
-    // l'exigence en azote — le climat, la densité, l'ombre mutuelle — et il ne
-    // se cale sur rien : dix points, contre dix-huit mesurés.
-    //
-    // **et le même seuil a retenu deux fois la même leçon** (#201). Le lot de
-    // la litière herbacée a bouché une fuite d'azote — la strate prélevait
-    // ~31 kg N/ha/an et ne les rendait jamais — ce qui profite bien davantage
-    // au limon **pauvre**, dont le pool est petit. Le contraste s'est donc resserré
-    // une seconde fois, de dix-huit points à **9,95**. Le seuil valait 0,1 :
-    // cinq millièmes de marge, c'est-à-dire de nouveau une photographie, et
-    // exactement la faute que le paragraphe ci-dessus raconte.
-    //
-    // On le pose à 0,06, qui laisse quatre points de marge et interdit toujours
-    // le cas qui compte : un hêtre qui ne sentirait pas la pauvreté. Ce que
-    // l'essai affirme est que la différence des deux pénalités est **franche**, pas
-    // qu'elle vaut dix points.
-    expect(hetre - aulne).toBeGreaterThan(0.06);
+    // **Le témoin était un aulne, et c'est lui qui a cédé** (#247). Depuis que
+    // l'azote se conserve, le hêtre planté avec des aulnes ne perd plus que
+    // 4,9 % : l'aulne fixe ~60 kg N/ha/an, sa litière nourrit la parcelle, et son
+    // voisin en profite. Le même hêtre perd 6,0 % seul et 7,8 % à côté de pins.
+    // Le critère (C6) oppose d'ailleurs un **frugal** à un **exigeant**, pas un
+    // fixateur à un non-fixateur. L'essai prend donc le pin, frugal de l'atlas
+    // (`demandeRelative` 0,25 contre 0,7), et garde ses deux seuils à 0,06.
+    // La mesure est venue avant le choix, sur la graine de l'essai : hêtre 7,8 %,
+    // pin −2,1 %. Les graines 7 et 13 ont été lancées ensuite contre une
+    // prédiction écrite (hêtre au-dessus de 6 %, pin sous 2 %) : 7,6 / 0,7 et
+    // 6,9 / −0,9.
+    expect(hetre - pin).toBeGreaterThan(0.06);
     // Et le hêtre paie **dans l'absolu**, sans quoi le contraste tiendrait avec un
-    // aulne qui prospère et un hêtre qui ne sent rien.
+    // pin qui prospère et un hêtre qui ne sent rien.
     expect(hetre).toBeGreaterThan(0.06);
   });
 
   it("l'aulne (fixateur) est quasi insensible à la pauvreté en azote", () => {
+    // Il tire son azote de l'air, à la mesure de sa demande, son bois compris :
+    // la pauvreté du sol ne l'atteint pas. Mesuré : il fait même 1,8 % de mieux
+    // sur sol pauvre, où il est moins concurrencé.
     const hRiche = meanHeight(riche, "alnus_glutinosa", 300);
     const hPauvre = meanHeight(pauvre, "alnus_glutinosa", 300);
     expect(hPauvre).toBeGreaterThan(hRiche * 0.9);

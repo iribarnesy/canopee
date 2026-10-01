@@ -114,6 +114,15 @@ pauvre : il ne perd que 3,5 %. L'eau le limite avant l'azote, et les aulnes du
 mélange fixent 60 kg N/ha/an. Le redessin de l'essai s'arrête là ; le constat
 est écrit.
 
+### Un témoin peut agir sur ce dont il témoigne
+
+L'aulne servait de témoin au hêtre sur sol pauvre : « un fixateur ne paie
+rien, un exigeant paie ». Mais l'aulne nourrit son voisin, et le hêtre planté
+avec lui perdait 4,9 % là où, seul, il en perd 6,0 et à côté d'un pin 7,8. Le
+critère opposait un frugal à un exigeant ; le pin le dit sans agir sur le
+hêtre. Avant de juger un écart à un témoin, vérifier que le témoin ne le
+modifie pas.
+
 ## Ce qu'un lot plus ancien a appris (la perte d'humus au labour et le grain lu sur pied, #247)
 
 `LABOUR_PERTE_HUMUS` valait 5 % « à calibrer », sans source, et c'est lui qui
