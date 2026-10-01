@@ -32,6 +32,7 @@ import { profondeurPenetrableCm, ruHorizonMm } from "./soil";
 import { geometrieTranches } from "./tranches";
 import {
   diametreInitialCm,
+  partPlancherRacines,
   profondeurRacinesCm,
   type TreeState,
   tirerVigueurIndividuelle,
@@ -927,12 +928,6 @@ export function createGameState(
 
 /** Proto-action : planter un plant à une position donnée (30 cm par défaut). */
 /**
- * Part du potentiel qu'on prête aux racines d'un arbre instancié : la même que
- * `RACINES_PLANCHER` dans `trees.ts`, dont c'est exactement la définition.
- */
-const RACINES_PLANCHER_INSTANCIE = 0.35;
-
-/**
  * Profondeur racinaire d'un arbre qu'on **instancie** à une taille donnée, cm.
  *
  * Les deux semeurs posaient 20 cm quelle que soit la hauteur demandée (#84) :
@@ -962,7 +957,10 @@ function nitrateTranchesInitiales(station: Station, n: number): Float64Array {
 function racinesInitialesCm(especeId: string, heightM: number, station: Station): number {
   const penetrable = profondeurPenetrableCm(station.profil);
   const potentiel = profondeurRacinesCm(getEspece(especeId), heightM, penetrable);
-  return Math.max(20, Math.min(potentiel, RACINES_PLANCHER_INSTANCIE * potentiel));
+  // Le plancher que `nouvelleProfondeurRacines` lui garantirait (trees.ts) : la
+  // constante figée ici à 0,35 avait divergé de celle des arbres (#247).
+  const espece = getEspece(especeId);
+  return Math.max(20, Math.min(potentiel, partPlancherRacines(espece, heightM) * potentiel));
 }
 
 export function plantAt(

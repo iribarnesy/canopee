@@ -309,10 +309,19 @@ const MULCH_FULL_CG = 250;
  * Šimůnek et Hopmans 2009). Tant que l'indice de stress pondéré par les racines
  * reste au-dessus, l'arbre reporte sur les horizons humides ce que les horizons
  * secs ne donnent plus, et prend toute sa demande ; en dessous, il en prend
- * ω / ωc. ωc = 1 serait le moteur d'avant, sans compensation *(0,5 : valeur
- * courante dans la littérature des modèles de prélèvement, à confirmer)*.
+ * ω / ωc. ωc = 1 serait le moteur d'avant, sans compensation.
+ *
+ * **0,9, et pas 0,5** (#247). 0,5 est la compensation **maximale** qui sert
+ * d'illustration à Šimůnek et Hopmans ; essayée, elle faisait transpirer à plein
+ * tout arbre dont la moitié des racines trouvait de l'eau, et le peuplement
+ * asséchait la surface avant l'été : quarante hêtres sur soixante morts de soif
+ * à climat figé, et un hêtre qui ne payait plus le sable de la lande. Les
+ * estimations de terrain sont proches de 1 (Cai et al. 2018, *Vadose Zone J.*
+ * 17 : 160125), et la compensation décroît avec le rapport des racines aux
+ * feuilles (Jarvis 2011, *HESS* 15 : 3431), faible chez un arbre *(0,9 : « proche
+ * de 1 », à confirmer)*.
  */
-const OMEGA_CRITIQUE = 0.5;
+const OMEGA_CRITIQUE = 0.9;
 const G_PER_M2_TO_KG_PER_HA = 10;
 /** semaine du recrutement annuel des semis (printemps) */
 const RECRUITMENT_WEEK = 14;
