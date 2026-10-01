@@ -3679,18 +3679,24 @@ export function tick(state: GameState, weather: WeekWeather): TickResult {
       // cellules se découpent en tranches — la ligne de flammes du rendu.
       const rangs = rangsDuFront(brulees, depart.origine, station.coteM);
       const ordonnees = [...rangs].sort((a, b) => a[1] - b[1] || a[0] - b[0]);
-      incendie = {
-        cellulesBrulees: brulees.size,
-        arbresTues: tues,
-        rejets,
-        victimes,
-        chandellesConsumees,
-        carboneTHa: carboneFeuKgC / 1000 / areaHa,
-        origine: depart.origine,
-        brulees: Int32Array.from(ordonnees, ([cellule]) => cellule),
-        rangs: Int32Array.from(ordonnees, ([, rang]) => rang),
-        charges: Float32Array.from(ordonnees, ([cellule]) => charge.parCellule[cellule] ?? 0),
-      };
+      // Un départ qui ne prend pas n'est pas un incendie : la cellule d'allumage
+      // passe le même tirage que les autres (feu.ts), et le front peut s'y
+      // éteindre. Il remontait alors un incendie de zéro cellule, sans front ni
+      // charge, que l'écran et les compteurs prenaient pour un vrai.
+      if (brulees.size > 0) {
+        incendie = {
+          cellulesBrulees: brulees.size,
+          arbresTues: tues,
+          rejets,
+          victimes,
+          chandellesConsumees,
+          carboneTHa: carboneFeuKgC / 1000 / areaHa,
+          origine: depart.origine,
+          brulees: Int32Array.from(ordonnees, ([cellule]) => cellule),
+          rangs: Int32Array.from(ordonnees, ([, rang]) => rang),
+          charges: Float32Array.from(ordonnees, ([cellule]) => charge.parCellule[cellule] ?? 0),
+        };
+      }
     }
   }
 

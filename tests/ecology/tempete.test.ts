@@ -276,6 +276,9 @@ function soixanteAns(especeId: string, graine: number, ventExposition: number) {
  * | hêtre exposé | 3-5 | 4-11 | 2-8 m³ |
  * | l'un ou l'autre, abrité | 0 | 0 | 0 |
  *
+ * Relevé à #310 (graines 3 et 11, ruines des deux modes) : pin 116 et 131
+ * pour 19,8 et 19,1 m³, hêtre 39 et 44 pour 12,5 et 17,3 m³.
+ *
  * La colonne « tempêtes » compte les semaines où quelque chose est tombé : une
  * rafale qui passe sans rien coucher ne remonte pas (tick.ts). Les deux
  * peuplements voient donc les **mêmes** rafales et n'en retiennent pas le même
@@ -299,10 +302,18 @@ describe("en partie : la tempête trie, et elle ne trie pas au hasard", () => {
       // conclusion de l'essai déguisée en son hypothèse.
       expect(pin.hMaxAtteint).toBeGreaterThan(10);
       expect(hetre.hMaxAtteint).toBeGreaterThan(10);
-      // Relevé après #176, les deux modes confondus : 64 + 40 ruines de pin
-      // contre 24 au hêtre sur la graine 11. Le tri tient, et il tient mieux
-      // qu'avant — le pin est un bois tendre, donc il casse en plus de verser.
-      expect(pin.verses).toBeGreaterThan(3 * Math.max(1, hetre.verses));
+      // Les deux modes confondus, le pin est un bois tendre qui casse en plus de
+      // verser. On exige la direction, comme l'annonce le bloc ci-dessus, et
+      // plus le « trois fois » qui la doublait : il était relevé sur le moteur
+      // et dépassait le terrain. Aux tempêtes de 1999, la France a perdu 6,8 %
+      // du volume de ses conifères contre 3,5 % de ses feuillus (IFN 2003,
+      // L'IF n° 2), et Lothar range pin et mélèze un seul cran au-dessus de
+      // hêtre et chêne (Schmidt et al. 2010, Can. J. For. Res. 40 : 1636).
+      // Relevé à #310 : 116 et 131 ruines de pin contre 39 et 44 au hêtre
+      // (graines 3 et 11). Le rapport valait 3,7 avant que 23 jeunes hêtres de
+      // la graine 3 cessent de mourir de soif — un peuplement éclairci par un
+      // défaut offrait moins de prise au vent.
+      expect(pin.verses).toBeGreaterThan(hetre.verses);
       expect(pin.volumeM3).toBeGreaterThan(hetre.volumeM3);
       // Et les tempêtes sont des événements d'hiver. Pas « jamais en été » :
       // une bourrasque de juin qui couche un arbre existe, et la série en donne
