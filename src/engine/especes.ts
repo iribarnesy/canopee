@@ -730,8 +730,18 @@ export const ESPECES_V0: readonly EspeceV0[] = [
      * pineraies que Jansen mesure. Le nombre ci-dessous n'a pas bougé pour
      * autant — c'est même tout l'objet du lot —, et il rend 14,84 m à quarante
      * ans et 8,98 m à vingt sur la nouvelle station (`stations.ts`).
+     *
+     * **Il est maintenant calé, et il faut le dire** (#247). 0,45 avait été
+     * validé sous le frein de l'azote, qui bridait la demande du pin à la
+     * concentration du sable : sa satisfaction azotée y tenait à 0,70. Depuis
+     * que le frein pèse sur le partage et non sur la demande, le sable couvre
+     * le besoin d'un pin frugal (0,91), et 0,45 rendait 10,1 m à vingt ans
+     * (+24 %) puis couchait à la tempête de l'an 28 tous les pins d'une graine.
+     * La valeur est recalée sur la table à quarante ans, comme le hêtre et le
+     * charme : 0,40 rend 15,57 m pour 15,5. Vingt ans reste tenu à l'écart, et
+     * la prédiction écrite avant le balayage (6,5 à 9,7 m) tient : 9,0 m, +11 %.
      */
-    pousseMaxMAn: 0.45,
+    pousseMaxMAn: 0.4,
     // Atlas : xérophile, oligotrophe, « rustique, large amplitude ».
     eau: { seuilConfortSecheresse: 0.3, seuilStressSecheresse: 0.1, toleranceEngorgement: 0.2 },
     // pH : **laissé tel quel**, et la raison mérite d'être lue. L'USFS Silvics

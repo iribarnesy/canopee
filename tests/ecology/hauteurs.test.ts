@@ -31,8 +31,10 @@
  * tous le même statut, et c'est délibéré.
  *
  * **Calées** sur la table à quarante ans, donc gardées et non validées ici : le
- * **hêtre** et le **charme**. Leur `pousseMaxMAn` a été dérivé de cette valeur-là
- * (especes.ts). L'essai ne les mesure pas ; il attrapera leur dérive.
+ * **hêtre**, le **charme** et, depuis #247, le **pin**. Leur `pousseMaxMAn` a été
+ * dérivé de cette valeur-là (especes.ts). L'essai ne les mesure pas ; il
+ * attrapera leur dérive. Le pin avait été validé sous le frein de l'azote, qui
+ * bridait sa demande sur le sable ; le frein levé, il a fallu le recaler.
  *
  * **Non calées**, donc réellement mises à l'épreuve : aulne, frêne,
  * **châtaignier** et **bouleau** à quarante ans ; aubépine, fusain, genêt et houx dans
