@@ -6,6 +6,7 @@
  */
 
 import { describe, expect, it } from "vitest";
+import { CN_HUMUS } from "../../src/engine/carbon";
 import { syntheticYear } from "../../src/engine/meteo";
 import { litterDecayRate } from "../../src/engine/nitrogen";
 import { rngStateFromSeed } from "../../src/engine/rng";
@@ -25,14 +26,33 @@ function run(state: GameState, years: number): GameState {
   return s;
 }
 
-/** N total (minéral + litière) d'un disque de cellules, g/m² moyen. */
+/**
+ * Azote du sol d'une cellule, g/m² : minéral, litière **et humus** (#247).
+ *
+ * Le thermomètre ne comptait que le minéral et la litière. Il suffisait tant que
+ * la strate ne portait presque pas de litière et que l'humification créait
+ * l'azote qu'elle rangeait. Depuis #308, l'humus nouveau **prend** son azote à
+ * la litière, donc une part de l'azote fixé par l'aulne finit dans l'humus. Et
+ * depuis que la strate fabrique de la matière, la prairie porte ~250 kg N/ha
+ * dans sa propre litière, partout. Ne lire que minéral et litière revenait à
+ * peser l'azote de la prairie et à oublier celui de l'aulne.
+ */
+function azoteDuSol(state: GameState, i: number): number {
+  return (
+    (state.soil.mineralNG[i] ?? 0) +
+    (state.soil.litterNG[i] ?? 0) +
+    (state.soil.humusCG[i] ?? 0) / CN_HUMUS
+  );
+}
+
+/** Azote du sol d'un disque de cellules, g/m² moyen. */
 function meanNAround(state: GameState, cx: number, cy: number, r: number): number {
   const side = state.station.coteM;
   let sum = 0;
   let n = 0;
   for (let y = Math.max(0, cy - r); y <= Math.min(side - 1, cy + r); y++) {
     for (let x = Math.max(0, cx - r); x <= Math.min(side - 1, cx + r); x++) {
-      sum += (state.soil.mineralNG[y * side + x] ?? 0) + (state.soil.litterNG[y * side + x] ?? 0);
+      sum += azoteDuSol(state, y * side + x);
       n++;
     }
   }
@@ -73,7 +93,11 @@ describe("l'aulne améliore son sol (fixation → litière → minéral)", () =>
   it("le sol sous le bosquet d'aulnes est nettement plus riche en N qu'au loin", () => {
     const sousAulnes = meanNAround(finAvec, 25, 27, 3);
     const auLoin = meanNAround(finAvec, 40, 10, 3);
-    expect(sousAulnes).toBeGreaterThan(2 * auLoin);
+    // Le seuil valait le double, sur le minéral et la litière seuls (voir
+    // `azoteDuSol`). Azote total, prédit avant la mesure entre 1,05 et 1,5 fois
+    // le sol éloigné : 1,265 (347,7 contre 274,7 g/m²). Le minéral et la
+    // litière seuls donnent encore 1,51, mais ils pèsent surtout la prairie.
+    expect(sousAulnes).toBeGreaterThan(1.1 * auLoin);
   });
 
   it("le hêtre pousse mieux entouré d'aulnes que seul (malgré leur ombre)", () => {
@@ -145,11 +169,13 @@ describe("l'aulne améliore son sol (fixation → litière → minéral)", () =>
     // L'énoncé qui survit à #201, parce qu'il ne compare pas deux parcelles
     // dont l'une était volée : il regarde le sol **sous** les aulnes contre le sol
     // au départ. La fixation symbiotique, elle, n'a jamais rien dû à la strate.
+    // Azote total du sol, humus compris (voir `azoteDuSol`) : 275,81 contre
+    // 275,39 g/m², prédit avant la mesure. Le minéral et la litière seuls
+    // donnaient l'inverse (10,67 contre 10,72), parce que l'azote fixé passe
+    // en partie dans l'humus.
     const azoteSol = (s: typeof finAvec) => {
       let total = 0;
-      for (let i = 0; i < s.soil.mineralNG.length; i++) {
-        total += (s.soil.mineralNG[i] ?? 0) + (s.soil.litterNG[i] ?? 0);
-      }
+      for (let i = 0; i < s.soil.mineralNG.length; i++) total += azoteDuSol(s, i);
       return total / s.soil.mineralNG.length;
     };
     expect(azoteSol(finAvec)).toBeGreaterThan(azoteSol(finTemoin));
