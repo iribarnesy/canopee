@@ -2304,8 +2304,6 @@ function applyLabourer(
 
   const humusCG = state.soil.humusCG.slice();
   const mineralNG = state.soil.mineralNG.slice();
-  const litterNG = state.soil.litterNG.slice();
-  const litterCG = state.soil.litterCG.slice();
   const herbeCouverture = state.soil.herbeCouverture.slice();
   const herbeEmprise = state.soil.herbeEmprise.slice();
   const herbeFeuillage = state.soil.herbeFeuillage.slice();
@@ -2337,12 +2335,18 @@ function applyLabourer(
       const perdu = (humusCG[i] ?? 0) * LABOUR_PERTE_HUMUS;
       humusCG[i] = (humusCG[i] ?? 0) - perdu;
       mineralNG[i] = (mineralNG[i] ?? 0) + perdu / cnHumus;
-      emisKgC += (perdu * (1 - 1 / cnHumus)) / 1000;
-      // La litière est enfouie et se minéralise avec le reste.
-      mineralNG[i] = (mineralNG[i] ?? 0) + (litterNG[i] ?? 0);
-      emisKgC += (litterCG[i] ?? 0) / 1000;
-      litterNG[i] = 0;
-      litterCG[i] = 0;
+      // Tout le carbone de l'humus minéralisé part en CO₂, comme dans le tick :
+      // l'ancienne ligne en retranchait la masse de l'azote libéré, et un
+      // onzième du carbone perdu sortait des comptes sans être émis.
+      emisKgC += perdu / 1000;
+      // **La litière enfouie n'a pas de règle à elle** (#247). Elle se minéralisait
+      // ici d'un coup, azote compris, quel que soit son C/N : une paille de blé à
+      // C/N 46 rendait tout son azote en octobre, juste avant la lame drainante.
+      // Au champ, elle fait l'inverse : enfouie, elle **immobilise** l'azote du
+      // sol le temps que les micro-organismes la digèrent (Recous et al. 1995,
+      // azote 15 ; Mary et al. 1996). C'est exactement ce que la décomposition
+      // du tick fait déjà selon le C/N (seuil vers 27, C9) : la litière reste
+      // où elle est, et la règle commune décide.
       // Sol nu : c'est tout l'objet du labour, et c'est aussi son prix. La
       // charrue est le seul geste du jeu qui aille sous terre : elle retourne
       // les bulbes et tranche les rhizomes, donc l'emprise part avec le
@@ -2374,8 +2378,6 @@ function applyLabourer(
         ...state.soil,
         humusCG,
         mineralNG,
-        litterNG,
-        litterCG,
         herbeCouverture,
         herbeEmprise,
         herbeFeuillage,
