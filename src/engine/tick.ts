@@ -258,6 +258,7 @@ import {
 } from "./tranches";
 import type { CauseMort, TreeState } from "./trees";
 import {
+  AZOTE_HOUPPIER_G_M2_AN,
   cnBois,
   dureeChandelleSemaines,
   fractionsRacinairesParHorizon,
@@ -1608,6 +1609,15 @@ export function tick(state: GameState, weather: WeekWeather): TickResult {
   const cellWaterDemand = new Array<number>(nCells * nH).fill(0);
   const cellNWanted = new Array<number>(nCells).fill(0);
   /**
+   * **Le partage d'un azote rare** (#247) : la demande et la capacité d'extraction
+   * des arbres de chaque cellule, et la capacité de la strate. Quand le sol ne
+   * sert pas tout le monde, l'azote se partage selon la place que les racines
+   * occupent, pas selon la faim.
+   */
+  const arbresNWanted = new Float64Array(nCells);
+  const arbresCapacite = new Float64Array(nCells);
+  const herbeCapacite = new Float64Array(nCells);
+  /**
    * L'abri au vent, rangé une fois pour la semaine au lieu d'être recalculé en
    * balayant tout le peuplement pour chaque arbre (#99). Construit seulement
    * s'il va servir : sur une parcelle abritée, `ventExposition` vaut zéro et
@@ -1704,6 +1714,8 @@ export function tick(state: GameState, weather: WeekWeather): TickResult {
       const dispo = Math.min(1, (availFactor[i] ?? 0) * (gainMyco[t] ?? 1));
       const demandeN = Math.min(needPerCell, capPerCell * dispo);
       cellNWanted[i] = (cellNWanted[i] ?? 0) + demandeN;
+      arbresNWanted[i] = (arbresNWanted[i] ?? 0) + demandeN;
+      arbresCapacite[i] = (arbresCapacite[i] ?? 0) + capPerCell * dispo;
     });
   }
 
@@ -1739,6 +1751,12 @@ export function tick(state: GameState, weather: WeekWeather): TickResult {
       const h = HERBACEES[s_];
       const k = i * N_HERBACEES + s_;
       const feuillage = herbeFeuillage[k] ?? 0;
+      // Ses racines occupent la cellule au prorata de son feuillage, avec la même
+      // capacité par m² de couvert qu'un houppier d'arbre, freinée de même dans
+      // un sol pauvre.
+      herbeCapacite[i] =
+        (herbeCapacite[i] ?? 0) +
+        (AZOTE_HOUPPIER_G_M2_AN / 52) * Math.max(0, feuillage) * (availFactor[i] ?? 0);
       if (!h || feuillage <= 0) {
         herbePotentielG[k] = 0;
         herbeDemandeEspeceG[k] = 0;
@@ -1792,7 +1810,9 @@ export function tick(state: GameState, weather: WeekWeather): TickResult {
   }
 
   const waterServedRatio = new Array<number>(nCells * nH).fill(0);
+  /** La part servie à la strate, et celle servie aux arbres (#247). */
   const nServedRatio = new Array<number>(nCells).fill(0);
+  const arbresServedRatio = new Float64Array(nCells);
   let transpirationSumL = 0;
   let uptakeSumG = 0;
   /**
@@ -1820,9 +1840,28 @@ export function tick(state: GameState, weather: WeekWeather): TickResult {
     if (nWanted > 0) {
       const stock = mineralNG[i] ?? 0;
       const taken = Math.min(stock, nWanted);
-      const servi = taken / nWanted;
-      nServedRatio[i] = servi;
-      uptakeHerbeSumG += (herbeDemandeNG[i] ?? 0) * servi;
+      // **Un azote rare se partage selon la place occupée, pas selon la faim**
+      // (#247). Servi au prorata des demandes, il allait à la plante la plus
+      // carencée : une prairie qui réclame tout son déficit chaque semaine
+      // laissait les semis d'une friche sans rien. Deux systèmes racinaires
+      // dans le même sol se le partagent selon leur capacité d'extraction,
+      // chacun borné par ce qu'il demande ; ce que l'un ne prend pas va à
+      // l'autre.
+      const demandeArbres = arbresNWanted[i] ?? 0;
+      const demandeHerbe = herbeDemandeNG[i] ?? 0;
+      let partArbres = demandeArbres;
+      let partHerbe = demandeHerbe;
+      if (taken < nWanted) {
+        const capA = arbresCapacite[i] ?? 0;
+        const capH = herbeCapacite[i] ?? 0;
+        const poidsA = capA + capH > 0 ? capA / (capA + capH) : demandeArbres / nWanted;
+        partArbres = Math.min(demandeArbres, taken * poidsA);
+        partHerbe = Math.min(demandeHerbe, taken - partArbres);
+        partArbres = Math.min(demandeArbres, taken - partHerbe);
+      }
+      arbresServedRatio[i] = demandeArbres > 0 ? partArbres / demandeArbres : 0;
+      nServedRatio[i] = demandeHerbe > 0 ? partHerbe / demandeHerbe : 0;
+      uptakeHerbeSumG += partHerbe;
       mineralNG[i] = stock - taken;
       // Une racine ne trie pas : elle prend les deux formes dans la proportion
       // où elles se présentent (#280).
@@ -2007,7 +2046,7 @@ export function tick(state: GameState, weather: WeekWeather): TickResult {
       // passe 3).
       const dispo = Math.min(1, (availFactor[i] ?? 0) * (gainMyco[t] ?? 1));
       const demandeCell = Math.min(needPerCell, capPerCell * dispo);
-      gotN += demandeCell * (nServedRatio[i] ?? 0);
+      gotN += demandeCell * (arbresServedRatio[i] ?? 0);
     });
     const wd = waterDemandL[t] ?? 0;
     const nd = nNeedG[t] ?? 0;
