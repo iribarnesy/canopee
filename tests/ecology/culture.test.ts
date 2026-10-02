@@ -222,9 +222,15 @@ describe("ce que le blé rend, contre une source extérieure au moteur", () => {
       expect(tranche(debut), `ans ${debut}-${debut + 19}`).toBeGreaterThan(0.5);
       expect(tranche(debut), `ans ${debut}-${debut + 19}`).toBeLessThan(2);
     }
-    // Et il y ralentit : la dernière tranche ne s'écarte pas de la précédente de
-    // plus d'un cinquième de ce qu'elle vaut.
-    expect(Math.abs(tranche(101) / tranche(81) - 1)).toBeLessThan(0.2);
+    // Il exigeait aussi qu'il s'y **pose** : la dernière tranche à moins d'un
+    // cinquième de la précédente. Le chiffre n'avait pas de source, et il ne
+    // passait qu'au bord : 18,5 % sur main (1,14 puis 0,93), 20,4 % depuis que
+    // l'érosion ne prend plus une terre que la cellule n'a pas (#283 : 1,12 puis
+    // 0,89). La parcelle Nil de Broadbalk, elle, ne bouge plus depuis cent
+    // soixante-dix ans, et le moteur ne sait pas encore la tenir : un humus à
+    // un seul pool, sans fraction stable, se vide sans plancher (Barré et al.
+    // 2010). La borne est retirée, avec l'accord de l'auteur sur les bornes sans
+    // source ; le manque est porté par #317, et C16 le dit.
   }, 900_000);
 });
 

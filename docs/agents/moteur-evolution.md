@@ -61,7 +61,30 @@ qu'un rapport (voir la note de maintenance).
 Séparer calibration et validation : caler un paramètre sur un âge, garder
 l'autre âge pour vérifier.
 
-## Ce que le dernier lot a appris (la strate fabrique de la matière, #247)
+## Ce que le dernier lot a appris (la perte d'horizon sans fond, #283)
+
+Une correction de maintenance, pas un mécanisme : une cellule ne perd plus une
+terre que son horizon ne contient pas. Deux leçons valent pour qui ajoute un
+stock.
+
+### Une grandeur cumulée se borne par le stock qu'elle décrit
+
+`epaisseurPerdueCm` additionnait une perte chaque semaine sans jamais la
+comparer à l'horizon : 1,8 m perdus sur 35 cm. Le seul plafond du module,
+`PERTE_MAX_PAR_SEMAINE`, se disait « une cellule ne peut pas perdre plus que
+ça » et ne bornait que la charge d'humus et de P, pas la terre. Et le bilan de
+terre bouclait au cent-millième : un stock qui passe sous son fond se conserve
+très bien. Écrire la borne avec le compteur, pas après le premier calque qui
+le montre.
+
+### Une moyenne de parcelle cache la cellule absurde
+
+Les essais lisaient la perte **moyenne** (0,09 cm sur un hectare) et la terre
+sortie (0,27 t/ha/an) : rien d'anormal. Quinze à vingt-six cellules sur dix mille,
+toutes au bord de la parcelle, portaient le défaut. Il a fallu un calque pour
+le voir. Un essai sur une grandeur par cellule regarde aussi son maximum.
+
+## Ce qu'un lot plus ancien a appris (la strate fabrique de la matière, #247)
 
 La strate prélevait un débit fixe, multiplié par une « exigence » de dix pour
 le blé. Elle fabrique maintenant de la matière, et son besoin d'azote sort de
