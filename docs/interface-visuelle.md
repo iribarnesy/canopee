@@ -1033,9 +1033,13 @@ janvier ne recharge le sol qu'en fondant. Deux champs dans l'instantané :
 
 Ce qu'il faut savoir avant de dessiner : le manteau est **un** nombre pour la
 parcelle, pas une grille — le moteur ne sait pas encore ce que les houppiers
-interceptent ni ce que leur ombre retarde. Et la neige est rare en plaine :
-sur les soixante ans de Dijon, la station la plus froide, quelques semaines de
-neige par an et un manteau qui ne passe la semaine qu'une fois sur deux hivers.
+interceptent ni ce que leur ombre retarde. Et la neige est rare en plaine : sur
+les soixante ans de Dijon, la station la plus froide, cinq semaines de neige par
+an ; un manteau quatre hivers sur cinq, mais qui ne passe la semaine qu'un hiver
+sur deux, et jamais plus de 62 mm d'équivalent en eau. Au Luc, la plus douce,
+une semaine de neige tous les trois ou quatre ans, et un manteau trois hivers
+sur soixante. Une parcelle en altitude change tout : à 800 m sur la série de
+Dijon, le manteau tient treize semaines par an.
 
 **Le voile de chaleur et les flaques** restent à faire. Aucun ne manque au
 moteur (`tMax`, les creux et la crue sont là), ils ne sont simplement pas dans
