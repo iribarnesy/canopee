@@ -71,6 +71,7 @@ import {
   masseHorizonKgM2,
   partDeposee,
   terreArracheeKgM2,
+  terreDisponibleKgM2,
 } from "./erosion";
 import { getEspece } from "./especes";
 import type { DepartFaune, InstallationFaune, TableDeLaParcelle } from "./faune";
@@ -1461,7 +1462,16 @@ export function tick(state: GameState, weather: WeekWeather): TickResult {
       boisRetenueMm += infiltre;
     }
     // ── Érosion : ce qui part en surface arrache de la terre au passage ─────
-    const arrachee = part > 0 ? terreArracheeKgM2(part, pentes[i] ?? 0, couvertureDe(i)) : 0;
+    // Mais pas plus de terre que la cellule n'en a : son horizon de surface,
+    // diminué de ce qu'elle a déjà perdu et augmenté du colluvium reçu, y
+    // compris celui que l'amont vient de lui laisser cette semaine. Une cellule
+    // décapée jusqu'au bout cesse de perdre de la terre, et ce qu'elle passe à
+    // l'aval n'est plus que ce qu'elle a reçu (erosion.ts).
+    const arracheeBrute = part > 0 ? terreArracheeKgM2(part, pentes[i] ?? 0, couvertureDe(i)) : 0;
+    const arrachee =
+      arracheeBrute > 0 && horizonSurface
+        ? Math.min(arracheeBrute, terreDisponibleKgM2(horizonSurface, epaisseurPerdueCm[i] ?? 0))
+        : arracheeBrute;
     const emporte = fractionEmportee(arrachee, masseSurfaceKgM2);
     if (emporte > 0) {
       // Le sédiment part avec sa charge : humus, litière, azote, phosphore et

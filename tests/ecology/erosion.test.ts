@@ -11,6 +11,7 @@ import { terreArracheeKgM2 } from "../../src/engine/erosion";
 import { syntheticYear } from "../../src/engine/meteo";
 import { RELIEF_PLAT } from "../../src/engine/relief";
 import { rngStateFromSeed } from "../../src/engine/rng";
+import { densiteApparente } from "../../src/engine/soil";
 import { createGameState, type GameState } from "../../src/engine/state";
 import { LIMON_RICHE } from "../../src/engine/stations";
 import { tick } from "../../src/engine/tick";
@@ -122,6 +123,50 @@ describe("l'érosion amincit le sol, et c'est la boucle qui se referme", () => {
     };
     // En haut on perd (valeur positive), en bas on gagne (valeur négative).
     expect(bande(COTE - 8, COTE)).toBeGreaterThan(bande(0, 8));
+  });
+
+  it("une cellule ne perd pas une terre qu'elle n'a pas, et ce qui part arrive ailleurs (#283)", () => {
+    // Le cas qui emballait la boucle : un versant raide tenu nu, que rien ne
+    // vient recouvrir. On désherbe chaque semaine comme une case de mesure
+    // (nitrogen-conservation.test.ts) — aucune règle du moteur ne change.
+    // Sur main, dix ans suffisaient à faire perdre 2,4 m à une cellule d'un
+    // horizon de 35 cm, et 110 cellules sur 400 passaient sous l'horizon.
+    const cote = 20;
+    const station = {
+      ...LIMON_RICHE.station,
+      coteM: cote,
+      herbeInitiale: 0,
+      relief: { ...LIMON_RICHE.station.relief, pentePct: 30 },
+      voisinage: [],
+      gibierParHa: 0,
+    };
+    const horizon = station.profil[0];
+    if (!horizon) throw new Error("profil vide");
+    const meteo = syntheticYear(LIMON_RICHE.climat);
+    let state = createGameState(station, rngStateFromSeed(11));
+    let sortieKgM2 = 0;
+    for (let w = 0; w < 10 * 52; w++) {
+      state.soil.herbeEmprise.fill(0);
+      state.soil.herbeFeuillage.fill(0);
+      state.soil.herbeCouverture.fill(0);
+      state.soil.herbeBiomasse.fill(0);
+      const r = tick(state, meteo[w % 52] as never);
+      state = r.state;
+      sortieKgM2 += r.fluxes.erosionSortieKgM2;
+    }
+    const perdues = [...state.soil.epaisseurPerdueCm];
+    // D'abord, qu'il y ait quelque chose à vérifier : des cellules ont bien été
+    // décapées jusqu'au fond, sinon la borne n'est jamais sollicitée.
+    const decapees = perdues.filter((p) => p > horizon.epaisseurCm - 0.01).length;
+    expect(decapees).toBeGreaterThan(10);
+    // Aucune ne descend sous son horizon (à l'arrondi des flottants près).
+    expect(Math.max(...perdues)).toBeLessThanOrEqual(horizon.epaisseurCm + 1e-3);
+    // Et la terre se conserve : ce que le versant a perdu, net des dépôts, est
+    // exactement ce qui a franchi le bas de la parcelle.
+    const perteNetteKgM2 =
+      (perdues.reduce((a, b) => a + b, 0) / perdues.length) * densiteApparente(horizon) * 10;
+    expect(sortieKgM2).toBeGreaterThan(0);
+    expect(Math.abs(perteNetteKgM2 - sortieKgM2)).toBeLessThan(1e-4 * sortieKgM2);
   });
 
   it("un sol aminci retient moins d'eau : la boucle est vicieuse", () => {

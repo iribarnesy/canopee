@@ -51,7 +51,12 @@ export const DEPOT_SOL_NU = 0.2;
 /** Part supplémentaire déposée quand la cellule d'arrivée est bien couverte. */
 export const DEPOT_PAR_COUVERTURE = 0.7;
 
-/** Plafond de sécurité : une cellule ne peut pas perdre plus que ça par semaine. */
+/**
+ * Plafond de sécurité sur la **charge** : une cellule ne peut pas perdre plus que
+ * cette part de ses stocks de surface (humus, azote, P, K) par semaine
+ * *(à calibrer)*. Il ne borne pas la **terre** arrachée — celle-ci l'est par ce que
+ * l'horizon contient encore (`terreDisponibleKgM2`).
+ */
 export const PERTE_MAX_PAR_SEMAINE = 0.03;
 
 /**
@@ -103,6 +108,29 @@ export function epaisseurPerdueCm(arracheeKgM2: number, horizon: Horizon): numbe
   if (densite <= 0) return 0;
   // kg/m² ÷ (t/m³ × 10) = cm de sol.
   return arracheeKgM2 / (densite * 10);
+}
+
+/**
+ * Terre que l'horizon de surface d'une cellule contient encore, kg/m² : son
+ * épaisseur de départ, moins ce que l'eau lui a déjà pris, plus le colluvium
+ * qu'il a reçu (`perdueCm` est négative là où la terre s'est déposée).
+ *
+ * C'est le plafond de ce que l'eau peut lui arracher. Sans lui, la boucle que
+ * décrit `epaisseurPerdueCm` n'a pas de fond : sur un versant de 25 %, une
+ * cellule perdait 1,2 à 1,8 m d'un horizon de 35 cm en quarante ans, et l'aval
+ * recevait en colluvium une terre qui n'avait jamais existé (#283). Conversion
+ * exactement inverse de `epaisseurPerdueCm`, pour qu'une cellule décapée
+ * s'arrête pile à zéro.
+ *
+ * Ce que le plafond ne fait pas : laisser l'érosion entamer l'horizon suivant,
+ * ce que fait pourtant un vrai versant décapé. Le profil est commun à toute la
+ * parcelle et seul son premier horizon s'amincit cellule par cellule ; une
+ * cellule mise à nu cesse donc de perdre de la terre *(manque connu)*.
+ */
+export function terreDisponibleKgM2(horizon: Horizon, perdueCm: number): number {
+  const densite = densiteApparente(horizon); // t/m³
+  if (densite <= 0) return 0;
+  return Math.max(0, horizon.epaisseurCm - perdueCm) * densite * 10;
 }
 
 /**

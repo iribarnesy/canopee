@@ -280,7 +280,11 @@ quarante ans contre 15,5 tabulés, là où les stations du dépôt l'encadraient
 qu'elle n'habite pas, et que `pousseMaxMAn` n'a pas eu à être tordu une
 troisième fois. Le lot met au passage un prix sur une dette qui était écrite
 sans : au pH réel d'un podzol, la rampe de C7 coûte au pin plus de la moitié de
-sa hauteur, 6,79 m contre 14,91 pour six dixièmes de pH)**.*
+sa hauteur, 6,79 m contre 14,91 pour six dixièmes de pH) → 92 % (une cellule
+ne perd plus une terre qu'elle n'a pas : la perte d'horizon n'avait pas de fond,
+et un versant à 25 % en perdait jusqu'à 1,8 m sur 35 cm en quarante ans. Aucun
+point gagné, c'est un correctif — et la masse de terre se conservait déjà, ce
+qui est la leçon : le bilan bouclait sur une terre prise sous l'horizon)**.*
 
 *Le score a **baissé** en cours de route — au chantier du plancher racinaire comme
 à celui des hauteurs, et pour la même raison. Le moteur sait faire strictement plus qu'hier ;
@@ -315,7 +319,7 @@ maladie-là, pas une preuve de santé.*
 | A9 | Les paramètres de sol sont **dérivés** de la texture, la profondeur, la pierrosité et la MO | ✅ | `soil.ts` ; `soil.test.ts` — **le générateur de sols est débloqué** |
 | A10 | Le sol est stratifié en horizons ; les racines explorent en profondeur avec l'âge | ✅ | `profilHydro` + `profondeurRacinesCm` ; `racines.test.ts` — **et depuis #263 le profil s'écoule à ce que son fond CONDUIT, plus à ce qu'il contient.** Le ressuyage ne faisait descendre l'eau que d'un horizon par semaine : le dernier vidangeait les millimètres qu'il détenait, celui du dessus s'y déversait jusqu'à le remplir, et tout s'arrêtait là. Asymétrique avec la passe d'infiltration, qui borne un **flux** (`Math.min(flux, h.conductiviteMm)`) là où le ressuyage bornait un **stock**. Chaque horizon garde désormais un budget hebdomadaire égal à sa conductivité et on balaie jusqu'à ce que plus rien ne bouge — au plus une passe par interface. **Le fait qui l'a révélé** : glisser cinq centimètres de sable, le matériau le plus filtrant du catalogue, sous un plateau bien drainé engorgeait le profil du haut en bas et tuait tous les hêtres en quarante ans. Cinq centimètres de sable ne peuvent pas noyer un plateau. **Et la correction n'est pas neutre, il faut le dire** : l'horizon de fond des sept stations vivait à 50-62 % de saturation en permanence, il revient à zéro. C'est la bonne physique — un plateau à exutoire libre retrouve la capacité au champ en quelques jours, pas en plusieurs semaines — mais ça déplace le régime hydrique sur lequel le calage des hauteurs a été fait, et c'est pourquoi le banc des hauteurs, celui des tolérances et la propriété de conservation du profil sont les témoins du lot. Ce qui **ne** bouge pas : un exutoire fermé engorge toujours, parce que ce qui retenait l'eau d'un fond de vallée n'était pas la vidange interne |
 | A17 | Un arbre n'investit vers le bas que s'il manque d'eau (plasticité racinaire) | ✅ | `nouvelleProfondeurRacines` ; `racines.test.ts` — et il faut distinguer **deux** choses que le moteur confondait (#84) : la plasticité, qui ne répond qu'à la soif, et le **squelette** d'ancrage, qu'un arbre bâtit en grandissant qu'il ait soif ou non. Le plancher `partPlancherRacines` vaut 0,80 du potentiel **à tout âge** : c'est le potentiel lui-même qui grandit avec la maturité, si bien qu'un semis démarre toujours en surface. Il a d'abord valu 0,35 à tout âge (un hêtre de vingt mètres jamais assoiffé avait les racines d'un semis, ce qui forçait le barème d'ancrage de `tempete.ts` à mentir, F15), puis monté de 0,35 à 0,80 avec la maturité ; cette rampe laissait un hêtre de dix ans à 25-30 cm, et c'est elle qui tuait de soif les jeunes plantations dès que l'eau de surface se partageait mieux (#310). Bakker et al. 2008 (*J. For. Res.* 13 : 176), hêtraies de 9 à 146 ans échantillonnées jusqu'à 120 cm : la biomasse de racines fines est la plus forte dans les plus jeunes, et sa répartition suit le sol plus que l'âge — rien ne justifiait la rampe |
-| A11 | La pente crée ruissellement, érosion et dessèchement d'adret | ✅ | `relief.ts` + `erosion.ts` ; `erosion.test.ts` — 4 t/ha/an à 15 % sur sol nu, quasi rien sous couvert |
+| A11 | La pente crée ruissellement, érosion et dessèchement d'adret | ✅ | `relief.ts` + `erosion.ts` ; `erosion.test.ts` — remesuré au lot #283 sur le banc du test (limon riche, cote 30, 15 %, herbe initiale nulle, dix ans) : **18 t/ha/an arrachées en moyenne, dont 180 la première année et plus rien dès que l'herbe couvre**, 2,8 t/ha/an sorties de la parcelle ; quasi rien sous couvert. Les « 4 t/ha/an » qu'écrivait cette ligne ne se retrouvent plus, et la première année, très au-dessus des ordres de grandeur européens, est portée par le bassin amont déclaré sur une parcelle de 30 m (#311, non tranché ici). **Et une cellule ne perd plus une terre qu'elle n'a pas** (#283) : la perte cumulée est bornée par l'épaisseur de l'horizon de surface, colluvium reçu compris, là où un versant à 25 % perdait jusqu'à 1,8 m d'un horizon de 35 cm en quarante ans |
 | A27 | Ce que l'eau emporte est plus riche que le sol moyen, et se dépose plus bas | ✅ | enrichissement ×3, dépôt fonction du couvert de la cellule d'arrivée — le versant se déshabille par le sommet |
 | A15 | Une nappe perchée engorge la profondeur sans asphyxier la surface | ✅ | engorgement par horizon ; drainage externe |
 | A16 | Le drainage dépend de l'exutoire autant que de la texture | ✅ | `drainageExterneMmSemaine` |
@@ -837,10 +841,18 @@ perte en terre ramenée à la semaine : *érosivité × ruissellement × √pent
 (1 − couverture)²*.
 
 Le carré sur le couvert n'est pas cosmétique : il dit que les premiers
-pourcents de sol nu coûtent peu et que les derniers coûtent tout. Mesuré sur
-dix ans de limon : **4 t/ha/an arrachées à 15 % de pente sur sol nu, 9 t/ha/an
-à 30 %, et pratiquement rien dès que l'herbe couvre** — les ordres de grandeur
-européens pour un sol cultivé nu.
+pourcents de sol nu coûtent peu et que les derniers coûtent tout. Mesuré à
+l'origine sur dix ans de limon : 4 t/ha/an arrachées à 15 % de pente sur sol
+nu, 9 t/ha/an à 30 %. **Ces deux chiffres ne se retrouvent plus** : remesurés au
+lot #283 sur le même banc (cote 30, herbe initiale nulle, graine 11, météo
+synthétique), ils valent **18 et 33 t/ha/an en moyenne sur dix ans** — mais
+presque tout tombe la première année (180 et 330 t/ha/an), avant que l'herbe ne
+couvre, et plus rien ensuite ; 2,8 et 5,6 t/ha/an sortent de la parcelle. Une
+première année aussi forte n'est pas un ordre de grandeur européen. Elle est
+portée par le bassin amont déclaré (0,5 ha versés sur 0,09 ha) : sur un sol
+tenu nu à 4 % de pente et cote 20, retirer le bassin fait passer la terre
+sortie de 105 à 2,3 t/ha/an, et porter la cote à 60 la ramène à 8. C'est #311,
+un choix de modèle qui n'est pas tranché ici.
 
 Deux choses distinguent l'érosion d'une simple perte de masse, et toutes deux
 sont modélisées : ce qui part est **plus riche** que le sol moyen (l'eau
@@ -865,10 +877,46 @@ trois centimètres — même décapé, il reste toujours un peu de terre.
 
 Mesuré sur vingt-cinq ans à 30 % de pente : 0,14 cm perdus en moyenne sur un
 sol laissé nu au départ, jusqu'à 0,33 cm en haut de versant, et 2,3 cm
-d'accumulation en bas — le colluvium. C'est peu, et pour une bonne raison : sur
-une parcelle abandonnée, l'herbe reprend en quelques années et l'érosion
-s'arrête. Un versant labouré tous les ans, lui, ne referme jamais cette
-fenêtre.
+d'accumulation en bas — le colluvium. Remesuré au lot #283 : **0,45 cm en
+moyenne, 3,9 cm au plus, 14,5 cm de colluvium** dans les coins du bas. C'est
+peu, et pour une bonne raison : sur une parcelle abandonnée, l'herbe reprend en
+quelques années et l'érosion s'arrête. Un versant labouré tous les ans, lui, ne
+referme jamais cette fenêtre.
+
+**Mais la boucle n'avait pas de fond** (#283). La perte d'épaisseur s'ajoutait
+semaine après semaine sans jamais se comparer à ce que l'horizon contenait :
+sur un hectare de limon à 25 % de pente, en quarante ans de friche, des
+cellules perdaient **1,2 à 1,8 m d'un horizon de 35 cm** selon la graine (trois
+graines, météo mesurée), et leurs voisines d'aval recevaient jusqu'à 98 cm de
+colluvium. Le jeu, avec son entourage, en montrait davantage — 3,8 m perdus,
+5,6 m déposés. Une fois l'horizon décapé, la réserve utile tombait au plancher
+de trois centimètres, l'herbe ne reprenait plus (7 % de couverture sur ces
+cellules), le couvert restait presque nul et la cellule continuait de perdre une terre
+qu'elle n'avait plus.
+
+Ce n'était **pas** une fuite du bilan : la terre se conservait au cent-millième
+près, ce qu'un versant perdait arrivant bien en bas ou hors de la parcelle. Le
+bilan bouclait sur une terre prise sous l'horizon. La correction ne crée aucun
+mécanisme : une cellule ne peut pas perdre plus de terre que son horizon de
+surface n'en contient, colluvium reçu compris (`terreDisponibleKgM2`). Le dépôt
+n'a pas besoin d'une borne à lui — un colluvium plus épais que l'horizon est
+un fait de bas de versant —, il lui suffisait de ne plus venir que d'une terre
+qui existait. Sur les mêmes trois graines, la perte s'arrête pile à 35 cm, le
+dépôt maximal passe de 94-98 cm à 52-90 cm, et la terre sortie de la parcelle
+ne bouge pas (0,27-0,28 t/ha/an) : seules quelques dizaines de cellules sur
+dix mille étaient concernées. Partout où aucune cellule n'atteignait le fond
+de son horizon, rien ne bouge : les sept bancs comparés avant et après
+sont identiques sur toutes les grandeurs relevées.
+
+Ces cellules sont presque toutes sur les **bords latéraux** de la parcelle :
+l'eau d'amont entre par tout le pourtour en proportion de la hauteur, si bien
+que les deux colonnes de flanc en reçoivent à chaque rang et la concentrent
+vers le bas. C'est un choix de `relief.ts`, signalé et non tranché ici.
+
+**Ce qui manque** : un vrai versant décapé continue de s'éroder dans l'horizon
+suivant. Ici le profil est commun à toute la parcelle et seul son premier
+horizon s'amincit cellule par cellule ; une cellule mise à nu cesse donc de
+perdre de la terre, ce qui sous-estime l'érosion d'un versant décapé.
 
 ## La strate arbustive : quatre espèces qui changent la succession
 
