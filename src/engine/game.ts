@@ -103,6 +103,8 @@ export function advanceWeek(
   debordementParCellule: Float32Array;
   /** lumière arrivant au sol, par cellule (tick.ts) */
   lumiereAuSol: Float32Array;
+  /** où sont les insectes pollinisateurs, par cellule ∈ [0,1], sans le plancher (tick.ts) */
+  pollinisateurs: Float32Array;
 } {
   let s = beginWeek(state);
   const refusals: ActionRefusal[] = [];
@@ -131,6 +133,7 @@ export function advanceWeek(
     chutes: ticked.chutes,
     debordementParCellule: ticked.debordementParCellule,
     lumiereAuSol: ticked.lumiereAuSol,
+    pollinisateurs: ticked.pollinisateurs,
   };
 }
 
