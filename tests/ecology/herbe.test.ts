@@ -189,14 +189,21 @@ describe("concurrence herbacée sur les jeunes plants", () => {
     expect(riche.sans).toBeGreaterThan(pauvre.sans);
   });
 
-  it("la fauche ne fait pas dix points d'écart entre sol pauvre et sol riche", () => {
+  it("la fauche coûte là où l'eau commande, pas sur un sol qui ne manque de rien", () => {
     // **Le sens que cet essai gardait s'est retourné** (#247) : la fauche ne
     // libérait le plant sur sol pauvre que par un gain d'azote, et sur la lande
-    // c'est l'eau qui commande (voir l'essai au-dessus). La ligne « pauvre
-    // gagne plus que riche » est retirée ; le plafond, lui, tient : 0,917 contre
-    // ~1,00, huit points. Ce qui reste ouvert (#210) est la reprise d'un plant
-    // **désherbé**, et le moteur n'a pas le geste qui la mesurerait.
-    expect(Math.abs(pauvre.rapport - riche.rapport)).toBeLessThan(0.1);
+    // c'est l'eau qui commande (voir l'essai au-dessus). Il gardait ensuite un
+    // plafond de dix points entre les deux sols, relevé sur le moteur et sans
+    // source ; il est tombé à #310, quand l'herbe a puisé son eau dans tout son
+    // enracinement : 0,888 et 0,889 sur la lande (graines 3 et 7) contre 1,001
+    // sur le limon. Le plafond est retiré. Ce que dit le terrain est la
+    // direction : faucher une graminée accroît sa transpiration et renforce la
+    // concurrence pour l'eau (Davies et Gardiner 1989, *Arboriculture Research
+    // Note* 59/89/ARB). Prédit avant la mesure sur une graine neuve : lande sous
+    // limon, lande entre 0,85 et 0,95. Relevé graine 11 : 0,894 contre 1,001.
+    // Ce qui reste ouvert (#210) est la reprise d'un plant **désherbé**, et le
+    // moteur n'a pas le geste qui la mesurerait.
+    expect(pauvre.rapport).toBeLessThan(riche.rapport);
   });
 });
 
