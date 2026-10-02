@@ -482,9 +482,18 @@ describe("une chandelle tombe dans le sens du coup de vent, pas seulement vers l
     expect(calmes.length).toBeGreaterThan(100);
     // Et il fait ce qu'il annonce : ces chutes-là penchent du côté où soufflait
     // la rafale, les autres nulle part en particulier.
+    //
+    // Il exigeait aussi un rapport : les ventées « trois fois » plus concentrées
+    // que les calmes. Le chiffre n'avait pas de source, et il est tombé à #310 :
+    // 0,145 sur 306 chutes ventées contre 0,058 sur 1 520 calmes. Ces 1 520 ne
+    // sont pas 1 520 tirages : le banc tue tous les treize semaines, une chandelle
+    // de saule tombe à délai fixe, et l'année synthétique se répète — toutes les
+    // chutes tombent donc aux quatre mêmes semaines de l'année, sous quatre caps.
+    // La concentration des calmes mesure ces quatre caps, pas le hasard, et un
+    // rapport dont le dénominateur est ce reliquat lit le tirage. Retiré avec
+    // l'accord de l'auteur ; les deux seuils qui disent le mécanisme restent.
     expect(conc(ventees)).toBeGreaterThan(0.1);
     expect(Math.abs(conc(calmes))).toBeLessThan(0.1);
-    expect(conc(ventees)).toBeGreaterThan(3 * Math.abs(conc(calmes)));
   }, 400_000);
 
   it("mais elles ne resserrent PAS au-delà du plancher de hasard", () => {
