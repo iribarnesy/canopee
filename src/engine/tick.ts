@@ -151,6 +151,7 @@ import {
   stocksEquilibreParCellule,
   tauxDeVidange,
 } from "./nappe";
+import { neigeEtFonte } from "./neige";
 import {
   azoteNetDecomposition,
   decompositionClimateFactor,
@@ -788,6 +789,16 @@ export function tick(state: GameState, weather: WeekWeather): TickResult {
     groundLight[i] = (groundLight[i] ?? 1) * lumiereApresBordures(x, y, dims, station.bordures);
   }
 
+  // ── 0 bis. La neige : ce qui tombe solide attend le redoux ─────────────────
+  // Sous 0 °C de moyenne, la précipitation de la semaine tombe en neige ;
+  // au-dessus de 2 °C, en pluie ; entre les deux, en partie. La neige s'ajoute
+  // au manteau, qui fond d'environ trois millimètres et demi par jour et par
+  // degré au-dessus de zéro, et le sol ne reçoit que la pluie et la fonte : une
+  // neige de janvier recharge le sol le jour où elle fond, pas celui où elle
+  // tombe (neige.ts, #303).
+  const neige = neigeEtFonte(weather, state.soil.manteauNeigeMm);
+  const eauLiquideMm = neige.eauLiquideMm;
+
   // ── 1. Bilan hydrique stratifié + minéralisation + litière ────────────────
   const profil = station.profil;
   const nH = Math.max(1, profil.length);
@@ -992,6 +1003,9 @@ export function tick(state: GameState, weather: WeekWeather): TickResult {
   // Apport hebdomadaire moyen, g N/m² ; la part humide suit la pluie de la
   // semaine, rapportée à une semaine moyenne de l'année.
   const depositionSemaineG = station.depositionNKgHaAn / G_PER_M2_TO_KG_PER_HA / 52;
+  // La précipitation entière, neige comprise : les dépôts tombent avec elle,
+  // qu'elle soit liquide ou solide. Ce qu'un manteau garderait de ces dépôts
+  // jusqu'à la fonte est négligé *(à confirmer)*.
   const partPluie = Math.min(3, weather.rainMm / 15);
 
   // Relief : l'eau ne reste plus dans sa cellule (relief.ts). On précalcule le
@@ -1052,9 +1066,11 @@ export function tick(state: GameState, weather: WeekWeather): TickResult {
   // Ce qui arrive de l'amont : la pluie tombée sur le bassin versant qui verse
   // sur nous, ramenée à la surface de la parcelle.
   const surfaceHaParcelle = nCells / 10_000;
+  // Le bassin amont a le même ciel que la parcelle, donc le même manteau : il
+  // envoie la pluie et la fonte, pas la neige qui y tient encore.
   const apportAmontMm =
     surfaceHaParcelle > 0
-      ? (weather.rainMm * RUISSELLEMENT_AMONT * station.relief.bassinAmontHa) / surfaceHaParcelle
+      ? (eauLiquideMm * RUISSELLEMENT_AMONT * station.relief.bassinAmontHa) / surfaceHaParcelle
       : 0;
   // L'eau d'amont ne tombe pas du ciel : elle franchit la bordure haute puis
   // traverse la parcelle en s'infiltrant au passage (relief.ts). La répartir
@@ -1146,7 +1162,7 @@ export function tick(state: GameState, weather: WeekWeather): TickResult {
     // un passage de tracteur à une ravine, et elle n'existait pas.
     const infiltration = facteurInfiltration(tassement[i] ?? 0);
     const ruissele =
-      (weather.rainMm + amontIci) *
+      (eauLiquideMm + amontIci) *
       Math.min(
         1,
         coefficientRuissellement(pentes[i] ?? 0, couvertureSol, saturationSurface) /
@@ -1157,7 +1173,7 @@ export function tick(state: GameState, weather: WeekWeather): TickResult {
         horizons: horizonsCellule,
         eauMm: eauCellule,
         excesMm: excesCellule,
-        rainMm: weather.rainMm + amontIci - ruissele,
+        rainMm: eauLiquideMm + amontIci - ruissele,
         evapDemandMm:
           etpMm *
           SOIL_EVAP_FRACTION *
@@ -4185,6 +4201,7 @@ export function tick(state: GameState, weather: WeekWeather): TickResult {
         // Le réseau régional suit la parcelle à proportion de ce que le bassin
         // partage avec elle : c'est ainsi qu'un incendie de **massif** se
         // distingue d'un incendie de parcelle (nappe.ts).
+        manteauNeigeMm: neige.manteauNeigeMm,
         nappeRegionaleMm: nouveauNiveauRegionalMm(
           state.soil.nappeRegionaleMm,
           nappeStockMm.reduce((a, b) => a + b, 0) / nCells,
@@ -4255,6 +4272,9 @@ export function tick(state: GameState, weather: WeekWeather): TickResult {
     pollinisateurs: Float32Array.from(pollinisateurs),
     fluxes: {
       rainMm: weather.rainMm,
+      neigeMm: neige.neigeMm,
+      fonteMm: neige.fonteMm,
+      manteauNeigeMm: neige.manteauNeigeMm,
       etpMm,
       evapMm: evapSum / nCells,
       nappeMm: remonteeNappeMm / nCells,
@@ -4319,6 +4339,11 @@ export function tick(state: GameState, weather: WeekWeather): TickResult {
 /**
  * Hash déterministe de l'état (FNV-1a : grilles de sol en binaire, arbres en
  * JSON). Sert au test de non-régression « même seed + mêmes actions → même partie ».
+ *
+ * Le manteau neigeux n'y entre pas : il ne dépend que de la suite des semaines
+ * de météo, pas de la partie, et ce qu'il fait se lit dans l'eau du sol, qui y
+ * entre. Le laisser dehors garde aussi l'empreinte d'une partie sans neige
+ * identique à celle d'avant la neige (#303).
  */
 export function stateHash(state: GameState): number {
   let hash = 0x811c9dc5;

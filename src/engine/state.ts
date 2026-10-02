@@ -413,6 +413,15 @@ export interface SoilState {
    */
   nappeRegionaleMm: number;
   /**
+   * Manteau neigeux de la parcelle en fin de semaine, mm d'équivalent en eau
+   * (neige.ts). Un stock d'eau au même titre que le sol et la nappe : ce qui
+   * tombe en neige y attend le redoux, et ne rejoint le sol qu'en fondant.
+   * **Un** nombre pour la parcelle, et non une grille : ce qui le
+   * différencierait d'une cellule à l'autre (l'interception par les houppiers,
+   * l'ombre qui retarde la fonte) n'est pas encore dans le moteur.
+   */
+  manteauNeigeMm: number;
+  /**
    * Épaisseur d'horizon de surface perdue par érosion, cm (négative là où le
    * sédiment s'est déposé). Un sol qui s'amincit retient moins d'eau, donc
    * ruisselle davantage, donc s'érode plus vite (erosion.ts).
@@ -624,7 +633,14 @@ export interface GameState {
 
 /** Flux de la semaine, moyennés sur la parcelle (affichage + tests de conservation). */
 export interface TickFluxes {
+  /** **toute** la précipitation de la semaine, pluie et neige, mm */
   rainMm: number;
+  /** part de `rainMm` tombée en neige, mm d'eau (neige.ts) */
+  neigeMm: number;
+  /** eau rendue par le manteau neigeux, mm : elle entre au sol avec la pluie */
+  fonteMm: number;
+  /** manteau neigeux en fin de semaine, mm d'équivalent en eau — un stock, pas un flux */
+  manteauNeigeMm: number;
   etpMm: number;
   /** évaporation du sol, mm moyen */
   evapMm: number;
@@ -874,6 +890,8 @@ export function createGameState(
         station.drainageExterneMmSemaine,
         station.profondeurNappeEquilibreCm,
       ),
+      // Une partie démarre sans neige au sol, quelle que soit sa semaine.
+      manteauNeigeMm: 0,
       nappeMm: Float64Array.from(
         stocksEquilibreParCellule(
           station.profil,

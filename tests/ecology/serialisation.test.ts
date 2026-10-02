@@ -127,6 +127,52 @@ describe("une partie reprise continue comme une partie qui ne s'est pas arrêté
   }, 900_000);
 });
 
+describe("un bloc d'avant la neige se relit, avec un manteau nul (#303)", () => {
+  it("la version 7 n'avait pas de manteau : son eau est déjà toute au sol", () => {
+    // Un moteur de version 7 versait toute la précipitation au sol la semaine
+    // même. Son état relu avec un manteau nul est donc **son** état, pas un état
+    // inventé — c'est ce qui permet de ne pas refuser le bloc.
+    const partieV7 = partie(1);
+    const avant: GameState = { ...partieV7, soil: { ...partieV7.soil, manteauNeigeMm: 0 } };
+    const b = ecrireEtat(avant);
+    const vue = new DataView(b.buffer);
+    const longueur = vue.getUint32(10);
+    const entete = JSON.parse(new TextDecoder().decode(b.subarray(14, 14 + longueur))) as {
+      v: number;
+      sol: Record<string, unknown>;
+    };
+    // On fabrique le bloc qu'un moteur de version 7 aurait écrit : la même
+    // disposition, sans le champ, et l'ancien numéro.
+    const { manteauNeigeMm: _absent, ...solV7 } = entete.sol;
+    const neuf = new TextEncoder().encode(JSON.stringify({ ...entete, v: 7, sol: solV7 }));
+    const debutGrilles = 14 + longueur;
+    const bourrage = (8 - (debutGrilles % 8)) % 8;
+    const grilles = b.subarray(debutGrilles + bourrage);
+    const debutNeuf = 14 + neuf.length;
+    const bourrageNeuf = (8 - (debutNeuf % 8)) % 8;
+    const v7 = new Uint8Array(debutNeuf + bourrageNeuf + grilles.length);
+    v7.set(b.subarray(0, 14));
+    const vueV7 = new DataView(v7.buffer);
+    vueV7.setUint16(8, 7);
+    vueV7.setUint32(10, neuf.length);
+    v7.set(neuf, 14);
+    v7.set(grilles, debutNeuf + bourrageNeuf);
+
+    const relu = lireEtat(v7, STATION);
+    if (!relu) throw new Error("un bloc de version 7 doit se relire");
+    expect(relu.soil.manteauNeigeMm).toBe(0);
+    expect(stateHash(relu)).toBe(stateHash(avant));
+    // Et la partie reprise continue comme celle qui ne s'est pas arrêtée.
+    expect(stateHash(partie(1, relu))).toBe(stateHash(partie(1, avant)));
+  }, 300_000);
+
+  it("une version plus ancienne que 7 reste refusée", () => {
+    const b = ecrireEtat(partie(1));
+    new DataView(b.buffer).setUint16(8, 6);
+    expect(lireEtat(b, STATION)).toBeUndefined();
+  }, 300_000);
+});
+
 describe("ce qu'on ne sait pas lire, on le refuse", () => {
   // Rendre `undefined` est un **résultat**, pas un échec à cacher : le journal
   // existe pour ça, et l'appelant rejoue. Un bloc relu de travers serait bien

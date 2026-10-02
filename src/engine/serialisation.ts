@@ -142,8 +142,28 @@ const MAGIE = "CANOPEE\u0000";
  * (`cultureGrain`, `cultureGrainPotentiel`). Un bloc de version 6 ne les contient
  * pas, et les reconstruire à zéro ferait d'un blé de juin un semis sans matière
  * ni azote. On refuse, sixième fois.
+ *
+ * **8 (issue #303, la neige)** : le sol porte un scalaire de plus,
+ * `manteauNeigeMm`, le manteau neigeux de la parcelle. C'est la première montée
+ * qui **ne refuse pas** l'ancien bloc, et la raison est l'inverse de celle des
+ * six précédentes : ici, la valeur par défaut est innocente. Un moteur de
+ * version 7 ne gardait aucune neige, il versait toute la précipitation au sol
+ * la semaine même ; l'eau d'une partie écrite par lui est donc déjà tout
+ * entière dans le sol et la nappe. Lui donner un manteau nul, ce n'est pas
+ * inventer un état, c'est écrire celui qu'elle avait. Un bloc de version 7 se
+ * relit donc avec `manteauNeigeMm = 0` (`VERSIONS_RELUES`), et seulement lui.
  */
-export const VERSION_FORMAT = 7;
+export const VERSION_FORMAT = 8;
+
+/**
+ * Les versions d'un bloc que ce moteur sait relire, et ce qu'il faut ajouter à
+ * leur sol pour en faire un sol de la version courante. Une version absente
+ * d'ici est refusée, et le journal reprend la main.
+ */
+const VERSIONS_RELUES: Record<number, Record<string, unknown>> = {
+  [VERSION_FORMAT]: {},
+  7: { manteauNeigeMm: 0 },
+};
 
 /** Une grille de sol, telle que l'en-tête la déclare. */
 interface GrilleDeclaree {
@@ -313,7 +333,8 @@ export function lireEtat(octets: Uint8Array, station: Station): GameState | unde
     if (octets[i] !== MAGIE.charCodeAt(i)) return undefined;
   }
   const vue = new DataView(octets.buffer, octets.byteOffset, octets.byteLength);
-  if (vue.getUint16(MAGIE.length) !== VERSION_FORMAT) return undefined;
+  const ajoutsAuSol = VERSIONS_RELUES[vue.getUint16(MAGIE.length)];
+  if (!ajoutsAuSol) return undefined;
 
   const longueurEntete = vue.getUint32(MAGIE.length + 2);
   const debutEntete = MAGIE.length + 6;
@@ -391,6 +412,12 @@ export function lireEtat(octets: Uint8Array, station: Station): GameState | unde
     } else {
       soil[cle] = valeur;
     }
+  }
+
+  // Ce qu'une version plus ancienne n'avait pas et dont la valeur est connue
+  // (`VERSIONS_RELUES`) : posé à la fin du sol, sans écraser ce que le bloc dit.
+  for (const [cle, valeur] of Object.entries(ajoutsAuSol)) {
+    if (!(cle in soil)) soil[cle] = valeur;
   }
 
   // Rebâti dans l'ordre d'origine, pour la même raison que le sol : un état
