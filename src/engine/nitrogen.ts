@@ -93,6 +93,11 @@ export function azoteNetDecomposition(carboneDecomposeG: number, azoteDecomposeG
  * Stock d'azote minéral pour lequel une racine prélève à la **moitié** de sa
  * capacité : 0,5 g/m², soit 5 kg N/ha.
  *
+ * **Depuis #247, ce frein pondère le partage et ne borne plus la demande.** Une
+ * prairie tient le minéral à zéro ; appliqué à la demande, il plafonnait un
+ * arbre isolé à 9 % de sa capacité. Il dit qui gagne quand plusieurs racines
+ * se disputent un azote rare (`tick.ts`, passe 3).
+ *
  * La version précédente écrivait ce frein comme une rampe linéaire saturant à
  * 3 g/m² — 30 kg N/ha — et cela ne tenait pas debout de deux façons.
  *

@@ -8,15 +8,17 @@
  * West et Post 2002) ; et
  * les jeunes arbres ne compensent pas avant des années.
  *
- * **La mesure en dit plus que l'énoncé**, et c'est la raison d'être du témoin
- * intact. Le creux existe **aussi** sans labour : une parcelle nue plantée de
- * chênes perd 7,3 à 7,5 t C/ha avant de remonter, parce que l'humus se
- * minéralise à 1,5 %/an (`HUMUS_DECAY_PER_YEAR`) pendant que des plants de
- * trente centimètres ne rendent presque rien à la litière. Le labour n'est donc
- * pas la **cause** du bilan négatif : il l'aggrave d'un neuvième (0,8 t C/ha) et
- * retarde le retour d'un an au plus. Sans le témoin, cet essai aurait attribué
- * au labour un creux qu'il ne fait que creuser — et avec l'ancienne perte de
- * 5 % sans source, il l'aggravait de 40 %.
+ * **La mesure a corrigé l'énoncé deux fois.** Elle a d'abord trouvé un creux
+ * **sans** labour (−7,3 à −7,5 t C/ha) et conclu que c'était la jeunesse du
+ * peuplement, pas le travail du sol. C'était la prairie : elle ne rendait
+ * qu'un débit fixe et minait son humus. Depuis que la strate fabrique sa
+ * matière (#247), une prairie installée tient son humus (Park Grass), et la
+ * plantation qu'on y fait sans travailler le sol **ne creuse pas** : le stock
+ * ne descend jamais sous le départ (+0,20 t C/ha au plus bas). Le creux revient
+ * avec le labour, −2,04 t C/ha la première année, et le stock repasse au-dessus
+ * du départ la septième. C'est ce que dit la littérature de l'afforestation des
+ * prairies : la perte vient de la préparation du sol et de l'arrêt des apports,
+ * pas de l'arbre.
  *
  * Ce qui est épinglé ici, ce sont des **directions** vérifiées graine par graine.
  * La date du croisement est relevée en commentaire et non assertée : elle
@@ -52,16 +54,40 @@ interface Serie {
   croisement: number;
 }
 
-/** Une plantation de chênes, labour préalable ou non. */
-function plantation(seed: number, laboure: boolean): Serie {
-  const station = { ...LIMON_RICHE.station, coteM: COTE, gibierParHa: 0, voisinage: [] };
-  const meteo = syntheticYear(LIMON_RICHE.climat);
-  let state: GameState = createGameState(station, rngStateFromSeed(seed));
+const STATION = { ...LIMON_RICHE.station, coteM: COTE, gibierParHa: 0, voisinage: [] };
+const METEO = syntheticYear(LIMON_RICHE.climat);
+/**
+ * Années de prairie avant la plantation. On plante dans une prairie
+ * **installée**, comme sur le terrain : la parcelle de départ porte une strate
+ * mais pas de litière, et depuis que la strate fabrique sa matière (#247), elle
+ * bâtit 3,8 t C/ha de litière la première année. Partir de là mesurait la
+ * naissance d'une litière, pas une plantation. Vingt ans la mettent à ~11 t C/ha.
+ */
+const ANS_DE_PRAIRIE = 20;
+
+/** La prairie installée d'une graine, calculée une fois pour les deux bras. */
+function prairieInstallee(seed: number): GameState {
+  let state: GameState = createGameState(STATION, rngStateFromSeed(seed));
+  for (let a = 0; a < ANS_DE_PRAIRIE; a++) {
+    for (let w = 0; w < 52; w++) {
+      const m = METEO[w % 52];
+      if (!m) throw new Error("météo manquante");
+      state = tick(state, m).state;
+    }
+  }
+  return state;
+}
+
+/** Une plantation de chênes dans une prairie installée, labour préalable ou non. */
+function plantation(prairie: GameState, laboure: boolean): Serie {
+  const station = STATION;
+  const meteo = METEO;
+  let state = prairie;
   const depart = carbonInventory(state, station.initialSoilCTHa).totalTHa;
   if (laboure) {
     const { state: apres, refusals } = applyAction(state, {
       type: "labourer",
-      week: 0,
+      week: ANS_DE_PRAIRIE * 52,
       x: COTE / 2,
       y: COTE / 2,
       rayonM: COTE,
@@ -95,13 +121,18 @@ describe("le bilan carbone d'une plantation", () => {
   // délai, et la campagne ne tourne pas à la collecte, où rien ne la couvrirait.
   beforeAll(() => {
     for (const seed of GRAINES) {
-      parties.push({ seed, laboure: plantation(seed, true), intact: plantation(seed, false) });
+      const prairie = prairieInstallee(seed);
+      parties.push({
+        seed,
+        laboure: plantation(prairie, true),
+        intact: plantation(prairie, false),
+      });
     }
   }, 900_000);
 
   it("passe SOUS son point de départ dans les premières années", () => {
-    // Mesuré sur le code livré, départ à 73,97 t C/ha : le creux vaut −8,10 /
-    // −8,31 / −8,23 t C/ha après labour, aux douzième et treizième années.
+    // Mesuré dans une prairie installée (85,6 t C/ha au départ) : −2,04 t C/ha
+    // après labour, la première année, sur les trois graines.
     for (const p of parties) {
       expect(p.laboure.creux).toBeLessThan(0);
       // Et il est atteint **tôt** : pas un déclin sans fin, un creux qu'on franchit.
@@ -110,7 +141,8 @@ describe("le bilan carbone d'une plantation", () => {
   });
 
   it("puis repasse au-dessus, sans que la date du croisement soit épinglée", () => {
-    // Croisement relevé : 22ᵉ–23ᵉ année, avec ou sans labour. Le chiffre
+    // Croisement relevé : 7ᵉ année après labour (22ᵉ–23ᵉ avant #247, quand la
+    // prairie minait son humus). Le chiffre
     // est là pour être relu, pas pour contraindre — il tient à toute la
     // croissance, et il a d'ailleurs reculé de deux ans quand l'infradensité
     // (#68) a allégé le carbone vivant des jeunes tiges.
@@ -121,30 +153,28 @@ describe("le bilan carbone d'une plantation", () => {
   });
 
   it("le labour CREUSE le déficit et ne hâte jamais le retour, graine par graine", () => {
-    // C'est ici que le travail du sol se lit, et nulle part ailleurs :
-    // −8,10 / −8,31 / −8,23 avec labour contre −7,30 / −7,52 / −7,44 sans.
-    // Le croisement recule d'un an sur une graine et reste à la même année
-    // sur les deux autres (22/22, 23/23, 23/22) : 0,8 t C/ha, c'est moins d'un
-    // an de croissance d'une jeune chênaie. Avec les 5 % d'avant, le labour
-    // retirait 3,3 t C/ha et reculait le croisement de deux ans partout.
+    // C'est ici que le travail du sol se lit : −2,04 t C/ha avec labour contre
+    // +0,20 sans, et le retour au-dessus du départ à la septième année contre
+    // la première. Le labour retourne la prairie, et pendant qu'elle repousse
+    // elle ne rend plus rien à la litière.
     for (const p of parties) {
       expect(p.laboure.creux).toBeLessThan(p.intact.creux);
       expect(p.laboure.croisement).toBeGreaterThanOrEqual(p.intact.croisement);
     }
   });
 
-  it("mais le labour n'est PAS la cause du bilan négatif : le creux existe sans lui", () => {
-    // La découverte de cette campagne, et la raison pour laquelle le témoin
-    // intact existe. Une parcelle nue plantée sans aucun travail du sol perd
-    // quand même 7,3 à 7,5 t C/ha : l'humus se minéralise à 1,5 %/an et de
-    // jeunes plants ne rendent presque rien à la litière. Le labour ajoute
-    // un neuvième à un creux qu'il n'a pas créé.
+  it("sans labour, une plantation dans une prairie installée ne creuse pas", () => {
+    // **L'essai disait le contraire, et c'est la prairie qui avait tort.** Il
+    // affirmait « le creux existe sans lui » : une parcelle plantée sans travail
+    // du sol perdait 7,3 à 7,5 t C/ha. La strate ne rendait alors qu'un débit
+    // fixe, et l'humus se minéralisait sans rien en face. Une prairie qui
+    // fabrique sa matière tient son humus, et les jeunes chênes s'ajoutent à
+    // elle au lieu de la remplacer.
     //
-    // Cet essai dit donc l'énoncé de I8 plus précisément que I8 lui-même : ce
-    // n'est pas le travail du sol qui rend le bilan négatif, c'est la **jeunesse**
-    // du peuplement.
+    // Prédit avant la mesure : un creux plus faible que 0,5 t C/ha. Mesuré :
+    // le stock ne descend jamais sous le départ (+0,20 au plus bas).
     for (const p of parties) {
-      expect(p.intact.creux).toBeLessThan(0);
+      expect(p.intact.creux).toBeGreaterThan(-0.5);
       expect(p.intact.parAn[ANS - 1]).toBeGreaterThan(p.intact.depart);
     }
   });

@@ -45,6 +45,7 @@ import {
   sedimentPiegeKgM2,
 } from "./boisMort";
 import {
+  CARBON_FRACTION,
   CN_HUMUS,
   cnHumusDuProfil,
   DEADWOOD_DECAY_PER_YEAR,
@@ -99,11 +100,8 @@ import {
   evoluerEmprises,
   facteurEauHerbacee,
   facteurThermique,
-  grainDeLaSemaine,
   HERBACEES,
-  INDEX_CULTURES,
   INERTIE_RESSOURCE_FLORALE,
-  N_CULTURES,
   N_HERBACEES,
   OFFRE_FLORALE_SUFFISANTE,
   partSaisonniere,
@@ -111,7 +109,14 @@ import {
   suivreFeuillage,
   vigueurHerbacee,
 } from "./herbacees";
-import { herbeDemandeAzoteG, herbeDemandeEauL, humiditeVecue } from "./herbe";
+import {
+  azoteCritiqueG,
+  DUREE_VIE_TISSUS_DJ,
+  herbeDemandeEauL,
+  humiditeVecue,
+  RUE_HERBACEE_G_MJ,
+  T_BASE_TISSUS_C,
+} from "./herbe";
 import {
   abriVentIndexe,
   baseHouppierCible,
@@ -124,7 +129,7 @@ import {
 import { lumiereApresBordures } from "./lisiere";
 import { maladiesActives, pressionMaladie, RAYON_INOCULUM_M } from "./maladies";
 import type { WeekWeather } from "./meteo";
-import { weeklyEtpHargreaves } from "./meteo";
+import { rayonnementGlobalSemaineMJ, weeklyEtpHargreaves } from "./meteo";
 import { fermetureDuCouvert, tMinimumSousCouvert } from "./microclimat";
 import {
   cibleReseau,
@@ -253,6 +258,7 @@ import {
 } from "./tranches";
 import type { CauseMort, TreeState } from "./trees";
 import {
+  AZOTE_HOUPPIER_G_M2_AN,
   cnBois,
   dureeChandelleSemaines,
   fractionsRacinairesParHorizon,
@@ -298,6 +304,24 @@ const MULCH_MAX_EFFECT = 0.5;
 const PLAFOND_ENERGIE = 1.15;
 
 const MULCH_FULL_CG = 250;
+/**
+ * Seuil de compensation du prélèvement d'eau, ωc ∈ (0, 1] (Jarvis 1989 ;
+ * Šimůnek et Hopmans 2009). Tant que l'indice de stress pondéré par les racines
+ * reste au-dessus, l'arbre reporte sur les horizons humides ce que les horizons
+ * secs ne donnent plus, et prend toute sa demande ; en dessous, il en prend
+ * ω / ωc. ωc = 1 serait le moteur d'avant, sans compensation.
+ *
+ * **0,9, et pas 0,5** (#247). 0,5 est la compensation **maximale** qui sert
+ * d'illustration à Šimůnek et Hopmans ; essayée, elle faisait transpirer à plein
+ * tout arbre dont la moitié des racines trouvait de l'eau, et le peuplement
+ * asséchait la surface avant l'été : quarante hêtres sur soixante morts de soif
+ * à climat figé, et un hêtre qui ne payait plus le sable de la lande. Les
+ * estimations de terrain sont proches de 1 (Cai et al. 2018, *Vadose Zone J.*
+ * 17 : 160125), et la compensation décroît avec le rapport des racines aux
+ * feuilles (Jarvis 2011, *HESS* 15 : 3431), faible chez un arbre *(0,9 : « proche
+ * de 1 », à confirmer)*.
+ */
+const OMEGA_CRITIQUE = 0.9;
 const G_PER_M2_TO_KG_PER_HA = 10;
 /** semaine du recrutement annuel des semis (printemps) */
 const RECRUITMENT_WEEK = 14;
@@ -864,14 +888,16 @@ export function tick(state: GameState, weather: WeekWeather): TickResult {
   const litterCaMgG = state.soil.litterCaMgG.slice();
   const herbeCouverture = state.soil.herbeCouverture.slice();
   const herbeEmprise = state.soil.herbeEmprise.slice();
-  const cultureGrain = state.soil.cultureGrain.slice();
-  const cultureGrainPotentiel = state.soil.cultureGrainPotentiel.slice();
+  const herbeMatiereSecheG = state.soil.herbeMatiereSecheG.slice();
+  const herbeAzoteG = state.soil.herbeAzoteG.slice();
   const herbeFeuillage = state.soil.herbeFeuillage.slice();
   const herbeBiomasse = state.soil.herbeBiomasse.slice();
   const herbeHumidite = state.soil.herbeHumidite.slice();
   /** engorgement par (cellule, horizon) */
   const waterlogging = new Array<number>(nCells * nH).fill(0);
   const availFactor = new Array<number>(nCells);
+  /** Le même frein, lu sur le stock du sous-sol (lot B). */
+  const availFactorFond = new Array<number>(nCells).fill(0);
   // **Les solutés ne lisent pas le drainage sous le profil** (#291). Il compte
   // l'eau que la nappe fait entrer par le bas et ressortir par le bas — 4,9 m
   // par an sur le sable profond — et qui ne traverse jamais la surface. Deux
@@ -1335,6 +1361,7 @@ export function tick(state: GameState, weather: WeekWeather): TickResult {
     mineralizationSumG += mineralized;
     litterDecaySumG += transfere;
     availFactor[i] = nitrogenAvailabilityFactor(mineralNG[i] ?? 0);
+    availFactorFond[i] = nitrogenAvailabilityFactor(mineralNProfondG[i] ?? 0);
   }
 
   // ── 2 bis. Ruissellement : l'eau descend la pente ─────────────────────────
@@ -1601,7 +1628,76 @@ export function tick(state: GameState, weather: WeekWeather): TickResult {
   const phMean = new Array<number>(nTrees).fill(7);
   const rootFractions = new Array<number[]>(nTrees);
   const cellWaterDemand = new Array<number>(nCells * nH).fill(0);
+  /**
+   * **Le prélèvement compensatoire** (Jarvis 1989 ; Šimůnek et Hopmans 2009) :
+   * un arbre dont la surface sèche reporte sa demande sur les horizons encore
+   * humides, au lieu de ne prendre dans chacun que sa part de racines. La
+   * disponibilité de chaque horizon (`drynessFactor`) est relevée ici, avant
+   * tout prélèvement, et relue à l'identique au service (#115).
+   */
+  const dispoEau = new Float64Array(nCells * nH);
+  for (let i = 0; i < nCells; i++) {
+    for (let h = 0; h < nH; h++) {
+      dispoEau[i * nH + h] = drynessFactor(waterMm[i * nH + h] ?? 0, horizonsHydro[h]?.ruMm ?? 0);
+    }
+  }
+  /**
+   * Le facteur qui répartit la demande d'un arbre entre horizons dans une
+   * cellule : 1 / max(ω, ωc), ω étant l'indice de stress pondéré par ses racines.
+   * La demande de l'horizon h vaut W f_h / max(ω, ωc), et le service la rabat
+   * de la disponibilité de l'horizon : le servi total vaut W ω / max(ω, ωc).
+   */
+  const reportCompensatoire = (i: number, fractions: readonly number[]): number => {
+    let omega = 0;
+    for (let h = 0; h < nH; h++) omega += (fractions[h] ?? 0) * (dispoEau[i * nH + h] ?? 0);
+    return 1 / Math.max(omega, OMEGA_CRITIQUE);
+  };
   const cellNWanted = new Array<number>(nCells).fill(0);
+  /**
+   * **Le partage d'un azote rare** (#247) : la demande et la capacité d'extraction
+   * des arbres de chaque cellule, et la capacité de la strate. Quand le sol ne
+   * sert pas tout le monde, l'azote se partage selon la place que les racines
+   * occupent, pas selon la faim.
+   */
+  const arbresNWanted = new Float64Array(nCells);
+  const arbresCapacite = new Float64Array(nCells);
+  const herbeCapacite = new Float64Array(nCells);
+  /**
+   * **Le même partage, au fond** (#247, lot B) : ce que chaque plante demande au
+   * sous-sol (`mineralNProfondG`) et la capacité qu'elle y a, au prorata de ses
+   * racines sous l'horizon de surface. Le fond ne recevait que le lessivage de
+   * la surface et le rendait au monde : aucune plante n'y puisait.
+   */
+  const cellNWantedFond = new Float64Array(nCells);
+  const arbresNWantedFond = new Float64Array(nCells);
+  const arbresCapaciteFond = new Float64Array(nCells);
+  const herbeCapaciteFond = new Float64Array(nCells);
+  /**
+   * La part de ses racines que chaque herbacée met sous l'horizon de surface, et
+   * sa répartition par horizon : la fonction des arbres, sur la profondeur que
+   * l'atlas lui donne (bornée par le sol pénétrable).
+   */
+  const fractionsHerbe = HERBACEES.map((h) =>
+    fractionsRacinairesParHorizon(epaisseurs, Math.min(h.profondeurRacinesCm, solPenetrableCm)),
+  );
+  const partFondHerbe = fractionsHerbe.map((f) => (nH > 1 ? 1 - (f[0] ?? 1) : 0));
+  /**
+   * La part de sa demande d'azote qu'une plante adresse au fond de la cellule i,
+   * ses racines y mettant la part `fond` : au prorata des racines **fois** ce que
+   * chaque compartiment a à offrir (#310). Une racine en sol riche prend plus
+   * qu'une racine en sol pauvre, et c'est ce que montrent les racines divisées :
+   * la plante compense sur la moitié servie ce que l'autre ne trouve pas
+   * (Robinson 1994, *New Phytologist* 127 : 635). Au seul prorata des racines,
+   * un arbre qui descendait envoyait une part de sa faim vers un fond pauvre,
+   * que la surface ne reprenait jamais : une aubépine de douze ans y perdait
+   * 0,3 m. La même part sert à la demande et au service.
+   */
+  const partFondPonderee = (fond: number, i: number): number => {
+    if (fond <= 0) return 0;
+    const surface = (1 - fond) * (availFactor[i] ?? 0);
+    const profond = fond * (availFactorFond[i] ?? 0);
+    return surface + profond > 0 ? profond / (surface + profond) : fond;
+  };
   /**
    * L'abri au vent, rangé une fois pour la semaine au lieu d'être recalculé en
    * balayant tout le peuplement pour chaque arbre (#99). Construit seulement
@@ -1688,17 +1784,35 @@ export function tick(state: GameState, weather: WeekWeather): TickResult {
     const capPerCell = capG / n;
     const wPerCell = (waterDemandL[t] ?? 0) / n;
     forEachDiscCell(dims, tree.x, tree.y, rootR, (i) => {
+      const report = reportCompensatoire(i, fractions);
       for (let h = 0; h < nH; h++) {
         cellWaterDemand[i * nH + h] =
-          (cellWaterDemand[i * nH + h] ?? 0) + wPerCell * (fractions[h] ?? 0);
+          (cellWaterDemand[i * nH + h] ?? 0) + wPerCell * (fractions[h] ?? 0) * report;
       }
-      // Le mycélium sait capter l'azote **dilué**, là où une racine nue ne
-      // trouverait plus rien : c'est sur ce frein-là qu'il agit, et c'est
-      // pourquoi il compte sur les sols pauvres et pas sur les riches
-      // (où le frein est déjà levé).
+      // **Le frein pèse sur le partage, pas sur la demande** (#247). L'arbre vit
+      // du flux de minéralisation qu'il intercepte (nitrogen.ts) : seul dans
+      // son sol, il prend ce qui arrive, aussi bas que tienne le stock. Brider
+      // sa demande au stock de la semaine faisait d'une racine lente une racine
+      // plafonnée : sous une prairie qui tient le minéral à zéro, un hêtre isolé
+      // ne demandait plus que 9 % de sa capacité et finissait à 10,6 m à
+      // quarante ans, contre 16 dans la table. Le frein dit qui gagne quand
+      // l'azote est rare : il pondère la capacité au partage. Le mycélium, qui
+      // sait capter l'azote **dilué** là où une racine nue ne trouverait plus
+      // rien, agit sur ce frein-là, donc sur la part de l'arbre.
       const dispo = Math.min(1, (availFactor[i] ?? 0) * (gainMyco[t] ?? 1));
-      const demandeN = Math.min(needPerCell, capPerCell * dispo);
-      cellNWanted[i] = (cellNWanted[i] ?? 0) + demandeN;
+      const demandeN = Math.min(needPerCell, capPerCell);
+      // Chaque compartiment reçoit la part de la capacité que les racines y
+      // mettent (lot B), et la part de la demande que ce qu'il offre lui vaut.
+      const fond = nH > 1 ? 1 - (fractions[0] ?? 1) : 0;
+      const demandeFond = partFondPonderee(fond, i);
+      cellNWanted[i] = (cellNWanted[i] ?? 0) + demandeN * (1 - demandeFond);
+      arbresNWanted[i] = (arbresNWanted[i] ?? 0) + demandeN * (1 - demandeFond);
+      arbresCapacite[i] = (arbresCapacite[i] ?? 0) + capPerCell * dispo * (1 - fond);
+      cellNWantedFond[i] = (cellNWantedFond[i] ?? 0) + demandeN * demandeFond;
+      arbresNWantedFond[i] = (arbresNWantedFond[i] ?? 0) + demandeN * demandeFond;
+      arbresCapaciteFond[i] =
+        (arbresCapaciteFond[i] ?? 0) +
+        capPerCell * Math.min(1, (availFactorFond[i] ?? 0) * (gainMyco[t] ?? 1)) * fond;
     });
   }
 
@@ -1708,29 +1822,95 @@ export function tick(state: GameState, weather: WeekWeather): TickResult {
   const herbeDemandeL = new Array<number>(nCells).fill(0);
   /** Azote voulu par le tapis, rangé pour que le service relise la demande. */
   const herbeDemandeNG = new Array<number>(nCells).fill(0);
+  /** Et ce qu'il demande au sous-sol (lot B). */
+  const herbeDemandeFondNG = new Array<number>(nCells).fill(0);
+  /** Par cellule et par espèce : la production possible et l'azote qu'elle demande. */
+  const herbePotentielG = new Float64Array(nCells * N_HERBACEES);
+  const herbeDemandeEspeceG = new Float64Array(nCells * N_HERBACEES);
+  const rayonnementMJ = rayonnementGlobalSemaineMJ(station.latitudeDeg, week, weather);
   for (let i = 0; i < nCells; i++) {
     const couverture = herbeCouverture[i] ?? 0;
     if (couverture <= 0) continue;
     const demandeEau = herbeDemandeEauL(couverture, etpMm, groundLight[i] ?? 1, saisonHerbe);
     herbeDemandeL[i] = demandeEau;
-    cellWaterDemand[i * nH] = (cellWaterDemand[i * nH] ?? 0) + demandeEau;
-    // **par espèce, et pondérée par son exigence** (#136). C'était une
-    // constante multipliée par la couverture ; un blé demande dix fois ce que
-    // demande une graminée spontanée, et sans ça `exigenceMinerale` ne veut
-    // rien dire. Les trois spontanées étant à 1, la somme vaut **exactement**
-    // l'ancienne valeur tant qu'aucune culture n'est semée : le lot est
-    // l'identité sur une parcelle sans culture.
+    // L'eau de la strate se prend là où sont ses racines (lot B) : chaque espèce
+    // au prorata de son feuillage, sur ses fractions racinaires. Une anémone
+    // puise en surface, un blé descend jusqu'au fond.
+    let feuillageTotal = 0;
+    for (let s_ = 0; s_ < N_HERBACEES; s_++)
+      feuillageTotal += Math.max(0, herbeFeuillage[i * N_HERBACEES + s_] ?? 0);
+    for (let s_ = 0; s_ < N_HERBACEES; s_++) {
+      const part =
+        feuillageTotal > 0
+          ? Math.max(0, herbeFeuillage[i * N_HERBACEES + s_] ?? 0) / feuillageTotal
+          : s_ === 0
+            ? 1
+            : 0;
+      if (part <= 0) continue;
+      const fr = fractionsHerbe[s_] ?? [1];
+      for (let h = 0; h < nH; h++) {
+        cellWaterDemand[i * nH + h] =
+          (cellWaterDemand[i * nH + h] ?? 0) + demandeEau * part * (fr[h] ?? 0);
+      }
+    }
+    // **Ce que la strate fabrique cette semaine, et l'azote que ça demande** (#247).
+    // La production est le rayonnement que le feuillage intercepte, fois ce
+    // que la station permet (`capaciteHerbacee` : lumière, pH, tassement — le
+    // facteur que lisait le grain), fois la RUE des plantes en C3. Le besoin
+    // d'azote est ce qui manque pour tenir la courbe critique de dilution à la
+    // biomasse visée. Une plante qui ne pousse pas ne prélève rien : sans quoi
+    // une touffe qui perd ses feuilles en hiver, donc dont la teneur critique
+    // remonte, réclamerait de l'azote au sol gelé.
+    const lumiere = groundLight[i] ?? 1;
+    const plafondTassement = facteurCroissanceTassement(tassement[i] ?? 0);
+    const ph = state.soil.ph[i] ?? 7;
     let demandeN = 0;
+    let demandeFondN = 0;
     for (let s_ = 0; s_ < N_HERBACEES; s_++) {
       const h = HERBACEES[s_];
-      if (!h) continue;
-      demandeN += herbeDemandeAzoteG(
-        (herbeFeuillage[i * N_HERBACEES + s_] ?? 0) * h.exigenceMinerale,
-        saisonHerbe,
-      );
+      const k = i * N_HERBACEES + s_;
+      const feuillage = herbeFeuillage[k] ?? 0;
+      // Ses racines occupent la cellule au prorata de son feuillage, avec la même
+      // capacité par m² de couvert qu'un houppier d'arbre, freinée de même dans
+      // un sol pauvre.
+      const fondH = partFondHerbe[s_] ?? 0;
+      herbeCapacite[i] =
+        (herbeCapacite[i] ?? 0) +
+        (AZOTE_HOUPPIER_G_M2_AN / 52) *
+          Math.max(0, feuillage) *
+          (availFactor[i] ?? 0) *
+          (1 - fondH);
+      herbeCapaciteFond[i] =
+        (herbeCapaciteFond[i] ?? 0) +
+        (AZOTE_HOUPPIER_G_M2_AN / 52) * Math.max(0, feuillage) * (availFactorFond[i] ?? 0) * fondH;
+      if (!h || feuillage <= 0) {
+        herbePotentielG[k] = 0;
+        herbeDemandeEspeceG[k] = 0;
+        continue;
+      }
+      // Le froid ralentit la fabrique autant que la sortie des feuilles : c'est
+      // le facteur thermique de l'espèce, celui qui règle déjà son feuillage
+      // (`tBaseCroissanceC`). Sans lui, un dactyle resté vert en janvier
+      // produisait au rayonnement d'hiver comme en mai.
+      const potentiel =
+        RUE_HERBACEE_G_MJ *
+        rayonnementMJ *
+        feuillage *
+        capaciteHerbacee(h, lumiere, ph) *
+        plafondTassement *
+        facteurThermique(h, weather.tMean);
+      const vise = (herbeMatiereSecheG[k] ?? 0) + potentiel;
+      const demande = potentiel > 0 ? Math.max(0, azoteCritiqueG(vise) - (herbeAzoteG[k] ?? 0)) : 0;
+      herbePotentielG[k] = potentiel;
+      herbeDemandeEspeceG[k] = demande;
+      const demandeFondH = partFondPonderee(fondH, i);
+      demandeN += demande * (1 - demandeFondH);
+      demandeFondN += demande * demandeFondH;
     }
     herbeDemandeNG[i] = demandeN;
+    herbeDemandeFondNG[i] = demandeFondN;
     cellNWanted[i] = (cellNWanted[i] ?? 0) + (herbeDemandeNG[i] ?? 0);
+    cellNWantedFond[i] = (cellNWantedFond[i] ?? 0) + demandeFondN;
   }
 
   // ── Plafond d'énergie ─────────────────────────────────────────────────────
@@ -1760,7 +1940,46 @@ export function tick(state: GameState, weather: WeekWeather): TickResult {
   }
 
   const waterServedRatio = new Array<number>(nCells * nH).fill(0);
+  /** La part servie à la strate, et celle servie aux arbres (#247). */
   const nServedRatio = new Array<number>(nCells).fill(0);
+  const arbresServedRatio = new Float64Array(nCells);
+  /** Les mêmes parts, servies par le sous-sol (lot B). */
+  const nServedRatioFond = new Float64Array(nCells);
+  const arbresServedRatioFond = new Float64Array(nCells);
+  /**
+   * **Un azote rare se partage selon la place occupée, pas selon la faim**
+   * (#247). Servi au prorata des demandes, il allait à la plante la plus
+   * carencée : une prairie qui réclame tout son déficit chaque semaine laissait
+   * les semis d'une friche sans rien. Deux systèmes racinaires dans le même sol
+   * se le partagent selon leur capacité d'extraction, chacun borné par ce qu'il
+   * demande ; ce que l'un ne prend pas va à l'autre. La règle vaut pour chaque
+   * compartiment, surface et fond (lot B). Rend ce qui est pris, et les parts
+   * servies aux arbres et à la strate.
+   */
+  const partager = (
+    stock: number,
+    demandeArbres: number,
+    demandeHerbe: number,
+    capA: number,
+    capH: number,
+  ): { pris: number; ratioArbres: number; ratioHerbe: number; partHerbe: number } => {
+    const voulu = demandeArbres + demandeHerbe;
+    const pris = Math.min(stock, voulu);
+    let partArbres = demandeArbres;
+    let partHerbe = demandeHerbe;
+    if (pris < voulu) {
+      const poidsA = capA + capH > 0 ? capA / (capA + capH) : voulu > 0 ? demandeArbres / voulu : 0;
+      partArbres = Math.min(demandeArbres, pris * poidsA);
+      partHerbe = Math.min(demandeHerbe, pris - partArbres);
+      partArbres = Math.min(demandeArbres, pris - partHerbe);
+    }
+    return {
+      pris,
+      ratioArbres: demandeArbres > 0 ? partArbres / demandeArbres : 0,
+      ratioHerbe: demandeHerbe > 0 ? partHerbe / demandeHerbe : 0,
+      partHerbe,
+    };
+  };
   let transpirationSumL = 0;
   let uptakeSumG = 0;
   /**
@@ -1787,10 +2006,17 @@ export function tick(state: GameState, weather: WeekWeather): TickResult {
     const nWanted = cellNWanted[i] ?? 0;
     if (nWanted > 0) {
       const stock = mineralNG[i] ?? 0;
-      const taken = Math.min(stock, nWanted);
-      const servi = taken / nWanted;
-      nServedRatio[i] = servi;
-      uptakeHerbeSumG += (herbeDemandeNG[i] ?? 0) * servi;
+      const surface = partager(
+        stock,
+        arbresNWanted[i] ?? 0,
+        herbeDemandeNG[i] ?? 0,
+        arbresCapacite[i] ?? 0,
+        herbeCapacite[i] ?? 0,
+      );
+      const taken = surface.pris;
+      arbresServedRatio[i] = surface.ratioArbres;
+      nServedRatio[i] = surface.ratioHerbe;
+      uptakeHerbeSumG += surface.partHerbe;
       mineralNG[i] = stock - taken;
       // Une racine ne trie pas : elle prend les deux formes dans la proportion
       // où elles se présentent (#280).
@@ -1798,6 +2024,25 @@ export function tick(state: GameState, weather: WeekWeather): TickResult {
         ammoniacalNG[i] = Math.max(0, (ammoniacalNG[i] ?? 0) * ((stock - taken) / stock));
       uptakeSumG += taken;
       azotePris = taken;
+    }
+    // **Le sous-sol se partage de même** (lot B). Il ne porte que du nitrate
+    // (l'ammonium ne lessive pas, #280) : rien à rabattre.
+    const nWantedFond = cellNWantedFond[i] ?? 0;
+    if (nWantedFond > 0) {
+      const stockFond = mineralNProfondG[i] ?? 0;
+      const fond = partager(
+        stockFond,
+        arbresNWantedFond[i] ?? 0,
+        herbeDemandeFondNG[i] ?? 0,
+        arbresCapaciteFond[i] ?? 0,
+        herbeCapaciteFond[i] ?? 0,
+      );
+      arbresServedRatioFond[i] = fond.ratioArbres;
+      nServedRatioFond[i] = fond.ratioHerbe;
+      uptakeHerbeSumG += fond.partHerbe;
+      mineralNProfondG[i] = stockFond - fond.pris;
+      uptakeSumG += fond.pris;
+      azotePris += fond.pris;
     }
     // Phosphore et potassium suivent l'azote **réellement** absorbé, pas la
     // demande : une plante bridée par l'azote n'accumule pas du potassium pour
@@ -1836,6 +2081,7 @@ export function tick(state: GameState, weather: WeekWeather): TickResult {
   const thermiques = HERBACEES.map((h) => facteurThermique(h, weather.tMean));
   const capacites = new Array<number>(N_HERBACEES).fill(0);
   const facteursEau = new Array<number>(N_HERBACEES).fill(0);
+  const feuillagesAvant = new Array<number>(N_HERBACEES).fill(0);
   let herbeSum = 0;
   for (let i = 0; i < nCells; i++) {
     const remplissage = ruSurface > 0 ? (waterMm[i * nH] ?? 0) / ruSurface : 0;
@@ -1854,111 +2100,87 @@ export function tick(state: GameState, weather: WeekWeather): TickResult {
       facteursEau[s] = h ? facteurEauHerbacee(h, humidite) : 0;
     }
     const base = i * N_HERBACEES;
+    for (let s = 0; s < N_HERBACEES; s++) feuillagesAvant[s] = herbeFeuillage[base + s] ?? 0;
     evoluerEmprises(herbeEmprise, base, capacites, vigueurs, thermiques);
     suivreFeuillage(herbeFeuillage, herbeEmprise, base, saisonnieres, facteursEau, thermiques);
-    // ── **ce que la strate basse rend au sol** (#201) ───────────────────────────
+    // ── **La strate pousse, vieillit et rend au sol** (#201, #247) ────────────────
     //
-    // Elle ne rendait **rien**. Mesuré avant ce lot, une prairie spontanée à 0,95
-    // de couverture sur limon riche : le stock d'humus perd 42 % en cinquante
-    // ans et la litière reste à 0,00 les deux mille six cents semaines. Park
-    // Grass, prairie permanente non fertilisée depuis 1856, tient son stock.
+    // Ce qu'elle fabrique est la production possible de la semaine
+    // (`herbePotentielG`, calculée avant le partage de l'azote), rabotée par sa
+    // faim d'azote : sous la courbe critique de dilution, la croissance baisse
+    // en proportion de l'indice de nutrition azotée — la teneur de la plante sur
+    // la teneur critique —, ce que font les modèles de culture depuis Lemaire.
     //
-    // **une plante ne peut rendre que ce qu'elle a pris, et c'est la propriété
-    // de conservation de l'azote qui a dû le rappeler.** Le premier jet posait
-    // un taux de renouvellement sur la fiche et en tirait la litière : il
-    // rendait 120 kg N/ha/an là où la strate en prélève 31, soit quatre fois
-    // ce qu'elle avait jamais absorbé, créé de rien chaque année. Trente-quatre
-    // essais sont tombés — un frêne poussait 17 % au-dessus de sa table, la
-    // courbe de Broadbalk crevait son plafond — et `tick-conservation` a
-    // chiffré la fuite à 0,38 kg N/ha par semaine.
+    // Ce qu'elle rend tient à son histoire de vie. **Une pérenne** perd ses tissus
+    // à mesure qu'ils vieillissent (`DUREE_VIE_TISSUS_DJ`) et quand son feuillage
+    // recule — fin de saison, sécheresse, ombre ; les tissus morts tombent en
+    // litière avec la moitié de leur azote, l'autre moitié étant résorbée par la
+    // plante avant la chute (`LITTER_RETURN_FRACTION`, le même patron que
+    // l'arbre). Ce qui est résorbé reste dans la plante : une vernale qui se
+    // retire garde son azote pour le printemps suivant, sans réserve déclarée.
+    // **Une culture** ne perd rien avant la moisson : sa paille et son grain
+    // restent debout, et c'est la moisson qui les partage (`actions.ts`).
     //
-    // Le mécanisme n'avait donc pas besoin d'un taux inventé : **le moteur
-    // porte déjà le flux annuel de la strate, c'est son prélèvement d'azote**
-    // (`herbe.ts`, calibré à ~30 kg N/ha/an). L'azote rendu est celui qui a été
-    // servi, et le carbone qui l'accompagne vaut cet azote fois le C/N de
-    // l'espèce. Conservateur par construction, et ancré sur une grandeur qui
-    // l'était déjà.
+    // La litière a le C/N de ce qui est mort : le carbone de la matière sèche
+    // sur l'azote qui n'a pas été résorbé. Plus de C/N déclaré par espèce.
     //
-    // *Simplification assumée* : le retour se fait la semaine même du
-    // prélèvement, faute d'un pool d'azote dans la plante. L'azote ne
-    // court-circuite pas pour autant — il passe par la **litière**, dont il ne
-    // ressort qu'au rythme de la décomposition, donc avec le délai qu'il faut.
+    // Cela remplace le retour « la semaine même » de #201, qui rendait à la
+    // litière l'azote tout juste prélevé faute d'un pool d'azote dans la plante.
     const servi = nServedRatio[i] ?? 0;
-    if (servi > 0) {
-      let poidsTotal = 0;
-      for (let s = 0; s < N_HERBACEES; s++) {
-        const h = HERBACEES[s];
-        if (h) poidsTotal += (herbeFeuillage[base + s] ?? 0) * h.exigenceMinerale;
+    const ageSemaineDJ = 7 * Math.max(0, weather.tMean - T_BASE_TISSUS_C);
+    const vieillit = Math.min(1, ageSemaineDJ / DUREE_VIE_TISSUS_DJ);
+    let litiereNCellule = 0;
+    let litiereCCellule = 0;
+    for (let s = 0; s < N_HERBACEES; s++) {
+      const fiche = HERBACEES[s];
+      if (!fiche) continue;
+      const k = base + s;
+      const fondS = partFondPonderee(partFondHerbe[s] ?? 0, i);
+      const serviEspece = (1 - fondS) * servi + fondS * (nServedRatioFond[i] ?? 0);
+      let azote = (herbeAzoteG[k] ?? 0) + (herbeDemandeEspeceG[k] ?? 0) * serviEspece;
+      let matiere = herbeMatiereSecheG[k] ?? 0;
+      const potentiel = herbePotentielG[k] ?? 0;
+      if (potentiel > 0) {
+        const critique = azoteCritiqueG(matiere + potentiel);
+        const nutrition = critique > 0 ? Math.min(1, azote / critique) : 1;
+        matiere += potentiel * nutrition;
       }
-      const azoteCellule = (herbeDemandeNG[i] ?? 0) * servi;
-      if (poidsTotal > 0 && azoteCellule > 0) {
-        for (let s = 0; s < N_HERBACEES; s++) {
-          const fiche = HERBACEES[s];
-          if (!fiche) continue;
-          const poids = (herbeFeuillage[base + s] ?? 0) * fiche.exigenceMinerale;
-          if (poids <= 0) continue;
-          // Ce que cette espèce-là a pris, et ce qu'elle en **restitue** : une
-          // pérenne rend tout, une culture garde dans son grain l'azote qui
-          // quittera la parcelle (`azoteDansLeGrain`, herbacees.ts).
-          const pris = (azoteCellule * poids) / poidsTotal;
-          // **la rétranslocation, et c'est le même patron que l'arbre.** Une
-          // plante retire l'azote d'un organe avant de le lâcher : une feuille
-          // qui jaunit a déjà rendu la moitié de son azote au reste de la
-          // plante, et c'est pour cela qu'une litière est toujours plus pauvre
-          // que le tissu vivant dont elle vient. `LITTER_RETURN_FRACTION` porte
-          // exactement ça pour l'arbre — *« part de l'azote acquis dans l'année
-          // qui retourne au sol avec les feuilles ; le reste est retenu »* — et
-          // il n'y a aucune raison que la strate s'en dispense.
-          //
-          // *Ce que ça laisse de côté, et c'est la même dette que pour
-          // l'arbre* : la part retenue devrait vivre dans un pool d'azote de la
-          // plante, et le moteur n'en a pas. Elle n'est donc pas rendue, ce qui
-          // reste une fuite — mais la moitié de celle d'avant ce lot, et une
-          // fuite **nommée**, adossée à un fait (la rétranslocation) plutôt qu'à un
-          // oubli.
-          const n = pris * LITTER_RETURN_FRACTION * (1 - (fiche.culture?.azoteDansLeGrain ?? 0));
-          if (n <= 0) continue;
-          const c = n * fiche.litiere.cSurN;
-          // Le carbone est **crédité** à la production primaire — c'est la plante
-          // qui l'a fixé — et l'azote déclaré comme un retour de litière, sans
-          // quoi le bilan du sol verrait une entrée venue de nulle part.
-          herbeNppKgC += c / 1000;
-          herbeLitiereNG += n;
-          const oldN = litterNG[i] ?? 0;
-          // `litterK` **est la ligne qui manquait au premier jet**, et l'essai l'a
-          // dit sans ambiguïté : la litière s'accumulait à 99 t C/ha après
-          // quarante ans, c'est-à-dire que rien ne s'en décomposait jamais. La
-          // vitesse de décomposition d'une cellule est un mélange pondéré des
-          // vitesses de ce qui y est tombé, et sur une parcelle sans arbre elle
-          // valait zéro faute que personne ne l'ait jamais posée. Elle se
-          // déduit du C/N, donc le trait de la fiche suffit.
-          litterK[i] =
-            (oldN * (litterK[i] ?? 0) + n * litterDecayRate(fiche.litiere.cSurN)) / (oldN + n);
-          litterCaMgG[i] =
-            (oldN * (litterCaMgG[i] ?? CALCIUM_NEUTRE_MG_G) + n * CALCIUM_NEUTRE_MG_G) / (oldN + n);
-          litterNG[i] = oldN + n;
-          litterCG[i] = (litterCG[i] ?? 0) + c;
+      if (!fiche.culture && matiere > 0) {
+        const avant = feuillagesAvant[s] ?? 0;
+        const apres = herbeFeuillage[k] ?? 0;
+        const recul = avant > 0 && apres < avant ? 1 - apres / avant : 0;
+        const meurt = 1 - (1 - vieillit) * (1 - recul);
+        if (meurt > 0) {
+          const matiereMorte = matiere * meurt;
+          const azoteMort = azote * meurt;
+          const azoteLitiere = azoteMort * LITTER_RETURN_FRACTION;
+          matiere -= matiereMorte;
+          azote -= azoteLitiere;
+          litiereNCellule += azoteLitiere;
+          litiereCCellule += matiereMorte * CARBON_FRACTION;
         }
       }
+      herbeMatiereSecheG[k] = matiere;
+      herbeAzoteG[k] = azote;
     }
-    // ── Le **grain** s'accumule (#136) ──────────────────────────────────────────
-    // Le rendement est l'intégrale de ce que la plante assimile, pas une
-    // fonction de son état du jour. Les trois facteurs sont déjà là : ce
-    // qu'elle couvre (le feuillage, qui porte la saison et la sécheresse), ce
-    // que la station lui permet (`capacites`, qui porte la lumière, le pH et
-    // le tassement), et ce que l'azote lui laisse — `nServedRatio`, la part
-    // réellement servie à cette cellule cette semaine.
-    for (let s = 0; s < N_CULTURES; s++) {
-      const s_ = INDEX_CULTURES[s];
-      if (s_ === undefined) continue;
-      if ((herbeEmprise[base + s_] ?? 0) <= 0) continue;
-      const { assimile, potentiel } = grainDeLaSemaine(
-        herbeFeuillage[base + s_] ?? 0,
-        capacites[s_] ?? 0,
-        nServedRatio[i] ?? 0,
-      );
-      cultureGrain[base + s_] = (cultureGrain[base + s_] ?? 0) + assimile;
-      cultureGrainPotentiel[base + s_] = (cultureGrainPotentiel[base + s_] ?? 0) + potentiel;
+    if (litiereNCellule > 0 && litiereCCellule > 0) {
+      // Le carbone est **crédité** à la production primaire — c'est la plante
+      // qui l'a fixé — et l'azote déclaré comme un retour de litière, sans quoi
+      // le bilan du sol verrait une entrée venue de nulle part.
+      herbeNppKgC += litiereCCellule / 1000;
+      herbeLitiereNG += litiereNCellule;
+      const oldN = litterNG[i] ?? 0;
+      // La vitesse de décomposition d'une cellule est un mélange pondéré des
+      // vitesses de ce qui y est tombé, et elle se déduit du C/N.
+      litterK[i] =
+        (oldN * (litterK[i] ?? 0) +
+          litiereNCellule * litterDecayRate(litiereCCellule / litiereNCellule)) /
+        (oldN + litiereNCellule);
+      litterCaMgG[i] =
+        (oldN * (litterCaMgG[i] ?? CALCIUM_NEUTRE_MG_G) + litiereNCellule * CALCIUM_NEUTRE_MG_G) /
+        (oldN + litiereNCellule);
+      litterNG[i] = oldN + litiereNCellule;
+      litterCG[i] = (litterCG[i] ?? 0) + litiereCCellule;
     }
     // Ce que la cellule **couvre** : la somme des feuillages. Tout le reste du
     // moteur lit cette ligne et ignore les espèces.
@@ -1991,16 +2213,19 @@ export function tick(state: GameState, weather: WeekWeather): TickResult {
     let gotN = 0;
 
     forEachDiscCell(dims, tree.x, tree.y, rootR, (i) => {
+      const report = reportCompensatoire(i, fractions);
       for (let h = 0; h < nH; h++) {
-        gotW += wPerCell * (fractions[h] ?? 0) * (waterServedRatio[i * nH + h] ?? 0);
+        gotW += wPerCell * (fractions[h] ?? 0) * report * (waterServedRatio[i * nH + h] ?? 0);
       }
-      // Le **même** `dispo` qu'à la passe de demande, et c'est tout le correctif
+      // La **même** demande qu'à la passe de demande, et c'est tout le correctif
       // de #115 : servir sur une demande plus petite que celle qui a vidé la
       // cellule fait disparaître la différence (mycorhizes.ts, `tick.ts`
       // passe 3).
-      const dispo = Math.min(1, (availFactor[i] ?? 0) * (gainMyco[t] ?? 1));
-      const demandeCell = Math.min(needPerCell, capPerCell * dispo);
-      gotN += demandeCell * (nServedRatio[i] ?? 0);
+      const demandeCell = Math.min(needPerCell, capPerCell);
+      const fond = partFondPonderee(nH > 1 ? 1 - (fractions[0] ?? 1) : 0, i);
+      gotN +=
+        demandeCell *
+        ((1 - fond) * (arbresServedRatio[i] ?? 0) + fond * (arbresServedRatioFond[i] ?? 0));
     });
     const wd = waterDemandL[t] ?? 0;
     const nd = nNeedG[t] ?? 0;
@@ -3452,7 +3677,15 @@ export function tick(state: GameState, weather: WeekWeather): TickResult {
         litiereEnfouieCG[i] = 0;
         // L'azote de la litière part en fumée pour l'essentiel ; le reste
         // reste en cendres, immédiatement disponible.
-        const cendresN = (litterNG[i] ?? 0) * 0.2;
+        // L'herbe sur pied brûle de même : sa matière part, son azote suit la
+        // règle de la litière (#247).
+        let azoteHerbe = 0;
+        for (let s = 0; s < N_HERBACEES; s++) {
+          azoteHerbe += herbeAzoteG[i * N_HERBACEES + s] ?? 0;
+          herbeAzoteG[i * N_HERBACEES + s] = 0;
+          herbeMatiereSecheG[i * N_HERBACEES + s] = 0;
+        }
+        const cendresN = ((litterNG[i] ?? 0) + azoteHerbe) * 0.2;
         mineralNG[i] = (mineralNG[i] ?? 0) + cendresN;
         // L'azote des cendres est ammoniacal (#280) — c'est même la forme sous
         // laquelle un feu le laisse, la nitrification venant après.
@@ -3465,18 +3698,24 @@ export function tick(state: GameState, weather: WeekWeather): TickResult {
       // cellules se découpent en tranches — la ligne de flammes du rendu.
       const rangs = rangsDuFront(brulees, depart.origine, station.coteM);
       const ordonnees = [...rangs].sort((a, b) => a[1] - b[1] || a[0] - b[0]);
-      incendie = {
-        cellulesBrulees: brulees.size,
-        arbresTues: tues,
-        rejets,
-        victimes,
-        chandellesConsumees,
-        carboneTHa: carboneFeuKgC / 1000 / areaHa,
-        origine: depart.origine,
-        brulees: Int32Array.from(ordonnees, ([cellule]) => cellule),
-        rangs: Int32Array.from(ordonnees, ([, rang]) => rang),
-        charges: Float32Array.from(ordonnees, ([cellule]) => charge.parCellule[cellule] ?? 0),
-      };
+      // Un départ qui ne prend pas n'est pas un incendie : la cellule d'allumage
+      // passe le même tirage que les autres (feu.ts), et le front peut s'y
+      // éteindre. Il remontait alors un incendie de zéro cellule, sans front ni
+      // charge, que l'écran et les compteurs prenaient pour un vrai.
+      if (brulees.size > 0) {
+        incendie = {
+          cellulesBrulees: brulees.size,
+          arbresTues: tues,
+          rejets,
+          victimes,
+          chandellesConsumees,
+          carboneTHa: carboneFeuKgC / 1000 / areaHa,
+          origine: depart.origine,
+          brulees: Int32Array.from(ordonnees, ([cellule]) => cellule),
+          rangs: Int32Array.from(ordonnees, ([, rang]) => rang),
+          charges: Float32Array.from(ordonnees, ([cellule]) => charge.parCellule[cellule] ?? 0),
+        };
+      }
     }
   }
 
@@ -3911,8 +4150,8 @@ export function tick(state: GameState, weather: WeekWeather): TickResult {
         litterK,
         herbeCouverture,
         herbeEmprise,
-        cultureGrain,
-        cultureGrainPotentiel,
+        herbeMatiereSecheG,
+        herbeAzoteG,
         ressourceFlorale,
         herbeFeuillage,
         herbeBiomasse,

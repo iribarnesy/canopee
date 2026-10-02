@@ -127,6 +127,29 @@ export function dureeDuJourH(latitudeDeg: number, dayOfYear: number): number {
 }
 
 /**
+ * Coefficient de Hargreaves pour le rayonnement global (FAO-56, éq. 50) : 0,16
+ * pour un site intérieur, 0,19 pour un site côtier. La valeur intérieure, faute
+ * de déclarer la distance à la mer des stations *(à confirmer pour les
+ * stations côtières)*.
+ */
+export const KRS_HARGREAVES = 0.16;
+
+/**
+ * Rayonnement solaire global de la semaine, MJ/m² (FAO-56, éq. 50) :
+ * Rs = kRs × √(Tmax − Tmin) × Ra. L'amplitude thermique dit la nébulosité —
+ * un ciel couvert écrase l'écart entre le jour et la nuit — et c'est la même
+ * lecture que l'ETP de Hargreaves fait déjà : aucune donnée de plus.
+ */
+export function rayonnementGlobalSemaineMJ(
+  latitudeDeg: number,
+  week: number,
+  w: WeekWeather,
+): number {
+  const ra = extraterrestrialRadiation(latitudeDeg, midWeekDayOfYear(week));
+  return KRS_HARGREAVES * Math.sqrt(Math.max(0, w.tMax - w.tMin)) * ra * 7;
+}
+
+/**
  * ETP hebdomadaire (mm) par Hargreaves-Samani :
  * ET0_jour = 0,0023 × Ra(mm) × (Tmoy + 17,8) × √(Tmax − Tmin)
  * Ra converti de MJ·m⁻²·j⁻¹ en mm·j⁻¹ par ×0,408 (FAO-56).

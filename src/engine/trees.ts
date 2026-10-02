@@ -671,51 +671,34 @@ export function profondeurRacinesCm(
  * système de base qui l'**ancre** et le **nourrit**, indépendamment de ce qu'il cherche
  * à boire.
  *
- * **Elle croît avec la maturité**, et une fraction constante ne pouvait pas marcher
- * (#84). Aux deux bouts, les contraintes sont contradictoires :
+ * **Elle ne croît plus avec la maturité** (#247). #84 l'avait fait monter de 0,35
+ * pour un semis à 0,8 pour un arbre mûr, pour tenir deux bouts : qu'un chêne
+ * d'un an reste sous 60 cm (`racines.test.ts`), et qu'un hêtre de vingt mètres
+ * jamais assoiffé ne porte pas 36 à 44 cm de racines (rapport racines/hauteur
+ * 0,018 à 0,022, contre 0,04 à 0,06 aux relevés d'arrachage). Une fraction
+ * constante de 0,8 tient les deux : le **potentiel** d'un semis est déjà faible
+ * (`profondeurRacinesCm`, 40 cm pour un chêne d'un an, donc 32 cm de plancher).
  *
- * - un **semis** démarre en surface quelles que soient les capacités de son espèce,
- *   et `racines.test.ts` l'exige — un chêne d'un an reste sous 60 cm alors que
- *   son espèce peut descendre à 250 ;
- * - un **arbre mûr** doit tenir debout. À 35 % du potentiel, un hêtre de vingt
- *   mètres jamais assoiffé portait 36 à 44 cm de racines selon le banc, soit un
- *   rapport racines/hauteur de 0,018 à 0,022, quand les relevés d'arrachage
- *   donnent 0,04 à 0,06.
+ * Et c'est la mesure qui le demande. Bakker et al. (2008, *J. For. Res.*
+ * 13 : 176) ont suivi des hêtraies de 9, 26, 82 et 146 ans jusqu'à 120 cm : la
+ * biomasse de racines fines y est la plus forte dans les deux plus jeunes, et
+ * sa répartition dépend du sol plus que de l'âge. Un jeune arbre explore son
+ * profil ; le plancher croissant le laissait en surface tant qu'il n'avait pas
+ * soif. Sous la litière d'une prairie qui garde la surface fraîche, un hêtre de
+ * dix ans restait à 25 cm pour un horizon de 35, et une sécheresse en tuait
+ * quarante sur soixante.
  *
- * Ce n'est pas la plasticité qui était en cause — elle est juste, et c'est le
- * mécanisme qui la porte (`nouvelleProfondeurRacines` ne fait descendre les
- * racines que sous l'effet de la **soif**). C'est que le plancher ne représente pas
- * la recherche d'eau : il représente le squelette structurel, et un squelette ne
- * se dimensionne pas en part du potentiel de l'espèce mais en part de ce que
- * l'arbre a déjà construit. Un semis n'a rien à ancrer ; un arbre de
- * vingt-cinq mètres si.
- *
- * Mesuré sur le code livré, hêtre isolé, graine 7, limon riche :
- *
- * | | 30 ans | 60 ans | 90 ans |
- * |---|---|---|---|
- * | série (été sec) | 5,9 m / 60 cm | 13,3 m / 87 cm | 16,4 m / 96 cm |
- * | site jamais sec | 9,0 m / 43 cm | 16,9 m / 72 cm | 20,5 m / 79 cm |
- *
- * En régime sec, la soif atteint le potentiel de toute façon : ce lot ne
- * déplace **rien** sur les stations sèches. C'est le régime frais qu'il corrige.
- * Le rapport racines/hauteur y passe de 0,022 — c'est le chiffre que `tempete.ts`
- * avait relevé et documenté, 44 cm pour un hêtre de vingt mètres — à 0,039,
- * quand le régime sec tient 0,059. L'écart entre les deux régimes tombe donc de
- * 2,7 × à 1,5 ×, l'ordre que donnent les comparaisons de terrain, et le barème
- * d'ancrage de `tempete.ts` en dépendait directement.
+ * Ce n'est pas la plasticité qui change : au-dessus du plancher, la soif fait
+ * toujours descendre les racines jusqu'au potentiel (`nouvelleProfondeurRacines`).
  */
-const RACINES_PLANCHER_JEUNE = 0.35;
-/** Part du potentiel qu'un arbre **adulte** tient pour son seul ancrage. */
-const RACINES_PLANCHER_MUR = 0.8;
+const RACINES_PLANCHER = 0.8;
 
 /**
- * Part du potentiel garantie à cette taille — l'interpolation entre les deux
- * précédentes, sur la même mesure de maturité que `profondeurRacinesCm`.
+ * Part du potentiel garantie à cette taille. Constante (voir `RACINES_PLANCHER`) ;
+ * la signature garde l'espèce et la hauteur, que lisent ses appelants.
  */
-export function partPlancherRacines(espece: EspeceV0, heightM: number): number {
-  const maturite = Math.min(1, Math.max(0, heightM / (0.6 * espece.hauteurMaxM)) ** 0.7);
-  return RACINES_PLANCHER_JEUNE + (RACINES_PLANCHER_MUR - RACINES_PLANCHER_JEUNE) * maturite;
+export function partPlancherRacines(_espece: EspeceV0, _heightM: number): number {
+  return RACINES_PLANCHER;
 }
 /** Vitesse maximale d'approfondissement d'un arbre assoiffé, cm/an *(à calibrer)*. */
 const APPROFONDISSEMENT_CM_AN = 25;

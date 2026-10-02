@@ -61,7 +61,126 @@ qu'un rapport (voir la note de maintenance).
 Séparer calibration et validation : caler un paramètre sur un âge, garder
 l'autre âge pour vérifier.
 
-## Ce que le dernier lot a appris (l'azote de l'humus, #247)
+## Ce que le dernier lot a appris (la strate fabrique de la matière, #247)
+
+La strate prélevait un débit fixe, multiplié par une « exigence » de dix pour
+le blé. Elle fabrique maintenant de la matière, et son besoin d'azote sort de
+la courbe critique de dilution. On demandait que les 3 kg N par quintal du blé
+se déduisent d'autre chose : ils sortent à 2,4-2,5.
+
+### Écrire la cible sur la fiche empêche de la retrouver
+
+Un besoin par quintal posé sur la fiche aurait rendu 3 kg N/q à coup sûr, et
+n'aurait rien dit. Tiré d'une loi commune aux plantes en C3, il tombe à 2,5, et
+l'écart désigne une cause (la racine qui ne lit que la surface) au lieu de la
+cacher. La même loi, sans rien de plus, rend Park Grass : une prairie qui
+prélève 50 kg N/ha/an et dont l'humus tient.
+
+### Un débit déclaré ne sait pas ce que la plante fabrique
+
+Le débit de la strate était juste en moyenne pour une prairie, et faux pour
+tout le reste : il ne bougeait ni avec la lumière, ni avec la fertilisation,
+ni avec l'âge des tissus. Remplacer un flux calé par la loi qui le produit fait
+bouger ensemble ce qui doit bouger ensemble.
+
+### Le chiffre qu'on refuse d'écrire désigne le mécanisme qui manque
+
+Le besoin du blé sortait à 2,4-2,5 kg N par quintal, contre 3 chez Arvalis.
+L'écrire sur la fiche aurait fermé l'écart sans rien apprendre. Il désignait
+une cause : la racine du blé ne lisait que la surface, et 123 kg N/ha/an
+filaient dessous. Le lot B (chaque plante puise là où sont ses racines) le
+fait tomber à 2,99 sans qu'aucun nombre du blé ait bougé, et Broadbalk sans
+apport se pose sur son ~1 t/ha.
+
+### Une complémentarité attendue peut devenir une concurrence
+
+Le lot B devait rendre au noyer le nitrate lessivé sous le blé, le « filet de
+sécurité » de l'agroforesterie. Mais le blé descend aussi : plus rien n'est
+lessivé, et dans une allée non fertilisée le noyer lui dispute l'azote du
+fond (0,52 à l'an 33 au lieu de 0,56). Un mécanisme qui donne accès à une
+ressource le donne à tous ceux dont les racines y arrivent.
+
+### Quand une famille d'échecs a une seule cause, ne pas soigner chaque membre
+
+Une fois l'eau de surface partagée avec l'herbe, les jeunes plantations sont
+mortes de soif dans deux essais à la fois : l'aulnaie des ravageurs et la
+cohorte de hêtres de `climat`. Le premier remède, le prélèvement compensatoire à ωc = 0,5, est
+la valeur la plus forte qu'on trouve dans la littérature. Il ne sauvait que 47
+aulnes sur 144. Les deux échecs avaient une cause commune : un hêtre de dix
+ans n'avait que 25-30 cm de racines. Le plancher racinaire montait avec la
+maturité, sans rien pour le justifier (Bakker et al. 2008 : les hêtraies les
+plus jeunes ont le plus de racines fines, réparties selon le sol). Avec le
+plancher constant, 121 aulnes sur 144 vivent, 0 hêtre meurt de soif, et ωc
+revient à 0,9, la valeur qu'on mesure sur le terrain. Avant de doser un
+remède, chercher l'organe qui manque.
+
+### Une variante jetable trouve la cause plus vite qu'une hypothèse bien argumentée
+
+L'aubépine perdait 0,3 m depuis le plancher racinaire constant. L'explication
+la plus séduisante était la forme du profil racinaire, qui s'étirait avec la
+profondeur. Le profil de Jackson, sourcé et approuvé, a été écrit et mesuré :
++0,02 m, et il est reparti. La cause est venue d'une variante d'une ligne,
+« l'arbre ne prend son azote qu'en surface » : 3,94 m. Le lot B adressait au
+fond pauvre une part de la demande que la surface ne reprenait jamais. Avant
+d'écrire un mécanisme, couper l'arbre causal avec un interrupteur grossier.
+
+### Deux correctifs approuvés peuvent repartir, et c'est le système qui marche
+
+La motte de pépinière rejointe à vitesse finie (B) et le profil de Jackson
+avaient le feu vert de l'auteur. Mesurés, ils ne changeaient pas ce qu'ils
+visaient : le hêtre de la lande s'installait quand même, l'aubépine ne
+remontait pas. Un feu vert autorise un essai, pas un mécanisme qui n'agit pas.
+Les deux sont dans le carnet de pré-enregistrement avec leurs chiffres, pas
+dans le moteur.
+
+### Une borne relevée sur le moteur tombe au premier changement qui touche son tirage
+
+Trois bornes ont lâché pendant ce lot sans qu'aucune réalité ne bouge : la
+tempête qui couchait « trois fois plus » de pins que de hêtres (en 1999, les
+conifères ont perdu deux fois plus que les feuillus, IFN 2003), la fauche « à moins de dix points » entre deux sols,
+la moyenne des bases « au-dessus de 1,5 » (graines de 1,01 à 1,72 pour un effet
+de 0,26). Aucune n'avait de source. Elles ont été remplacées par ce que le
+terrain dit, une direction, ou retirées avec l'accord de l'auteur.
+
+### Un surplus faux peut nourrir tout ce qui pousse à côté
+
+Sur main, la prairie minait son humus (−36 % en quarante ans) et lessivait 85 à
+105 kg N/ha/an. Les arbres de tous les essais plantés dans l'herbe vivaient de
+ce surplus, que personne ne voyait comme une source. La prairie réaliste le
+retire, et quarante-neuf essais tombent d'un coup : un hêtre isolé fait 10,6 m
+à quarante ans au lieu de 16. Quand une correction juste fait tomber un pan
+entier, chercher ce que l'erreur nourrissait avant de chercher ce que la
+correction casse.
+
+### Un frein sur un stock devient un plafond quand un voisin vide le stock
+
+Le frein de Michaelis-Menten était appliqué à la demande de l'arbre, calculé
+sur le stock de la semaine. Sous une prairie qui tient le minéral à zéro,
+l'arbre ne demandait plus que 9 % de sa capacité, alors que le partage lui en
+aurait donné 36 %. Le frein dit la vitesse d'une racine face à une
+concentration ; au pas d'une semaine, appliqué à la demande, il interdisait à
+l'arbre de vivre du flux. Il pèse maintenant sur le partage, et le hêtre isolé
+revient à 16,7 m sans qu'aucun nombre ait bougé. La même phrase était écrite
+dans `nitrogen.ts` (« brider le prélèvement à proportion du stock inverse la
+causalité ») : le code la contredisait.
+
+### Un correctif sans effet se retire
+
+Freiner la demande de l'herbe comme celle de l'arbre semblait la symétrie
+évidente. Mesuré avant d'être gardé : prairie identique, blé 7,43 t/ha contre
+7,49, hêtre 10,65 m. Il ne corrigeait rien, il est parti. Un correctif qui ne
+change pas le résultat ajoute une règle sans ajouter de comportement.
+
+### Un dispositif d'essai peut cacher une plante
+
+Les essais de plomberie du sous-sol disaient « parcelle nue » et tournaient
+sous la prairie par défaut. Elle fuyait, donc le fond se remplissait, et
+personne n'a vu qu'il y avait une prairie. Quand elle a cessé de fuir, les
+essais ont perdu leur sujet. Ils tournent maintenant sur un lysimètre tenu nu
+par le banc. Une jachère travaillée a été essayée d'abord : à cinq labours par
+an, l'herbe repousse à 0,91 de couverture entre deux passages.
+
+## Ce qu'un lot plus ancien a appris (l'azote de l'humus, #247)
 
 Retirer une règle spéciale (la litière minéralisée d'un coup au labour) a fait
 sortir C16 de sa bande, et la cause était ailleurs : l'humification créait de
@@ -3380,7 +3499,9 @@ montre — un gradient monotone sur trois couverts — et non ce qu'on espérait
 
 ## File d'attente
 
-**Ce que #201 laisse, et c'est le gros morceau.** **le prélèvement d'azote de la**
+**Fait depuis (#247)** : la strate fabrique de la matière, son prélèvement en
+sort, et la rétranslocation vit dans un pool d'azote de la plante. Ce qui
+suit est l'état d'avant, gardé pour l'histoire. **Ce que #201 laisse, et c'est le gros morceau.** **le prélèvement d'azote de la**
 **strate est trop bas**. La strate rend maintenant sa matière, mais ce qu'elle rend
 est borné par ce qu'elle prend — 31 kg N/ha/an (`HERBE_AZOTE_G_M2_SEMAINE`,
 marqué *(à calibrer)*), soit 0,52 t C/ha/an de litière là où il en faudrait ~1,9

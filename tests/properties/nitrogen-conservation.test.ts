@@ -96,20 +96,32 @@ describe("le sous-sol de l'azote : ce que la surface perd, elle le passe (#247 l
   /**
    * Une station à deux horizons, et une à un seul : les deux clauses du lot.
    *
-   * On plante peu et on laisse filer : ce qu'on regarde est la **plomberie**, et
-   * un peuplement dense la masquerait en prélevant tout avant le drainage.
+   * Ce qu'on regarde est la **plomberie** : un **lysimètre tenu nu**. Une plante
+   * qui prélève tout avant le drainage la masquerait, et c'est ce que fait
+   * maintenant la prairie spontanée (#247) : elle tient le minéral à zéro et ne
+   * lessive plus rien. Ces essais tournaient sur elle en la croyant nue — elle
+   * fuyait alors 85 à 105 kg N/ha/an.
+   *
+   * Le banc désherbe donc chaque semaine, comme on désherbe une case de mesure :
+   * aucune règle du moteur ne change, la strate ne prélève simplement rien. Une
+   * jachère travaillée a été essayée d'abord et rejetée : à cinq labours par an,
+   * l'herbe repousse à 0,91 de couverture entre deux passages.
    */
   function partie(sc: StationClimat, ans: number, unSeulHorizon = false) {
     const premier = sc.station.profil[0];
     if (premier === undefined) throw new Error("profil vide");
     const profil = unSeulHorizon ? [premier] : sc.station.profil;
-    const station: Station = { ...sc.station, coteM: 20, voisinage: [], profil };
+    const station: Station = { ...sc.station, coteM: 20, voisinage: [], profil, herbeInitiale: 0 };
     const weather = syntheticYear(sc.climat);
     let state = createGameState(station, rngStateFromSeed(5));
     let sortiSumKgHa = 0;
     for (let w = 0; w < ans * 52; w++) {
       const m = weather[w % weather.length];
       if (!m) throw new Error("météo manquante");
+      state.soil.herbeEmprise.fill(0);
+      state.soil.herbeFeuillage.fill(0);
+      state.soil.herbeCouverture.fill(0);
+      state.soil.herbeBiomasse.fill(0);
       const r = tick(state, m);
       state = r.state;
       sortiSumKgHa += r.fluxes.leachedKgHa;
@@ -163,7 +175,7 @@ describe("le sous-sol de l'azote : ce que la surface perd, elle le passe (#247 l
     // ne s'accumule pas : il s'équilibre. Le premier jet de cet essai affirmait
     // le contraire et il est tombé, ce qui est exactement ce qu'on lui demande.
     //
-    // Relevé sur trente ans, parcelle nue :
+    // Relevé sur trente ans, « parcelle nue » qui était en fait la prairie spontanée :
     //
     //     an  1   surface 8,81   profond 24,26   rapport 2,75
     //     an  3   surface 8,96   profond 23,31           2,60
@@ -184,6 +196,15 @@ describe("le sous-sol de l'azote : ce que la surface perd, elle le passe (#247 l
     // ~2,1 avec les deux cellules de mélange). Il dérive de 4 % en vingt-quatre
     // ans pendant que les deux stocks perdent un tiers : toujours un budget qui
     // suit la surface, pas un puits. La garde se lit donc en **relatif**.
+    //
+    // **Sur le lysimètre tenu nu** (les relevés ci-dessus étaient ceux de la
+    // prairie qui fuyait) : surface 10,00 / 8,79 / 7,33 / 4,53 / 2,77 kg/ha et
+    // fond 36,2 / 32,4 / 27,0 / 16,4 / 9,8 aux ans 1, 3, 6, 15 et 30, rapport
+    // 3,62 / 3,68 / 3,69 / 3,62 / 3,55. Les énoncés et le seuil ont été écrits
+    // avant la mesure et n'ont pas bougé : le rapport dérive de 3,8 % pendant
+    // que les deux stocks perdent près des deux tiers. Le sol nu perd surtout
+    // par érosion (413 kg N/ha d'humus la première année, contre 93
+    // minéralisés) : c'est le module d'érosion, hors de cet essai.
     const six = partie(LIMON_RICHE, 6);
     const trente = partie(LIMON_RICHE, 30);
     // Les deux stocks se vident — la parcelle nue perd son azote.

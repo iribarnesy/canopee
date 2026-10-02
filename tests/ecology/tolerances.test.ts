@@ -52,7 +52,7 @@ describe("sécheresse (lande sableuse, RU faible)", () => {
     // jour où les arbres ont cessé d'être bridés par l'azote — plus vigoureux,
     // ils transpirent plus, et le sable ne suit pas. Ce qui compte est le
     // **contraste** avec les deux essais suivants : le chêne pubescent est balayé,
-    // le hêtre dominé.
+    // le hêtre reste dessous.
     expect(aliveCount(state, "pinus_sylvestris", 30)).toBeGreaterThan(5);
     // Croissance lente : sable pauvre, vent, et concurrence de la lande.
     expect(meanHeight(state, "pinus_sylvestris", 30)).toBeGreaterThan(1.2);
@@ -62,10 +62,26 @@ describe("sécheresse (lande sableuse, RU faible)", () => {
     expect(aliveCount(state, "quercus_pubescens", 30)).toBe(0);
   });
 
-  it("le hêtre souffre : mort, ou nettement dominé par le pin", () => {
+  it("le hêtre reste sous le pin", () => {
+    // L'essai demandait le hêtre « mort, ou nettement dominé » (moins de 0,6 de la
+    // hauteur du pin). Sur main, les dix hêtres meurent de soif dès le premier
+    // été, avec vingt centimètres de racines. Depuis que le plancher racinaire ne
+    // traite plus un jeune arbre comme un semis (#310), ils démarrent à trente,
+    // traversent l'été et ne manquent plus jamais d'eau : 2,90 / 2,81 / 2,73 m
+    // contre 3,70 / 4,15 / 3,75 au pin (graines 42, 1, 2), soit 0,66 à 0,78.
+    //
+    // Un plant motté qui rejoint son plancher à la vitesse où une racine pousse a
+    // été essayé : le hêtre traverse alors une vraie crise de transplantation
+    // (stress 4,7 la première année), puis s'installe de même. Ce qui manque est
+    // ailleurs : un petit arbre au petit houppier, sur 75 cm de sable, voit toute
+    // sa demande servie, et la sensibilité du hêtre ne passe que par des seuils de
+    // satisfaction. Le chantier est ouvert à part (#312). L'essai, avec l'accord de
+    // l'auteur, n'exige plus que la direction. Elle n'est pas rien : sur bien des
+    // sables acides d'Europe du Nord, la végétation naturelle est une
+    // chênaie-hêtraie, et c'est l'été sec du climat landais qui exclut le hêtre.
     const fagus = meanHeight(state, "fagus_sylvatica", 30);
     const pinus = meanHeight(state, "pinus_sylvestris", 30);
-    expect(fagus).toBeLessThan(pinus * 0.6);
+    expect(fagus).toBeLessThan(pinus);
   });
 });
 

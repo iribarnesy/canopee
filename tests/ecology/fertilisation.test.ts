@@ -6,12 +6,13 @@
  * affirme, et toutes deux contre **Broadbalk**, l'essai de fertilisation le plus
  * ancien du monde :
  *   1. la courbe de réponse **tombe** — elle n'est écrite nulle part ;
- *   2. minéral et fumier ne font pas la même chose, et c'est le lessivage qui
- *      les sépare.
+ *   2. minéral et fumier ne font pas la même chose : le fumier construit un
+ *      sol, le minéral le traverse.
  */
 
 import { describe, expect, it } from "vitest";
 import { applyAction, type GameAction, grainRecoltableT } from "../../src/engine/actions";
+import { CN_HUMUS } from "../../src/engine/carbon";
 import { HERBACEES } from "../../src/engine/herbacees";
 import { syntheticYear } from "../../src/engine/meteo";
 import { rngStateFromSeed } from "../../src/engine/rng";
@@ -32,7 +33,13 @@ function bleContinu(
   ans: number,
   mineralKgNHa: number,
   fumierKgNHa = 0,
-  options: { cote?: number; rayonM?: number; rangs?: number[] } = {},
+  options: {
+    cote?: number;
+    rayonM?: number;
+    rangs?: number[];
+    /** Appelée sur l'état final, pour lire le sol de la zone cultivée. */
+    fin?: (state: GameState, cellules: number[]) => void;
+  } = {},
 ): number[] {
   const cote = options.cote ?? COTE;
   const rayon = options.rayonM ?? R;
@@ -100,6 +107,7 @@ function bleContinu(
       state = tick(state, m).state;
     }
   }
+  options.fin?.(state, cellulesDeLaZone(cote, zone));
   return rendements;
 }
 
@@ -213,8 +221,15 @@ describe("la courbe de réponse de Broadbalk TOMBE, elle n'est écrite nulle par
     // 0,6 t/ha de moins. Grain lu sur pied, et labour à 1 % d'humus par passage
     // (West et Post 2002) : **minéral 192 → 7,49, fumier → 8,61**, contre 8-9 et
     // ~9 chez Broadbalk.
+    //
+    // **Et le fumier se juge à l'équilibre, pas à trente ans** (#247, lot B).
+    // Depuis que le blé puise au fond, le minéral 192 rend 9,28 t/ha et le
+    // fumier 7,16 aux ans 21-30 : un fumier frais ne libère qu'une part de son
+    // azote, et le reste construit le sol. Broadbalk compare une parcelle fumée
+    // depuis 1843 ; la gamme de l'essai se lit donc à cent ans. Prédit avant la
+    // mesure entre 7,5 et 10 t/ha aux ans 91-100 : 7,79.
     const fort = dernieres(bleContinu(ANS, 192));
-    const fumier = dernieres(bleContinu(ANS, 0, 240));
+    const fumier = dernieres(bleContinu(101, 0, 240));
     // Le plafond d'avant est franchi, et largement.
     expect(fort).toBeGreaterThan(5.5);
     // Et le fumier atteint la gamme de l'essai.
@@ -224,22 +239,42 @@ describe("la courbe de réponse de Broadbalk TOMBE, elle n'est écrite nulle par
 });
 
 describe("minéral et fumier ne font pas la même chose", () => {
-  it("à azote égal, le fumier tient et le minéral s'en va", () => {
-    // **C'est le lessivage qui les sépare, et le moteur savait déjà le faire.**
-    // Le minéral arrive dans le pool disponible — donc lessivable ; le fumier
-    // arrive dans la litière, se minéralise sur des années et ne part pas tant
-    // qu'il ne l'est pas.
+  it("à azote comparable, le fumier construit un sol et le minéral le traverse", () => {
+    // **L'essai disait « le fumier tient et le minéral s'en va », par le
+    // lessivage, et le lot B l'a retourné** (#247). Un blé qui puise au fond
+    // reprend l'azote minéral apporté au printemps : 30 kg N/ha/an lessivés aux
+    // ans 21-30, contre 60 pour le fumier, épandu au semis d'automne et
+    // minéralisé quand le blé ne prend rien. C'est le constat de Broadbalk : la
+    // parcelle fumée y est parmi les plus lessivantes (Goulding et al. 2000).
     //
-    // Mesuré au centre après trente ans : le plot minéral 192 porte 0,98 g/m²
-    // d'azote minéral et **rien** en litière ; le plot fumier en porte 4,50 et
-    // 20,25 de litière. Le second a constitué un stock, le premier non.
-    const ANS = 30;
-    const mineral = bleContinu(ANS, 192);
-    const fumier = bleContinu(ANS, 0, 240);
-    const moy = (r: number[]) => r.slice(-10).reduce((a, b) => a + b, 0) / 10;
-    // Broadbalk dit la même chose : à azote comparable, le fumier fait mieux
-    // sur la durée, parce qu'il construit un sol au lieu de le traverser.
-    expect(moy(fumier)).toBeGreaterThan(moy(mineral));
+    // Ce qui reste vrai, et que les deux énoncés ci-dessous prédisaient avant la
+    // mesure : le fumier **construit un stock** et son rendement **monte**, quand
+    // le minéral rend autant à trente ans qu'à dix.
+    const ANS = 31;
+    let organiqueMineral = 0;
+    let organiqueFumier = 0;
+    const azoteOrganique = (s: GameState, cellules: number[]) =>
+      cellules.reduce(
+        (t, i) => t + (s.soil.humusCG[i] ?? 0) / CN_HUMUS + (s.soil.litterNG[i] ?? 0),
+        0,
+      ) / Math.max(1, cellules.length);
+    const mineral = bleContinu(ANS, 192, 0, {
+      fin: (s, c) => {
+        organiqueMineral = azoteOrganique(s, c);
+      },
+    });
+    const fumier = bleContinu(ANS, 0, 240, {
+      fin: (s, c) => {
+        organiqueFumier = azoteOrganique(s, c);
+      },
+    });
+    const moy = (r: number[], de: number, a: number) =>
+      r.slice(de, a + 1).reduce((t, v) => t + v, 0) / (a - de + 1);
+    // Le stock : 891 contre 651 g N/m² d'humus et de litière (+37 %).
+    expect(organiqueFumier).toBeGreaterThan(1.1 * organiqueMineral);
+    // Le fumier monte (6,82 → 7,17 t/ha) ; le minéral tient (9,33 → 9,27).
+    expect(moy(fumier, 21, 30)).toBeGreaterThan(moy(fumier, 3, 12));
+    expect(Math.abs(moy(mineral, 21, 30) / moy(mineral, 3, 12) - 1)).toBeLessThan(0.03);
   }, 900_000);
 });
 

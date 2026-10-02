@@ -184,10 +184,17 @@ describe("en partie : le geai plante les chênes, le sanglier retourne le sol", 
     }
   });
 
-  it("ce qu'il enfouit ne disparaît pas : l'humus y gagne", () => {
-    // Un boutis est un **enfouissement**, pas une combustion. La litière passe au
-    // pool lent, elle ne part pas en fumée — et ça se voit sur le stock.
-    for (const m of MESURES) expect(m.forte.humus).toBeGreaterThan(m.sans.humus);
+  it("ce qu'il enfouit ne disparaît pas : un boutis n'est pas une combustion", () => {
+    // Un boutis est un **enfouissement**, pas une combustion. L'essai disait
+    // « l'humus y gagne », parce que la litière retournée passait tout droit
+    // dans l'humus. Depuis #308, la litière enfouie se décompose selon son C/N
+    // comme toute litière (C9) : l'enfouir ne range plus rien dans l'humus, et
+    // le tapis déchiré rend un peu moins à la litière. Prédit avant la mesure des
+    // graines 5 et 7 : l'humus à moins d'un demi-pour-cent du témoin. Mesuré :
+    // 0,99984 / 0,99987 / 0,99990. Rien ne part en fumée.
+    for (const m of MESURES) {
+      expect(Math.abs(m.forte.humus / m.sans.humus - 1)).toBeLessThan(0.005);
+    }
   });
 });
 

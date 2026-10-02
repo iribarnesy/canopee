@@ -159,24 +159,30 @@ describe("complémentarité verticale sur sol contrasté", () => {
     const sec = sousLaPluie(320);
 
     // Le pivot va chercher le limon sous le manteau de sable ; le traçant reste
-    // dedans. Mesuré à douze ans, année arrosée : 122 cm contre 81.
+    // dedans. Mesuré à douze ans, année arrosée : 142 cm contre 79.
     expect(arrose.pivot.rootDepthCm).toBeGreaterThan(SABLE_CM);
     expect(arrose.tracant.rootDepthCm).toBeLessThan(SABLE_CM);
 
     // Et l'écart se **creuse** quand on assèche, ce qui est le mécanisme lui-même :
-    // 147 cm contre 81. Le pivot gagne vingt-cinq centimètres, le traçant **pas**
-    // **un seul**.
+    // 165 cm contre 84. Le pivot gagne vingt-trois centimètres, le traçant six.
     expect(sec.pivot.rootDepthCm).toBeGreaterThan(arrose.pivot.rootDepthCm);
     expect(sec.pivot.rootDepthCm - arrose.pivot.rootDepthCm).toBeGreaterThan(
       sec.tracant.rootDepthCm - arrose.tracant.rootDepthCm,
     );
 
     // Et c'est bien qu'il **ne peut pas**, non qu'il n'a pas soif : à 320 mm il est
-    // collé au potentiel que sa taille et son espèce lui accordent (81 cm pour
-    // 81,1 de potentiel), quand le pivot en a encore trente devant lui. Sans
-    // cette ligne, l'essai ne saurait pas distinguer « il plafonne » de « rien
-    // ne lui a été demandé » — et c'est exactement la confusion qui avait fait
-    // écrire la mort du bouleau.
+    // collé au potentiel que sa taille et son espèce lui accordent (84,29 cm pour
+    // 84,32 de potentiel). Sans cette ligne, l'essai ne saurait pas distinguer
+    // « il plafonne » de « rien ne lui a été demandé » — et c'est exactement la
+    // confusion qui avait fait écrire la mort du bouleau.
+    //
+    // Le pivot, lui, avait de la place et ne l'a prise qu'en ayant soif : arrosé,
+    // il tient à son plancher (142 cm pour 178 de potentiel, 0,80). Sous 320 mm
+    // il va maintenant presque au bout du sien (165 pour 170) : depuis que le
+    // plancher ne traite plus un jeune arbre comme un semis (#310), il part
+    // plus profond et douze étés secs suffisent à combler l'écart. Ce qui
+    // trie les deux espèces sous la sécheresse est le plafond lui-même, que
+    // l'espèce et la taille fixent.
     const penetrable = profondeurPenetrableCm(station.profil);
     const potentielTracant = profondeurRacinesCm(
       getEspece("betula_pendula"),
@@ -184,8 +190,8 @@ describe("complémentarité verticale sur sol contrasté", () => {
       penetrable,
     );
     expect(sec.tracant.rootDepthCm).toBeGreaterThan(0.98 * potentielTracant);
-    expect(sec.pivot.rootDepthCm).toBeLessThan(
-      0.9 * profondeurRacinesCm(getEspece("quercus_pubescens"), sec.pivot.heightM, penetrable),
+    expect(arrose.pivot.rootDepthCm).toBeLessThan(
+      0.9 * profondeurRacinesCm(getEspece("quercus_pubescens"), arrose.pivot.heightM, penetrable),
     );
   });
 });
@@ -197,7 +203,7 @@ describe("plasticité racinaire : on ne creuse que si on a soif", () => {
     horizon(120, { sable: 30, limon: 55, argile: 15 }, { moPct: 0.9, ph: 6.8 }),
   ];
 
-  function eleverUnChene(nappeMm: number, pluieAnnuelleMm: number, ans: number) {
+  function eleverUnChene(nappeMm: number, pluieAnnuelleMm: number, ans: number, hauteurM = 2) {
     const station: Station = {
       ...LIMON_RICHE.station,
       // Terrain plat et fermé : ces essais isolent un mécanisme vertical, pas
@@ -213,7 +219,7 @@ describe("plasticité racinaire : on ne creuse que si on a soif", () => {
     };
     const weather = anneeSynthetique({ ...LIMON_RICHE.climat, rainAnnualMm: pluieAnnuelleMm });
     let state = createGameState(station, rngStateFromSeed(4));
-    state = plantAt(state, "quercus_pubescens", 15, 15, 2);
+    state = plantAt(state, "quercus_pubescens", 15, 15, hauteurM);
     for (let i = 0; i < ans * 52; i++) {
       const w = weather[i % weather.length];
       if (!w) throw new Error("météo manquante");
@@ -239,8 +245,17 @@ describe("plasticité racinaire : on ne creuse que si on a soif", () => {
     expect(gate.heightM).toBeGreaterThan(0.7 * endurci.heightM);
   });
 
+  /**
+   * Un **semis**, pas un plant de deux mètres : l'essai plantait le chêne des
+   * deux autres à 2 m, et ne passait que parce que le plancher racinaire
+   * traitait tout jeune arbre comme une plantule (0,35 du potentiel). Plancher
+   * constant (#310), ce chêne de 2 m a 74 cm de racines un an après, ce qui
+   * n'a rien d'absurde pour un pivot de cette taille. Un semis de 30 cm en a
+   * 35 (prédit 35 à 40 avant la mesure), loin des 250 que l'espèce peut
+   * atteindre.
+   */
   it("un semis démarre en surface, quelles que soient ses capacités d'espèce", () => {
-    const jeune = eleverUnChene(10, 1000, 1);
-    expect(jeune.rootDepthCm).toBeLessThan(60);
+    const semis = eleverUnChene(10, 1000, 1, 0.3);
+    expect(semis.rootDepthCm).toBeLessThan(60);
   });
 });

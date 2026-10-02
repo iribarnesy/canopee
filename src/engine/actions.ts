@@ -24,13 +24,7 @@ import type { EspeceV0 } from "./especes";
 import { getEspece } from "./especes";
 import { EFFET_CHASSE, HAUTEUR_BROUTAGE_M } from "./gibier";
 import { cellIndexAt } from "./grid";
-import {
-  HERBACEES,
-  INDEX_CULTURES,
-  N_HERBACEES,
-  partDuRendement,
-  rabattreParEspece,
-} from "./herbacees";
+import { HERBACEES, INDEX_CULTURES, N_HERBACEES, rabattreParEspece } from "./herbacees";
 import { crownRadiusM } from "./light";
 import { decoteEngorgement, indiceDuMarche } from "./marche";
 import { partMecanisable } from "./mecanisation";
@@ -1797,8 +1791,6 @@ function applySemer(state: GameState, action: Extract<GameAction, { type: "semer
     return { state, refusals: [refuse(action.week, "semer", "découvert plafonné")] };
   }
   const herbeEmprise = state.soil.herbeEmprise.slice();
-  const cultureGrain = state.soil.cultureGrain.slice();
-  const cultureGrainPotentiel = state.soil.cultureGrainPotentiel.slice();
   const cellules = cellulesDeLaZone(state.station.coteM, action);
   // **ce que le semis pose, c'est la place libre.** Un blé semé dans une
   // friche n'occupe que ce que les adventices lui laissent, et la règle
@@ -1837,13 +1829,11 @@ function applySemer(state: GameState, action: Extract<GameAction, { type: "semer
       if (k !== s) occupee += herbeEmprise[base + k] ?? 0;
     }
     herbeEmprise[base + s] = Math.max(0, 1 - occupee);
-    cultureGrain[base + s] = 0;
-    cultureGrainPotentiel[base + s] = 0;
   }
   return {
     state: {
       ...state,
-      soil: { ...state.soil, herbeEmprise, cultureGrain, cultureGrainPotentiel },
+      soil: { ...state.soil, herbeEmprise },
       economy: {
         ...state.economy,
         treasuryEur: state.economy.treasuryEur - cost,
@@ -1867,23 +1857,60 @@ function applySemer(state: GameState, action: Extract<GameAction, { type: "semer
  * qui faisait « glisser sous 1 t/ha » le blé sans apport de C16.
  */
 export function grainRecoltableT(state: GameState, zone: Zone): number {
-  const { cultureGrain, cultureGrainPotentiel, herbeEmprise } = state.soil;
-  const m2ParCellule = 1;
+  const { herbeMatiereSecheG } = state.soil;
   let tonnes = 0;
   for (const s of INDEX_CULTURES) {
     const culture = HERBACEES[s]?.culture;
     if (!culture) continue;
     for (const i of cellulesDeLaZone(state.station.coteM, zone)) {
-      const base = i * N_HERBACEES;
-      const grain = partDuRendement(
-        cultureGrain[base + s] ?? 0,
-        cultureGrainPotentiel[base + s] ?? 0,
-      );
-      if ((herbeEmprise[base + s] ?? 0) <= 0 && grain <= 0) continue;
-      tonnes += (grain * culture.rendementMaxTHa * m2ParCellule) / 10_000;
+      tonnes += grainDeLaCelluleT(herbeMatiereSecheG[i * N_HERBACEES + s] ?? 0, culture);
     }
   }
   return tonnes;
+}
+
+/**
+ * Le grain d'une cellule d'un mètre carré, en tonnes : la part de la biomasse
+ * que l'indice de récolte donne au grain (#247).
+ */
+function grainDeLaCelluleT(matiereSecheGM2: number, culture: { indiceRecolte: number }): number {
+  return (matiereSecheGM2 * culture.indiceRecolte) / 1_000_000;
+}
+
+/**
+ * Verse à la litière d'une cellule la part `fraction` de la biomasse herbacée
+ * qui y est sur pied, toutes espèces confondues, et la retire de la plante
+ * (#247). Des tissus **coupés** ou retournés n'ont rien résorbé : leur azote
+ * part entier, au C/N de la plante. Rend le carbone versé, g/m², que l'appelant
+ * crédite à la production primaire.
+ */
+function verserHerbeALaLitiere(
+  i: number,
+  fraction: number,
+  herbe: { matiere: Float64Array; azote: Float64Array },
+  litiere: { n: Float64Array; c: Float64Array; k: Float32Array | Float64Array },
+): number {
+  if (fraction <= 0) return 0;
+  let c = 0;
+  let n = 0;
+  for (let s = 0; s < N_HERBACEES; s++) {
+    const k = i * N_HERBACEES + s;
+    const dm = (herbe.matiere[k] ?? 0) * fraction;
+    const dn = (herbe.azote[k] ?? 0) * fraction;
+    herbe.matiere[k] = (herbe.matiere[k] ?? 0) - dm;
+    herbe.azote[k] = (herbe.azote[k] ?? 0) - dn;
+    c += dm * CARBON_FRACTION;
+    n += dn;
+  }
+  if (c > 0 && n > 0) {
+    const oldN = litiere.n[i] ?? 0;
+    litiere.k[i] = (oldN * (litiere.k[i] ?? 0) + n * litterDecayRate(c / n)) / (oldN + n);
+    litiere.n[i] = oldN + n;
+    litiere.c[i] = (litiere.c[i] ?? 0) + c;
+  } else if (n > 0) {
+    litiere.n[i] = (litiere.n[i] ?? 0) + n;
+  }
+  return c;
 }
 
 function applyMoissonner(
@@ -1896,41 +1923,47 @@ function applyMoissonner(
   const cellules = cellulesDeLaZone(state.station.coteM, action);
   const herbeEmprise = state.soil.herbeEmprise.slice();
   const herbeFeuillage = state.soil.herbeFeuillage.slice();
-  const cultureGrain = state.soil.cultureGrain.slice();
-  const cultureGrainPotentiel = state.soil.cultureGrainPotentiel.slice();
-  // Ce qu'on récolte, culture par culture, en part de rendement maximal cumulée
-  // sur les cellules. Diviser par le nombre de cellules donnerait la moyenne ;
-  // on veut la **somme**, parce que c'est elle qui devient des tonnes.
+  const herbeMatiereSecheG = state.soil.herbeMatiereSecheG.slice();
+  const herbeAzoteG = state.soil.herbeAzoteG.slice();
+  const litterNG = state.soil.litterNG.slice();
+  const litterCG = state.soil.litterCG.slice();
+  const litterK = state.soil.litterK.slice();
+  // Ce qu'on récolte, culture par culture et cellule par cellule.
   let recolteEur = 0;
+  let pailleKgC = 0;
   let cellulesRecoltees = 0;
-  const m2ParCellule = 1;
   for (const s of INDEX_CULTURES) {
     const culture = HERBACEES[s]?.culture;
     if (!culture) continue;
     for (const i of cellules) {
-      const base = i * N_HERBACEES;
-      const grain = partDuRendement(
-        cultureGrain[base + s] ?? 0,
-        cultureGrainPotentiel[base + s] ?? 0,
-      );
-      if ((herbeEmprise[base + s] ?? 0) <= 0 && grain <= 0) continue;
-      const tonnes = (grain * culture.rendementMaxTHa * m2ParCellule) / 10_000;
-      recolteEur += tonnes * culture.prixEurT;
-      cultureGrain[base + s] = 0;
-      cultureGrainPotentiel[base + s] = 0;
-      // **la paille est déjà rendue, semaine après semaine** (issue #201).
-      // Ce bloc mettait le feuillage à zéro et c'était tout : le grain était
-      // vendu et le reste s'évaporait. Il ne rend toujours rien **ici**, mais pour
-      // la raison inverse — la strate restitue continûment ce qu'elle prélève,
-      // moins l'azote que le grain emporte (`azoteDansLeGrain`), si bien que
-      // la paille et le chaume ont déjà été versés au sol au fil de la saison.
-      // Y rajouter un versement à la moisson compterait la même matière deux
-      // fois. *Simplification assumée* : dans un champ, la paille tombe le
-      // jour de la moisson, pas tout l'été.
+      const k = i * N_HERBACEES + s;
+      const matiere = herbeMatiereSecheG[k] ?? 0;
+      if ((herbeEmprise[k] ?? 0) <= 0 && matiere <= 0) continue;
+      recolteEur += grainDeLaCelluleT(matiere, culture) * culture.prixEurT;
+      // **La moisson partage la plante** (#247). Le grain part avec sa part de
+      // la matière (`indiceRecolte`) et de l'azote (`azoteDansLeGrain`) ; la
+      // paille et le chaume restent au champ et tombent en litière avec le
+      // reste, au C/N qu'ils ont. Jusqu'ici la paille était « déjà rendue »
+      // semaine après semaine, faute d'un pool d'azote dans la plante — la
+      // simplification que ce pool lève : elle tombe le jour de la moisson.
+      const azote = herbeAzoteG[k] ?? 0;
+      const pailleC = matiere * (1 - culture.indiceRecolte) * CARBON_FRACTION;
+      const pailleN = azote * (1 - culture.azoteDansLeGrain);
+      if (pailleC > 0 && pailleN > 0) {
+        const oldN = litterNG[i] ?? 0;
+        litterK[i] =
+          (oldN * (litterK[i] ?? 0) + pailleN * litterDecayRate(pailleC / pailleN)) /
+          (oldN + pailleN);
+        litterNG[i] = oldN + pailleN;
+        litterCG[i] = (litterCG[i] ?? 0) + pailleC;
+        pailleKgC += pailleC / 1000;
+      }
+      herbeMatiereSecheG[k] = 0;
+      herbeAzoteG[k] = 0;
       // La culture libère la place : le chaume n'occupe plus rien, et les
       // adventices reprendront la main dès la semaine suivante.
-      herbeEmprise[base + s] = 0;
-      herbeFeuillage[base + s] = 0;
+      herbeEmprise[k] = 0;
+      herbeFeuillage[k] = 0;
       cellulesRecoltees++;
     }
   }
@@ -1953,9 +1986,15 @@ function applyMoissonner(
         herbeEmprise,
         herbeFeuillage,
         herbeCouverture,
-        cultureGrain,
-        cultureGrainPotentiel,
+        herbeMatiereSecheG,
+        herbeAzoteG,
+        litterNG,
+        litterCG,
+        litterK,
       },
+      // Le carbone de la paille est crédité à la production primaire, comme
+      // toute litière de la strate (#201) : c'est la plante qui l'a fixé.
+      carbon: { ...state.carbon, nppCumKgC: state.carbon.nppCumKgC + pailleKgC },
       economy: {
         ...state.economy,
         treasuryEur: state.economy.treasuryEur + recolteEur - areaM2 * part * COUT_ENGIN_EUR_M2,
@@ -1980,6 +2019,16 @@ function applyFaucher(
   const herbeCouverture = state.soil.herbeCouverture.slice();
   const herbeFeuillage = state.soil.herbeFeuillage.slice();
   const herbeBiomasse = state.soil.herbeBiomasse.slice();
+  const herbe = {
+    matiere: state.soil.herbeMatiereSecheG.slice(),
+    azote: state.soil.herbeAzoteG.slice(),
+  };
+  const litiere = {
+    n: state.soil.litterNG.slice(),
+    c: state.soil.litterCG.slice(),
+    k: state.soil.litterK.slice(),
+  };
+  let coupeG = 0;
   const cote = state.station.coteM;
   // Les cellules où l'outil a effectivement mordu : une pelouse déjà rase ne
   // se fauche pas, et le rendu n'a rien à y montrer.
@@ -1997,19 +2046,11 @@ function applyFaucher(
       // espèce déjà rentrée sous terre n'a rien à perdre : c'est ce qui laisse
       // une prairie de fauche garder sa flore de printemps (herbacees.ts).
       rabattreParEspece(herbeFeuillage, i * N_HERBACEES, FAUCHE_COUVERTURE_RESIDUELLE / avant);
-      // **l'herbe coupée a déjà été rendue, elle aussi** (issue #201).
-      //
-      // Il y avait ici `litterNG += coupe * 4` et `litterCG += coupe * 4 * 25`
-      // — les deux seuls nombres du moteur qui transformaient de l'herbe en
-      // carbone, et ils étaient nus. **Ils créaient aussi de la matière à
-      // partir de rien** : la strate n'était ni au bilan carbone ni au bilan
-      // azote, et aucune propriété ne passait par cette action. Le même défaut
-      // que celui que le lot répare, sur le seul chemin qui existait déjà.
-      //
-      // La strate restituant désormais son prélèvement au fil des semaines, la
-      // matière de cette coupe est déjà au sol : la verser ici la compterait
-      // deux fois. La fauche fait donc ce qu'elle doit faire et rien d'autre —
-      // elle enlève ce qui est sorti, et le tapis repart.
+      // **L'herbe coupée tombe en litière** (#201, #247). La strate rendait jusqu'ici
+      // son prélèvement au fil des semaines, et la coupe n'avait donc rien à
+      // verser. Elle porte maintenant sa matière : ce que l'outil coupe, dans
+      // la même proportion que le feuillage, reste au sol avec tout son azote.
+      coupeG += verserHerbeALaLitiere(i, 1 - FAUCHE_COUVERTURE_RESIDUELLE / avant, herbe, litiere);
     }
   }
   // ── **et le rotor ne trie pas** (issue #184) ────────────────────────────────────
@@ -2043,7 +2084,18 @@ function applyFaucher(
     state: {
       ...state,
       trees,
-      soil: { ...state.soil, herbeCouverture, herbeFeuillage, herbeBiomasse },
+      soil: {
+        ...state.soil,
+        herbeCouverture,
+        herbeFeuillage,
+        herbeBiomasse,
+        herbeMatiereSecheG: herbe.matiere,
+        herbeAzoteG: herbe.azote,
+        litterNG: litiere.n,
+        litterCG: litiere.c,
+        litterK: litiere.k,
+      },
+      carbon: { ...state.carbon, nppCumKgC: state.carbon.nppCumKgC + coupeG / 1000 },
       economy: {
         ...state.economy,
         treasuryEur: state.economy.treasuryEur - coutEngin,
@@ -2367,6 +2419,16 @@ function applyLabourer(
   const herbeFeuillage = state.soil.herbeFeuillage.slice();
   const herbeBiomasse = state.soil.herbeBiomasse.slice();
   const litiereEnfouieCG = state.soil.litiereEnfouieCG.slice();
+  const herbe = {
+    matiere: state.soil.herbeMatiereSecheG.slice(),
+    azote: state.soil.herbeAzoteG.slice(),
+  };
+  const litiere = {
+    n: state.soil.litterNG.slice(),
+    c: state.soil.litterCG.slice(),
+    k: state.soil.litterK.slice(),
+  };
+  let retourneeG = 0;
   const mycorhizes = {
     ecto: state.soil.mycorhizes.ecto.slice(),
     arbusculaire: state.soil.mycorhizes.arbusculaire.slice(),
@@ -2407,7 +2469,9 @@ function applyLabourer(
       // du tick fait déjà selon le C/N (seuil vers 27, C9) : la litière reste
       // où elle est, et la règle commune décide. Ce que le soc change est ce
       // qu'elle **couvre** : enfouie, elle ne paille plus le sol.
-      const auSol = Math.max(0, (state.soil.litterCG[i] ?? 0) - (litiereEnfouieCG[i] ?? 0));
+      // L'herbe retournée y passe avec elle : sa matière et tout son azote.
+      retourneeG += verserHerbeALaLitiere(i, 1, herbe, litiere);
+      const auSol = Math.max(0, (litiere.c[i] ?? 0) - (litiereEnfouieCG[i] ?? 0));
       litiereEnfouieCG[i] = (litiereEnfouieCG[i] ?? 0) + auSol * LABOUR_ENFOUISSEMENT;
       // Sol nu : c'est tout l'objet du labour, et c'est aussi son prix. La
       // charrue est le seul geste du jeu qui aille sous terre : elle retourne
@@ -2444,6 +2508,11 @@ function applyLabourer(
         herbeEmprise,
         herbeFeuillage,
         herbeBiomasse,
+        herbeMatiereSecheG: herbe.matiere,
+        herbeAzoteG: herbe.azote,
+        litterNG: litiere.n,
+        litterCG: litiere.c,
+        litterK: litiere.k,
         litiereEnfouieCG,
         mycorhizes,
         tassement,
@@ -2451,6 +2520,7 @@ function applyLabourer(
       carbon: {
         ...state.carbon,
         emittedCumKgC: state.carbon.emittedCumKgC + emisKgC,
+        nppCumKgC: state.carbon.nppCumKgC + retourneeG / 1000,
       },
       economy: {
         ...state.economy,

@@ -32,6 +32,7 @@ import { profondeurPenetrableCm, ruHorizonMm } from "./soil";
 import { geometrieTranches } from "./tranches";
 import {
   diametreInitialCm,
+  partPlancherRacines,
   profondeurRacinesCm,
   type TreeState,
   tirerVigueurIndividuelle,
@@ -483,20 +484,26 @@ export interface SoilState {
    */
   herbeBiomasse: Grille;
   /**
-   * **grain** accumulé par cellule et par culture, en part du rendement annuel
-   * maximal de l'espèce (#136). Même indexation à plat que `herbeEmprise`.
+   * **Matière sèche aérienne** de chaque espèce herbacée, g/m², même indexation
+   * à plat que `herbeEmprise` (#247). Elle se fabrique avec le rayonnement que
+   * le feuillage intercepte (`herbe.ts:RUE_HERBACEE_G_MJ`) et meurt en litière
+   * avec l'âge des tissus chez une pérenne ; chez une culture, elle s'accumule
+   * jusqu'à la moisson, qui en emporte le grain (`indiceRecolte`).
    *
-   * C'est une **intégrale** : le grain est ce que la plante a assimilé pendant sa
-   * saison, semaine après semaine, et non une fonction de son état du jour.
-   * La moisson le remet à zéro et l'emporte hors de la parcelle.
+   * Elle remplace l'intégrale de grain d'avant (`cultureGrain`), qui comptait
+   * une part d'un rendement maximal déclaré : le rendement sort maintenant de
+   * la biomasse.
    */
-  cultureGrain: Grille;
+  herbeMatiereSecheG: GrilleLongue;
   /**
-   * Le **dénominateur** du rendement : ce que la culture aurait assimilé sans
-   * aucun facteur limitant, cumulé de la même façon. Le rapport des deux est
-   * la part du rendement maximal (`herbacees.ts:partDuRendement`).
+   * **Azote dans la plante**, g/m², même indexation (#247). C'est le pool qui
+   * manquait : la strate rendait jusqu'ici à la litière, la semaine même, ce
+   * qu'elle venait de prélever. L'azote entre par le prélèvement, sort à la
+   * litière quand des tissus meurent (moins la part résorbée) et avec le grain
+   * à la moisson. Rapporté à la courbe critique de dilution, il dit si la
+   * plante a faim (`herbe.ts:azoteCritiqueG`).
    */
-  cultureGrainPotentiel: Grille;
+  herbeAzoteG: GrilleLongue;
   /**
    * **ressource florale** vécue par cellule ∈ [0,1] (#70, critère G4) : ce que les
    * pollinisateurs ont trouvé à manger ici, ces dernières semaines.
@@ -892,9 +899,10 @@ export function createGameState(
       // que la saison permet.
       herbeFeuillage: Float32Array.from(Array.from({ length: n }, () => depart).flat()),
       herbeBiomasse: new Float32Array(n).fill(station.herbeInitiale),
-      // Rien de semé au premier jour : une culture s'obtient par une action.
-      cultureGrain: new Float32Array(n * N_HERBACEES),
-      cultureGrainPotentiel: new Float32Array(n * N_HERBACEES),
+      // Rien sur pied au premier jour : la couverture déclarée par la station
+      // est un feuillage qui repart, et la première saison fabrique sa matière.
+      herbeMatiereSecheG: new Float64Array(n * N_HERBACEES),
+      herbeAzoteG: new Float64Array(n * N_HERBACEES),
       // Aucune mémoire florale au premier jour : la première saison la
       // construit. Partir d'un plancher supposerait une année d'avant.
       ressourceFlorale: new Float32Array(n),
@@ -919,12 +927,6 @@ export function createGameState(
 }
 
 /** Proto-action : planter un plant à une position donnée (30 cm par défaut). */
-/**
- * Part du potentiel qu'on prête aux racines d'un arbre instancié : la même que
- * `RACINES_PLANCHER` dans `trees.ts`, dont c'est exactement la définition.
- */
-const RACINES_PLANCHER_INSTANCIE = 0.35;
-
 /**
  * Profondeur racinaire d'un arbre qu'on **instancie** à une taille donnée, cm.
  *
@@ -955,7 +957,10 @@ function nitrateTranchesInitiales(station: Station, n: number): Float64Array {
 function racinesInitialesCm(especeId: string, heightM: number, station: Station): number {
   const penetrable = profondeurPenetrableCm(station.profil);
   const potentiel = profondeurRacinesCm(getEspece(especeId), heightM, penetrable);
-  return Math.max(20, Math.min(potentiel, RACINES_PLANCHER_INSTANCIE * potentiel));
+  // Le plancher que `nouvelleProfondeurRacines` lui garantirait (trees.ts) : la
+  // constante figée ici à 0,35 avait divergé de celle des arbres (#247).
+  const espece = getEspece(especeId);
+  return Math.max(20, Math.min(potentiel, partPlancherRacines(espece, heightM) * potentiel));
 }
 
 export function plantAt(

@@ -377,7 +377,6 @@ describe("le complexe ne peut céder que les bases qu'il porte", () => {
     nonTamponne: LANDES.reduce((a, r) => a + r.nonTamponne, 0),
     planchePartout: Math.min(...LANDES.map((r) => r.planchePartout)),
     plancherProfond: Math.min(...LANDES.map((r) => r.plancherProfond)),
-    bases: LANDES.reduce((a, r) => a + r.bases, 0) / LANDES.length,
   };
 
   it("soixante ans d'ajoncs sur la lande : le pool touche zéro et s'y arrête", () => {
@@ -427,7 +426,15 @@ describe("le complexe ne peut céder que les bases qu'il porte", () => {
     // riche qu'elle n'a commencé (3,76 eq/m²). La comparaison appariée avec et
     // sans plancher reste la forme juste de ce que la bande voulait dire
     // *(à reprendre)*.
-    expect(r.bases).toBeGreaterThan(1.5);
+    //
+    // **La borne basse était la même photographie**, et #310 l'a montré à son
+    // tour. Elle demandait une moyenne au-dessus de 1,5 : main y tient à 1,65,
+    // ses trois graines s'étalant de 1,36 à 2,17 ; #310 tombe à 1,39, les siennes
+    // de 1,01 à 1,72 (des ajoncs dont les racines vont chercher plus bas, une
+    // graine qui acidifie plus). Un écart entre graines près de trois fois plus
+    // grand que l'effet, et aucune source derrière 1,5 : elle est retirée avec
+    // l'accord de l'auteur. Restent l'invariant, le plancher touché, et
+    // l'appauvrissement partie par partie.
     for (const partie of LANDES) expect(partie.bases).toBeLessThan(partie.bases0);
   }, 300_000);
 

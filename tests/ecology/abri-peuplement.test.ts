@@ -109,12 +109,16 @@ const gabarit: TreeState = {
 };
 
 /** Quarante-cinq ans de pins sur une parcelle carrée. */
-function futaie(coteM: number, plants: number): GameState {
+function futaie(coteM: number, plants: number, graine = 7): GameState {
   const station: Station = { ...LIMON_RICHE.station, coteM, voisinage: [] };
   const serie = serieMeteoPour(LIMON_RICHE.station.id);
   if (!serie) throw new Error("série manquante");
   const meteo = serieToWeeks(serie);
-  let s = plantScattered(createGameState(station, rngStateFromSeed(7)), "pinus_sylvestris", plants);
+  let s = plantScattered(
+    createGameState(station, rngStateFromSeed(graine)),
+    "pinus_sylvestris",
+    plants,
+  );
   for (let i = 0; i < 45 * 52; i++) {
     const w = meteo[i % meteo.length];
     if (!w) throw new Error("météo manquante");
@@ -188,13 +192,27 @@ describe("en partie : ce sont les DOMINANTS que le lot change", () => {
     // La distance à la lisière n'est calculée nulle part : un arbre de bordure
     // a simplement moins de voisins, donc un espacement local plus grand.
     // Relevé : 0,271 au bord contre 0,338 à l'intérieur.
-    const s = futaie(60, 1200);
+    //
+    // **Deux parties, pas une** (#310). Une futaie de pins de quarante-cinq ans
+    // peut brûler, et la graine 7 brûle à l'an 26,6 depuis que le plancher
+    // racinaire est constant : 1 415 pins tués, plus un seul dominant. Ce n'est
+    // pas le moteur qui brûle plus : sur quatre graines, un feu de chaque côté,
+    // jamais la même. Un incendie n'est pas le sujet d'un essai sur l'abri, et
+    // une partie n'est pas une mesure. Les dominants des deux parties sont
+    // cumulés, chacun lu dans sa propre futaie. Prédit avant la mesure : la
+    // graine 8 ne brûle pas, et l'ordre tient. Relevé : 731 pins debout sur la
+    // 8 ; lisière 0,230 (103 dominants), intérieur 0,276 (13).
     const bord = (t: TreeState) => Math.min(t.x, t.y, 60 - t.x, 60 - t.y);
-    const lisiere = moyenne(dominants(s, (t) => bord(t) < 12).map((t) => abriAuVent(s.trees, t)));
-    const interieur = moyenne(dominants(s, (t) => bord(t) > 20).map((t) => abriAuVent(s.trees, t)));
-    expect(lisiere).toBeGreaterThan(0);
-    expect(interieur).toBeGreaterThan(lisiere);
-  });
+    const lisiere: number[] = [];
+    const interieur: number[] = [];
+    for (const graine of [7, 8]) {
+      const s = futaie(60, 1200, graine);
+      for (const t of dominants(s, (t) => bord(t) < 12)) lisiere.push(abriAuVent(s.trees, t));
+      for (const t of dominants(s, (t) => bord(t) > 20)) interieur.push(abriAuVent(s.trees, t));
+    }
+    expect(moyenne(lisiere)).toBeGreaterThan(0);
+    expect(moyenne(interieur)).toBeGreaterThan(moyenne(lisiere));
+  }, 900_000);
 
   it("et le rayon de peuplement se compte en HAUTEURS, pas en mètres", () => {
     // Ce qui fait canopée pour un arbre de vingt mètres n'est pas ce qui fait

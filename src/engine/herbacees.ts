@@ -111,6 +111,21 @@ export interface HerbaceeV0 {
     seuilConfort: number;
   };
   /**
+   * Jusqu'où l'espèce descend, cm (#247, lot B).
+   *
+   * **Le trait qui manquait**, et son absence était une position que personne
+   * n'avait prise : la strate entière puisait son azote et son eau dans
+   * l'horizon de surface. Ça convient à une anémone ; ça fait d'un blé — qui
+   * descend à plus d'un mètre — une plante qui laisse filer sous elle l'azote
+   * qu'elle réclame, et un concurrent que l'arbre distance trop facilement.
+   *
+   * Lu par `fractionsRacinairesParHorizon` (trees.ts), la fonction qui répartit
+   * les racines des arbres, avec la même décroissance exponentielle : déclarer
+   * une profondeur ne met pas les racines uniformément au fond, la moitié reste
+   * dans le premier tiers.
+   */
+  profondeurRacinesCm: number;
+  /**
    * Gamme de pH tolérée [min, max], bordure douce de ±0,7 comme pour les
    * ligneux (`soil.ts:facteurGammePh`). C'est l'axe qui sépare le plus
    * nettement les deux graminées : le dactyle fuit l'acidité, la molinie y
@@ -155,19 +170,6 @@ export interface HerbaceeV0 {
      */
     partPersistante: number;
   };
-  /**
-   * Exigence minérale, même échelle que les ligneux (`especes.ts`) : une
-   * essence forestière est à 1, et c'est la référence. Une céréale
-   * sélectionnée pour le rendement, dont on exporte la récolte chaque année,
-   * est à dix ou vingt — c'est par ce nombre, et non par un cas particulier
-   * dans le moteur, que les cultures s'ajoutent.
-   *
-   * Les trois herbacées spontanées sont à 1, ce qui rend le lot des cultures
-   * **identique** pour elles : la demande d'azote du tapis était une constante
-   * multipliée par la couverture, elle devient une somme par espèce, et la
-   * somme vaut exactement l'ancienne tant que tout le monde est à 1.
-   */
-  exigenceMinerale: number;
   /**
    * Ce que l'espèce offre aux pollinisateurs quand elle fleurit, et **quand**
    * (#70, critères G4 et J6). Même forme que sur la fiche ligneuse
@@ -226,10 +228,13 @@ export interface HerbaceeV0 {
    */
   culture?: {
     /**
-     * Rendement en grain à pleine emprise et sans aucun facteur limitant,
-     * t/ha. C'est un **plafond**, que la lumière, l'eau et l'azote rabotent.
+     * **Indice de récolte** : la part de la matière sèche aérienne que le grain
+     * emporte à maturité. C'est ce qu'une variété déclare, et le rendement en
+     * sort : la biomasse, elle, vient du rayonnement intercepté, de l'eau et de
+     * l'azote (`herbe.ts`). Le plafond déclaré d'avant (`rendementMaxTHa`)
+     * devient ainsi un résultat du climat de la station.
      */
-    rendementMaxTHa: number;
+    indiceRecolte: number;
     /** Prix de vente du grain, €/t. */
     prixEurT: number;
     /** Semaine de semis (0-51). */
@@ -257,42 +262,14 @@ export interface HerbaceeV0 {
      */
     azoteDansLeGrain: number;
   };
-  /**
-   * **ce que l'espèce rend au sol** (issue #201).
-   *
-   * La strate basse ne rendait **rien**. Mesuré avant ce lot, une prairie
-   * spontanée à 0,95 de couverture sur limon riche : le stock d'humus perd
-   * 42 % en cinquante ans et la litière reste à 0,00 les deux mille six cents
-   * semaines. Park Grass, prairie permanente non fertilisée depuis 1856, tient
-   * son stock. Une prairie ne se décarbonise pas — c'est même le couvert qui
-   * en stocke le plus vite dans l'horizon de surface.
-   *
-   * Le seul retour qui existait était celui de la **fauche**, et il portait deux
-   * nombres nus (`coupe * 4` et `* 25`) qui sont devenus les constantes
-   * nommées de ce bloc, à la valeur près : la fauche n'a pas bougé d'un
-   * gramme.
+  /*
+   * **ce que l'espèce rend au sol** (#201, #247). La fiche portait un C/N de
+   * litière par espèce (paille 90, foin 25-40 *(à confirmer)*). Il n'y est plus :
+   * la litière d'une herbacée a le C/N de la plante qu'elle a été, carbone de sa
+   * matière sèche sur l'azote qu'elle n'a pas résorbé (`tick.ts`).
    */
-  litiere: {
-    /**
-     * Rapport C/N de la litière de l'espèce.
-     *
-     * C'est le trait qui décide si un résidu **nourrit** la culture suivante ou
-     * lui **vole** son azote, et l'écart entre les deux bouts est énorme : une
-     * feuille tendre de vernale se minéralise en quelques semaines, une paille
-     * de blé immobilise l'azote du sol pendant un an avant de le rendre.
-     * Ordres de grandeur usuels : feuillage herbacé jeune 15-25, foin de
-     * graminée 25-40, paille de céréale 80-100 *(à confirmer)*.
-     */
-    cSurN: number;
-  };
   /**
-   * **l'azote du grain n'est pas compté à la moisson, et c'est voulu.** Il est
-   * déjà sorti du sol pendant la saison, par le prélèvement de la strate
-   * (`tick.ts`, pondéré par `exigenceMinerale`), et la strate ne rend pas de
-   * litière. Le recompter à la récolte le ferait disparaître deux fois — ce
-   * que la propriété de conservation attraperait (#115). Ce qui manque
-   * vraiment est le retour de la **paille**, qui reste au champ et devrait rendre
-   * son azote : c'est une dette de ce lot, écrite ici pour ne pas être oubliée.
+   * Sources de la fiche.
    */
   sources: string[];
 }
@@ -327,6 +304,9 @@ const TAYLOR_2001 =
 export const HERBACEES: readonly HerbaceeV0[] = [
   {
     id: "anemone_nemorosa",
+    // Géophyte à rhizome traçant : le rhizome court à deux ou trois
+    // centimètres, et les racines ne s'en éloignent guère *(à calibrer)*.
+    profondeurRacinesCm: 15,
     nom: "Anémone des bois",
     nomLatin: "Anemone nemorosa",
     // Géophyte de sous-bois : elle sature autour du quart de la pleine
@@ -365,20 +345,19 @@ export const HERBACEES: readonly HerbaceeV0[] = [
     floraison: { debutDJ: 60, dureeDJ: 300, nectar: 0.4 },
     // Elle travaille à deux ou trois degrés, quand la prairie attend : c'est là
     // tout son avantage *(à calibrer)*.
-    exigenceMinerale: 1,
     tBaseCroissanceC: 2,
     // Le rhizome avance de quelques centimètres par an (SHIRREFFS_1985, ordre
     // de grandeur repris par la littérature des indicatrices de forêt
     // ancienne) : soit ~17 ans pour remplir un mètre carré depuis son bord,
     // étalés sur la quinzaine de semaines où elle végète *(à confirmer)*.
     vitesseInstallation: 0.004,
-    // Une feuille d'anémone est tendre et disparaît en quelques semaines : elle
-    // est du côté bas de la gamme du feuillage herbacé jeune *(à confirmer)*.
-    litiere: { cSurN: 18 },
     sources: [SHIRREFFS_1985],
   },
   {
     id: "dactylis_glomerata",
+    // Graminée de pâture : 0,5 à 1,5 m d'enracinement maximal (Allen et al.
+    // 1998, FAO-56, tableau 22) ; le milieu de la gamme.
+    profondeurRacinesCm: 80,
     nom: "Dactyle aggloméré",
     nomLatin: "Dactylis glomerata",
     // Héliophile : c'est **la** graminée qui étouffe une plantation sur sol riche.
@@ -414,19 +393,17 @@ export const HERBACEES: readonly HerbaceeV0[] = [
       senescenceAutomnale: false,
       partPersistante: 1,
     },
-    exigenceMinerale: 1,
     tBaseCroissanceC: 4,
     // Elle talle : un semis couvre en une saison (BEDDOWS_1959). La valeur est
     // celle de la reconquête du tapis d'avant ce lot (0,12 par semaine de
     // pleine végétation), pour la même raison que ses seuils de lumière.
     vitesseInstallation: 0.12,
-    // Foin de graminée : le milieu de la gamme, et la valeur que la fauche
-    // portait en dur avant #201 — d'où une fauche inchangée au gramme près.
-    litiere: { cSurN: 25 },
     sources: [BEDDOWS_1959],
   },
   {
     id: "molinia_caerulea",
+    // Touradon des landes humides : 40 à 80 cm *(à confirmer)*.
+    profondeurRacinesCm: 60,
     nom: "Molinie bleue",
     nomLatin: "Molinia caerulea",
     lumiere: { compensation: 0.12, saturation: 0.45 },
@@ -445,18 +422,17 @@ export const HERBACEES: readonly HerbaceeV0[] = [
       senescenceAutomnale: true,
       partPersistante: 0.25,
     },
-    exigenceMinerale: 1,
     tBaseCroissanceC: 8,
     // Touffe, plus lente à couvrir qu'une graminée traçante *(à calibrer)*.
     vitesseInstallation: 0.05,
-    // La molinie fait une touradon sèche et fibreuse qui tient l'hiver : plus
-    // dure qu'un dactyle, et c'est ce qui fait la litière acide d'une lande
-    // à molinie *(à confirmer)*.
-    litiere: { cSurN: 38 },
     sources: [TAYLOR_2001],
   },
   {
     id: "triticum_aestivum",
+    // Blé : 1,0 à 1,5 m d'enracinement maximal (Allen et al. 1998, FAO-56,
+    // tableau 22). La profondeur est prise atteinte dès le semis, ce qui
+    // avance l'accès au fond en hiver, quand le blé demande peu *(à confirmer)*.
+    profondeurRacinesCm: 120,
     nom: "Blé tendre d'hiver",
     nomLatin: "Triticum aestivum",
     /**
@@ -506,27 +482,19 @@ export const HERBACEES: readonly HerbaceeV0[] = [
     tBaseCroissanceC: 3,
     // Elle ne conquiert **rien** : son emprise est posée par le semis.
     vitesseInstallation: 0,
-    /**
-     * Dix fois une essence forestière. Le commentaire d'`especes.ts` le
-     * réservait depuis longtemps : « une céréale ou un maraîchage seraient à
-     * dix ou vingt ». C'est ce nombre qui fait qu'un blé a faim là où un chêne
-     * se contente, et donc que la concurrence pour l'azote se voie.
-     */
-    exigenceMinerale: 10,
     culture: {
       /**
-       * Le rendement **sans aucun facteur limitant** — ni lumière, ni eau, ni
-       * azote. Ce n'est donc pas la moyenne française (7 t/ha), qui est déjà
-       * une moyenne de parcelles fertilisées et diversement limitées : c'est
-       * le plafond que les parcelles pleinement fumées de **Broadbalk**
-       * atteignent, 8 à 9 t/ha (ROTHAMSTED_BROADBALK).
+       * 0,45 à 0,5 pour les blés d'hiver modernes d'Europe du Nord-Ouest, la
+       * limite théorique vers 0,6 (Austin et al. 1980 ; Brancourt-Hulmel et al.
+       * 2003 pour les variétés françaises de 1946 à 1992). Le haut de la
+       * fourchette observée.
        *
-       * Et le même essai fournit la **validation**, sur un autre chiffre : ses
-       * parcelles sans aucun apport tiennent ~1 t/ha depuis 1843. Le moteur
-       * n'a pas d'action de fertilisation, donc un blé continu doit y
-       * descendre de lui-même — ce qui se vérifie et ne se cale pas.
+       * Le rendement à pleine fumure n'est plus déclaré : il sort de la
+       * biomasse, et c'est **Broadbalk** qui le juge (8 à 9 t/ha sur les parcelles
+       * pleinement fumées, ROTHAMSTED_BROADBALK), comme il juge le point zéro
+       * (~1 t/ha sans apport depuis 1843).
        */
-      rendementMaxTHa: 9,
+      indiceRecolte: 0.5,
       // Ordre de grandeur des dernières campagnes *(à calibrer : le prix du
       // blé varie du simple au double d'une année à l'autre, et le moteur n'a
       // pas de marché céréalier)*.
@@ -541,14 +509,6 @@ export const HERBACEES: readonly HerbaceeV0[] = [
       semenceEurHa: 90,
       azoteDansLeGrain: 0.75,
     },
-    // **La paille de blé, et c'est le trait le plus conséquent du bloc.** Son
-    // C/N est célèbre pour son effet : à 90, elle **immobilise** l'azote du sol
-    // le temps que les micro-organismes la digèrent, et ne le rend qu'ensuite.
-    // Enfouir une paille sans apport d'azote fait donc baisser la culture
-    // suivante avant de la faire monter — c'est un fait d'agronomie que le
-    // moteur ne pouvait pas produire tant que la paille n'existait pas
-    // *(à confirmer)*.
-    litiere: { cSurN: 90 },
     sources: [ROTHAMSTED_BROADBALK, AGRESTE_BLE, ARTRU_2019, DUPRAZ_CAPILLON],
   },
 ];
@@ -736,37 +696,6 @@ export const N_CULTURES = INDEX_CULTURES.length;
 /** La fiche est-elle celle d'une culture semée, plutôt que d'une spontanée ? */
 export function estCulture(h: HerbaceeV0): boolean {
   return h.culture !== undefined;
-}
-
-/**
- * Le **grain** est la moyenne des facteurs limitants, **pondérée par le feuillage**
- * (#136) — et cette forme-là ne demande aucune constante à caler.
- *
- * Le premier jet divisait le cumul par le nombre de semaines de culture, ce qui
- * suppose un feuillage plein d'un bout à l'autre de la saison. Aucun blé ne
- * fait ça : il lève à l'automne, passe l'hiver en rosette et mûrit en juin.
- * Mesuré, le plafond de la fiche devenait inatteignable par construction —
- * 1,1 t/ha là où la fiche annonce 7 — et « rendement maximal » ne voulait plus
- * dire ce que son commentaire promettait.
- *
- * La bonne grandeur est un **rapport**. On cumule d'un côté ce que la plante a
- * réellement assimilé — son feuillage, multiplié par ce que la station lui
- * permet et par ce que l'azote lui laisse —, de l'autre ce qu'elle aurait
- * assimilé sans aucune limite, c'est-à-dire son feuillage seul. Le quotient
- * vaut 1 pour une culture que rien ne bride, et `rendementMaxTHa` retrouve
- * exactement le sens que la fiche lui donne.
- */
-export function grainDeLaSemaine(
-  feuillage: number,
-  facteurLumiere: number,
-  facteurAzote: number,
-): { assimile: number; potentiel: number } {
-  return { assimile: feuillage * facteurLumiere * facteurAzote, potentiel: feuillage };
-}
-
-/** Le rendement, en part du maximum de la fiche : le quotient des deux cumuls. */
-export function partDuRendement(assimileCum: number, potentielCum: number): number {
-  return potentielCum > 0 ? assimileCum / potentielCum : 0;
 }
 
 /**
