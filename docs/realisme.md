@@ -911,12 +911,12 @@ sont identiques sur toutes les grandeurs relevées.
 Ces cellules sont presque toutes sur les **bords latéraux** de la parcelle :
 l'eau d'amont entre par tout le pourtour en proportion de la hauteur, si bien
 que les deux colonnes de flanc en reçoivent à chaque rang et la concentrent
-vers le bas. C'est un choix de `relief.ts`, signalé et non tranché ici.
+vers le bas. C'est un choix de `relief.ts`, signalé (#315) et non tranché ici.
 
 **Ce qui manque** : un vrai versant décapé continue de s'éroder dans l'horizon
 suivant. Ici le profil est commun à toute la parcelle et seul son premier
 horizon s'amincit cellule par cellule ; une cellule mise à nu cesse donc de
-perdre de la terre, ce qui sous-estime l'érosion d'un versant décapé.
+perdre de la terre, ce qui sous-estime l'érosion d'un versant décapé (#314).
 
 ## La strate arbustive : quatre espèces qui changent la succession
 

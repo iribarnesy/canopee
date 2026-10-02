@@ -125,7 +125,7 @@ export function epaisseurPerdueCm(arracheeKgM2: number, horizon: Horizon): numbe
  * Ce que le plafond ne fait pas : laisser l'érosion entamer l'horizon suivant,
  * ce que fait pourtant un vrai versant décapé. Le profil est commun à toute la
  * parcelle et seul son premier horizon s'amincit cellule par cellule ; une
- * cellule mise à nu cesse donc de perdre de la terre *(manque connu)*.
+ * cellule mise à nu cesse donc de perdre de la terre *(manque connu, #314)*.
  */
 export function terreDisponibleKgM2(horizon: Horizon, perdueCm: number): number {
   const densite = densiteApparente(horizon); // t/m³
