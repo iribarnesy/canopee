@@ -114,6 +114,34 @@ plancher constant, 121 aulnes sur 144 vivent, 0 hêtre meurt de soif, et ωc
 revient à 0,9, la valeur qu'on mesure sur le terrain. Avant de doser un
 remède, chercher l'organe qui manque.
 
+### Une variante jetable trouve la cause plus vite qu'une hypothèse bien argumentée
+
+L'aubépine perdait 0,3 m depuis le plancher racinaire constant. L'explication
+la plus séduisante était la forme du profil racinaire, qui s'étirait avec la
+profondeur. Le profil de Jackson, sourcé et approuvé, a été écrit et mesuré :
++0,02 m, et il est reparti. La cause est venue d'une variante d'une ligne,
+« l'arbre ne prend son azote qu'en surface » : 3,94 m. Le lot B adressait au
+fond pauvre une part de la demande que la surface ne reprenait jamais. Avant
+d'écrire un mécanisme, couper l'arbre causal avec un interrupteur grossier.
+
+### Deux correctifs approuvés peuvent repartir, et c'est le système qui marche
+
+La motte de pépinière rejointe à vitesse finie (B) et le profil de Jackson
+avaient le feu vert de l'auteur. Mesurés, ils ne changeaient pas ce qu'ils
+visaient : le hêtre de la lande s'installait quand même, l'aubépine ne
+remontait pas. Un feu vert autorise un essai, pas un mécanisme qui n'agit pas.
+Les deux sont dans le carnet de pré-enregistrement avec leurs chiffres, pas
+dans le moteur.
+
+### Une borne relevée sur le moteur tombe au premier changement qui touche son tirage
+
+Trois bornes ont lâché pendant ce lot sans qu'aucune réalité ne bouge : la
+tempête qui couchait « trois fois plus » de pins que de hêtres (en 1999, les
+conifères ont perdu deux fois plus que les feuillus, IFN 2003), la fauche « à moins de dix points » entre deux sols,
+la moyenne des bases « au-dessus de 1,5 » (graines de 1,01 à 1,72 pour un effet
+de 0,26). Aucune n'avait de source. Elles ont été remplacées par ce que le
+terrain dit, une direction, ou retirées avec l'accord de l'auteur.
+
 ### Un surplus faux peut nourrir tout ce qui pousse à côté
 
 Sur main, la prairie minait son humus (−36 % en quarante ans) et lessivait 85 à
