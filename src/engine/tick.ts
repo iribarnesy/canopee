@@ -1682,6 +1682,23 @@ export function tick(state: GameState, weather: WeekWeather): TickResult {
   );
   const partFondHerbe = fractionsHerbe.map((f) => (nH > 1 ? 1 - (f[0] ?? 1) : 0));
   /**
+   * La part de sa demande d'azote qu'une plante adresse au fond de la cellule i,
+   * ses racines y mettant la part `fond` : au prorata des racines **fois** ce que
+   * chaque compartiment a à offrir (#310). Une racine en sol riche prend plus
+   * qu'une racine en sol pauvre, et c'est ce que montrent les racines divisées :
+   * la plante compense sur la moitié servie ce que l'autre ne trouve pas
+   * (Robinson 1994, *New Phytologist* 127 : 635). Au seul prorata des racines,
+   * un arbre qui descendait envoyait une part de sa faim vers un fond pauvre,
+   * que la surface ne reprenait jamais : une aubépine de douze ans y perdait
+   * 0,3 m. La même part sert à la demande et au service.
+   */
+  const partFondPonderee = (fond: number, i: number): number => {
+    if (fond <= 0) return 0;
+    const surface = (1 - fond) * (availFactor[i] ?? 0);
+    const profond = fond * (availFactorFond[i] ?? 0);
+    return surface + profond > 0 ? profond / (surface + profond) : fond;
+  };
+  /**
    * L'abri au vent, rangé une fois pour la semaine au lieu d'être recalculé en
    * balayant tout le peuplement pour chaque arbre (#99). Construit seulement
    * s'il va servir : sur une parcelle abritée, `ventExposition` vaut zéro et
@@ -1784,14 +1801,15 @@ export function tick(state: GameState, weather: WeekWeather): TickResult {
       // rien, agit sur ce frein-là, donc sur la part de l'arbre.
       const dispo = Math.min(1, (availFactor[i] ?? 0) * (gainMyco[t] ?? 1));
       const demandeN = Math.min(needPerCell, capPerCell);
-      // Chaque compartiment reçoit la part de la demande et de la capacité que
-      // les racines y mettent (lot B).
+      // Chaque compartiment reçoit la part de la capacité que les racines y
+      // mettent (lot B), et la part de la demande que ce qu'il offre lui vaut.
       const fond = nH > 1 ? 1 - (fractions[0] ?? 1) : 0;
-      cellNWanted[i] = (cellNWanted[i] ?? 0) + demandeN * (1 - fond);
-      arbresNWanted[i] = (arbresNWanted[i] ?? 0) + demandeN * (1 - fond);
+      const demandeFond = partFondPonderee(fond, i);
+      cellNWanted[i] = (cellNWanted[i] ?? 0) + demandeN * (1 - demandeFond);
+      arbresNWanted[i] = (arbresNWanted[i] ?? 0) + demandeN * (1 - demandeFond);
       arbresCapacite[i] = (arbresCapacite[i] ?? 0) + capPerCell * dispo * (1 - fond);
-      cellNWantedFond[i] = (cellNWantedFond[i] ?? 0) + demandeN * fond;
-      arbresNWantedFond[i] = (arbresNWantedFond[i] ?? 0) + demandeN * fond;
+      cellNWantedFond[i] = (cellNWantedFond[i] ?? 0) + demandeN * demandeFond;
+      arbresNWantedFond[i] = (arbresNWantedFond[i] ?? 0) + demandeN * demandeFond;
       arbresCapaciteFond[i] =
         (arbresCapaciteFond[i] ?? 0) +
         capPerCell * Math.min(1, (availFactorFond[i] ?? 0) * (gainMyco[t] ?? 1)) * fond;
@@ -1885,8 +1903,9 @@ export function tick(state: GameState, weather: WeekWeather): TickResult {
       const demande = potentiel > 0 ? Math.max(0, azoteCritiqueG(vise) - (herbeAzoteG[k] ?? 0)) : 0;
       herbePotentielG[k] = potentiel;
       herbeDemandeEspeceG[k] = demande;
-      demandeN += demande * (1 - fondH);
-      demandeFondN += demande * fondH;
+      const demandeFondH = partFondPonderee(fondH, i);
+      demandeN += demande * (1 - demandeFondH);
+      demandeFondN += demande * demandeFondH;
     }
     herbeDemandeNG[i] = demandeN;
     herbeDemandeFondNG[i] = demandeFondN;
@@ -2116,7 +2135,7 @@ export function tick(state: GameState, weather: WeekWeather): TickResult {
       const fiche = HERBACEES[s];
       if (!fiche) continue;
       const k = base + s;
-      const fondS = partFondHerbe[s] ?? 0;
+      const fondS = partFondPonderee(partFondHerbe[s] ?? 0, i);
       const serviEspece = (1 - fondS) * servi + fondS * (nServedRatioFond[i] ?? 0);
       let azote = (herbeAzoteG[k] ?? 0) + (herbeDemandeEspeceG[k] ?? 0) * serviEspece;
       let matiere = herbeMatiereSecheG[k] ?? 0;
@@ -2203,7 +2222,7 @@ export function tick(state: GameState, weather: WeekWeather): TickResult {
       // cellule fait disparaître la différence (mycorhizes.ts, `tick.ts`
       // passe 3).
       const demandeCell = Math.min(needPerCell, capPerCell);
-      const fond = nH > 1 ? 1 - (fractions[0] ?? 1) : 0;
+      const fond = partFondPonderee(nH > 1 ? 1 - (fractions[0] ?? 1) : 0, i);
       gotN +=
         demandeCell *
         ((1 - fond) * (arbresServedRatio[i] ?? 0) + fond * (arbresServedRatioFond[i] ?? 0));
