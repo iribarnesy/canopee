@@ -165,11 +165,11 @@ describe("la crue", () => {
 
 describe("la crue comme événement (#288)", () => {
   /**
-   * Deux ans de météo réelle sur une station, parcelle de 30 m : chaque
-   * semaine, la crue s'il y en a une, la pluie, et le plus fort débordement.
+   * Deux ans de météo réelle sur une station : chaque semaine, la crue s'il y
+   * en a une, le plus fort débordement, et si l'état garde une mémoire.
    */
-  function deuxAns(sc: StationClimat) {
-    const st: Station = { ...sc.station, coteM: 30, voisinage: [], gibierParHa: 0 };
+  function deuxAns(sc: StationClimat, coteM: number) {
+    const st: Station = { ...sc.station, coteM, voisinage: [], gibierParHa: 0 };
     const serie = serieMeteoPour(sc.station.id);
     const meteo: WeekWeather[] = serie ? serieToWeeks(serie, sc.climat) : syntheticYear(sc.climat);
     let state = createGameState(st, rngStateFromSeed(5));
@@ -188,13 +188,25 @@ describe("la crue comme événement (#288)", () => {
     return semaines;
   }
 
-  // Relevé (graine 5, 1964-1965, 30 m) : la première semaine sort d'un état
-  // initial à l'équilibre et s'inonde, puis l'hiver 1964-65 fait une crue de
+  // **Un hectare, la taille des parcelles du jeu, et pas trente mètres.** La
+  // rangée du pied de la parcelle, où la nappe converge, reste inondée toute
+  // l'année : sur trente mètres elle pèse 2,7 % de la surface, au-dessus du
+  // seuil de fin, et la crue ne se ferme jamais (relevé : six ans d'une seule
+  // crue) ; sur un hectare elle pèse 1 %. C'est une limite de la définition par
+  // part de parcelle, écrite dans crue.ts.
+  //
+  // Relevé (graine 5, 1964-1965) : la première semaine sort d'un état initial
+  // à l'équilibre et s'inonde une semaine, puis l'hiver 1964-65 fait une crue de
   // plusieurs mois. Le talweg y porte plus de 100 000 mm de débit pendant que
   // les lames restent à quelques dizaines de millimètres.
-  const vallee = deuxAns(VALLEE_ENGORGEE);
+  let memo: ReturnType<typeof deuxAns> | undefined;
+  const valleeDeuxAns = () => {
+    memo ??= deuxAns(VALLEE_ENGORGEE, 100);
+    return memo;
+  };
 
   it("le fond de vallée a sa crue d'hiver, qui commence, dure et se ferme", () => {
+    const vallee = valleeDeuxAns();
     const ids = [...new Set(vallee.flatMap((s) => (s.crue ? [s.crue.id] : [])))];
     const longues = ids.filter((id) => vallee.filter((s) => s.crue?.id === id).length >= 4);
     expect(longues.length).toBeGreaterThanOrEqual(1);
@@ -209,9 +221,10 @@ describe("la crue comme événement (#288)", () => {
     expect(vallee[derniere]?.memoire).toBe(true);
     // Sans eau libre déclarée, la montée est souterraine : zéro.
     expect(suite.every((c) => c.monteeM === 0)).toBe(true);
-  });
+  }, 300_000);
 
   it("ses lames ne comptent pas l'eau qui ne fait que passer", () => {
+    const vallee = valleeDeuxAns();
     // Le défaut des 652 835 mm : `debordementParCellule` cumule le long du
     // talweg toute l'eau du bassin d'amont, c'est un débit. Une lame lue là
     // dedans mettrait des centaines de mètres d'eau sur le lit.
@@ -221,13 +234,13 @@ describe("la crue comme événement (#288)", () => {
     expect(debitMax).toBeGreaterThan(100_000);
     expect(lameMax).toBeGreaterThan(0);
     expect(lameMax).toBeLessThan(500);
-  });
+  }, 300_000);
 
   it("un plateau sans bassin ni nappe n'a aucune crue", () => {
-    const plateau = deuxAns(LIMON_RICHE);
+    const plateau = deuxAns(LIMON_RICHE, 30);
     expect(plateau.filter((s) => s.crue).length).toBe(0);
     expect(plateau.some((s) => s.memoire)).toBe(false);
-  });
+  }, 300_000);
 
   it("un ruisseau qui monte pose sa hauteur sur ce qu'il noie", () => {
     const st = {

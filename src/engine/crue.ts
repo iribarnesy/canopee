@@ -45,6 +45,17 @@
  * montée, c'est le pic ; elle continue de se réduire, c'est le retrait. Une
  * seconde vague dans la même saison repart en montée sans ouvrir un autre
  * événement — c'est le même hiver d'eau.
+ *
+ * ## Ce que la définition ne sait pas faire
+ *
+ * Les deux seuils sont des parts **de la parcelle**, et c'est leur limite. Ce
+ * qui est inondé en permanence — sur le fond de vallée, la rangée du pied de
+ * la parcelle, où la nappe converge — pèse d'autant plus que la parcelle est
+ * petite : 1 % d'un hectare, 2,7 % d'un carré de trente mètres. Au-dessus du
+ * seuil de fin, la crue ne se ferme plus jamais. Les parcelles du jeu font un
+ * hectare ; une parcelle plus petite demanderait de retirer de l'emprise ce
+ * qui ne sèche jamais, ce qui suppose une mémoire plus longue que celle d'une
+ * crue *(à trancher)*.
  */
 
 import type { CauseMort } from "./trees";
