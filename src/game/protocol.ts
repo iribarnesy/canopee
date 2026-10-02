@@ -406,6 +406,14 @@ export interface Snapshot {
    */
   soilLumiere: Float32Array;
   /**
+   * Où sont les insectes pollinisateurs par cellule ∈ [0,1] : le gîte et la
+   * table, `min(habitat, ressource florale)`, la grandeur même que lit le
+   * service de pollinisation, **sans** son plancher (vent, abeilles
+   * domestiques). Haute là où une haie fleurie loge et nourrit, presque nulle
+   * dans un verger nu même en pleine floraison (tick.ts, #299).
+   */
+  soilPollinisateurs: Float32Array;
+  /**
    * Litière au sol, gC/m² par cellule : le tapis de feuilles de novembre, le
    * paillage d'un BRF fraîchement épandu, le noir des cendres après un feu.
    */

@@ -121,6 +121,7 @@ est là pour qu'une station le déclare quand on l'aura).
 | `soilEngorgement` | engorgement du profil ∈ [0,1] |
 | `soilDebordementMm` | ce qui n'est pas rentré dans le sol cette semaine, mm |
 | `soilLumiere` | lumière arrivant au sol ∈ [0,1] |
+| `soilPollinisateurs` | où sont les insectes pollinisateurs ∈ [0,1] : `min(habitat, ressourceFlorale)`, la grandeur même du service de pollinisation, **sans** son plancher (vent, abeilles domestiques) — presque nulle dans un verger nu en fleur ; mesurée à quelques centièmes au pied d'une jeune haie, 0,6 en été au pied d'une haie de dix ans (#299) |
 | `soilCloture` | cellules closes (1) |
 
 **Par arbre** (`SnapshotTree`, chandelles comprises) : `id`, `especeId`, `x`,
