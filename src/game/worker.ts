@@ -30,6 +30,7 @@ import { advanceWeek, beginWeek } from "../engine/game";
 import { partMecanisable } from "../engine/mecanisation";
 import { serieToWeeks, syntheticYear, type WeekWeather } from "../engine/meteo";
 import { profondeurEquilibreCm } from "../engine/nappe";
+import type { FrequentationDeGuilde } from "../engine/oiseaux";
 import {
   type Bordures,
   bordersUniformes,
@@ -537,6 +538,9 @@ let pendingTempete: TempeteResult | undefined;
 let lastDebordement: Float32Array | undefined;
 let lastLumiereAuSol: Float32Array | undefined;
 let lastPollinisateurs: Float32Array | undefined;
+// Les oiseaux de passage de la dernière semaine (#296) : une fréquentation, pas
+// un événement — on garde la dernière, on n'accumule pas.
+let lastOiseauxDePassage: readonly FrequentationDeGuilde[] | undefined;
 let droughtYearFlagged = -1;
 // Part inondée la semaine précédente : on ne raconte la crue qu'une fois.
 let partInondeePrecedente = 0;
@@ -982,6 +986,7 @@ function postSnapshot() {
     debordementParCellule: lastDebordement,
     lumiereAuSol: lastLumiereAuSol,
     pollinisateurs: lastPollinisateurs,
+    oiseauxDePassage: lastOiseauxDePassage,
     refusals: pendingRefusals,
     events: pendingEvents,
     morts: pendingMorts,
@@ -1239,6 +1244,7 @@ function stepWeeks(n: number) {
     lastDebordement = ticked.debordementParCellule;
     lastLumiereAuSol = ticked.lumiereAuSol;
     lastPollinisateurs = ticked.pollinisateurs;
+    lastOiseauxDePassage = ticked.oiseauxDePassage;
     pendingMorts.push(...ticked.morts);
     pendingNaissances.push(...ticked.naissances);
     pendingFranchissements.push(...ticked.franchissements);
@@ -1595,6 +1601,7 @@ function avancerLaRelecture(n: number): void {
     lastDebordement = step.debordementParCellule;
     lastLumiereAuSol = step.lumiereAuSol;
     lastPollinisateurs = step.pollinisateurs;
+    lastOiseauxDePassage = step.oiseauxDePassage;
   }
 }
 
@@ -1876,6 +1883,7 @@ function init(
   lastDebordement = undefined;
   lastLumiereAuSol = undefined;
   lastPollinisateurs = undefined;
+  lastOiseauxDePassage = undefined;
   weeksPerSecond = 0;
   bankruptcyAnnounced = false;
   droughtYearFlagged = -1;
@@ -1978,6 +1986,7 @@ self.addEventListener("message", (event: MessageEvent<ToWorker>) => {
         lastDebordement = step.debordementParCellule;
         lastLumiereAuSol = step.lumiereAuSol;
         lastPollinisateurs = step.pollinisateurs;
+        lastOiseauxDePassage = step.oiseauxDePassage;
         if (i % 104 === 0)
           post({ type: "progress", done: i, total: msg.save.weeks, phase: "rejeu" });
       }

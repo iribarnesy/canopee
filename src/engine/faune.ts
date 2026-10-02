@@ -855,7 +855,7 @@ export function graineInstallation(idArbre: number, idEspece: string, semaine: n
 }
 
 /** Un flottant dans [0,1[ tiré d'une graine locale, sans état à faire circuler. */
-function tirageLocal(graine: number): number {
+export function tirageLocal(graine: number): number {
   let x = graine >>> 0;
   x ^= x << 13;
   x >>>= 0;

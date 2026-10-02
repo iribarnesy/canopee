@@ -481,6 +481,38 @@ export interface EspeceV0 {
    * Voir `glandee.ts`, qui en tire une production annuelle irrégulière.
    */
   semences?: Semences;
+  /**
+   * **les baies que mangent les oiseaux** — et ce n'est ni `fruits` ni
+   * `semences` (issue #296).
+   *
+   * `fruits` décrit une **récolte** : une semaine de cueillette, une fenêtre de
+   * fraîcheur au-delà de laquelle le moteur jette ce qui n'a pas été ramassé.
+   * Un oiseau ne lit pas cette fenêtre. Les prunelles restent sur la branche
+   * jusqu'en janvier quand la fiche les dit perdues mi-novembre, et l'aubépine,
+   * qui est la première baie d'hiver des grives, n'a pas de bloc `fruits` du
+   * tout : on ne vend pas de cenelles. C'est la leçon de la glandée (#197),
+   * pour la seconde fois : deux notions qui partagent un mot méritent deux
+   * blocs.
+   *
+   * Ce bloc dit **quand la baie mûre est sur la plante**, offerte aux oiseaux :
+   * de la semaine où elle mûrit à celle où il n'en reste presque plus. Les deux
+   * bornes sont comprises, et la fenêtre peut **enjamber le nouvel an** (un houx
+   * se lit de 39 à 9). Ce n'est pas une date de maturité botanique : c'est ce
+   * que Snow & Snow ont **vu manger**, et leur fin de saison contient donc déjà
+   * ce que les oiseaux ont emporté (*Birds and Berries*, 1988, fig. 1).
+   *
+   * **Absent veut dire « pas une baie d'oiseau »** : un gland se mange au sol et
+   * par d'autres bêtes (`semences`), une pomme tombe. La fiche le déclare en
+   * même temps que `dissemination: "oiseaux"`, qui dit déjà que la graine passe
+   * par un tube digestif — `fiches.test.ts` vérifie que l'un ne va pas sans
+   * l'autre.
+   */
+  baies?: {
+    /** première semaine de l'année (0-51) où la baie mûre est offerte */
+    debutSemaine: number;
+    /** dernière semaine où il en reste assez pour attirer, comprise */
+    finSemaine: number;
+  };
   sources: string[];
 }
 
@@ -525,6 +557,13 @@ const ASENSIO_2008 =
   "Asensio, Casaleiro & Montalvo 2008, Aptitudes de madroño para reforestación en Galicia, Cuadernos SECF 28 (Galice, Espagne) — première année de plantation seulement";
 const PEPINIERES_DE =
   "catalogues de pépiniéristes et bases horticoles allemands (Garten von Ehren, Baumschule Horstmann, NaturaDB) — ordre de grandeur commercial, pas une mesure";
+/**
+ * **source des saisons de baies** (`baies`, #296). Six ans de guet aux buissons
+ * en fruits dans la vallée d'Aylesbury : la figure 1 et les pages 19-21 disent
+ * quand chaque fruit est **mangé**, ce qui est la grandeur que lit un oiseau.
+ */
+const SNOW_1988 =
+  "Snow & Snow 1988, Birds and Berries, T & AD Poyser (vallée d'Aylesbury, sud de l'Angleterre, 1980-85) — fig. 1 et p. 19-21, saisons des fruits mangés par les oiseaux";
 
 /**
  * **sources d'infradensité** (`bois.densite`, #68). Deux, et dans cet ordre : la
@@ -1155,7 +1194,13 @@ export const ESPECES_V0: readonly EspeceV0[] = [
     ravageurs: { sensibilite: 0.4 },
     gibier: { appetence: 0.3 },
     feu: { inflammabilite: 0.45, resistanceEcorce: 0.15, rejetteApresFeu: true },
-    sources: [ATLAS, GRUBB_1999],
+    // Les prunelles mûrissent à l'automne et **restent sur la branche** l'hiver
+    // (Wildlife Trusts, fiche Blackthorn), et ne deviennent vraiment mangeables
+    // qu'après les gelées (Kleinschmidt 2021, bird-lens.com). Le début en
+    // octobre et la fin en janvier sont *(à confirmer)* : la partie de Snow &
+    // Snow lue ici ne les chiffre pas.
+    baies: { debutSemaine: 40, finSemaine: 4 },
+    sources: [ATLAS, GRUBB_1999, SNOW_1988],
   },
   {
     id: "crataegus_monogyna",
@@ -1197,7 +1242,12 @@ export const ESPECES_V0: readonly EspeceV0[] = [
     ravageurs: { sensibilite: 0.5 },
     gibier: { appetence: 0.25 },
     feu: { inflammabilite: 0.4, resistanceEcorce: 0.2, rejetteApresFeu: true },
-    sources: [ATLAS, GRUBB_1999, WILLOUGHBY_2007],
+    // Les premières cenelles en août, le gros en septembre, et la récolte est
+    // « largement finie en décembre » (Snow & Snow 1988, p. 21). Ce qui reste
+    // jusqu'en février sur quelques buissons ne compte pas ici. C'est **la**
+    // baie d'hiver des grives, et la fiche n'avait aucun bloc pour le dire.
+    baies: { debutSemaine: 34, finSemaine: 48 },
+    sources: [ATLAS, GRUBB_1999, WILLOUGHBY_2007, SNOW_1988],
   },
   {
     id: "rubus_fruticosus",
@@ -1270,7 +1320,10 @@ export const ESPECES_V0: readonly EspeceV0[] = [
     ravageurs: { sensibilite: 0.3 },
     gibier: { appetence: 0.45 },
     feu: { inflammabilite: 0.5, resistanceEcorce: 0.05, rejetteApresFeu: true },
-    sources: [ATLAS, PEPINIERES_DE],
+    // Les premières mûres en août, le gros en septembre (Snow & Snow 1988,
+    // p. 20). La fin, mi-octobre, est *(à confirmer)*.
+    baies: { debutSemaine: 31, finSemaine: 42 },
+    sources: [ATLAS, PEPINIERES_DE, SNOW_1988],
   },
   {
     id: "sambucus_nigra",
@@ -1319,7 +1372,12 @@ export const ESPECES_V0: readonly EspeceV0[] = [
     ravageurs: { sensibilite: 0.35 },
     gibier: { appetence: 0.2 }, // feuillage rebutant : le chevreuil s'en détourne
     feu: { inflammabilite: 0.35, resistanceEcorce: 0.1, rejetteApresFeu: true },
-    sources: [ATLAS, ATKINSON_2002],
+    // Le sureau mûrit en août — « de loin le plus important » des fruits du
+    // mois — et sa récolte est « largement finie en novembre » (Snow & Snow
+    // 1988, p. 20-21). C'est la baie des fauvettes qui s'engraissent avant de
+    // partir, pas celle des grives d'hiver.
+    baies: { debutSemaine: 30, finSemaine: 42 },
+    sources: [ATLAS, ATKINSON_2002, SNOW_1988],
   },
   {
     id: "carpinus_betulus",
@@ -1421,7 +1479,13 @@ export const ESPECES_V0: readonly EspeceV0[] = [
     // Piquant, mais le chevreuil s'y met quand même en hiver, faute de mieux.
     gibier: { appetence: 0.3 },
     feu: { inflammabilite: 0.35, resistanceEcorce: 0.15, rejetteApresFeu: true },
-    sources: [ATLAS, PETERKEN_1967, GWDD_2009],
+    // Les premières baies fin septembre, la plupart en octobre, et il en reste
+    // jusqu'en février-mars sur une partie des houx (Snow & Snow 1988, p. 20).
+    // **Le houx est dioïque** et seul le pied femelle porte des baies ;
+    // le moteur ne connaît pas le sexe d'un arbre, il compte donc tous les houx
+    // — soit à peu près le double de ce qu'il faudrait.
+    baies: { debutSemaine: 39, finSemaine: 9 },
+    sources: [ATLAS, PETERKEN_1967, GWDD_2009, SNOW_1988],
   },
   {
     id: "salix_alba",
@@ -1538,6 +1602,10 @@ export const ESPECES_V0: readonly EspeceV0[] = [
     ravageurs: { sensibilite: 0.25 },
     gibier: { appetence: 0.35 },
     feu: { inflammabilite: 0.35, resistanceEcorce: 0.2, rejetteApresFeu: true },
+    // Le cornouiller mâle mûrit en août-septembre. Snow & Snow ne le suivent
+    // pas (leur « dogwood » est le cornouiller sanguin) : la fenêtre reprend la
+    // semaine de récolte de la fiche et sa fraîcheur *(à confirmer)*.
+    baies: { debutSemaine: 31, finSemaine: 38 },
     sources: [ATLAS, PEPINIERES_DE],
   },
   {
@@ -1577,7 +1645,10 @@ export const ESPECES_V0: readonly EspeceV0[] = [
     ravageurs: { sensibilite: 0.45, hoteHivernal: true },
     gibier: { appetence: 0.4 },
     feu: { inflammabilite: 0.35, resistanceEcorce: 0.15, rejetteApresFeu: true },
-    sources: [ATLAS, WILLOUGHBY_2007, GWDD_2009],
+    // Le fusain commence à mûrir en novembre (Snow & Snow 1988, p. 20). La
+    // fin, en janvier, est *(à confirmer)*.
+    baies: { debutSemaine: 43, finSemaine: 3 },
+    sources: [ATLAS, WILLOUGHBY_2007, GWDD_2009, SNOW_1988],
   },
   {
     id: "ligustrum_vulgare",
@@ -1635,7 +1706,11 @@ export const ESPECES_V0: readonly EspeceV0[] = [
     ravageurs: { sensibilite: 0.3 },
     gibier: { appetence: 0.35 },
     feu: { inflammabilite: 0.4, resistanceEcorce: 0.15, rejetteApresFeu: true },
-    sources: [ATLAS, GRUBB_1999, GWDD_2009],
+    // Le troène commence à mûrir en novembre (Snow & Snow 1988, p. 20), et sa
+    // baie noire tient une bonne partie de l'hiver. La fin, en février, est
+    // *(à confirmer)*.
+    baies: { debutSemaine: 43, finSemaine: 8 },
+    sources: [ATLAS, GRUBB_1999, GWDD_2009, SNOW_1988],
   },
   {
     id: "ulex_europaeus",
@@ -2055,6 +2130,9 @@ export const ESPECES_V0: readonly EspeceV0[] = [
     ravageurs: { sensibilite: 0.2 },
     gibier: { appetence: 0.3 },
     feu: { inflammabilite: 0.7, resistanceEcorce: 0.35, rejetteApresFeu: true },
+    // L'arbouse mûrit d'octobre à décembre, en même temps que l'arbre
+    // refleurit. Hors de l'aire de Snow & Snow : la fenêtre est *(à confirmer)*.
+    baies: { debutSemaine: 40, finSemaine: 51 },
     sources: [ATLAS, ASENSIO_2008, GWDD_2009],
   },
 ];
