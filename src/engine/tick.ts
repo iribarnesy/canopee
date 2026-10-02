@@ -604,6 +604,19 @@ export interface TickResult {
   debordementParCellule: Float32Array;
   /** lumière relative arrivant au sol, cellule par cellule ∈ [0,1] (light.ts) */
   lumiereAuSol: Float32Array;
+  /**
+   * Où sont les **insectes pollinisateurs** cette semaine, cellule par cellule
+   * ∈ [0,1] (#299) : `min(habitat, ressourceFlorale)`, le gîte et la table, et
+   * le plus rare décide. C'est la grandeur même que lit le service de
+   * pollinisation au moment de la récolte, calculée une seule fois par le tick.
+   *
+   * Ce n'est **pas** la nouaison : le plancher `POLLINISATION_PLANCHER` n'y est
+   * pas, parce qu'il représente ce qui pollinise sans insecte sauvage — le vent,
+   * les abeilles domestiques d'un voisin, l'autogamie partielle. Un verger nu
+   * dans une plaine nue vaut ici presque zéro, et c'est voulu : il fleurit, mais
+   * personne n'y vit pour porter le pollen.
+   */
+  pollinisateurs: Float32Array;
   /** chandelles abattues cette semaine, avec où et comment elles sont tombées */
   chutes: ChuteDeChandelle[];
   /**
@@ -685,6 +698,27 @@ function imputer(tree: TreeState, coup: CauseMort, stressFinal: number): CauseMo
  * il ne déplace pas le plancher.
  */
 const POLLINISATION_PLANCHER = 0.35;
+
+/**
+ * Où sont les insectes pollinisateurs, cellule par cellule ∈ [0,1] : il leur
+ * faut un gîte (`habitat`, la carte des auxiliaires de `carteBiotique`) **et**
+ * une table (`ressourceFlorale`, la mémoire de ce qu'ils ont eu à manger), et
+ * le plus rare des deux décide (#70).
+ *
+ * Le plancher `POLLINISATION_PLANCHER` n'y entre pas : il dit ce qui noue sans
+ * eux (vent, abeilles domestiques, autogamie), pas où ils sont. Le service de
+ * pollinisation l'ajoute par-dessus ; le rendu, qui pose des insectes, ne le
+ * voit pas (#299).
+ */
+export function pollinisateursParCellule(
+  habitat: ArrayLike<number>,
+  ressourceFlorale: ArrayLike<number>,
+): Float64Array {
+  const n = Math.min(habitat.length, ressourceFlorale.length);
+  const carte = new Float64Array(n);
+  for (let i = 0; i < n; i++) carte[i] = Math.min(habitat[i] ?? 0, ressourceFlorale[i] ?? 0);
+  return carte;
+}
 
 export function tick(state: GameState, weather: WeekWeather): TickResult {
   const { station } = state;
@@ -2700,6 +2734,12 @@ export function tick(state: GameState, weather: WeekWeather): TickResult {
     ressourceFlorale[i] =
       (ressourceFlorale[i] ?? 0) + (cible - (ressourceFlorale[i] ?? 0)) * INERTIE_RESSOURCE_FLORALE;
   }
+  // **où vivent les pollinisateurs, et s'ils ont mangé** (#70, #299). Le gîte
+  // (l'habitat des auxiliaires) et la table (la mémoire florale), réunis en une
+  // seule carte. Le service de pollinisation la lit plus bas, arbre par arbre,
+  // et le rendu la reçoit telle quelle pour poser ses abeilles et ses papillons :
+  // une seule règle, deux lecteurs.
+  const pollinisateurs = pollinisateursParCellule(habitat, ressourceFlorale);
 
   nextTrees = nextTrees.map((tree, t) => {
     const espece = getEspece(tree.especeId);
@@ -2771,11 +2811,10 @@ export function tick(state: GameState, weather: WeekWeather): TickResult {
         //
         // Le minimum plutôt qu'une somme, comme partout ailleurs dans ce
         // moteur : un abri sans fleurs ne fait pas un pollinisateur, des
-        // fleurs sans abri non plus.
+        // fleurs sans abri non plus. Ce minimum est la carte des
+        // pollinisateurs de la semaine (`pollinisateursParCellule`).
         const servicePollinisation =
-          POLLINISATION_PLANCHER +
-          (1 - POLLINISATION_PLANCHER) *
-            Math.min(habitat[cellArbre] ?? 0, ressourceFlorale[cellArbre] ?? 0);
+          POLLINISATION_PLANCHER + (1 - POLLINISATION_PLANCHER) * (pollinisateurs[cellArbre] ?? 0);
         fruitsKg =
           fruits.rendementMaxKg *
           sizeFactor *
@@ -4199,6 +4238,11 @@ export function tick(state: GameState, weather: WeekWeather): TickResult {
     // le rendu n'a ni crue, ni sous-bois sombre, ni tache de lumière.
     debordementParCellule: Float32Array.from(debordementParCellule),
     lumiereAuSol: Float32Array.from(groundLight),
+    // Le service lit la carte en double précision, comme il lisait le minimum
+    // avant d'avoir une carte : la nouaison reste ainsi identique au bit près.
+    // Le rendu la reçoit en simple, comme les autres grilles — l'écart est sous
+    // le millionième.
+    pollinisateurs: Float32Array.from(pollinisateurs),
     fluxes: {
       rainMm: weather.rainMm,
       etpMm,

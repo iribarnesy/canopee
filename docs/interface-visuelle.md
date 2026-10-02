@@ -1172,7 +1172,7 @@ individuellement ». C'est faux depuis #187 : les nicheurs sont des individus
 | **Mésanges, pic, chevêche, buse, écureuil** | les individus du moteur (`Snapshot.faune`) ; un couple fait deux corps (`unite`) | autour de l'arbre du gîte : la mésange va de houppier en houppier et rentre à sa loge, le pic grimpe aux fûts et va aux chandelles, la chevêche guette, la buse tourne au-dessus de son aire, l'écureuil court d'un pied à l'autre ; tous fuient un chantier proche | `render/faune/residents.ts` | livré (#297) |
 | **Geai** | les semis levés des espèces à dissémination `geai` (`Snapshot.naissances`) | **revient** à sa cachette au printemps, s'y pose et fouille — l'enfouissement est d'automne, et le moteur fait lever les semis en avril | `render/faune/geai.ts` | livré (#298) |
 | **Nuée de ravageurs** | `soilRavageurs` au-delà de 0,2, et `facteurChaleur` : sous la température de base, elle se pose | points qui dansent autour des houppiers de la tache | `render/faune/nuee.ts` | livré (#300) |
-| **Papillons, abeilles** | la présence des pollinisateurs, `min(habitat, ressourceFlorale)` — que le moteur calcule sans l'exposer | tourneront autour de ce qui fleurit, là où il y en a | — | attend #299 |
+| **Papillons, abeilles** | la présence des pollinisateurs, `soilPollinisateurs` = `min(habitat, ressourceFlorale)`, sans le plancher du vent et des abeilles domestiques | tourneront autour de ce qui fleurit, là où il y en a | — | grandeur exposée (#299), dessin à faire |
 | **Oiseaux de passage** | aucune grandeur : le moteur ne tient que les nicheurs | — | — | attend #296 |
 
 **Invisibles, et c'est tenu** : les chauves-souris (elles chassent de nuit, et le

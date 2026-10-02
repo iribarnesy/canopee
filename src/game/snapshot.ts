@@ -204,6 +204,8 @@ export interface EntreesSnapshot {
   debordementParCellule?: Float32Array;
   /** lumière au sol de la dernière semaine simulée, par cellule (`TickResult`) */
   lumiereAuSol?: Float32Array;
+  /** pollinisateurs de la dernière semaine simulée, par cellule (`TickResult`) */
+  pollinisateurs?: Float32Array;
   refusals: ActionRefusal[];
   events: GameEvent[];
   morts: MortDeLaSemaine[];
@@ -319,6 +321,12 @@ export function construireSnapshot(e: EntreesSnapshot): Snapshot {
     soilLumiere: e.lumiereAuSol
       ? Float32Array.from(e.lumiereAuSol)
       : new Float32Array(nCells).fill(1),
+    // Au premier instantané, aucun tick n'a tourné : l'habitat n'est pas de
+    // l'état, la carte n'existe pas encore. On la montre vide plutôt que de
+    // refaire ici le minimum du moteur (#299) — elle arrive à la semaine suivante.
+    soilPollinisateurs: e.pollinisateurs
+      ? Float32Array.from(e.pollinisateurs)
+      : new Float32Array(nCells),
     // La litière **est** de l'état (elle s'accumule et se décompose) : on la lit
     // dans le sol, comme le pH, plutôt que de la faire remonter du tick.
     soilLitiereCG: Float32Array.from(state.soil.litterCG),
@@ -370,6 +378,7 @@ export function transferablesDuSnapshot(s: Snapshot): Transferable[] {
     s.soilCloture.buffer,
     s.soilDebordementMm.buffer,
     s.soilLumiere.buffer,
+    s.soilPollinisateurs.buffer,
     s.soilLitiereCG.buffer,
   ];
   if (s.incendie) {

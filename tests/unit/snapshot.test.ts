@@ -49,6 +49,7 @@ function entrees(state: ReturnType<typeof etatNeuf>): EntreesSnapshot {
     fluxes: ticked.fluxes,
     debordementParCellule: ticked.debordementParCellule,
     lumiereAuSol: ticked.lumiereAuSol,
+    pollinisateurs: ticked.pollinisateurs,
     refusals: [],
     events: [],
     morts: ticked.morts,
@@ -246,10 +247,15 @@ describe("les grilles de l'instantané", () => {
       state,
       debordementParCellule: undefined,
       lumiereAuSol: undefined,
+      pollinisateurs: undefined,
     });
     const nCells = STATION.coteM * STATION.coteM;
     expect(snapshot.soilDebordementMm).toHaveLength(nCells);
     expect([...snapshot.soilLumiere].every((v) => v === 1)).toBe(true);
+    // Les pollinisateurs ne s'inventent pas côté jeu (#299) : sans tick, la
+    // carte est vide, pas recalculée.
+    expect(snapshot.soilPollinisateurs).toHaveLength(nCells);
+    expect([...snapshot.soilPollinisateurs].every((v) => v === 0)).toBe(true);
   });
 
   it("copie les grilles du tick : elles servent aussi à l'instantané suivant", () => {
@@ -262,6 +268,8 @@ describe("les grilles de l'instantané", () => {
     expect(snapshot.soilDebordementMm).not.toBe(e.debordementParCellule);
     expect(snapshot.soilLumiere).not.toBe(e.lumiereAuSol);
     expect([...snapshot.soilLumiere]).toEqual([...(e.lumiereAuSol ?? [])]);
+    expect(snapshot.soilPollinisateurs).not.toBe(e.pollinisateurs);
+    expect([...snapshot.soilPollinisateurs]).toEqual([...(e.pollinisateurs ?? [])]);
   });
 
   it("transfère TOUS ses tampons : un oubli se paie en une copie par semaine", () => {

@@ -533,9 +533,10 @@ let pendingIncendie: IncendieResult | undefined;
 /** Même traitement que l'incendie : l'événement attend l'instantané (#87). */
 let pendingTempete: TempeteResult | undefined;
 // Grandeurs du dernier tick : elles ne sont pas dans l'état, et sans elles le
-// rendu n'a ni crue, ni sous-bois sombre (tick.ts).
+// rendu n'a ni crue, ni sous-bois sombre, ni insectes à poser (tick.ts).
 let lastDebordement: Float32Array | undefined;
 let lastLumiereAuSol: Float32Array | undefined;
+let lastPollinisateurs: Float32Array | undefined;
 let droughtYearFlagged = -1;
 // Part inondée la semaine précédente : on ne raconte la crue qu'une fois.
 let partInondeePrecedente = 0;
@@ -980,6 +981,7 @@ function postSnapshot() {
     fluxes: lastFluxes ?? emptyFluxes(),
     debordementParCellule: lastDebordement,
     lumiereAuSol: lastLumiereAuSol,
+    pollinisateurs: lastPollinisateurs,
     refusals: pendingRefusals,
     events: pendingEvents,
     morts: pendingMorts,
@@ -1236,6 +1238,7 @@ function stepWeeks(n: number) {
     // en route (une mort qu'on n'a pas vue est un arbre qui s'escamote).
     lastDebordement = ticked.debordementParCellule;
     lastLumiereAuSol = ticked.lumiereAuSol;
+    lastPollinisateurs = ticked.pollinisateurs;
     pendingMorts.push(...ticked.morts);
     pendingNaissances.push(...ticked.naissances);
     pendingFranchissements.push(...ticked.franchissements);
@@ -1591,6 +1594,7 @@ function avancerLaRelecture(n: number): void {
     lastFluxes = step.fluxes;
     lastDebordement = step.debordementParCellule;
     lastLumiereAuSol = step.lumiereAuSol;
+    lastPollinisateurs = step.pollinisateurs;
   }
 }
 
@@ -1871,6 +1875,7 @@ function init(
   lastFluxes = undefined;
   lastDebordement = undefined;
   lastLumiereAuSol = undefined;
+  lastPollinisateurs = undefined;
   weeksPerSecond = 0;
   bankruptcyAnnounced = false;
   droughtYearFlagged = -1;
@@ -1972,6 +1977,7 @@ self.addEventListener("message", (event: MessageEvent<ToWorker>) => {
         // débordement et sa lumière au sol servent au premier instantané.
         lastDebordement = step.debordementParCellule;
         lastLumiereAuSol = step.lumiereAuSol;
+        lastPollinisateurs = step.pollinisateurs;
         if (i % 104 === 0)
           post({ type: "progress", done: i, total: msg.save.weeks, phase: "rejeu" });
       }
