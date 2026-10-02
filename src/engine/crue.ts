@@ -25,8 +25,9 @@
  * jour : `debordementParCellule` additionne, le long de la pente, toute l'eau
  * qui **traverse** une cellule. Sur le talweg d'un vallon dont le bassin d'amont
  * fait six hectares, toute l'eau du bassin entre par une cellule d'un mètre
- * carré et la descend : 650 m³ dans la semaine d'un orage de 90 mm, soit
- * « 652 835 mm » si on le lit comme une lame. C'est un **débit**, borné par la
+ * carré et descend la parcelle de cellule en cellule : 650 m³ passent par sa
+ * sortie dans la semaine d'un orage de 90 mm, soit « 652 835 mm » si on le lit
+ * comme une lame. C'est un **débit**, borné par la
  * pluie de la semaine, et non une hauteur d'eau. Une crue qui s'en servirait
  * pour son emprise inonderait chaque semaine de pluie la ligne du ruisseau, et
  * pour ses lames poserait 650 m d'eau sur le lit.
@@ -74,9 +75,9 @@ export const SEUIL_DEBUT_CRUE = 0.05;
  * Part inondée sous laquelle la crue est finie.
  *
  * Plus bas que le seuil de début, pour qu'un hiver qui fléchit une semaine
- * avant de repartir reste un seul événement. Mesuré sur le fond de vallée
- * (#288) : avec un seuil unique à 5 %, un hiver sur quatre se découpe en
- * morceaux d'une à trois semaines *(à calibrer)*.
+ * avant de repartir reste un seul événement : c'est l'hystérésis ordinaire
+ * d'un détecteur à seuil. La valeur elle-même n'a pas d'ancre *(à calibrer)* ;
+ * ce qu'elle change sur le fond de vallée est relevé dans docs/realisme.md (A22).
  */
 export const SEUIL_FIN_CRUE = 0.02;
 

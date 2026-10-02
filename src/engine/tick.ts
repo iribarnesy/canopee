@@ -60,6 +60,9 @@ import {
 } from "./carbon";
 import { CO2_ACTUEL_PPM, facteurCo2Croissance, facteurCo2Transpiration } from "./climat";
 import { type CrueResult, NAPPE_AFFLEURANTE_CM, suivreLaCrue } from "./crue";
+
+export type { CrueResult } from "./crue";
+
 import {
   champDeNappeCm,
   drainageAvecNappe,
@@ -612,10 +615,11 @@ export interface TickResult {
    * qui lui est arrivé de l'amont et qu'elle a laissé filer**.
    *
    * **C'est un débit, pas une lame** (#288). Le long d'un talweg, il cumule l'eau
-   * de tout ce qui verse au-dessus : sur le fond de vallée, la cellule où entre
-   * le ruisseau d'un bassin de six hectares voit passer 650 m³ la semaine d'un
-   * orage de 90 mm — « 652 835 mm », qui ne sont pas 652 m d'eau mais un
-   * ruisseau d'un litre par seconde dans un lit d'un mètre. C'est la bonne base
+   * de tout ce qui verse au-dessus : sur le fond de vallée, l'eau d'un bassin
+   * de six hectares entre par une cellule et descend le talweg, et la cellule
+   * par où elle quitte la parcelle voit passer 650 m³ la semaine d'un orage de
+   * 90 mm — « 652 835 mm », qui ne sont pas 652 m d'eau mais un ruisseau d'un
+   * litre par seconde dans un lit d'un mètre. C'est la bonne base
    * pour un **courant** ou une ravine ; pour savoir où l'eau **reste** et sur
    * quelle hauteur, c'est `crue` (ses `lamesMm`) et la nappe qu'il faut lire.
    */

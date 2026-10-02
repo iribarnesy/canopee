@@ -10,12 +10,12 @@
 import type { ActionRefusal, GameAction, GesteVisible } from "./actions";
 import { applyAction, OVERDRAFT_LIMIT_EUR, SALARY_EUR_WEEK } from "./actions";
 import type { AidesAnnuelles } from "./aides";
+import type { CrueResult } from "./crue";
 import type { DepartFaune, InstallationFaune } from "./faune";
 import type { WeekWeather } from "./meteo";
 import { rngStateFromSeed } from "./rng";
 import type { GameState, Station, TickFluxes } from "./state";
 import { createGameState } from "./state";
-import type { CrueResult } from "./crue";
 import type {
   ChuteDeChandelle,
   FranchissementDeStade,
