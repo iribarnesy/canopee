@@ -59,6 +59,7 @@ import {
   treeTotalCarbonKg,
 } from "./carbon";
 import { CO2_ACTUEL_PPM, facteurCo2Croissance, facteurCo2Transpiration } from "./climat";
+import { type CrueResult, NAPPE_AFFLEURANTE_CM, suivreLaCrue } from "./crue";
 import {
   champDeNappeCm,
   drainageAvecNappe,
@@ -592,15 +593,31 @@ export interface TickResult {
   /** tempête de la semaine, si elle a couché au moins un arbre */
   tempete?: TempeteResult;
   /**
+   * La crue de la semaine, **chaque** semaine où une crue est en cours (crue.ts) :
+   * son identifiant, sa phase, les cellules dans l'ordre où l'eau les a
+   * atteintes, la lame sur chacune et les arbres qu'elle a noyés. Absente hors
+   * crue ; la première semaine sans elle dit que l'eau s'est retirée.
+   */
+  crue?: CrueResult;
+  /**
    * Ce que le **gibier** a fait subir à quels arbres cette semaine (broutage,
    * frottis). Les gestes du joueur remontent par `applyAction` (actions.ts) ;
    * le rendu les traite de la même façon.
    */
   gestes: GesteVisible[];
   /**
-   * Ce qui n'a pas pu rentrer dans le sol de chaque cellule cette semaine,
-   * mm : débordement du profil + ruissellement refusé à l'infiltration. La
-   * seule base honnête pour une crue, une lame d'eau ou une ravine.
+   * L'eau qui est passée en surface sur chaque cellule cette semaine sans y
+   * entrer, mm (litres par mètre carré) : ce que la cellule a refusé elle-même
+   * — débordement du profil, ruissellement, nappe qui ressort — **plus tout ce
+   * qui lui est arrivé de l'amont et qu'elle a laissé filer**.
+   *
+   * **C'est un débit, pas une lame** (#288). Le long d'un talweg, il cumule l'eau
+   * de tout ce qui verse au-dessus : sur le fond de vallée, la cellule où entre
+   * le ruisseau d'un bassin de six hectares voit passer 650 m³ la semaine d'un
+   * orage de 90 mm — « 652 835 mm », qui ne sont pas 652 m d'eau mais un
+   * ruisseau d'un litre par seconde dans un lit d'un mètre. C'est la bonne base
+   * pour un **courant** ou une ravine ; pour savoir où l'eau **reste** et sur
+   * quelle hauteur, c'est `crue` (ses `lamesMm`) et la nappe qu'il faut lire.
    */
   debordementParCellule: Float32Array;
   /** lumière relative arrivant au sol, cellule par cellule ∈ [0,1] (light.ts) */
@@ -1084,9 +1101,13 @@ export function tick(state: GameState, weather: WeekWeather): TickResult {
     );
   }
   let cellulesInondees = 0;
-  for (const v of nappeCm) if (v <= 5) cellulesInondees++;
+  for (const v of nappeCm) if (v <= NAPPE_AFFLEURANTE_CM) cellulesInondees++;
 
   const debordementParCellule = new Array<number>(nCells).fill(0);
+  // La part du refus d'une cellule qui vient de l'**amont** de la parcelle : là
+  // où le bassin extérieur entre, son eau se mêle à la pluie de la cellule, et
+  // ce qu'elle n'absorbe pas est pour partie de l'eau de passage (crue.ts).
+  const refusVenuDAmontMm = new Float64Array(nCells);
   let ruissellementEntrantMm = 0;
   let ruissellementSortantMm = 0;
   // Érosion : la terre arrachée voyage avec sa charge de fertilité, et ce
@@ -1189,6 +1210,12 @@ export function tick(state: GameState, weather: WeekWeather): TickResult {
     // plat elle stagne puis s'en va ; sur une pente, elle **ruisselle** — et c'est
     // elle qu'il faut router, pas l'eau gravitaire déjà infiltrée.
     debordementParCellule[i] = bilan.overflowMm + ruissele;
+    // Pluie et eau d'amont entrent mêlées : ce que la cellule refuse se partage
+    // au prorata des deux *(hypothèse de mélange)*.
+    if (amontIci > 0) {
+      refusVenuDAmontMm[i] =
+        (bilan.overflowMm + ruissele) * (amontIci / (weather.rainMm + amontIci));
+    }
     // Ce qui percole recharge la nappe ; ce qu'elle a rendu au sol lui est
     // retiré. L'eau qui remonte n'a pas toujours la même provenance : quand un
     // ruisseau voisin impose une nappe haute, c'est **lui** qui fournit, et cette
@@ -1451,6 +1478,14 @@ export function tick(state: GameState, weather: WeekWeather): TickResult {
   // lecture du bois au sol, projetée sur la courbe de niveau.
   const barrageDe = (i: number) =>
     longueurEnTraversM(state.soil.boisAuSolCG[i] ?? 0, state.soil.boisEnTraversPart[i] ?? 0);
+  // Ce que chaque cellule refuse **d'elle-même** — sa pluie, ce que sa nappe
+  // fait ressortir —, relevé avant que la cascade n'y ajoute l'eau qui ne fait
+  // que traverser. C'est la lame d'une crue ; le total, lui, est un débit
+  // (crue.ts).
+  const refusPropreMm = Float64Array.from(
+    debordementParCellule,
+    (v, i) => v - (refusVenuDAmontMm[i] ?? 0),
+  );
   for (const i of descente) {
     const disponible = debordementParCellule[i] ?? 0;
     const partRuisselante = fractionRuissellement(pentes[i] ?? 0);
@@ -4152,9 +4187,38 @@ export function tick(state: GameState, weather: WeekWeather): TickResult {
         : [...bilan.individus, ...installationsFaune.map((entree) => entree.individu)];
   }
 
+  // ── La crue comme événement ───────────────────────────────────────────────
+  // Rien de neuf n'est calculé ici : la nappe de la semaine dit où l'eau
+  // affleure, la cascade a dit ce que chaque cellule refusait d'elle-même, et
+  // les morts sont comptés. La crue les **raconte** — quand elle commence, où
+  // l'eau arrive d'abord, jusqu'où elle s'étend, quand elle se retire, et qui
+  // s'y est noyé — et se rappelle d'une semaine à l'autre où elle en est
+  // (crue.ts). Aucun tirage, et aucune grandeur de la simulation ne la lit.
+  const rangDAltitude = new Int32Array(nCells);
+  for (let k = 0; k < descente.length; k++) {
+    rangDAltitude[descente[k] ?? 0] = descente.length - 1 - k;
+  }
+  const suiviDeCrue = suivreLaCrue(state.crue, {
+    semaine: state.week,
+    nCells,
+    nappeCm,
+    enEau: sourcesEau?.enEau,
+    rangDAltitude,
+    crueCm,
+    nappeReposCm,
+    refusPropreMm,
+    morts: morts.map((m) => ({
+      id: m.id,
+      cause: m.cause,
+      heightM: m.heightM,
+      cellule: cellIndexAt(dims, m.x, m.y),
+    })),
+  });
+  const { crue: _crueDeLaVeille, ...etatSansCrue } = state;
+
   return {
     state: {
-      ...state,
+      ...etatSansCrue,
       week: state.week + 1,
       faune,
       nextFauneId,
@@ -4232,6 +4296,9 @@ export function tick(state: GameState, weather: WeekWeather): TickResult {
       },
       rng,
       nextTreeId,
+      // Absente hors crue : une partie qui n'a jamais été inondée porte le même
+      // état qu'avant ce lot, et une sauvegarde d'avant se relit telle quelle.
+      ...(suiviDeCrue.memoire ? { crue: suiviDeCrue.memoire } : {}),
     },
     morts,
     naissances,
@@ -4242,6 +4309,7 @@ export function tick(state: GameState, weather: WeekWeather): TickResult {
     aides: aidesVersees,
     incendie,
     tempete,
+    ...(suiviDeCrue.crue ? { crue: suiviDeCrue.crue } : {}),
     gestes,
     // Grandeurs de la semaine, calculées ici et jusqu'ici jetées : elles ne
     // sont pas de l'état (la semaine suivante les recalcule), mais sans elles

@@ -14,6 +14,7 @@ import {
 } from "./bases";
 import type { CarbonState } from "./carbon";
 import { createCarbonState, T_HA_TO_G_M2 } from "./carbon";
+import type { MemoireDeCrue } from "./crue";
 import type { EauDeSurface } from "./eau_surface";
 import { getEspece } from "./especes";
 import type { IndividuFaune } from "./faune";
@@ -619,6 +620,18 @@ export interface GameState {
   faune?: readonly IndividuFaune[];
   /** Prochaine identité à distribuer à un individu — même règle que `nextTreeId`. */
   nextFauneId?: number;
+  /**
+   * La crue en cours, ce qu'elle doit se rappeler d'une semaine à l'autre pour
+   * se raconter : depuis quand, à quelle phase, et quand l'eau a atteint chaque
+   * cellule (`crue.ts`, #288).
+   *
+   * **Absente hors crue**, comme `faune` hors faune : une sauvegarde d'avant ce
+   * lot ne la porte pas et se relit telle quelle, sans changer de format — ce
+   * n'est pas une grille du sol, et rien de la simulation ne la lit. Une partie
+   * reprise au milieu d'une crue écrite par cette version la continue sous le
+   * même identifiant.
+   */
+  crue?: MemoireDeCrue;
   rng: RngState;
 }
 

@@ -15,6 +15,7 @@ import type { WeekWeather } from "./meteo";
 import { rngStateFromSeed } from "./rng";
 import type { GameState, Station, TickFluxes } from "./state";
 import { createGameState } from "./state";
+import type { CrueResult } from "./crue";
 import type {
   ChuteDeChandelle,
   FranchissementDeStade,
@@ -90,6 +91,8 @@ export function advanceWeek(
   incendie?: IncendieResult;
   /** tempête de la semaine, si elle a couché au moins un arbre (tempete.ts) */
   tempete?: TempeteResult;
+  /** crue de la semaine, chaque semaine où une crue est en cours (crue.ts) */
+  crue?: CrueResult;
   /** gestes du joueur **et** du gibier de la semaine, pour le rendu (tick.ts) */
   gestes: GesteVisible[];
   /** chandelles abattues cette semaine (boisMort.ts) */
@@ -129,6 +132,7 @@ export function advanceWeek(
     departsFaune: ticked.departsFaune,
     incendie: ticked.incendie,
     tempete: ticked.tempete,
+    crue: ticked.crue,
     gestes: [...gestes, ...ticked.gestes],
     chutes: ticked.chutes,
     debordementParCellule: ticked.debordementParCellule,
