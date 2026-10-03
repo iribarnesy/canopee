@@ -4336,14 +4336,28 @@ export function tick(state: GameState, weather: WeekWeather): TickResult {
   };
 }
 
+/** Remplaçant de `JSON.stringify` : un objet s'écrit clés triées, l'ordre de ses champs ne compte plus. */
+function clesTriees(_cle: string, valeur: unknown): unknown {
+  if (valeur === null || typeof valeur !== "object" || Array.isArray(valeur)) return valeur;
+  const objet = valeur as Record<string, unknown>;
+  const trie: Record<string, unknown> = {};
+  for (const k of Object.keys(objet).sort()) trie[k] = objet[k];
+  return trie;
+}
+
 /**
  * Hash déterministe de l'état (FNV-1a : grilles de sol en binaire, arbres en
  * JSON). Sert au test de non-régression « même seed + mêmes actions → même partie ».
  *
- * Le manteau neigeux n'y entre pas : il ne dépend que de la suite des semaines
- * de météo, pas de la partie, et ce qu'il fait se lit dans l'eau du sol, qui y
- * entre. Le laisser dehors garde aussi l'empreinte d'une partie sans neige
- * identique à celle d'avant la neige (#303).
+ * Le manteau neigeux y entre : c'est un stock d'eau au même titre que le sol
+ * (#303).
+ *
+ * Le JSON s'écrit **clés triées**. Un arbre porte des champs qui valent
+ * `undefined` tant que rien ne les a posés (`causeLente`, `carie`…) ; un état
+ * relu d'une sauvegarde les a perdus, puisque le JSON ne garde pas `undefined`,
+ * et quand ils prennent une valeur ils s'ajoutent à la fin de l'objet au lieu
+ * de reprendre leur place. Les valeurs sont les mêmes, l'ordre non, et une
+ * empreinte qui lisait l'ordre déclarait différentes deux parties identiques.
  */
 export function stateHash(state: GameState): number {
   let hash = 0x811c9dc5;
@@ -4375,9 +4389,10 @@ export function stateHash(state: GameState): number {
   ]) {
     for (const v of arr) mixNumber(v);
   }
-  mixString(JSON.stringify(state.trees));
-  mixString(JSON.stringify(state.economy));
-  mixString(JSON.stringify(state.carbon));
-  mixString(JSON.stringify(state.rng));
+  mixNumber(state.soil.manteauNeigeMm);
+  mixString(JSON.stringify(state.trees, clesTriees));
+  mixString(JSON.stringify(state.economy, clesTriees));
+  mixString(JSON.stringify(state.carbon, clesTriees));
+  mixString(JSON.stringify(state.rng, clesTriees));
   return hash >>> 0;
 }
