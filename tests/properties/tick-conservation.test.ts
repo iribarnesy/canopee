@@ -10,7 +10,7 @@ import { tick } from "../../src/engine/tick";
 /**
  * Conservation au niveau du **tick** complet, grille + arbres (docs/regles.md §16) :
  * chaque semaine, pluie = évaporation + transpiration + drainage + débordement
- * + Δstock, et minéralisation = prélèvements + lessivage + Δstock d'azote.
+ * + Δstock (sol, nappe et manteau neigeux), et minéralisation = prélèvements + lessivage + Δstock d'azote.
  */
 
 /** Stock d'eau moyen par **cellule**, tous horizons confondus (sol stratifié). */
@@ -22,7 +22,9 @@ function meanWaterStock(state: GameState): number {
   }
   // La nappe est un stock de la parcelle au même titre que le sol (nappe.ts).
   for (const v of state.soil.nappeMm) sum += v;
-  return sum / nCells;
+  // Le manteau neigeux aussi (neige.ts, #303) : la neige y attend le redoux. Il
+  // est **un** pour la parcelle, donc déjà par cellule.
+  return sum / nCells + state.soil.manteauNeigeMm;
 }
 
 /** Stock d'azote du sol = minéral de surface + minéral profond + litière + humus, kg/ha. */
@@ -49,8 +51,9 @@ function meanNStockKgHa(state: GameState): number {
   return ((sum + state.stockBrf.azoteG) / n) * 10;
 }
 
-function checkConservation(sc: StationClimat, years: number) {
+function checkConservation(sc: StationClimat, years: number): number {
   const weather = syntheticYear(sc.climat);
+  let manteauMax = 0;
   let state = createGameState(sc.station, rngStateFromSeed(7));
   state = plantScattered(state, "fagus_sylvatica", 40);
   state = plantScattered(state, "pinus_sylvestris", 40);
@@ -109,8 +112,10 @@ function checkConservation(sc: StationClimat, years: number) {
     // vider la cellule, puis servie sans ce gain. Personne ne recevait
     // l'écart, et aucune propriété ne le regardait.
     expect(fluxes.uptakeArbresKgHa + fluxes.uptakeHerbeKgHa).toBeCloseTo(fluxes.uptakeKgHa, 9);
+    manteauMax = Math.max(manteauMax, next.soil.manteauNeigeMm);
     state = next;
   }
+  return manteauMax;
 }
 
 describe("conservation eau + azote sur le tick complet (grille + arbres)", () => {
@@ -120,6 +125,19 @@ describe("conservation eau + azote sur le tick complet (grille + arbres)", () =>
 
   it("vallée engorgée, 3 ans, peuplement mixte", () => {
     checkConservation(VALLEE_ENGORGEE, 3);
+  });
+
+  it("un hiver froid : la neige tombée attend dans le manteau, puis fond, et rien ne se perd", () => {
+    // Le climat de la vallée, refroidi de huit degrés : des semaines sous zéro
+    // tout l'hiver, de quoi tenir un manteau et le faire fondre au printemps.
+    // Aucune année synthétique des stations du dépôt ne neige (leur semaine la
+    // plus froide reste au-dessus de 2 °C) ; sans ce cas, la propriété ne
+    // verrait jamais le manteau.
+    const manteauMax = checkConservation(
+      { ...VALLEE_ENGORGEE, climat: { ...VALLEE_ENGORGEE.climat, tMeanAnnual: 4 } },
+      2,
+    );
+    expect(manteauMax).toBeGreaterThan(20);
   });
 
   it("avec un ruisseau : l'eau imposée par la nappe est comptée comme un apport", () => {

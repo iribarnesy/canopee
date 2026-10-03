@@ -213,7 +213,7 @@ semaine simulée.
 | **Ambiance** | `soilLumiere` | le sous-bois sombre, les taches de lumière, la clairière |
 | **Tapis** | `soilLitiereCG` | les feuilles de novembre, le paillage, le noir des cendres |
 | **Floraison, gel, brout, liège** | `fruitProgress`, `bloomFrosted`, `pousseTendreM`, `frotteSemaine`, `derniereLeveeSemaine` | voile de fleurs, fleurs brunies par le gel, rameaux coupés net, écorce arrachée, tronc ocre-rouge |
-| **Météo** | `Snapshot.weather` (déjà là avant) | pluie, neige, gel, canicule — `rainMm` suffit |
+| **Météo** | `Snapshot.weather` (déjà là avant), `Snapshot.neigeMm`, `Snapshot.manteauNeigeMm` | pluie, gel, canicule — `rainMm` est **toute** la précipitation ; la neige demande les deux champs du moteur (#303) |
 | **Vent** | `Snapshot.weather.ventVersRad` + `.ventMoyMs` | le panache d'incendie **incliné pour de bon** (§6.4), le balancement des houppiers (§6.1), l'orientation d'un rideau de pluie. `ventVersRad` est le cap vers lequel le vent **souffle** (+x = est, +y = nord), pas sa provenance : un vent d'ouest vaut 0. L'amplitude visible veut le vent **reçu** — `ventMoyMs × ventExposition` — et pas la vitesse brute. Le cap ne vire pas dans l'année : un panache ne tourne pas pendant un acte, mais deux feux de la même parcelle penchent enfin du même côté |
 
 Trois choses qui ont été faites **mieux** que ce que ce document demandait, et
@@ -967,14 +967,15 @@ plus discrète des trois, parce qu'elle se déguise en souci de cohérence.
 
 Presque tout se lit dans l'instantané, qui transporte la `WeekWeather`
 complète. **Presque** : le premier jet de ce paragraphe disait qu'il n'y avait
-« rien à demander au moteur », et la neige l'a démenti (voir plus bas).
+« rien à demander au moteur », et la neige l'a démenti (voir plus bas) — elle a
+demandé deux champs, que le moteur porte depuis #303.
 
 | Élément | Donnée | Charge | État |
 |---|---|---|---|
 | Quatre palettes de saison interpolées en continu | `Snapshot.pheno` | `M` | — |
 | **Pluie** : rideau de gouttes obliques, intensité ∝ `rainMm`, sol qui fonce | `weather.rainMm`, `ventVersRad`, `ventRecuParLeSite` ✅ | `M` | ✅ #130 |
 | Gouttes qui rebondissent, flaques dans les creux | — | `S` | non fait |
-| **Neige** : tuiles blanchies, couronnes chargées, fonte progressive | **aucune** — ni part solide, ni manteau | `M` | attend le moteur, #303 |
+| **Neige** : flocons, tuiles blanchies, couronnes chargées, fonte progressive | `Snapshot.neigeMm` (part solide de la semaine), `Snapshot.manteauNeigeMm` (manteau au sol) ✅ | `M` | données livrées (#303), dessin à faire |
 | **Gel** : givre blanc au sol au petit matin | `tMinAbsC` + `tMinimumSousCouvert` ✅ | `S` | ✅ #130 |
 | Les fleurs qui brunissent quand `bloomFrosted` passe | `bloomFrosted` ✅ | `S` | — |
 | **Brume** : nappe basse dans les creux quand la nappe affleure | `soilNappeCm` = 0, vent reçu ✅ | `M` | ✅ #130 |
@@ -1012,12 +1013,34 @@ complète. **Presque** : le premier jet de ce paragraphe disait qu'il n'y avait
   voile au sol : posée sous les arbres, la brume d'un creux boisé disparaissait
   sous les houppiers, alors que c'est au pied des troncs qu'elle se voit.
 
-**La neige n'est pas dessinée, et c'est la règle qui le veut.** `tMean` et
-`tMinAbsC` disent qu'il fait froid, pas qu'il a neigé. `rainMm` est **toute** la
-précipitation, sans part solide, et rien ne s'accumule ni ne fond d'une semaine
-à l'autre. Dessiner un manteau, ce serait écrire dans le rendu une loi de
-partage pluie/neige et une fonte que le bilan d'eau ignore. #303 demande les
-deux champs au moteur.
+**La neige n'était pas dessinée, et c'était la règle qui le voulait.** Le
+premier jet de ce tableau donnait `tMean` et `tMinAbsC` comme suffisants : c'était
+faux, ces deux champs disent qu'il fait froid, pas qu'il a neigé. `rainMm` est
+**toute** la précipitation, et rien ne s'accumulait ni ne fondait d'une semaine à
+l'autre. Dessiner un manteau, c'était écrire dans le rendu une loi de partage
+pluie/neige et une fonte que le bilan d'eau aurait ignorées.
+
+**Le moteur les porte depuis #303**, et le bilan d'eau les lit : une neige de
+janvier ne recharge le sol qu'en fondant. Deux champs dans l'instantané :
+
+- `neigeMm` — la part de `weather.rainMm` qui tombe en neige **la semaine
+  montrée**, mm d'eau. Les flocons, donc ; et la pluie liquide à dessiner vaut
+  `weather.rainMm − neigeMm`, sans quoi la même eau tomberait deux fois. Elle
+  sort de la loi du moteur (`neigeDeLaSemaine`), appelée par l'instantané : rien
+  n'est à recopier côté rendu.
+- `manteauNeigeMm` — le manteau au sol sur lequel la semaine s'ouvre, mm
+  d'équivalent en eau (0 = pas de neige). Les tuiles blanchies et les couronnes
+  chargées ; la fonte se voit d'elle-même, d'un instantané à l'autre.
+
+Ce qu'il faut savoir avant de dessiner : le manteau est **un** nombre pour la
+parcelle, pas une grille — le moteur ne sait pas encore ce que les houppiers
+interceptent ni ce que leur ombre retarde. Et la neige est rare en plaine : sur
+les soixante ans de Dijon, la station la plus froide, cinq semaines de neige par
+an ; un manteau quatre hivers sur cinq, mais qui ne passe la semaine qu'un hiver
+sur deux, et jamais plus de 62 mm d'équivalent en eau. Au Luc, la plus douce,
+une semaine de neige tous les trois ou quatre ans, et un manteau trois hivers
+sur soixante. Une parcelle en altitude change tout : à 800 m sur la série de
+Dijon, le manteau tient treize semaines par an.
 
 **Le voile de chaleur et les flaques** restent à faire. Aucun ne manque au
 moteur (`tMax`, les creux et la crue sont là), ils ne sont simplement pas dans

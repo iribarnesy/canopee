@@ -127,6 +127,54 @@ describe("une partie reprise continue comme une partie qui ne s'est pas arrêté
   }, 900_000);
 });
 
+describe("un bloc d'avant la neige se relit, avec un manteau nul (#303)", () => {
+  it("la version 8 n'avait pas de manteau : son eau est déjà toute au sol", () => {
+    // Un moteur de version 8 versait toute la précipitation au sol la semaine
+    // même. Son état relu avec un manteau nul est donc **son** état, pas un état
+    // inventé — c'est ce qui permet de ne pas refuser le bloc.
+    const partieV8 = partie(1);
+    const avant: GameState = { ...partieV8, soil: { ...partieV8.soil, manteauNeigeMm: 0 } };
+    const b = ecrireEtat(avant);
+    const vue = new DataView(b.buffer);
+    const longueur = vue.getUint32(10);
+    const entete = JSON.parse(new TextDecoder().decode(b.subarray(14, 14 + longueur))) as {
+      v: number;
+      sol: Record<string, unknown>;
+    };
+    // On fabrique le bloc qu'un moteur de version 8 aurait écrit : la même
+    // disposition, sans le champ, et l'ancien numéro.
+    const { manteauNeigeMm: _absent, ...solV8 } = entete.sol;
+    const neuf = new TextEncoder().encode(JSON.stringify({ ...entete, v: 8, sol: solV8 }));
+    const debutGrilles = 14 + longueur;
+    const bourrage = (8 - (debutGrilles % 8)) % 8;
+    const grilles = b.subarray(debutGrilles + bourrage);
+    const debutNeuf = 14 + neuf.length;
+    const bourrageNeuf = (8 - (debutNeuf % 8)) % 8;
+    const v8 = new Uint8Array(debutNeuf + bourrageNeuf + grilles.length);
+    v8.set(b.subarray(0, 14));
+    const vueV8 = new DataView(v8.buffer);
+    vueV8.setUint16(8, 8);
+    vueV8.setUint32(10, neuf.length);
+    v8.set(neuf, 14);
+    v8.set(grilles, debutNeuf + bourrageNeuf);
+
+    const relu = lireEtat(v8, STATION);
+    if (!relu) throw new Error("un bloc de version 8 doit se relire");
+    expect(relu.soil.manteauNeigeMm).toBe(0);
+    expect(stateHash(relu)).toBe(stateHash(avant));
+    // Et la partie reprise continue comme celle qui ne s'est pas arrêtée.
+    expect(stateHash(partie(1, relu))).toBe(stateHash(partie(1, avant)));
+  }, 300_000);
+
+  it("une version plus ancienne que 8 reste refusée", () => {
+    for (const v of [7, 6]) {
+      const b = ecrireEtat(partie(1));
+      new DataView(b.buffer).setUint16(8, v);
+      expect(lireEtat(b, STATION)).toBeUndefined();
+    }
+  }, 300_000);
+});
+
 describe("la mémoire d'une crue en cours voyage avec l'état (#288)", () => {
   it("relue telle quelle, cellules et semaines d'arrivée comprises", () => {
     const avant: GameState = {

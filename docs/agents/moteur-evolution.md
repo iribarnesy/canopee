@@ -61,7 +61,47 @@ qu'un rapport (voir la note de maintenance).
 Séparer calibration et validation : caler un paramètre sur un âge, garder
 l'autre âge pour vérifier.
 
-## Ce que le dernier lot a appris (la crue comme événement, #288)
+## Ce que le dernier lot a appris (la neige, #303)
+
+La précipitation tombe en neige sous 2 °C, attend dans un manteau et ne
+recharge le sol qu'en fondant. Quatre leçons, toutes trouvées en mesurant.
+
+### La nuit la plus froide d'une semaine est une nuit sèche
+
+Pour passer d'une loi journalière à la semaine, une variante étalait les
+journées sur l'écart que creuse `tMinAbsC`. Elle faisait neiger 12,5 mm par an
+au Luc, contre 1,7 avec la moyenne seule. Une nuit très froide est une nuit
+claire : son écart est celui des jours où il ne tombe rien. Avant d'étaler une
+grandeur sur la variabilité d'une autre, vérifier qu'elles varient ensemble.
+
+### Un flux brut peut monter quand le flux net baisse
+
+La prédiction disait que le drainage d'hiver baisserait à Dijon. Il a **monté**
+(+2,5 mm) : sous le manteau, le sol ne reçoit plus rien, la nappe remonte
+davantage par capillarité, et la fonte redescend d'un coup. La recharge
+**nette** (drainage moins remontée) baisse bien, de 0,8 %. Un moteur qui fait
+circuler l'eau dans les deux sens se juge sur le solde, pas sur l'un des deux
+bras.
+
+### Une empreinte qui lit l'ordre des champs déclare différentes deux parties identiques
+
+L'essai de relecture d'un bloc d'avant la neige échouait, alors que les deux parties
+étaient identiques champ pour champ, semaine après semaine. Un arbre porte des
+champs à `undefined` ; le JSON de la sauvegarde les perd, et quand ils prennent
+une valeur ils s'ajoutent en fin d'objet. `stateHash` hachait le JSON dans
+l'ordre des clés. Le défaut existait avant la neige ; il a fallu qu'un hiver
+neigeux déplace assez la partie pour qu'un de ces champs se pose dans la
+fenêtre de l'essai. L'empreinte écrit maintenant ses objets clés triées.
+
+### Une montée de format peut relire l'ancien bloc
+
+Les sept montées précédentes refusaient l'ancien bloc et rejouaient le journal.
+Celle-ci le relit, parce que la valeur par défaut est **l'état vrai** : un
+moteur de version 8 ne gardait aucune neige, son manteau valait zéro. Avant de
+refuser, se demander si le champ ajouté a une valeur que l'ancien moteur
+impliquait déjà.
+
+## Ce qu'un lot précédent a appris (la crue comme événement, #288)
 
 Le moteur savait qu'une parcelle était inondée une semaine donnée ; il ne
 savait pas qu'une crue commence, culmine et se retire. Rien de neuf n'est
