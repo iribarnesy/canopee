@@ -146,7 +146,9 @@ describe("les stations", () => {
 describe("ce que le bilan d'eau reçoit", () => {
   it("la neige attend dans le manteau, puis entre au sol en fondant ; rien ne se perd", () => {
     // Un hiver de Dijon, au tick complet : on cherche dans la série la première
-    // semaine qui laisse au moins 15 mm au sol, et on rejoue autour.
+    // semaine qui laisse au moins 15 mm au sol, et on rejoue autour. Elle doit
+    // laisser huit semaines devant elle : le premier hiver de la série (1964)
+    // tient un manteau dès janvier.
     const serie = serieMeteoPour(FRICHE_LIMON.station.id);
     if (!serie) throw new Error("série manquante");
     const meteo = serieToWeeks(serie, FRICHE_LIMON.climat);
@@ -156,9 +158,9 @@ describe("ce que le bilan d'eau reçoit", () => {
       const w = meteo[k];
       if (!w) throw new Error("météo manquante");
       m = neigeEtFonte(w, m).manteauNeigeMm;
-      if (m >= 15) pic = k;
+      if (m >= 15 && k >= 8) pic = k;
     }
-    expect(pic).toBeGreaterThan(0);
+    expect(pic).toBeGreaterThanOrEqual(8);
 
     const station: Station = { ...FRICHE_LIMON.station, coteM: 12, voisinage: [] };
     let s = createGameState(station, rngStateFromSeed(5));
