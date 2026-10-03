@@ -1174,7 +1174,7 @@ individuellement ». C'est faux depuis #187 : les nicheurs sont des individus
 | **Geai** | les semis levés des espèces à dissémination `geai` (`Snapshot.naissances`) | **revient** à sa cachette au printemps, s'y pose et fouille — l'enfouissement est d'automne, et le moteur fait lever les semis en avril | `render/faune/geai.ts` | livré (#298) |
 | **Nuée de ravageurs** | `soilRavageurs` au-delà de 0,2, et `facteurChaleur` : sous la température de base, elle se pose | points qui dansent autour des houppiers de la tache | `render/faune/nuee.ts` | livré (#300) |
 | **Papillons, abeilles** | la présence des pollinisateurs, `soilPollinisateurs` = `min(habitat, ressourceFlorale)`, sans le plancher du vent et des abeilles domestiques | tourneront autour de ce qui fleurit, là où il y en a | — | grandeur exposée (#299), dessin à faire |
-| **Oiseaux de passage** | aucune grandeur : le moteur ne tient que les nicheurs | — | — | attend #296 |
+| **Oiseaux de passage** | la fréquentation de la semaine, guilde par guilde (`Snapshot.oiseauxDePassage`) : combien d'oiseaux, attirés par quoi (`baies` ou `fourre`), et **par quels arbres** (ids de `trees`, les plus couvrants d'abord) — hivernants frugivores de mi-octobre à l'équinoxe, passereaux de haie toute l'année, migrateurs au printemps et en automne | se posent sur les arbres nommés : les grives en bande sur les buissons en baies, le merle et le troglodyte dans le bas du fourré, la fauvette qui picore le sureau ; une entrée à zéro oiseau ne pose rien | — | grandeur exposée (#296), dessin à faire |
 
 **Invisibles, et c'est tenu** : les chauves-souris (elles chassent de nuit, et le
 rendu n'a pas de nuit), le loir (il dort le jour et la moitié de l'année), les

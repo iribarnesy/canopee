@@ -61,7 +61,51 @@ qu'un rapport (voir la note de maintenance).
 Séparer calibration et validation : caler un paramètre sur un âge, garder
 l'autre âge pour vérifier.
 
-## Ce que le dernier lot a appris (la crue comme événement, #288)
+## Ce que le dernier lot a appris (les oiseaux de passage, #296)
+
+Un mécanisme sans état — une fréquentation par guilde et par semaine, lue sur
+les baies mûres et le fourré — repris après la perte des notes d'un premier jet.
+Trois leçons, et la troisième a laissé le critère à moitié.
+
+### Une reprise relit toutes les citations, pas seulement les nombres
+
+Les notes perdues, il restait le code et ses commentaires sourcés. Relues une à
+une, **deux citations sur neuf ne disaient pas ce qu'on leur faisait dire** : le
+passage de printemps du gobemouche était attribué à un article qui ne traite que
+de l'automne, et les dates de la litorne à un auteur qui n'étudie que la grive
+mauvis. Les nombres étaient plausibles, les sources réelles, et le lien entre
+les deux faux. C'est la leçon de #262 (« une citation dans un commentaire n'est
+pas une source ») vérifiée sur un code qu'on n'a pas écrit soi-même — et c'est
+justement là qu'on est tenté de la sauter.
+
+### Un scénario nommé « haie » ne le reste pas : compter ce qu'il est devenu
+
+La haie fruitière plantée pour le banc comptait 80 tiges. Seize ans plus tard,
+elle en comptait 1 400 à 2 000 et couvrait la parcelle : les baies semées « n'importe
+où » par la dissémination « oiseaux » et la ronce qui drageonne en ont fait une
+fruticée. Un banc qui n'aurait imprimé que les oiseaux aurait conclu que « une
+haie attire trois cents migrateurs ». **Imprimer l'effectif à côté de la
+mesure** a dit tout de suite que le dispositif avait changé de nature, et c'est
+ce qui a permis de lire la haie à six ans, quand elle était encore une haie.
+
+### Une ancre a un domaine de couvert, et le moteur sort de lui-même du domaine
+
+La densité de frugivores vient d'un recensement où les buissons en fruits
+couvraient 1 à 2 % du sol. Linéaire en surface, elle tient sur une haie et sur
+quelques buissons ; sur un massif en fruits elle donne quatre à cinq cents
+oiseaux à l'hectare. La leçon de #280 (« une ancre se confronte à son domaine »)
+avait été appliquée à la valeur, pas à **la variable** dont elle dépend : ici le
+domaine est un taux de couvert, et c'est le moteur lui-même, en laissant pousser
+la haie, qui l'a quitté. Le choix d'une borne étant un jugement de modèle, il est
+décrit et laissé à l'auteur plutôt que tranché par un plafond sans source.
+
+**La prédiction ratée a aussi désigné un mot.** « Un verger nu n'a presque pas
+d'oiseau de haie » : le moteur en mettait vingt-quatre, parce qu'un pommier
+jamais taillé est branchu à 10 % de sa hauteur et passe pour du fourré. La
+définition par la structure lit ce que le moteur fait pousser, pas ce que le mot
+« verger » évoque — un verger haute tige, élagué à 1,8 m, n'en a aucun.
+
+## Ce qu'un lot plus ancien a appris (la crue comme événement, #288)
 
 Le moteur savait qu'une parcelle était inondée une semaine donnée ; il ne
 savait pas qu'une crue commence, culmine et se retire. Rien de neuf n'est

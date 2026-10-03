@@ -162,6 +162,7 @@ import {
   nitrifieG,
   nitrogenAvailabilityFactor,
 } from "./nitrogen";
+import { type FrequentationDeGuilde, frequentationOiseaux } from "./oiseaux";
 import { frequentationDesBordures } from "./paysage";
 import {
   contextePhenologique,
@@ -654,6 +655,14 @@ export interface TickResult {
   installationsFaune: readonly InstallationFaune[];
   /** Faune qui a quitté la parcelle cette semaine, et pourquoi. */
   departsFaune: readonly DepartFaune[];
+  /**
+   * **Les oiseaux qui fréquentent la parcelle sans y nicher**, guilde par guilde
+   * (`oiseaux.ts`, #296) : combien cette semaine, attirés par quoi, et par quels
+   * arbres. Une entrée par guilde présente au calendrier. Toujours vide si
+   * `station.faune` est éteint — et c'est alors le même tableau figé que pour les
+   * nicheurs.
+   */
+  oiseauxDePassage: readonly FrequentationDeGuilde[];
 }
 
 /**
@@ -4145,6 +4154,7 @@ export function tick(state: GameState, weather: WeekWeather): TickResult {
   let nextFauneId = state.nextFauneId;
   let installationsFaune: readonly InstallationFaune[] = AUCUN_MOUVEMENT_DE_FAUNE;
   let departsFaune: readonly DepartFaune[] = AUCUN_MOUVEMENT_DE_FAUNE;
+  let oiseauxDePassage: readonly FrequentationDeGuilde[] = AUCUN_MOUVEMENT_DE_FAUNE;
   if (state.station.faune) {
     const presents = faune ?? [];
     const aireParcelleM2 = state.station.coteM * state.station.coteM;
@@ -4189,6 +4199,13 @@ export function tick(state: GameState, weather: WeekWeather): TickResult {
       installationsFaune.length === 0
         ? bilan.individus
         : [...bilan.individus, ...installationsFaune.map((entree) => entree.individu)];
+
+    // **Et ce qui ne fait que passer** (#296). Pas d'état : la fréquentation de
+    // la semaine se lit sur la parcelle de fin de semaine — ses baies mûres et
+    // son fourré — et sur le calendrier des guildes. Une haie qu'on arrache
+    // cette semaine n'attire plus personne la suivante, sans que rien ne s'en
+    // souvienne (`oiseaux.ts`).
+    oiseauxDePassage = frequentationOiseaux(nextTrees, state.week, dims, state.graineMarche);
   }
 
   // ── La crue comme événement ───────────────────────────────────────────────
@@ -4310,6 +4327,7 @@ export function tick(state: GameState, weather: WeekWeather): TickResult {
     chutes,
     installationsFaune,
     departsFaune,
+    oiseauxDePassage,
     aides: aidesVersees,
     incendie,
     tempete,
