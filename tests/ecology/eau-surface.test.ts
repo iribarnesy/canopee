@@ -7,6 +7,8 @@
  */
 
 import { describe, expect, it } from "vitest";
+import { serieMeteoPour } from "../../src/data/meteo";
+import type { CrueResult } from "../../src/engine/crue";
 import {
   cellulesEnEau,
   drainageAvecNappe,
@@ -16,12 +18,12 @@ import {
   remonteeCapillaireMm,
   SANS_EAU,
 } from "../../src/engine/eau_surface";
-import { syntheticYear } from "../../src/engine/meteo";
+import { serieToWeeks, syntheticYear, type WeekWeather } from "../../src/engine/meteo";
 import { RELIEF_PLAT } from "../../src/engine/relief";
 import { rngStateFromSeed } from "../../src/engine/rng";
 import { horizon } from "../../src/engine/soil";
-import { createGameState, gridDims, plantAt } from "../../src/engine/state";
-import { LIMON_RICHE } from "../../src/engine/stations";
+import { createGameState, gridDims, plantAt, type Station } from "../../src/engine/state";
+import { LIMON_RICHE, type StationClimat, VALLEE_ENGORGEE } from "../../src/engine/stations";
 import { tick } from "../../src/engine/tick";
 
 /** Une parcelle carrée de limon, avec le relief et l'eau qu'on veut. */
@@ -158,6 +160,106 @@ describe("la crue", () => {
     state = enCrue.state;
     const apres = tick(state, sec);
     expect(apres.fluxes.partInondee).toBeLessThan(enCrue.fluxes.partInondee);
+  });
+});
+
+describe("la crue comme événement (#288)", () => {
+  /**
+   * Deux ans de météo réelle sur une station : chaque semaine, la crue s'il y
+   * en a une, le plus fort débordement, et si l'état garde une mémoire.
+   */
+  function deuxAns(sc: StationClimat, coteM: number) {
+    const st: Station = { ...sc.station, coteM, voisinage: [], gibierParHa: 0 };
+    const serie = serieMeteoPour(sc.station.id);
+    const meteo: WeekWeather[] = serie ? serieToWeeks(serie, sc.climat) : syntheticYear(sc.climat);
+    let state = createGameState(st, rngStateFromSeed(5));
+    const semaines: { crue?: CrueResult; debordementMax: number; memoire: boolean }[] = [];
+    for (let i = 0; i < 2 * 52; i++) {
+      const w = meteo[i % meteo.length];
+      if (!w) throw new Error("météo manquante");
+      const r = tick(state, w);
+      state = r.state;
+      semaines.push({
+        crue: r.crue,
+        debordementMax: Math.max(...r.debordementParCellule),
+        memoire: state.crue !== undefined,
+      });
+    }
+    return semaines;
+  }
+
+  // **Un hectare, la taille des parcelles du jeu, et pas trente mètres.** La
+  // rangée du pied de la parcelle, où la nappe converge, reste inondée toute
+  // l'année : sur trente mètres elle pèse 2,7 % de la surface, au-dessus du
+  // seuil de fin, et la crue ne se ferme jamais (relevé : six ans d'une seule
+  // crue) ; sur un hectare elle pèse 1 %. C'est une limite de la définition par
+  // part de parcelle, écrite dans crue.ts.
+  //
+  // Relevé (graine 5, 1964-1965) : la première semaine sort d'un état initial
+  // à l'équilibre et s'inonde une semaine, puis l'hiver 1964-65 fait une crue de
+  // plusieurs mois. Le talweg y porte plus de 100 000 mm de débit pendant que
+  // les lames restent à quelques dizaines de millimètres.
+  let memo: ReturnType<typeof deuxAns> | undefined;
+  const valleeDeuxAns = () => {
+    memo ??= deuxAns(VALLEE_ENGORGEE, 100);
+    return memo;
+  };
+
+  it("le fond de vallée a sa crue d'hiver, qui commence, dure et se ferme", () => {
+    const vallee = valleeDeuxAns();
+    const ids = [...new Set(vallee.flatMap((s) => (s.crue ? [s.crue.id] : [])))];
+    const longues = ids.filter((id) => vallee.filter((s) => s.crue?.id === id).length >= 4);
+    expect(longues.length).toBeGreaterThanOrEqual(1);
+    const id = longues[0];
+    const suite = vallee.filter((s) => s.crue?.id === id).map((s) => s.crue as CrueResult);
+    expect(suite[0]?.phase).toBe("montée");
+    expect(suite.map((c) => c.semaine)).toEqual(suite.map((_, k) => k));
+    // Elle se ferme : la semaine qui suit la dernière n'a ni crue ni mémoire.
+    const derniere = vallee.map((s) => s.crue?.id).lastIndexOf(id);
+    expect(derniere).toBeLessThan(vallee.length - 1);
+    expect(vallee[derniere + 1]?.crue?.id).not.toBe(id);
+    expect(vallee[derniere]?.memoire).toBe(true);
+    // Sans eau libre déclarée, la montée est souterraine : zéro.
+    expect(suite.every((c) => c.monteeM === 0)).toBe(true);
+  }, 300_000);
+
+  it("ses lames ne comptent pas l'eau qui ne fait que passer", () => {
+    const vallee = valleeDeuxAns();
+    // Le défaut des 652 835 mm : `debordementParCellule` cumule le long du
+    // talweg toute l'eau du bassin d'amont, c'est un débit. Une lame lue là
+    // dedans mettrait des centaines de mètres d'eau sur le lit.
+    const debitMax = Math.max(...vallee.map((s) => s.debordementMax));
+    let lameMax = 0;
+    for (const s of vallee) for (const l of s.crue?.lamesMm ?? []) lameMax = Math.max(lameMax, l);
+    expect(debitMax).toBeGreaterThan(100_000);
+    expect(lameMax).toBeGreaterThan(0);
+    expect(lameMax).toBeLessThan(500);
+  }, 300_000);
+
+  it("un plateau sans bassin ni nappe n'a aucune crue", () => {
+    const plateau = deuxAns(LIMON_RICHE, 30);
+    expect(plateau.filter((s) => s.crue).length).toBe(0);
+    expect(plateau.some((s) => s.memoire)).toBe(false);
+  }, 300_000);
+
+  it("un ruisseau qui monte pose sa hauteur sur ce qu'il noie", () => {
+    const st = {
+      ...station(RUISSEAU),
+      relief: { ...RELIEF_PLAT, pentePct: 3, expositionDeg: 180, bassinAmontHa: 40 },
+    };
+    const meteo = syntheticYear(LIMON_RICHE.climat);
+    const pluvieuse = meteo.reduce((a, b) => (b.rainMm > a.rainMm ? b : a));
+    let state = createGameState(st, rngStateFromSeed(3));
+    let crue: CrueResult | undefined;
+    for (let i = 0; i < 3 && !crue; i++) {
+      const r = tick(state, pluvieuse);
+      state = r.state;
+      crue = r.crue;
+    }
+    if (!crue) throw new Error("le ruisseau en crue aurait dû noyer le bas");
+    expect(crue.monteeM).toBeGreaterThan(0);
+    // Le plan d'eau ne monte pas plus haut que sa montée : aucune lame ne la dépasse.
+    for (const l of crue.lamesMm) expect(l).toBeLessThanOrEqual(crue.monteeM * 1000 + 1e-3);
   });
 });
 

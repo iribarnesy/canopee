@@ -127,6 +127,27 @@ describe("une partie reprise continue comme une partie qui ne s'est pas arrêté
   }, 900_000);
 });
 
+describe("la mémoire d'une crue en cours voyage avec l'état (#288)", () => {
+  it("relue telle quelle, cellules et semaines d'arrivée comprises", () => {
+    const avant: GameState = {
+      ...partie(1),
+      crue: {
+        id: 40,
+        semaines: 3,
+        phase: "pic",
+        emprise: 3,
+        emprisePic: 4,
+        cellules: [12, 7, 30],
+        arrivees: [0, 1, 2],
+      },
+    };
+    const relu = lireEtat(ecrireEtat(avant), STATION);
+    if (!relu) throw new Error("le bloc aurait dû se relire");
+    expect(relu.crue).toEqual(avant.crue);
+    expect(Object.keys(relu)).toEqual(Object.keys(avant));
+  }, 300_000);
+});
+
 describe("ce qu'on ne sait pas lire, on le refuse", () => {
   // Rendre `undefined` est un **résultat**, pas un échec à cacher : le journal
   // existe pour ça, et l'appelant rejoue. Un bloc relu de travers serait bien
@@ -144,6 +165,15 @@ describe("ce qu'on ne sait pas lire, on le refuse", () => {
   it("une version de format inconnue", () => {
     const b = bloc();
     new DataView(b.buffer).setUint16(8, VERSION_FORMAT + 1);
+    expect(lireEtat(b, STATION)).toBeUndefined();
+  }, 300_000);
+
+  it("un bloc de version 7, d'avant la mémoire de crue (#288)", () => {
+    // Il ne porte pas `crue`, et son absence dirait « aucune crue en cours » :
+    // une partie arrêtée en plein hiver d'eau reprendrait sous un autre
+    // identifiant. Refusé ; le journal la reconstruit.
+    const b = bloc();
+    new DataView(b.buffer).setUint16(8, 7);
     expect(lireEtat(b, STATION)).toBeUndefined();
   }, 300_000);
 

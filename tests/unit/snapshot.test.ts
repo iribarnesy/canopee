@@ -531,3 +531,25 @@ describe("les oiseaux de passage (#296)", () => {
       for (const id of g.arbres) expect(ids.has(id), `arbre ${id}`).toBe(true);
   });
 });
+
+describe("les semaines de crue (#288)", () => {
+  it("voyagent toutes, dans l'ordre, et rien ne voyage quand il n'y en a pas", () => {
+    const sans = construireSnapshot(entrees(etatNeuf()));
+    expect(sans.crues).toEqual([]);
+    const semaine = (n: number) => ({
+      id: 30,
+      semaine: n,
+      phase: n === 0 ? ("montée" as const) : ("pic" as const),
+      monteeM: 0,
+      cellules: Int32Array.from([3, 4]),
+      rangs: Int32Array.from([0, n]),
+      lamesMm: Float32Array.from([2, 0]),
+      victimes: [],
+      emprisePic: 2,
+    });
+    const crues = [semaine(0), semaine(1)];
+    const avec = construireSnapshot({ ...entrees(etatNeuf()), crues });
+    expect(avec.crues.map((c) => c.id + c.semaine)).toEqual([30, 31]);
+    expect(avec.crues[1]?.phase).toBe("pic");
+  });
+});

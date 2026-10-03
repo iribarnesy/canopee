@@ -57,6 +57,7 @@ import { STATIONS_V0, type StationClimat } from "../engine/stations";
 import { sourcesDeLaParcelle } from "../engine/terrain";
 import type {
   ChuteDeChandelle,
+  CrueResult,
   FranchissementDeStade,
   IncendieResult,
   MortDeLaSemaine,
@@ -533,6 +534,13 @@ let pendingDeparts: DepartFaune[] = [];
 let pendingIncendie: IncendieResult | undefined;
 /** Même traitement que l'incendie : l'événement attend l'instantané (#87). */
 let pendingTempete: TempeteResult | undefined;
+/**
+ * Les semaines de crue depuis le dernier instantané, **toutes** et dans l'ordre
+ * (crue.ts). Pas seulement la dernière, à la différence de l'incendie : une
+ * crue dure des semaines, et c'est la suite montée, pic, retrait que le rendu
+ * joue — à ×64, un instantané en couvre plusieurs.
+ */
+let pendingCrues: CrueResult[] = [];
 // Grandeurs du dernier tick : elles ne sont pas dans l'état, et sans elles le
 // rendu n'a ni crue, ni sous-bois sombre, ni insectes à poser (tick.ts).
 let lastDebordement: Float32Array | undefined;
@@ -542,8 +550,6 @@ let lastPollinisateurs: Float32Array | undefined;
 // un événement — on garde la dernière, on n'accumule pas.
 let lastOiseauxDePassage: readonly FrequentationDeGuilde[] | undefined;
 let droughtYearFlagged = -1;
-// Part inondée la semaine précédente : on ne raconte la crue qu'une fois.
-let partInondeePrecedente = 0;
 // Terre perdue depuis le début de l'année civile de jeu, kg/m².
 let erosionAnnee = 0;
 let bankruptcyAnnounced = false;
@@ -998,6 +1004,7 @@ function postSnapshot() {
     departsFaune: pendingDeparts,
     incendie: pendingIncendie,
     tempete: pendingTempete,
+    crues: pendingCrues,
   });
   pendingRefusals = [];
   pendingEvents = [];
@@ -1017,6 +1024,7 @@ function postSnapshot() {
   // suivant, sinon la même flambée se rejouerait à l'écran.
   pendingIncendie = undefined;
   pendingTempete = undefined;
+  pendingCrues = [];
   // Les grandeurs du tick, elles, se **gardent** : une action reçue en pause
   // déclenche un instantané sans qu'aucune semaine n'ait été simulée, et le
   // joueur ne doit pas voir la crue disparaître entre deux clics.
@@ -1261,6 +1269,7 @@ function stepWeeks(n: number) {
     // Deux tempêtes dans un même lot d'instantané : on garde la dernière, comme
     // pour l'incendie — c'est elle dont les troncs sont encore au sol.
     if (ticked.tempete) pendingTempete = ticked.tempete;
+    if (ticked.crue) pendingCrues.push(ticked.crue);
     // Les aides publiques, une fois l'an. On raconte surtout le cas où elles
     // **ne** tombent **pas** : perdre l'éligibilité en plantant un arbre de trop est
     // la décision que ce mécanisme met sur la table (aides.ts).
@@ -1414,13 +1423,12 @@ function stepWeeks(n: number) {
       }
       erosionAnnee = 0;
     }
-    // Crue : le cours d'eau reçoit l'eau de son bassin d'amont et monte, la
-    // nappe avec lui. On la raconte au moment où elle noie, pas chaque semaine.
-    const inondee = ticked.fluxes.partInondee;
-    if (inondee >= 0.05 && partInondeePrecedente < 0.05) {
-      event("🌊", `Crue : la nappe affleure sur ${Math.round(inondee * 100)} % de la parcelle`);
+    // Crue : on la raconte la semaine où elle commence, pas chaque semaine. Le
+    // moteur dit quand c'est (crue.ts) ; le jeu ne recompte pas un seuil à lui.
+    if (ticked.crue?.semaine === 0) {
+      const part = ticked.crue.cellules.length / Math.max(1, ticked.state.soil.nappeMm.length);
+      event("🌊", `Crue : la nappe affleure sur ${Math.round(part * 100)} % de la parcelle`);
     }
-    partInondeePrecedente = inondee;
     // Tempête : elle arrive en une semaine et doit se dire, sinon des arbres
     // s'escamotent.
     if (ticked.tempete) {
@@ -1597,6 +1605,7 @@ function avancerLaRelecture(n: number): void {
     pendingDeparts.push(...step.departsFaune);
     if (step.incendie) pendingIncendie = step.incendie;
     if (step.tempete) pendingTempete = step.tempete;
+    if (step.crue) pendingCrues.push(step.crue);
     lastFluxes = step.fluxes;
     lastDebordement = step.debordementParCellule;
     lastLumiereAuSol = step.lumiereAuSol;
@@ -1689,6 +1698,7 @@ function viderLesTampons(): void {
   pendingDeparts = [];
   pendingIncendie = undefined;
   pendingTempete = undefined;
+  pendingCrues = [];
 }
 
 function startLoop() {
@@ -1879,6 +1889,7 @@ function init(
   pendingDeparts = [];
   pendingIncendie = undefined;
   pendingTempete = undefined;
+  pendingCrues = [];
   lastFluxes = undefined;
   lastDebordement = undefined;
   lastLumiereAuSol = undefined;
@@ -1887,7 +1898,6 @@ function init(
   weeksPerSecond = 0;
   bankruptcyAnnounced = false;
   droughtYearFlagged = -1;
-  partInondeePrecedente = 0;
   erosionAnnee = 0;
   prevFruitsReadyKg = 0;
   post({ type: "ready", station: stationInfo() });
@@ -2008,6 +2018,7 @@ self.addEventListener("message", (event: MessageEvent<ToWorker>) => {
       pendingChutes = [];
       pendingIncendie = undefined;
       pendingTempete = undefined;
+      pendingCrues = [];
       weeksPerSecond = 0;
       post({ type: "ready", station: stationInfo() });
       // La consigne vient de la sauvegarde : l'écran ne la devinerait pas.
