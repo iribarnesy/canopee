@@ -4166,7 +4166,7 @@ export function tick(state: GameState, weather: WeekWeather): TickResult {
     // son fourré — et sur le calendrier des guildes. Une haie qu'on arrache
     // cette semaine n'attire plus personne la suivante, sans que rien ne s'en
     // souvienne (`oiseaux.ts`).
-    oiseauxDePassage = frequentationOiseaux(nextTrees, state.week, dims);
+    oiseauxDePassage = frequentationOiseaux(nextTrees, state.week, dims, state.graineMarche);
   }
 
   return {

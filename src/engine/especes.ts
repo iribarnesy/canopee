@@ -497,9 +497,9 @@ export interface EspeceV0 {
    * Ce bloc dit **quand la baie mûre est sur la plante**, offerte aux oiseaux :
    * de la semaine où elle mûrit à celle où il n'en reste presque plus. Les deux
    * bornes sont comprises, et la fenêtre peut **enjamber le nouvel an** (un houx
-   * se lit de 39 à 9). Ce n'est pas une date de maturité botanique : c'est ce
-   * que Snow & Snow ont **vu manger**, et leur fin de saison contient donc déjà
-   * ce que les oiseaux ont emporté (*Birds and Berries*, 1988, fig. 1).
+   * se lit de 39 à 9). Ce n'est pas une date de maturité botanique : c'est la
+   * saison où l'on **voit manger** (Snow & Snow 1988, Croxton & Sparks 2004), et
+   * sa fin contient donc déjà ce que les oiseaux ont emporté.
    *
    * **Absent veut dire « pas une baie d'oiseau »** : un gland se mange au sol et
    * par d'autres bêtes (`semences`), une pomme tombe. La fiche le déclare en
@@ -558,12 +558,18 @@ const ASENSIO_2008 =
 const PEPINIERES_DE =
   "catalogues de pépiniéristes et bases horticoles allemands (Garten von Ehren, Baumschule Horstmann, NaturaDB) — ordre de grandeur commercial, pas une mesure";
 /**
- * **source des saisons de baies** (`baies`, #296). Six ans de guet aux buissons
- * en fruits dans la vallée d'Aylesbury : la figure 1 et les pages 19-21 disent
- * quand chaque fruit est **mangé**, ce qui est la grandeur que lit un oiseau.
+ * **sources des saisons de baies** (`baies`, #296). Snow & Snow ont guetté six
+ * ans les buissons en fruits de la vallée d'Aylesbury et disent quand chaque
+ * fruit est **mangé**, ce qui est la grandeur que lit un oiseau. Le livre n'a pas
+ * pu être relu pour #296 : les pages citées sur les fiches viennent d'un premier
+ * jet et restent *(à confirmer)* là où rien d'autre ne les recoupe. Croxton &
+ * Sparks, eux, ont été relus : trois hivers de comptage de baies sur pied à
+ * Monks Wood.
  */
 const SNOW_1988 =
-  "Snow & Snow 1988, Birds and Berries, T & AD Poyser (vallée d'Aylesbury, sud de l'Angleterre, 1980-85) — fig. 1 et p. 19-21, saisons des fruits mangés par les oiseaux";
+  "Snow & Snow 1988, Birds and Berries, T & AD Poyser (vallée d'Aylesbury, sud de l'Angleterre, 1980-85) — saisons des fruits mangés par les oiseaux (non relu pour #296)";
+const CROXTON_2004 =
+  "Croxton & Sparks 2004, Timing of berry depletion rates of three common hedgerow shrubs, Agriculture, Ecosystems & Environment 104 : 663-666 (Monks Wood, Cambridgeshire, hivers 1998-2001)";
 
 /**
  * **sources d'infradensité** (`bois.densite`, #68). Deux, et dans cet ordre : la
@@ -1194,13 +1200,12 @@ export const ESPECES_V0: readonly EspeceV0[] = [
     ravageurs: { sensibilite: 0.4 },
     gibier: { appetence: 0.3 },
     feu: { inflammabilite: 0.45, resistanceEcorce: 0.15, rejetteApresFeu: true },
-    // Les prunelles mûrissent à l'automne et **restent sur la branche** l'hiver
-    // (Wildlife Trusts, fiche Blackthorn), et ne deviennent vraiment mangeables
-    // qu'après les gelées (Kleinschmidt 2021, bird-lens.com). Le début en
-    // octobre et la fin en janvier sont *(à confirmer)* : la partie de Snow &
-    // Snow lue ici ne les chiffre pas.
+    // Les prunelles **restent sur la branche** bien après les cenelles : mangées
+    // dès début octobre certains hivers, il en restait plus de 70 % au
+    // 1er décembre d'autres, et elles sont épuisées entre la mi-janvier et la
+    // fin janvier (Croxton & Sparks 2004). Semaine 40 à semaine 4.
     baies: { debutSemaine: 40, finSemaine: 4 },
-    sources: [ATLAS, GRUBB_1999, SNOW_1988],
+    sources: [ATLAS, GRUBB_1999, CROXTON_2004],
   },
   {
     id: "crataegus_monogyna",
@@ -1242,12 +1247,14 @@ export const ESPECES_V0: readonly EspeceV0[] = [
     ravageurs: { sensibilite: 0.5 },
     gibier: { appetence: 0.25 },
     feu: { inflammabilite: 0.4, resistanceEcorce: 0.2, rejetteApresFeu: true },
-    // Les premières cenelles en août, le gros en septembre, et la récolte est
-    // « largement finie en décembre » (Snow & Snow 1988, p. 21). Ce qui reste
-    // jusqu'en février sur quelques buissons ne compte pas ici. C'est **la**
-    // baie d'hiver des grives, et la fiche n'avait aucun bloc pour le dire.
+    // Les cenelles sont mangées vite en octobre, et il n'en reste qu'un dixième
+    // au début de décembre (Croxton & Sparks 2004 ; un hiver sur trois, un
+    // tiers). Ce qui reste jusqu'en février sur quelques buissons ne compte pas
+    // ici. Le début, fin août, est celui de Snow & Snow *(à confirmer)*. C'est
+    // **la** baie d'automne des grives, et la fiche n'avait aucun bloc pour le
+    // dire.
     baies: { debutSemaine: 34, finSemaine: 48 },
-    sources: [ATLAS, GRUBB_1999, WILLOUGHBY_2007, SNOW_1988],
+    sources: [ATLAS, GRUBB_1999, WILLOUGHBY_2007, SNOW_1988, CROXTON_2004],
   },
   {
     id: "rubus_fruticosus",
@@ -1321,7 +1328,7 @@ export const ESPECES_V0: readonly EspeceV0[] = [
     gibier: { appetence: 0.45 },
     feu: { inflammabilite: 0.5, resistanceEcorce: 0.05, rejetteApresFeu: true },
     // Les premières mûres en août, le gros en septembre (Snow & Snow 1988,
-    // p. 20). La fin, mi-octobre, est *(à confirmer)*.
+    // *à confirmer*). La fin, mi-octobre, est *(à confirmer)*.
     baies: { debutSemaine: 31, finSemaine: 42 },
     sources: [ATLAS, PEPINIERES_DE, SNOW_1988],
   },
@@ -1372,12 +1379,19 @@ export const ESPECES_V0: readonly EspeceV0[] = [
     ravageurs: { sensibilite: 0.35 },
     gibier: { appetence: 0.2 }, // feuillage rebutant : le chevreuil s'en détourne
     feu: { inflammabilite: 0.35, resistanceEcorce: 0.1, rejetteApresFeu: true },
-    // Le sureau mûrit en août — « de loin le plus important » des fruits du
-    // mois — et sa récolte est « largement finie en novembre » (Snow & Snow
-    // 1988, p. 20-21). C'est la baie des fauvettes qui s'engraissent avant de
-    // partir, pas celle des grives d'hiver.
-    baies: { debutSemaine: 30, finSemaine: 42 },
-    sources: [ATLAS, ATKINSON_2002, SNOW_1988],
+    // En Fermanagh, au nord-ouest de l'aire, les premières baies mûres
+    // apparaissent début septembre et tous les sureaux sont dépouillés début
+    // novembre (BSBI, flore du comté de Fermanagh, fiche Sambucus nigra) ; plus
+    // au sud, Snow & Snow le font mûrir dès août *(à confirmer)*. Semaine 33
+    // (mi-août) à semaine 43 (fin octobre). C'est la baie des fauvettes qui
+    // s'engraissent avant de partir, pas celle des grives d'hiver.
+    baies: { debutSemaine: 33, finSemaine: 43 },
+    sources: [
+      ATLAS,
+      ATKINSON_2002,
+      SNOW_1988,
+      "BSBI, Fermanagh species accounts, Sambucus nigra L. (flore du comté de Fermanagh, Irlande du Nord) — maturité et dépouillement des baies",
+    ],
   },
   {
     id: "carpinus_betulus",
@@ -1480,7 +1494,8 @@ export const ESPECES_V0: readonly EspeceV0[] = [
     gibier: { appetence: 0.3 },
     feu: { inflammabilite: 0.35, resistanceEcorce: 0.15, rejetteApresFeu: true },
     // Les premières baies fin septembre, la plupart en octobre, et il en reste
-    // jusqu'en février-mars sur une partie des houx (Snow & Snow 1988, p. 20).
+    // jusqu'en février-mars sur une partie des houx (Snow & Snow 1988, *à
+    // confirmer*).
     // **Le houx est dioïque** et seul le pied femelle porte des baies ;
     // le moteur ne connaît pas le sexe d'un arbre, il compte donc tous les houx
     // — soit à peu près le double de ce qu'il faudrait.
@@ -1645,8 +1660,8 @@ export const ESPECES_V0: readonly EspeceV0[] = [
     ravageurs: { sensibilite: 0.45, hoteHivernal: true },
     gibier: { appetence: 0.4 },
     feu: { inflammabilite: 0.35, resistanceEcorce: 0.15, rejetteApresFeu: true },
-    // Le fusain commence à mûrir en novembre (Snow & Snow 1988, p. 20). La
-    // fin, en janvier, est *(à confirmer)*.
+    // Le fusain mûrit en octobre-novembre (Snow & Snow 1988, *à confirmer*).
+    // La fin, en janvier, est *(à confirmer)*.
     baies: { debutSemaine: 43, finSemaine: 3 },
     sources: [ATLAS, WILLOUGHBY_2007, GWDD_2009, SNOW_1988],
   },
@@ -1706,9 +1721,9 @@ export const ESPECES_V0: readonly EspeceV0[] = [
     ravageurs: { sensibilite: 0.3 },
     gibier: { appetence: 0.35 },
     feu: { inflammabilite: 0.4, resistanceEcorce: 0.15, rejetteApresFeu: true },
-    // Le troène commence à mûrir en novembre (Snow & Snow 1988, p. 20), et sa
-    // baie noire tient une bonne partie de l'hiver. La fin, en février, est
-    // *(à confirmer)*.
+    // Le troène mûrit en octobre-novembre (Snow & Snow 1988, *à confirmer*),
+    // et sa baie noire tient une bonne partie de l'hiver. La fin, en février,
+    // est *(à confirmer)*.
     baies: { debutSemaine: 43, finSemaine: 8 },
     sources: [ATLAS, GRUBB_1999, GWDD_2009, SNOW_1988],
   },

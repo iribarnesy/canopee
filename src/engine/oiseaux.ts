@@ -61,7 +61,7 @@
  */
 
 import { getEspece } from "./especes";
-import { graineInstallation, tirageLocal } from "./faune";
+import { tirageLocal } from "./faune";
 import { forEachDiscCell, type GridDims } from "./grid";
 import { crownRadiusM } from "./light";
 import type { TreeState } from "./trees";
@@ -109,12 +109,13 @@ export interface GuildeDePassage {
 /**
  * Densité des **passereaux de haie** au mètre carré de fourré.
  *
- * Newton (2017, *British Birds* 110 : 77-91) résume la littérature : en saison de
- * nidification, **5 à 14 couples par kilomètre de haie**, davantage dans les haies
- * hautes et larges. Le moteur ne connaît pas de « kilomètre de haie », il connaît
+ * Newton (2017, « In praise of hedgerows », *British Birds* 110 : 77-91) résume
+ * la littérature : en saison de nidification, **5 à 14 couples par kilomètre de
+ * haie**, davantage dans les haies hautes et larges. Le moteur ne connaît pas de « kilomètre de haie », il connaît
  * des mètres carrés de couronne : on divise par la largeur d'une haie, et le
  * Countryside Survey 2000 en donne la classe la plus fréquente — **68 % des haies
- * de Grande-Bretagne font 1 à 2 m de large** (Barr et al., rapport M03). Avec le
+ * de Grande-Bretagne font 1 à 2 m de large** (Barr et al. 2004, rapport M03 du
+ * CS2000, « Hedgerows », NERC Open Research Archive 4798). Avec le
  * milieu de la fourchette de Newton et la borne haute de la largeur :
  *
  *     9,5 couples/km × 2 oiseaux ÷ 2 000 m²/km = 0,0095 oiseau/m²
@@ -132,11 +133,12 @@ export const OISEAUX_DE_HAIE_PAR_M2 = (9.5 * 2) / 2000;
  * Densité des **frugivores** au mètre carré de couronne en baies.
  *
  * Tellería, Ramírez & Pérez-Tris (2005, *Biological Conservation* 124 :
- * 493-502, annexe A) comptent en janvier, sur quatre hivers, **17 à 21 oiseaux
- * disséminateurs** (fauvettes à tête noire et mélanocéphales, rouges-gorges,
- * grives, merles) par transect de 2,5 ha, et **8 à 15 buissons porteurs de baies
- * mûres** sur la bande de 0,5 ha où ils les recensent. En moyenne des quatre
- * hivers, et ramené à la même surface :
+ * 493-502, annexe A) comptent en janvier, sur quatre hivers, **16,9 à 20,8
+ * oiseaux disséminateurs** (fauvettes à tête noire et mélanocéphales,
+ * rouges-gorges, quatre grives et merles) par transect de 500 m sur 50 m, soit
+ * 2,5 ha, et **8,2 à 15,3 plantes porteuses de baies mûres** sur la bande de 10 m
+ * (0,5 ha) où ils les recensent. En moyenne des quatre hivers (19,6 oiseaux,
+ * 11,4 plantes), et ramené à la même surface :
  *
  *     19,6 oiseaux ÷ (11,4 buissons × 5) ≈ 0,34 oiseau par buisson en fruits
  *
@@ -147,8 +149,9 @@ export const OISEAUX_DE_HAIE_PAR_M2 = (9.5 * 2) / 2000;
  * Un recoupement indépendant, et il tombe dans le même ordre de grandeur. Une
  * haie d'aubépine non taillée porte **0,1 à 0,2 kg de cenelles par mètre carré**
  * de face (Sparks, Robinson & Downing 2000, *Aspects of Applied Biology* 58 :
- * 421-424 : 219 à 421 g par 2,5 m² de haie non coupée), mangées en une quinzaine
- * de semaines (Snow & Snow 1988, p. 21). Si une grive avale à peu près son
+ * 421-424 : 219 à 421 g par 2,5 m² de haie non coupée), mangées entre octobre et
+ * début décembre, où il n'en reste qu'un dixième (Croxton & Sparks 2004,
+ * *Agriculture, Ecosystems & Environment* 104 : 663-666). Si une grive avale à peu près son
  * propre poids de fruits par jour, soit ~70 g *(à confirmer)*, ce stock nourrit
  * de l'ordre de **0,02 oiseau/m²** sur la saison — deux à trois fois moins, ce qui est
  * l'écart attendu entre un quartier d'hiver méditerranéen, où se concentrent
@@ -168,14 +171,16 @@ export const GUILDES_DE_PASSAGE: readonly GuildeDePassage[] = [
     membres: "grives mauvis et litornes, merles et rouges-gorges venus du nord",
     presences: [
       {
-        // La grive mauvis passe en France surtout entre mi-octobre et
-        // mi-novembre, et repart vers le nord à partir de mi-février ; la
-        // litorne arrive au plus tôt dans la troisième décade d'octobre et
-        // repart de fin février, avec un pic début mars (Claessens 1990,
-        // *Gibier Faune Sauvage*, et Claessens 1991, *Alauda*, reprises de
-        // bagues du CRBPO). Semaine 42 (mi-octobre) à semaine 9 (début mars).
+        // La grive mauvis est en France « de la mi-octobre au début du
+        // printemps » (VivArmor Nature 2022, fiche Grive mauvis), avec des
+        // arrivées maximales en novembre-décembre d'après les reprises de bagues
+        // (Claessens 1990, *Gibier Faune Sauvage* 7 : 1-20, résumé par la fiche
+        // espèce de la fédération des chasseurs des Alpes-Maritimes), et une
+        // migration de retour qui commence de mi à fin février. Semaine 42
+        // (mi-octobre) à semaine 11 (l'équinoxe). La fin compte peu : il ne reste
+        // alors presque plus de baies sur aucune fiche.
         debutSemaine: 42,
-        finSemaine: 9,
+        finSemaine: 11,
         ressource: "baies",
         oiseauxParM2: FRUGIVORES_PAR_M2_DE_BAIES,
       },
@@ -205,9 +210,12 @@ export const GUILDES_DE_PASSAGE: readonly GuildeDePassage[] = [
     membres: "fauvettes à tête noire et des jardins, pouillots, gobemouches",
     presences: [
       {
-        // **Le passage de printemps** : le gobemouche noir remonte en mars-avril
-        // (Faune-Rhône, *L'Effraie* 45). Il cherche un abri et des insectes, pas
-        // de baies — il n'y en a plus. Semaines 11 à 17 (mi-mars à fin avril).
+        // **Le passage de printemps** : dans le Rhône, le pouillot fitis arrive
+        // autour de l'équinoxe, avril réunit plus de la moitié des données avec
+        // un pic à la deuxième décade, et mai n'en compte plus que le dixième
+        // d'avril (LPO Rhône, « l'oiseau du mois », septembre 2016). L'oiseau
+        // cherche un abri et des insectes, pas de baies — il n'y en a plus.
+        // Semaines 11 à 17 (l'équinoxe à fin avril).
         // La densité reprend celle de la haie, faute de mesure d'une halte
         // migratoire au mètre carré *(à calibrer)*.
         debutSemaine: 11,
@@ -216,18 +224,20 @@ export const GUILDES_DE_PASSAGE: readonly GuildeDePassage[] = [
         oiseauxParM2: OISEAUX_DE_HAIE_PAR_M2,
       },
       {
-        // **Le passage d'automne** : 90 % des gobemouches noirs passent entre
-        // les derniers jours d'août et la fin septembre (*L'Effraie* 45), et les
-        // fauvettes s'engraissent alors sur le sureau : en halte dans un jeune
-        // bois suisse, la fauvette à tête noire se prend significativement plus
-        // près des sureaux en fruits, et 80 % des fientes à graines des
-        // fauvettes à tête noire et des jardins portent des graines de sureau
-        // (von Hirschheydt, Schiegg & Suter 2005, *Der Ornithologische
-        // Beobachter* 102 : 1-14). Semaines 33 à
-        // 40 (mi-août à début octobre). La fauvette à tête noire est la première
-        // espèce du décompte de Tellería, d'où la même densité au mètre carré.
+        // **Le passage d'automne** : 90 % des gobemouches noirs passent entre la
+        // dernière pentade d'août et la dernière de septembre (Frey & Tissier
+        // 2017, *L'Effraie* 45 : 24-28), et les fauvettes s'engraissent alors
+        // sur le sureau. En halte dans un jeune bois suisse, filets ouverts du
+        // 7 août au 21 octobre, la fauvette à tête noire se prend plus près des
+        // sureaux en fruits, 80 % des fientes à graines des fauvettes à tête
+        // noire et des jardins portent des graines de sureau, et les rouges-gorges
+        // et accenteurs de passage arrivent en masse après le 1er septembre (von
+        // Hirschheydt, Schiegg & Suter 2005, *Der Ornithologische Beobachter*
+        // 102 : 1-14). Semaines 33 à 42 (mi-août à la fin des filets). La
+        // fauvette à tête noire est la première espèce du décompte de Tellería,
+        // d'où la même densité au mètre carré.
         debutSemaine: 33,
-        finSemaine: 40,
+        finSemaine: 42,
         ressource: "baies",
         oiseauxParM2: FRUGIVORES_PAR_M2_DE_BAIES,
       },
@@ -315,6 +325,29 @@ export interface FrequentationDeGuilde {
   arbres: readonly number[];
 }
 
+/**
+ * Graine **locale** de l'arrondi d'une fréquentation : la guilde, la semaine et la
+ * partie.
+ *
+ * Même construction que `graineDeGlandee`, et pour la même raison : deux des
+ * trois entrées sont petites (une semaine, une graine de partie qu'un essai
+ * numérote 1 et 2), si bien que sans brassage final deux parties tireraient les
+ * mêmes arrondis semaine après semaine. Le flux principal n'est pas touché.
+ */
+export function graineDePassage(guildeId: string, semaine: number, graineParcelle: number): number {
+  let h = 2166136261 >>> 0;
+  for (let i = 0; i < guildeId.length; i++) {
+    h = (h ^ guildeId.charCodeAt(i)) >>> 0;
+    h = Math.imul(h, 16777619) >>> 0;
+  }
+  h = (h + Math.imul(semaine, 2654435761) + Math.imul(graineParcelle, 40503)) >>> 0;
+  h = (h ^ (h >>> 16)) >>> 0;
+  h = Math.imul(h, 2246822507) >>> 0;
+  h = (h ^ (h >>> 13)) >>> 0;
+  h = Math.imul(h, 3266489909) >>> 0;
+  return (h ^ (h >>> 16)) >>> 0;
+}
+
 /** Une ressource peinte sur la grille, et qui l'a peinte. */
 interface Couverture {
   surfaceM2: number;
@@ -357,13 +390,16 @@ function couvrir(
  * « ce n'est pas la saison ». Les guildes absentes du calendrier n'ont pas
  * d'entrée.
  *
- * `semaine` est la semaine **absolue** de la partie : l'année sert à la graine
- * locale, la semaine de l'année au calendrier.
+ * `semaine` est la semaine **absolue** de la partie : elle sert entière à la
+ * graine locale, et réduite à l'année au calendrier. `graineParcelle` est la
+ * graine de la partie (`GameState.graineMarche`), pour que deux parties
+ * n'arrondissent pas de la même façon.
  */
 export function frequentationOiseaux(
   trees: readonly TreeState[],
   semaine: number,
   dims: GridDims,
+  graineParcelle: number,
 ): FrequentationDeGuilde[] {
   const semaineDeLAnnee = semaine % 52;
   const resultat: FrequentationDeGuilde[] = [];
@@ -386,7 +422,7 @@ export function frequentationOiseaux(
     }
     const attendus = couverture.surfaceM2 * presence.oiseauxParM2;
     const entiers = Math.floor(attendus);
-    const tirage = tirageLocal(graineInstallation(0, `passage:${guilde.id}`, semaine));
+    const tirage = tirageLocal(graineDePassage(guilde.id, semaine, graineParcelle));
     const oiseaux = entiers + (tirage < attendus - entiers ? 1 : 0);
     resultat.push({
       guildeId: guilde.id,
