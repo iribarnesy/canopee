@@ -61,7 +61,53 @@ qu'un rapport (voir la note de maintenance).
 Séparer calibration et validation : caler un paramètre sur un âge, garder
 l'autre âge pour vérifier.
 
-## Ce que le dernier lot a appris (la perte d'horizon sans fond, #283)
+## Ce que le dernier lot a appris (la crue comme événement, #288)
+
+Le moteur savait qu'une parcelle était inondée une semaine donnée ; il ne
+savait pas qu'une crue commence, culmine et se retire. Rien de neuf n'est
+calculé : la nappe, le refus d'infiltration et les morts existaient, il
+manquait une mémoire d'une semaine à l'autre.
+
+### Avant de borner un nombre absurde, savoir si c'est un stock ou un débit
+
+Les « 652 835 mm » d'eau refusée sur une cellule ressemblaient au défaut de
+#283, et le réflexe de #283 — borner par le stock — les aurait effacés. Ils
+n'étaient pas faux : `debordementParCellule` cumule, le long du talweg, toute
+l'eau qui traverse, et sur le fond de vallée l'eau d'un bassin de 6 ha sort par
+une seule cellule d'un mètre carré. 650 m³ en une semaine d'orage, un ruisseau
+d'un litre par seconde. Le même tableau porte le routage de l'eau : le borner
+aurait cassé le bilan de l'eau. Le défaut était dans le **nom** — sa doc disait
+« la seule base honnête pour une crue, une lame d'eau », et le rendu dessinait
+une profondeur proportionnelle à un débit. La lame de la crue se lit maintenant
+sur ce que la cellule refuse d'elle-même, et plafonne à 93 mm en trente ans.
+
+### Une absence dans l'état n'est pas neutre
+
+La mémoire de crue n'est pas une grille, et le JSON du reste l'aurait relue
+sans broncher. Mais un bloc d'avant ne la porte pas, et son absence dit « pas
+de crue en cours » : une partie arrêtée en plein hiver d'eau aurait repris
+sous un autre identifiant. Le format monte (8), pour la même raison que les
+grilles avant elle : une valeur manquante n'a pas de défaut innocent.
+
+### Un seuil en part de parcelle change de sens avec la taille de la parcelle
+
+Les essais tournent sur des carrés de trente mètres pour aller vite, le jeu sur
+un hectare. Sur trente mètres, la rangée du pied de la parcelle, inondée toute
+l'année, pèse 2,7 % de la surface — plus que le seuil de fin — et la crue ne se
+fermait jamais. Sur un hectare elle pèse 1 %. L'essai tourne donc sur un
+hectare, et la limite est écrite ; une définition locale reste à trouver.
+
+### Un chiffre qui n'est pas écrit dans le dépôt meurt avec la session
+
+Ce lot a été repris après un redémarrage, notes et bancs perdus. Un
+commentaire laissé par la session précédente justifiait le seuil de fin par
+une mesure (« un hiver sur quatre se découpe ») que rien ne permettait de
+retrouver. Remesuré sur une fenêtre : un seuil unique à 5 % fait 34 crues en
+trente ans au lieu de 28, et la durée médiane passe de 22 à 16 semaines — le
+découpage existe, mais pas dans la proportion annoncée. Écrire le relevé là où
+il sert (doc, commentaire d'essai) au moment où on le prend.
+
+## Ce qu'un lot précédent a appris (la perte d'horizon sans fond, #283)
 
 Une correction de maintenance, pas un mécanisme : une cellule ne perd plus une
 terre que son horizon ne contient pas. Deux leçons valent pour qui ajoute un

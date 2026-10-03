@@ -208,7 +208,8 @@ semaine simulée.
 | **Franchissements** | `Snapshot.franchissements` (`{id,deStade,versStade}`) | l'anneau sur l'arbre qui vient de passer gaulis, perchis ou futaie. Le stade lui-même se calcule côté rendu (`stadeDe`) ; seul le passage voyage |
 | **Gestes** | `Snapshot.gestes` (`GesteVisible`) | l'arbre qui **tombe** au lieu de s'escamoter ; élagage, étêtage, recépage, broutage, frottis. Ils disent ce qui a été *réellement* touché — le plafond horaire arrête souvent le chantier en cours de route. Les cinq gestes du joueur portent `retire: ArbreRetire[]` : position, espèce, hauteurs et bases de houppier avant/après, et `directionRad` quand une tige entière est tombée — de quoi animer un arbre qui a déjà quitté `state.trees` |
 | **Incendie** | `Snapshot.incendie` (`IncendieResult{origine,brulees,rangs,charges}`) | le front qui court : les cellules sont rangées **par rang croissant**, le rendu n'a qu'à les découper en tranches. `charges` dit dans **quoi** chaque cellule a brûlé (indice de `chargeCombustible`, relevé avant consommation) : flamme haute dans l'ajonc, basse dans un pré ras. Et `victimes: {id, hauteurAvantM, rejet}[]` : **qui** le feu a emporté, la semaine même — le torchage a enfin de quoi s'animer, sans que le rendu ait à reconnaître les arbres brûlés par leur `brulEeSemaine`. `rejet` sépare la chandelle noire du pyrophyte qui repart d'en bas |
-| **Eau de surface** | `soilDebordementMm` | la crue, la lame d'eau qui court, les ravines |
+| **Eau de surface** | `soilDebordementMm` | le courant, les ravines — un **débit** par cellule, pas une hauteur (#288) |
+| **Crue** | `Snapshot.crues` (`CrueResult{id,semaine,phase,monteeM,cellules,rangs,lamesMm,victimes,emprisePic}`, une entrée par semaine de crue, dans l'ordre) | la montée qui court dans l'ordre d'arrivée de l'eau, la lame sur chaque cellule, le retrait, les arbres noyés (§6.5) |
 | **Ambiance** | `soilLumiere` | le sous-bois sombre, les taches de lumière, la clairière |
 | **Tapis** | `soilLitiereCG` | les feuilles de novembre, le paillage, le noir des cendres |
 | **Floraison, gel, brout, liège** | `fruitProgress`, `bloomFrosted`, `pousseTendreM`, `frotteSemaine`, `derniereLeveeSemaine` | voile de fleurs, fleurs brunies par le gel, rameaux coupés net, écorce arrachée, tronc ocre-rouge |
@@ -1839,11 +1840,16 @@ la propagation anisotrope dans le sens du vent.
 
 | Étape | Mise en scène | Honnêteté |
 |---|---|---|
-| Montée | l'eau **entre par le côté du ruisseau** (`eau.cote`) et gagne les cellules dans l'ordre des altitudes croissantes | ⚠️ **mise en scène** : le moteur ne route pas d'eau de surface dans le temps, il calcule un état hebdomadaire. La vague est une *interpolation ordonnée* de l'état, pas une simulation. À afficher comme telle (elle ne mouille que ce que l'état déclare mouillé). |
-| Nappe d'eau | lame d'eau réfléchissante sur les cellules à `soilNappeCm ≤ 5`, profondeur ∝ `debordement` | ✅ données réelles |
-| Courant | le ruissellement suit la pente (`penteParCellule`) | ✅ |
-| Retrait | l'eau redescend, laisse du limon clair et des débris à la ligne de crue | `M` |
-| Victimes | les arbres noyés meurent d'`engorgement` — donc §6.3, pas d'animation spécifique | — |
+| Montée | l'eau gagne les cellules dans l'ordre où le moteur dit qu'elle les a atteintes : `Snapshot.crues[].cellules`, rangées par `rangs` (semaine d'arrivée) puis du plus bas au plus haut (#288) | ✅ d'une semaine à l'autre : c'est l'événement du moteur. ⚠️ **mise en scène** à l'intérieur d'une semaine : le moteur calcule un état hebdomadaire, la vague qui court dans la semaine est une interpolation ordonnée, et elle ne mouille que ce que l'événement déclare mouillé. |
+| Nappe d'eau | lame d'eau réfléchissante sur les cellules de l'emprise, profondeur ∝ `lamesMm` | ✅ données réelles. **Pas** ∝ `soilDebordementMm` : c'est un débit, qui cumule tout l'amont le long d'un talweg (650 000 mm sous un bassin de 6 ha) |
+| Courant | le ruissellement suit la pente (`penteParCellule`), son intensité ∝ `soilDebordementMm` | ✅ |
+| Retrait | `phase === "retrait"`, puis plus aucun `CrueResult` sous cet identifiant : l'eau redescend, laisse du limon clair et des débris à la ligne de crue | ✅ la date ; `M` pour l'image |
+| Victimes | `crues[].victimes` : les morts d'`engorgement` de la semaine sur l'emprise — les mêmes que dans `morts`, donc §6.3, pas d'animation spécifique. Vide aujourd'hui sur toutes les stations mesurées | — |
+
+**Ce que vaut une crue dans ce moteur** (mesuré, fond de vallée engorgé, trente
+ans) : un hiver d'eau de plusieurs mois, qui monte presque tout du long et se
+retire en une ou deux semaines. Sans ruisseau ni mare déclarés, `monteeM` vaut
+zéro : la nappe monte sous terre, et ce qui se voit est l'emprise qui grandit.
 
 Charge totale : `L`.
 
