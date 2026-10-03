@@ -1234,8 +1234,7 @@ export function tick(state: GameState, weather: WeekWeather): TickResult {
     // au prorata des deux *(hypothèse de mélange)*. La pluie, c'est l'eau qui
     // arrive liquide au sol, fonte comprise : la neige qui tient n'entre pas.
     if (amontIci > 0) {
-      refusVenuDAmontMm[i] =
-        (bilan.overflowMm + ruissele) * (amontIci / (eauLiquideMm + amontIci));
+      refusVenuDAmontMm[i] = (bilan.overflowMm + ruissele) * (amontIci / (eauLiquideMm + amontIci));
     }
     // Ce qui percole recharge la nappe ; ce qu'elle a rendu au sol lui est
     // retiré. L'eau qui remonte n'a pas toujours la même provenance : quand un
