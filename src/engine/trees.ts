@@ -1279,13 +1279,15 @@ export const TOLERANCE_SECHERESSE_MAX = 5;
  * pour que les vingt-quatre fiches sourcées gardent **en moyenne** le confort
  * qu'elles déclaraient avant #312 (0,562, pour une intolérance moyenne de
  * 0,395 : 1,42, arrondi). La source décide de l'ordre des espèces et de leurs
- * écarts ; ce nombre ne décide que du niveau, et c'est celui d'avant.
+ * écarts ; ce nombre ne décide que du niveau, et c'est celui d'avant. L'ordre,
+ * lui, a bougé : les seuils déclarés ne suivaient la source qu'à r = −0,59.
  */
 export const PENTE_CONFORT_SECHERESSE = 1.4;
 
 /**
  * Pente de la loi de **survie** hydrique *(à calibrer)*, posée de la même façon :
- * stress moyen déclaré 0,243 pour 0,395 d'intolérance, soit 0,615, arrondi.
+ * seuil de survie moyen déclaré 0,243 pour 0,395 d'intolérance, soit 0,615,
+ * arrondi.
  * Elle tient le seuil de survie à 0,43 fois le confort pour toutes les
  * espèces, ce que l'atlas faisait déjà en moyenne (0,40 en médiane) : la
  * croissance cède bien avant la survie, comme le veut l'ordre des sensibilités
