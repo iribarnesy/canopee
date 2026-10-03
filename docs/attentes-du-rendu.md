@@ -137,7 +137,7 @@ est là pour qu'une station le déclare quand on l'aura).
 | `soilEpaisseurPerdueCm` | érosion cumulée, signée : négatif = dépôt |
 | `soilNappeCm` | profondeur de la nappe, cm |
 | `soilEngorgement` | engorgement du profil ∈ [0,1] |
-| `soilDebordementMm` | ce qui n'est pas rentré dans le sol cette semaine, mm |
+| `soilDebordementMm` | l'eau passée en surface sur la cellule cette semaine sans y entrer, mm — **un débit, pas une lame** : le long d'un talweg elle cumule tout l'amont (#288). La base du courant ; la hauteur d'eau est dans `crues[].lamesMm` |
 | `soilLumiere` | lumière arrivant au sol ∈ [0,1] |
 | `soilPollinisateurs` | où sont les insectes pollinisateurs ∈ [0,1] : `min(habitat, ressourceFlorale)`, la grandeur même du service de pollinisation, **sans** son plancher (vent, abeilles domestiques) — presque nulle dans un verger nu en fleur ; mesurée à quelques centièmes au pied d'une jeune haie, 0,6 en été au pied d'une haie de dix ans (#299) |
 | `soilCloture` | cellules closes (1) |
@@ -216,6 +216,42 @@ le rendu poserait des troncs sans essence — une invention en creux.
 Un essai tient l'invariant qui motive tout cela : la semaine d'un incendie,
 **tout arbre qui disparaît est nommé** — soit par `chandellesConsumees`, soit par
 `chutes` — et chaque nom porte de quoi le poser.
+
+**La crue** (`Snapshot.crues`, #288) est un événement depuis ce lot, sur le
+modèle de l'incendie, et c'est ce qui manquait à la montée et au retrait. Le
+moteur émet un `CrueResult` **chaque semaine** où une crue est en cours ; le
+worker les accumule toutes jusqu'à l'instantané, dans l'ordre, parce qu'une crue
+dure et que c'est la suite qui se joue :
+
+- `id` : la semaine où elle a commencé, le même pour toutes ses semaines ;
+  `semaine` : son rang dans l'événement. La semaine de jeu est `id + semaine`.
+- `phase` : `montée` tant que l'emprise grandit, `pic` la première semaine où
+  elle cesse de grandir, `retrait` ensuite ; une seconde vague repart en montée
+  sous le même identifiant.
+- `cellules` et `rangs` : l'emprise, rangée par **semaine d'arrivée de l'eau**
+  croissante, puis du plus bas au plus haut. C'est ce qui fait courir la montée
+  comme `rangs` fait courir un front de feu.
+- `lamesMm` : l'eau posée sur chaque cellule — la hauteur du plan d'eau en crue
+  au-dessus du sol, ou ce que la cellule a refusé d'elle-même. **Jamais l'eau
+  qui ne fait que passer** : celle-là est dans `soilDebordementMm`, qui porte
+  jusqu'à 650 000 mm sur le talweg du fond de vallée une semaine d'orage, et
+  qu'il ne faut pas lire comme une hauteur.
+- `victimes` : les morts d'engorgement de la semaine **sur l'emprise**. Elles
+  sont aussi dans `morts` ; c'est la même mort, que la crue nomme.
+- `monteeM` : de combien l'eau libre est montée. **Zéro sans ruisseau ni mare
+  déclarés** : la nappe d'un fond de vallée monte sous terre, et ce qui s'en
+  voit est l'emprise qui grandit.
+
+Une crue est finie quand des semaines ont passé sans qu'aucun `CrueResult` ne
+porte plus son identifiant.
+
+Ce que le rendu doit savoir avant de la mettre en scène, mesuré sur le fond de
+vallée engorgé (1 ha, trente ans, trois graines) : une crue y est un **hiver
+d'eau**, pas un coup d'eau de trois jours — une vingtaine d'événements en
+trente ans, de plusieurs mois chacun, qui montent presque tout l'hiver et se
+retirent en une à deux semaines. Et **aucune victime** : l'aulnaie tolère
+l'engorgement, et rien dans le moteur ne tue par la crue elle-même (voir
+`docs/realisme.md`, A22).
 
 **La tempête** (`Snapshot.tempete`) voyage maintenant comme l'incendie, et pour
 la même raison : `rafaleMs`, `versRad`, `arbresVerses`, `volumeM3` et les
@@ -433,7 +469,7 @@ se cherche pas ».
 | **Les animaux d'élevage** (poules, volaille en verger) | **Plus tard**, quand le moteur les aura prévus. Pas de sprite d'élevage avant son module : une poule qu'on ne peut ni déplacer ni nourrir se retourne contre nous. La faune **sauvage**, elle, entre dès le lot L9 — le moteur sait déjà la peupler (pression de gibier, broutage, frottis, biodiversité), et la règle est que le nombre et l'activité des bêtes lisent l'état, l'individu restant du décor. |
 | **La vraie 3D** | Non. Raisons au §0 de `docs/interface-visuelle.md` — la première étant que la qualité d'illustration par jour de travail y est bien plus basse, la seconde que le moteur est plat (couronne = disque, ombre = disque décalé) et que la 3D afficherait une précision que le modèle n'a pas. |
 | **La météo volumétrique** | Non : c'est la simulation de l'atmosphère en volume, elle n'a pas de sens sans 3D. L'**effet** (pluie, neige, gel, brume) est dedans et ne coûte rien — `weather` est déjà dans l'instantané, et la neige y a ajouté deux champs (`neigeMm`, `manteauNeigeMm`, #303) : la température ne disait pas s'il avait neigé. |
-| **Le routage de l'eau de surface dans le temps** | Non demandé. La vague d'une crue est une mise en scène ordonnée d'un état hebdomadaire, explicitement bornée : elle ne mouille que ce que `soilNappeCm` et `soilDebordementMm` déclarent mouillé. |
+| **Le routage de l'eau de surface dans le temps** | Non demandé. La vague d'une crue est une mise en scène ordonnée d'un état hebdomadaire, explicitement bornée : elle ne mouille que ce que `soilNappeCm` et `soilDebordementMm` déclarent mouillé. Depuis #288 la crue elle-même est un événement (`Snapshot.crues`) : l'ordre d'arrivée et le retrait se lisent, il n'y a plus rien à interpoler d'une semaine à l'autre — seulement à l'intérieur d'une semaine. |
 
 ## Branches absorbées
 

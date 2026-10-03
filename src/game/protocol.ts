@@ -17,6 +17,7 @@ import type { Relief } from "../engine/relief";
 import type { TickFluxes } from "../engine/state";
 import type {
   ChuteDeChandelle,
+  CrueResult,
   FranchissementDeStade,
   IncendieResult,
   MortDeLaSemaine,
@@ -410,9 +411,13 @@ export interface Snapshot {
   /** cellules closes (1) — le gibier n'y entre pas */
   soilCloture: Uint8Array;
   /**
-   * Ce qui n'a pas pu rentrer dans le sol cette semaine, mm par cellule
-   * (débordement du profil + ruissellement refusé). La crue, la lame d'eau,
-   * la ravine (tick.ts).
+   * L'eau passée en surface sur chaque cellule cette semaine sans y entrer, mm
+   * (litres par mètre carré) : ce que la cellule a refusé, plus ce qui lui est
+   * arrivé de l'amont et qu'elle a laissé filer (tick.ts). **Un débit, pas une
+   * lame** : le long d'un talweg il cumule tout ce qui verse au-dessus, jusqu'à
+   * des centaines de milliers de millimètres sous un bassin de quelques
+   * hectares. La base du **courant** et de la ravine ; la hauteur d'eau qui
+   * **reste** sur une cellule inondée est dans `crues` (`lamesMm`).
    */
   soilDebordementMm: Float32Array;
   /**
@@ -516,6 +521,19 @@ export interface Snapshot {
    * de la semaine (#87).
    */
   tempete?: TempeteResult;
+  /**
+   * Les semaines de **crue** depuis le dernier instantané, dans l'ordre (crue.ts) :
+   * vide s'il n'y en a pas eu. Chacune porte l'identifiant de son événement, sa
+   * phase (montée, pic, retrait), les cellules dans l'ordre où l'eau les a
+   * atteintes, la lame posée sur chacune et les arbres noyés.
+   *
+   * Toutes les semaines et pas seulement la dernière, à la différence de
+   * l'incendie : une crue dure, et c'est la suite qui se joue. La semaine de
+   * jeu de chacune est `id + semaine` — les semaines d'une crue se suivent
+   * sans trou. Une crue est finie quand l'instantané suivant n'en porte plus
+   * sous le même identifiant alors que des semaines ont passé.
+   */
+  crues: CrueResult[];
 }
 
 export interface StationInfo {

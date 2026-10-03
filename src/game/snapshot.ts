@@ -26,6 +26,7 @@ import type { GameState, TickFluxes } from "../engine/state";
 import { weekOfYear } from "../engine/state";
 import type {
   ChuteDeChandelle,
+  CrueResult,
   FranchissementDeStade,
   IncendieResult,
   MortDeLaSemaine,
@@ -221,6 +222,8 @@ export interface EntreesSnapshot {
   departsFaune: readonly DepartFaune[];
   incendie?: IncendieResult;
   tempete?: TempeteResult;
+  /** semaines de crue depuis le dernier instantané, dans l'ordre (`TickResult`) ; aucune si absent */
+  crues?: CrueResult[];
 }
 
 /**
@@ -350,6 +353,7 @@ export function construireSnapshot(e: EntreesSnapshot): Snapshot {
     departsFaune: e.departsFaune,
     incendie: e.incendie,
     tempete: e.tempete,
+    crues: e.crues ?? [],
   };
 }
 

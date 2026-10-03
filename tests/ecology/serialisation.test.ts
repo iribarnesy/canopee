@@ -128,12 +128,12 @@ describe("une partie reprise continue comme une partie qui ne s'est pas arrêté
 });
 
 describe("un bloc d'avant la neige se relit, avec un manteau nul (#303)", () => {
-  it("la version 7 n'avait pas de manteau : son eau est déjà toute au sol", () => {
-    // Un moteur de version 7 versait toute la précipitation au sol la semaine
+  it("la version 8 n'avait pas de manteau : son eau est déjà toute au sol", () => {
+    // Un moteur de version 8 versait toute la précipitation au sol la semaine
     // même. Son état relu avec un manteau nul est donc **son** état, pas un état
     // inventé — c'est ce qui permet de ne pas refuser le bloc.
-    const partieV7 = partie(1);
-    const avant: GameState = { ...partieV7, soil: { ...partieV7.soil, manteauNeigeMm: 0 } };
+    const partieV8 = partie(1);
+    const avant: GameState = { ...partieV8, soil: { ...partieV8.soil, manteauNeigeMm: 0 } };
     const b = ecrireEtat(avant);
     const vue = new DataView(b.buffer);
     const longueur = vue.getUint32(10);
@@ -141,35 +141,58 @@ describe("un bloc d'avant la neige se relit, avec un manteau nul (#303)", () => 
       v: number;
       sol: Record<string, unknown>;
     };
-    // On fabrique le bloc qu'un moteur de version 7 aurait écrit : la même
+    // On fabrique le bloc qu'un moteur de version 8 aurait écrit : la même
     // disposition, sans le champ, et l'ancien numéro.
-    const { manteauNeigeMm: _absent, ...solV7 } = entete.sol;
-    const neuf = new TextEncoder().encode(JSON.stringify({ ...entete, v: 7, sol: solV7 }));
+    const { manteauNeigeMm: _absent, ...solV8 } = entete.sol;
+    const neuf = new TextEncoder().encode(JSON.stringify({ ...entete, v: 8, sol: solV8 }));
     const debutGrilles = 14 + longueur;
     const bourrage = (8 - (debutGrilles % 8)) % 8;
     const grilles = b.subarray(debutGrilles + bourrage);
     const debutNeuf = 14 + neuf.length;
     const bourrageNeuf = (8 - (debutNeuf % 8)) % 8;
-    const v7 = new Uint8Array(debutNeuf + bourrageNeuf + grilles.length);
-    v7.set(b.subarray(0, 14));
-    const vueV7 = new DataView(v7.buffer);
-    vueV7.setUint16(8, 7);
-    vueV7.setUint32(10, neuf.length);
-    v7.set(neuf, 14);
-    v7.set(grilles, debutNeuf + bourrageNeuf);
+    const v8 = new Uint8Array(debutNeuf + bourrageNeuf + grilles.length);
+    v8.set(b.subarray(0, 14));
+    const vueV8 = new DataView(v8.buffer);
+    vueV8.setUint16(8, 8);
+    vueV8.setUint32(10, neuf.length);
+    v8.set(neuf, 14);
+    v8.set(grilles, debutNeuf + bourrageNeuf);
 
-    const relu = lireEtat(v7, STATION);
-    if (!relu) throw new Error("un bloc de version 7 doit se relire");
+    const relu = lireEtat(v8, STATION);
+    if (!relu) throw new Error("un bloc de version 8 doit se relire");
     expect(relu.soil.manteauNeigeMm).toBe(0);
     expect(stateHash(relu)).toBe(stateHash(avant));
     // Et la partie reprise continue comme celle qui ne s'est pas arrêtée.
     expect(stateHash(partie(1, relu))).toBe(stateHash(partie(1, avant)));
   }, 300_000);
 
-  it("une version plus ancienne que 7 reste refusée", () => {
-    const b = ecrireEtat(partie(1));
-    new DataView(b.buffer).setUint16(8, 6);
-    expect(lireEtat(b, STATION)).toBeUndefined();
+  it("une version plus ancienne que 8 reste refusée", () => {
+    for (const v of [7, 6]) {
+      const b = ecrireEtat(partie(1));
+      new DataView(b.buffer).setUint16(8, v);
+      expect(lireEtat(b, STATION)).toBeUndefined();
+    }
+  }, 300_000);
+});
+
+describe("la mémoire d'une crue en cours voyage avec l'état (#288)", () => {
+  it("relue telle quelle, cellules et semaines d'arrivée comprises", () => {
+    const avant: GameState = {
+      ...partie(1),
+      crue: {
+        id: 40,
+        semaines: 3,
+        phase: "pic",
+        emprise: 3,
+        emprisePic: 4,
+        cellules: [12, 7, 30],
+        arrivees: [0, 1, 2],
+      },
+    };
+    const relu = lireEtat(ecrireEtat(avant), STATION);
+    if (!relu) throw new Error("le bloc aurait dû se relire");
+    expect(relu.crue).toEqual(avant.crue);
+    expect(Object.keys(relu)).toEqual(Object.keys(avant));
   }, 300_000);
 });
 
@@ -190,6 +213,15 @@ describe("ce qu'on ne sait pas lire, on le refuse", () => {
   it("une version de format inconnue", () => {
     const b = bloc();
     new DataView(b.buffer).setUint16(8, VERSION_FORMAT + 1);
+    expect(lireEtat(b, STATION)).toBeUndefined();
+  }, 300_000);
+
+  it("un bloc de version 7, d'avant la mémoire de crue (#288)", () => {
+    // Il ne porte pas `crue`, et son absence dirait « aucune crue en cours » :
+    // une partie arrêtée en plein hiver d'eau reprendrait sous un autre
+    // identifiant. Refusé ; le journal la reconstruit.
+    const b = bloc();
+    new DataView(b.buffer).setUint16(8, 7);
     expect(lireEtat(b, STATION)).toBeUndefined();
   }, 300_000);
 

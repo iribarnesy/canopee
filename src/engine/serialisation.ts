@@ -143,17 +143,27 @@ const MAGIE = "CANOPEE\u0000";
  * pas, et les reconstruire à zéro ferait d'un blé de juin un semis sans matière
  * ni azote. On refuse, sixième fois.
  *
- * **8 (issue #303, la neige)** : le sol porte un scalaire de plus,
+ * **8 (issue #288, crue)** : l'état porte la **mémoire de la crue en cours**
+ * (`crue`, crue.ts) — depuis quand elle dure, à quelle phase elle en est, quand
+ * l'eau a atteint chaque cellule. Ce n'est pas une grille, et le JSON du reste
+ * la relirait sans peine ; mais un bloc de version 7 ne la porte pas, et son
+ * absence n'est pas neutre : elle dit « aucune crue en cours ». Une partie
+ * arrêtée en plein hiver d'eau reprendrait alors sous un autre identifiant,
+ * l'eau arrivée depuis des semaines comptée comme arrivée à l'instant. On
+ * refuse, septième fois, et le rejeu du journal reconstruit la mémoire exacte.
+ *
+ * **9 (issue #303, la neige)** : le sol porte un scalaire de plus,
  * `manteauNeigeMm`, le manteau neigeux de la parcelle. C'est la première montée
  * qui **ne refuse pas** l'ancien bloc, et la raison est l'inverse de celle des
- * six précédentes : ici, la valeur par défaut est innocente. Un moteur de
- * version 7 ne gardait aucune neige, il versait toute la précipitation au sol
+ * sept précédentes : ici, la valeur par défaut est innocente. Un moteur de
+ * version 8 ne gardait aucune neige, il versait toute la précipitation au sol
  * la semaine même ; l'eau d'une partie écrite par lui est donc déjà tout
  * entière dans le sol et la nappe. Lui donner un manteau nul, ce n'est pas
- * inventer un état, c'est écrire celui qu'elle avait. Un bloc de version 7 se
- * relit donc avec `manteauNeigeMm = 0` (`VERSIONS_RELUES`), et seulement lui.
+ * inventer un état, c'est écrire celui qu'elle avait. Un bloc de version 8 se
+ * relit donc avec `manteauNeigeMm = 0` (`VERSIONS_RELUES`), et seulement lui :
+ * un bloc de version 7 n'a pas la mémoire de crue, et reste refusé.
  */
-export const VERSION_FORMAT = 8;
+export const VERSION_FORMAT = 9;
 
 /**
  * Les versions d'un bloc que ce moteur sait relire, et ce qu'il faut ajouter à
@@ -162,7 +172,7 @@ export const VERSION_FORMAT = 8;
  */
 const VERSIONS_RELUES: Record<number, Record<string, unknown>> = {
   [VERSION_FORMAT]: {},
-  7: { manteauNeigeMm: 0 },
+  8: { manteauNeigeMm: 0 },
 };
 
 /** Une grille de sol, telle que l'en-tête la déclare. */
