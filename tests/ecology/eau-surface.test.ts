@@ -215,7 +215,7 @@ describe("la crue comme événement (#288)", () => {
     expect(suite[0]?.phase).toBe("montée");
     expect(suite.map((c) => c.semaine)).toEqual(suite.map((_, k) => k));
     // Elle se ferme : la semaine qui suit la dernière n'a ni crue ni mémoire.
-    const derniere = vallee.findLastIndex((s) => s.crue?.id === id);
+    const derniere = vallee.map((s) => s.crue?.id).lastIndexOf(id);
     expect(derniere).toBeLessThan(vallee.length - 1);
     expect(vallee[derniere + 1]?.crue?.id).not.toBe(id);
     expect(vallee[derniere]?.memoire).toBe(true);

@@ -87,8 +87,10 @@ export const SEUIL_DEBUT_CRUE = 0.05;
  *
  * Plus bas que le seuil de début, pour qu'un hiver qui fléchit une semaine
  * avant de repartir reste un seul événement : c'est l'hystérésis ordinaire
- * d'un détecteur à seuil. La valeur elle-même n'a pas d'ancre *(à calibrer)* ;
- * ce qu'elle change sur le fond de vallée est relevé dans docs/realisme.md (A22).
+ * d'un détecteur à seuil. La valeur elle-même n'a pas d'ancre *(à calibrer)*.
+ * Ce qu'elle change, relevé sur le fond de vallée (1 ha, 1994-2023) : 28 crues
+ * en trente ans, de 22 semaines en médiane ; avec un seuil unique à 5 %, 34
+ * crues de 16 semaines ; à 3 %, 29 de 19.
  */
 export const SEUIL_FIN_CRUE = 0.02;
 
