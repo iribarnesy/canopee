@@ -142,8 +142,17 @@ const MAGIE = "CANOPEE\u0000";
  * (`cultureGrain`, `cultureGrainPotentiel`). Un bloc de version 6 ne les contient
  * pas, et les reconstruire à zéro ferait d'un blé de juin un semis sans matière
  * ni azote. On refuse, sixième fois.
+ *
+ * **8 (issue #288, crue)** : l'état porte la **mémoire de la crue en cours**
+ * (`crue`, crue.ts) — depuis quand elle dure, à quelle phase elle en est, quand
+ * l'eau a atteint chaque cellule. Ce n'est pas une grille, et le JSON du reste
+ * la relirait sans peine ; mais un bloc de version 7 ne la porte pas, et son
+ * absence n'est pas neutre : elle dit « aucune crue en cours ». Une partie
+ * arrêtée en plein hiver d'eau reprendrait alors sous un autre identifiant,
+ * l'eau arrivée depuis des semaines comptée comme arrivée à l'instant. On
+ * refuse, septième fois, et le rejeu du journal reconstruit la mémoire exacte.
  */
-export const VERSION_FORMAT = 7;
+export const VERSION_FORMAT = 8;
 
 /** Une grille de sol, telle que l'en-tête la déclare. */
 interface GrilleDeclaree {
