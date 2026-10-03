@@ -340,6 +340,27 @@ la sénescence sur la croissance suppose de recalibrer une seconde fois
 (`docs/realisme.md`, « le houppier doré produit encore »). L'écart vaut deux
 semaines par an sur vingt-six.
 
+**Les oiseaux de passage** (`Snapshot.oiseauxDePassage`, #296) : ceux qui
+fréquentent la parcelle sans y nicher, la **dernière semaine simulée** — pas un
+cumul, ce sont des oiseaux qui passent. Une entrée par guilde présente au
+calendrier cette semaine-là (`hivernants_frugivores`, `passereaux_de_haie`,
+`migrateurs_de_passage`), **même à zéro oiseau** : « les grives sont dans la
+région et la parcelle n'a rien pour elles » n'est pas « ce n'est pas la
+saison ». Chaque entrée porte `oiseaux` (entier, à poser), `ressource` (`baies`
+ou `fourre`, ce qui dit où et comment les poser), `surfaceM2` et `attendus`
+(l'espérance avant l'arrondi), et **`arbres`** : les ids des arbres qui attirent,
+vivants et présents dans `trees`, les plus couvrants d'abord, vingt-quatre au
+plus, vide quand il n'y a personne. C'est l'équivalent du gîte d'`IndividuFaune` :
+l'oiseau se pose là où il mange, pas au hasard. Absent quand la faune est
+éteinte, comme `faune`.
+
+**Une limite à connaître avant de dessiner** : la densité est linéaire en
+surface de baies ou de fourré, et elle dépasse le plausible sur un massif — une
+parcelle entièrement embroussaillée en fruits annonce plusieurs centaines de
+migrateurs par semaine (`docs/realisme.md`, J11). Le moteur tranchera la borne ;
+d'ici là, un plafond **d'affichage** est une décision de mise en scène, pas une
+règle écologique, et doit se dire comme telle.
+
 ## Ce qui voyage et que personne ne lit encore
 
 Ce contrat trace les demandes du rendu — une demande, une issue, fermée par la

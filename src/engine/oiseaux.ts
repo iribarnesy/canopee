@@ -54,7 +54,15 @@
  * (`regeneration.ts`) pose toujours ses graines au hasard sur la parcelle, alors
  * que ce module sait maintenant où les frugivores mangent et où ils se posent.
  * C'est un vrai chantier (il déplacerait les naissances, donc toutes les parties),
- * pas une ligne : il a son issue.
+ * pas une ligne : il a son issue (#322).
+ *
+ * **La densité ne sature pas, et c'est la limite du module.** Le nombre
+ * d'oiseaux est **linéaire** en surface, et ses deux ancres viennent de haies et
+ * de buissons **épars** — 1 à 2 % de couvert chez Tellería. Une haie laissée seize
+ * ans sème ses arbustes sur toute la parcelle, et le module annonce alors deux à
+ * trois cents migrateurs par semaine sur 0,64 ha, ce que personne n'a vu. Ce qui
+ * borne une foule d'oiseaux à l'hectare n'est pas dans le moteur, et le choix de
+ * la borne est une décision de modèle laissée ouverte (`docs/realisme.md`, J11).
  *
  * **Le commutateur est celui de la faune.** Éteint (`station.faune`), le tick
  * ne parcourt rien et rend le même tableau figé, comme pour les nicheurs.
