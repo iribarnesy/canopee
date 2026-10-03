@@ -61,7 +61,52 @@ qu'un rapport (voir la note de maintenance).
 Séparer calibration et validation : caler un paramètre sur un âge, garder
 l'autre âge pour vérifier.
 
-## Ce que le dernier lot a appris (la neige, #303)
+## Ce que le dernier lot a appris (les seuils de sécheresse sourcés, #312)
+
+Chaque fiche déclarait deux seuils de sécheresse sans source ; ils sortent
+maintenant de l'indice de Niinemets et Valladares (2006) par une loi commune.
+Le hêtre de la lande n'en est pas plus exclu, et quatre leçons valent au-delà.
+
+### Changer la source d'une grandeur, c'est relire tous ses lecteurs
+
+Le confort hydrique avait quatre lecteurs : la croissance, la demande en eau,
+la survie par ricochet, et le filtre du paysage (`especeTenable`, seuil 0,6).
+Le dernier avait été posé sur les valeurs des fiches, qui avaient été écrites
+pour qu'il sépare la flore de la lande (callune 0,30, bouleau 0,60). Lu à
+travers l'indice sourcé, il retire le bouleau des semis de la lande, et
+`fenetres-installation.test.ts` perd sa colonisation : zéro bouleau en
+quarante-deux ans. Sans la clause d'eau du filtre, le moteur le porte très
+bien (33 années au-dessus de 50 tiges). Le seuil tombe avec les chiffres sur
+lesquels il était posé, même quand on les traduit fidèlement.
+
+### Un indice de tolérance ne dit pas qui peuple une station
+
+La source met le bouleau (1,85) et la callune (2,21) **sous** le hêtre (2,40).
+Aucun seuil sur cet indice ne garde la flore de la lande en écartant le hêtre.
+Ce qui fait la lande — pionnier héliophile, sol pauvre, feu — n'est pas la
+tolérance d'un arbre établi à la sécheresse, et un trait sourcé ne doit pas
+être sommé de dire ce qu'il ne mesure pas.
+
+### Une sensibilité qui ne se paie que la première année ne trie pas
+
+Le hêtre passe 95 % des semaines de son premier été sous son seuil
+d'apparition du stress et finit l'année à 8 points sur 10 ; ses racines
+rejoignent ensuite l'eau, et il n'en manque plus jusqu'à dix ans. À quinze
+ans, le rapport hêtre/pin n'a pas bougé au centième (0,77 / 0,68 / 0,72). La
+prédiction du pin a raté de même : +15 à +25 % attendus d'un confort abaissé,
++3 à +4 % mesurés. Les deux prédictions lisaient le seuil et oubliaient que la
+satisfaction en eau d'un jeune arbre monte avec ses racines.
+
+### Un taux compté dans une fenêtre perd les morts qui tombent après
+
+Le tri par l'écorce de `feu.test.ts` divise les morts au feu par les arbres
+présents sur le front. Un arbre tué par le feu n'entre dans les morts qu'un an
+plus tard : un feu de l'année 39,4, sur quarante, ajoute 424 pins au
+dénominateur et aucun au numérateur. Le taux du pin tombe de 1,0 à 0,35 sans
+qu'un seul pin ait mieux résisté. Un taux se compte sur une fenêtre où
+numérateur et dénominateur ont eu le temps d'arriver.
+
+## Ce qu'un lot précédent a appris (la neige, #303)
 
 La précipitation tombe en neige sous 2 °C, attend dans un manteau et ne
 recharge le sol qu'en fondant. Quatre leçons, toutes trouvées en mesurant.
@@ -101,7 +146,7 @@ moteur de version 8 ne gardait aucune neige, son manteau valait zéro. Avant de
 refuser, se demander si le champ ajouté a une valeur que l'ancien moteur
 impliquait déjà.
 
-## Ce qu'un lot précédent a appris (la crue comme événement, #288)
+## Ce qu'un lot plus ancien a appris (la crue comme événement, #288)
 
 Le moteur savait qu'une parcelle était inondée une semaine donnée ; il ne
 savait pas qu'une crue commence, culmine et se retire. Rien de neuf n'est
@@ -147,7 +192,7 @@ trente ans au lieu de 28, et la durée médiane passe de 22 à 16 semaines — l
 découpage existe, mais pas dans la proportion annoncée. Écrire le relevé là où
 il sert (doc, commentaire d'essai) au moment où on le prend.
 
-## Ce qu'un lot précédent a appris (la perte d'horizon sans fond, #283)
+## Ce qu'un lot plus ancien a appris (la perte d'horizon sans fond, #283)
 
 Une correction de maintenance, pas un mécanisme : une cellule ne perd plus une
 terre que son horizon ne contient pas. Deux leçons valent pour qui ajoute un

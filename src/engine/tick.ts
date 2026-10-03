@@ -273,6 +273,7 @@ import {
   rootRadiusM,
   STRESS_LETHAL,
   seasonFactor,
+  seuilStressSecheresse,
   tickTree,
   treeExtractionCapacityGWeek,
   treeNitrogenNeedGWeek,
@@ -2640,7 +2641,7 @@ export function tick(state: GameState, weather: WeekWeather): TickResult {
     const dommageHydraulique = prochainDommageHydraulique(
       next.dommageHydraulique,
       waterSatisfaction[t] ?? 1,
-      getEspece(tree.especeId).eau.seuilStressSecheresse,
+      seuilStressSecheresse(getEspece(tree.especeId)),
     );
     // Élagage naturel (docs/realisme.md B10) : sous l'ombre, les branches
     // basses cessent de payer leur respiration et meurent. La base du houppier

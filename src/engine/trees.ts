@@ -814,7 +814,7 @@ export function treeWaterDemandL(
   const vent = 1 + WIND_MAX_EXTRA * ventExposition * (1 - abriVent);
   // Efficience d'usage de l'eau : les xérophiles (cuticule épaisse, stomates
   // régulés) transpirent moins par unité de couronne que les hygrophiles.
-  const wue = 0.35 + 0.65 * espece.eau.seuilConfortSecheresse;
+  const wue = 0.35 + 0.65 * seuilConfortSecheresse(espece);
   return etpMm * crownAreaM2 * TRANSPIRATION_COEFF * wue * season * rayonnement * vent;
 }
 
@@ -1268,9 +1268,74 @@ export function seasonFactor(espece: EspeceV0, tMean: number): number {
   return Math.min(1, Math.max(0, (tMean - espece.tBaseCroissanceC) / 8));
 }
 
+/**
+ * Haut de l'échelle de tolérance à la sécheresse de Niinemets et Valladares
+ * (2006, annexe A) : 0 = aucune tolérance, 5 = tolérance maximale.
+ */
+export const TOLERANCE_SECHERESSE_MAX = 5;
+
+/**
+ * Pente de la loi du **confort** hydrique *(à calibrer)*. Sans source : posée
+ * pour que les vingt-quatre fiches sourcées gardent **en moyenne** le confort
+ * qu'elles déclaraient avant #312 (0,562, pour une intolérance moyenne de
+ * 0,395 : 1,42, arrondi). La source décide de l'ordre des espèces et de leurs
+ * écarts ; ce nombre ne décide que du niveau, et c'est celui d'avant. L'ordre,
+ * lui, a bougé : les seuils déclarés ne suivaient la source qu'à r = −0,59.
+ */
+export const PENTE_CONFORT_SECHERESSE = 1.4;
+
+/**
+ * Pente de la loi de **survie** hydrique *(à calibrer)*, posée de la même façon :
+ * seuil de survie moyen déclaré 0,243 pour 0,395 d'intolérance, soit 0,615,
+ * arrondi.
+ * Elle tient le seuil de survie à 0,43 fois le confort pour toutes les
+ * espèces, ce que l'atlas faisait déjà en moyenne (0,40 en médiane) : la
+ * croissance cède bien avant la survie, comme le veut l'ordre des sensibilités
+ * au manque d'eau (Hsiao 1973, *Annual Review of Plant Physiology* 24).
+ */
+export const PENTE_STRESS_SECHERESSE = 0.6;
+
+/**
+ * Intolérance à la sécheresse ∈ [0,1] : l'échelle de la source lue à l'envers,
+ * 1 pour une espèce sans aucune tolérance, 0 au sommet de l'échelle.
+ */
+function intoleranceSecheresse(espece: EspeceV0): number {
+  return (TOLERANCE_SECHERESSE_MAX - espece.eau.toleranceSecheresse) / TOLERANCE_SECHERESSE_MAX;
+}
+
+/**
+ * **Confort hydrique** : la satisfaction en eau (ce que l'arbre reçoit sur ce
+ * qu'il demande) sous laquelle sa croissance ralentit. Bas = xérophile.
+ *
+ * Une **loi commune** tirée de l'indice de la fiche (#312) : proportionnelle à
+ * l'intolérance, nulle au sommet de l'échelle — une espèce de tolérance
+ * maximale ne serait jamais bridée par le manque d'eau. Plafonnée à 1 : une
+ * espèce très intolérante ralentit dès le premier manque. Elle remplace
+ * vingt-six nombres déclarés un par un, sans source, par une source et une
+ * pente.
+ */
+export function seuilConfortSecheresse(espece: EspeceV0): number {
+  return Math.min(1, PENTE_CONFORT_SECHERESSE * intoleranceSecheresse(espece));
+}
+
+/**
+ * **Seuil de survie hydrique** : la satisfaction sous laquelle l'arbre puise dans
+ * ses réserves et risque la mort (« pousse / s'épanouit / **survit** », ch3-C).
+ * Le stress ne monte qu'une fois le facteur de survie sous `STRESS_ONSET`,
+ * soit à 0,45 fois ce seuil ; la cavitation à `SEUIL_CAVITATION` fois ce seuil.
+ *
+ * La même loi que le confort, avec sa propre pente : l'écart entre « pousser
+ * mal » et « mourir » est le même pour toutes les espèces. Rien dans la source
+ * ne le fait varier d'une espèce à l'autre, et l'écart que l'atlas creusait
+ * pour le hêtre reposait sur un pivot qu'il n'a pas.
+ */
+export function seuilStressSecheresse(espece: EspeceV0): number {
+  return PENTE_STRESS_SECHERESSE * intoleranceSecheresse(espece);
+}
+
 /** f_sécheresse : la tolérance de l'espèce décale le seuil où l'eau devient limitante. */
 function droughtFactor(espece: EspeceV0, satisfaction: number): number {
-  return Math.min(1, satisfaction / espece.eau.seuilConfortSecheresse);
+  return Math.min(1, satisfaction / seuilConfortSecheresse(espece));
 }
 
 /** f_engorgement : 1 tant que l'anoxie reste sous la tolérance, 0 à saturation totale. */
@@ -1399,9 +1464,9 @@ export function tickTree(tree: TreeState, env: TreeEnvironment): TreeTickResult 
     season,
   );
   const fSec = droughtFactor(espece, env.waterSatisfaction);
-  // Survie hydrique : seuil découplé du confort (le hêtre pousse mal en sec
-  // mais son semis survit ; l'aulne, lui, meurt vite hors sol frais).
-  const fSecSurvie = Math.min(1, env.waterSatisfaction / espece.eau.seuilStressSecheresse);
+  // Survie hydrique : un seuil plus bas que le confort, tiré de la même
+  // tolérance par la même loi — pousser mal n'est pas mourir.
+  const fSecSurvie = Math.min(1, env.waterSatisfaction / seuilStressSecheresse(espece));
   const fEng = waterloggingFactor(espece, env.waterloggingRatio);
   const fLum = lightFactor(espece, env.light);
   const fPH = phFactor(espece, env.phMean);

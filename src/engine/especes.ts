@@ -18,17 +18,26 @@ export interface EspeceV0 {
   pousseMaxMAn: number;
   eau: {
     /**
-     * Confort hydrique : satisfaction (ETR/ETP) en dessous de laquelle la
-     * croissance ralentit. Bas = tolérant à la sécheresse (xérophile).
+     * **Tolérance à la sécheresse**, sur l'échelle de Niinemets et Valladares
+     * (2006, *Ecological Monographs* 76 : 521-547, annexe A, Ecological Archives
+     * M076-020-A1) : de 0 (aucune tolérance) à 5 (tolérance maximale), pour 806
+     * ligneux tempérés de l'hémisphère Nord. C'est une moyenne d'échelles
+     * d'experts et d'indicateurs de terrain recalibrées les unes sur les autres,
+     * pas une mesure physiologique : elle dit **l'ordre** des espèces et l'écart
+     * entre elles, pas une satisfaction en eau.
+     *
+     * La fiche ne déclare plus de seuils : la loi qui en tire le confort et la
+     * survie est commune à toutes les espèces et vit dans le moteur
+     * (`seuilConfortSecheresse` et `seuilStressSecheresse`, trees.ts). Avant
+     * #312, chaque fiche portait ses deux seuils sans source, et le hêtre
+     * justifiait l'écart entre les siens par un semis « à pivot » qui
+     * survivrait : le hêtre n'a pas de pivot, et la source le met à 2,40, à
+     * côté de l'aulne (2,22), loin du pin (4,34).
+     *
+     * Une espèce absente de la table garde ce que ses anciens seuils
+     * disaient, traduit par la loi inverse, et le dit *(à confirmer)*.
      */
-    seuilConfortSecheresse: number;
-    /**
-     * Satisfaction en dessous de laquelle l'arbre puise dans ses réserves et
-     * risque la mort (« pousse / s'épanouit / **survit** », ch3-C). Découplé du
-     * confort : le hêtre pousse mal dès que l'eau manque mais son semis
-     * (pivot) survit ; l'aulne meurt vite hors sol frais.
-     */
-    seuilStressSecheresse: number;
+    toleranceSecheresse: number;
     /** engorgement toléré ∈ [0,1] (waterloggingRatio sans dégât) */
     toleranceEngorgement: number;
   };
@@ -558,7 +567,8 @@ export const ESPECES_V0: readonly EspeceV0[] = [
     pousseMaxMAn: 0.8,
     // Atlas : « très hygrophile (tolère l'engorgement) », berges — vit en marais
     // mais souffre vite en sol sec (seuil de confort élevé).
-    eau: { seuilConfortSecheresse: 0.85, seuilStressSecheresse: 0.65, toleranceEngorgement: 1 },
+    // Tolérance à la sécheresse : Niinemets et Valladares 2006, annexe A.
+    eau: { toleranceSecheresse: 2.22, toleranceEngorgement: 1 },
     ph: [4.5, 7.5],
     // Atlas : héliophile pionnier.
     lumiere: { compensation: 0.2, saturation: 0.7, lai: 2, houppierRatio: 0.3, caduc: true },
@@ -601,7 +611,8 @@ export const ESPECES_V0: readonly EspeceV0[] = [
     // le plafond devait suivre.
     pousseMaxMAn: 0.57,
     // Atlas : mésophile, « aime le frais, sensible à la sécheresse ».
-    eau: { seuilConfortSecheresse: 0.85, seuilStressSecheresse: 0.25, toleranceEngorgement: 0.1 },
+    // Tolérance à la sécheresse : Niinemets et Valladares 2006, annexe A.
+    eau: { toleranceSecheresse: 2.4, toleranceEngorgement: 0.1 },
     // pH, littérature : Leuschner et al. 2006 (Ann. For. Sci.), 50 peuplements d'Europe centrale : extrêmes **mesurés** pH(H2O) 3,2-7,3 ; PFAF donne 3,5-8,5.
     ph: [3.5, 8],
     // Atlas : sciaphile climacique — un semis survit à ~1-2 % de lumière (ch3-B),
@@ -659,7 +670,8 @@ export const ESPECES_V0: readonly EspeceV0[] = [
     // donc sous les 15,4 m à quarante ans de la table néerlandaise de chêne.
     pousseMaxMAn: 0.35,
     // Atlas : xérophile, thermophile ; craint les sols engorgés.
-    eau: { seuilConfortSecheresse: 0.35, seuilStressSecheresse: 0.1, toleranceEngorgement: 0.05 },
+    // Tolérance à la sécheresse : Niinemets et Valladares 2006, annexe A.
+    eau: { toleranceSecheresse: 4.1, toleranceEngorgement: 0.05 },
     ph: [5.5, 8.5],
     // Atlas : héliophile, couronne claire de coteau sec.
     // Marcescent, surtout jeune : le trait est ici une moyenne sur la vie de
@@ -743,7 +755,8 @@ export const ESPECES_V0: readonly EspeceV0[] = [
      */
     pousseMaxMAn: 0.4,
     // Atlas : xérophile, oligotrophe, « rustique, large amplitude ».
-    eau: { seuilConfortSecheresse: 0.3, seuilStressSecheresse: 0.1, toleranceEngorgement: 0.2 },
+    // Tolérance à la sécheresse : Niinemets et Valladares 2006, annexe A.
+    eau: { toleranceSecheresse: 4.34, toleranceEngorgement: 0.2 },
     // pH : **laissé tel quel**, et la raison mérite d'être lue. L'USFS Silvics
     // donne « 4,0 à 7,0, optimum 4,5-6,0, chlorose au-delà de 6,5 » ; d'autres
     // fiches donnent « tolère l'alcalin jusqu'à 7,5 ». Les deux sont
@@ -819,7 +832,8 @@ export const ESPECES_V0: readonly EspeceV0[] = [
     // obtenir ce résultat** — il était écrit avant que la table soit trouvée.
     pousseMaxMAn: 0.9,
     // Atlas : pionnier colonisateur, oligotrophe, plutôt frais.
-    eau: { seuilConfortSecheresse: 0.6, seuilStressSecheresse: 0.25, toleranceEngorgement: 0.4 },
+    // Tolérance à la sécheresse : Niinemets et Valladares 2006, annexe A.
+    eau: { toleranceSecheresse: 1.85, toleranceEngorgement: 0.4 },
     // pH : **laissé tel quel**, et c'est une correction de ma propre correction.
     // J'avais resserré la borne haute à 7,0 sur « PFAF : préfère sous 6,5 » —
     // mais la même fiche dit aussi qu'il pousse en sols « basiques (légèrement
@@ -869,7 +883,8 @@ export const ESPECES_V0: readonly EspeceV0[] = [
     pousseMaxMAn: 0.5,
     // Atlas : héliophile, mésoxérophile, **eutrophe** — il exige le riche, et c'est
     // ce qui limite l'agroforesterie au noyer aux bonnes terres.
-    eau: { seuilConfortSecheresse: 0.6, seuilStressSecheresse: 0.25, toleranceEngorgement: 0.1 },
+    // Tolérance à la sécheresse : Niinemets et Valladares 2006, annexe A.
+    eau: { toleranceSecheresse: 2.98, toleranceEngorgement: 0.1 },
     // Il fuit l'acide : c'est un arbre de sols neutres à calcaires.
     // pH, littérature : PFAF et World Agroforestry : tolère 5,1-8,3, préfère 6,6-7,5 ; la chaux libre ne le limite pas.
     ph: [5, 8.3],
@@ -936,7 +951,8 @@ export const ESPECES_V0: readonly EspeceV0[] = [
     // formé (60 cm à 1 m) n'est **pas** un gain de hauteur : on ne s'en sert pas.
     pousseMaxMAn: 0.5,
     // Atlas : « fruitier clé » ; mésophile de plaine.
-    eau: { seuilConfortSecheresse: 0.7, seuilStressSecheresse: 0.3, toleranceEngorgement: 0.15 },
+    // Tolérance à la sécheresse : Niinemets et Valladares 2006, annexe A.
+    eau: { toleranceSecheresse: 3.04, toleranceEngorgement: 0.15 },
     // pH, littérature : ICL et PFAF : optimum 6-7, tolère dès 5,0, carences en fer au-delà de 8 (source horticole).
     ph: [5, 7.5],
     lumiere: { compensation: 0.2, saturation: 0.7, lai: 2, houppierRatio: 0.45, caduc: true },
@@ -990,7 +1006,8 @@ export const ESPECES_V0: readonly EspeceV0[] = [
     // le moteur fait (3,6 m à dix ans, 5,0 m à vingt).
     pousseMaxMAn: 0.5,
     // Atlas : « gel des fleurs = risque ; sec » — xérophile, floraison très précoce.
-    eau: { seuilConfortSecheresse: 0.4, seuilStressSecheresse: 0.15, toleranceEngorgement: 0.05 },
+    // Tolérance à la sécheresse : Niinemets et Valladares 2006, annexe A.
+    eau: { toleranceSecheresse: 2.75, toleranceEngorgement: 0.05 },
     // pH, littérature : PFAF et Garden Oracle : 6,0-7,8, optimum 6,7-7,5 (source horticole).
     ph: [6, 7.8],
     lumiere: { compensation: 0.25, saturation: 0.75, lai: 1.8, houppierRatio: 0.45, caduc: true },
@@ -1042,7 +1059,8 @@ export const ESPECES_V0: readonly EspeceV0[] = [
     // qui est son emploi réel en haie *(à confirmer)*.
     pousseMaxMAn: 0.6,
     // Atlas : demi-ombre, cépée — l'arbuste des sous-étages agroforestiers.
-    eau: { seuilConfortSecheresse: 0.6, seuilStressSecheresse: 0.25, toleranceEngorgement: 0.3 },
+    // Tolérance à la sécheresse : Niinemets et Valladares 2006, annexe A.
+    eau: { toleranceSecheresse: 3.04, toleranceEngorgement: 0.3 },
     // pH, littérature : Hicks 2022, Biological Flora : calcaires pH 7-8, dépôts sur craie 4-5, **et** sols très acides sous 4.
     ph: [4, 8],
     lumiere: { compensation: 0.05, saturation: 0.4, lai: 2.5, houppierRatio: 0.5, caduc: true },
@@ -1110,7 +1128,8 @@ export const ESPECES_V0: readonly EspeceV0[] = [
     // parce que le plafond du prunellier est à 4 m et celui de l'aubépine à 8.
     pousseMaxMAn: 0.4,
     // Atlas : arbuste pionnier, « drageonne, nurse », haies — Europe entière.
-    eau: { seuilConfortSecheresse: 0.5, seuilStressSecheresse: 0.18, toleranceEngorgement: 0.15 },
+    // Tolérance à la sécheresse : Niinemets et Valladares 2006, annexe A.
+    eau: { toleranceSecheresse: 3.46, toleranceEngorgement: 0.15 },
     ph: [5.5, 8.5],
     lumiere: { compensation: 0.12, saturation: 0.7, lai: 2.2, houppierRatio: 0.6, caduc: true },
     racines: { profondeurMaxCm: 100 },
@@ -1174,7 +1193,8 @@ export const ESPECES_V0: readonly EspeceV0[] = [
     // ce serait caler sur une moyenne de deux protocoles différents.
     pousseMaxMAn: 0.3,
     // Atlas : « nurse épineuse », pionnière, très commune.
-    eau: { seuilConfortSecheresse: 0.55, seuilStressSecheresse: 0.2, toleranceEngorgement: 0.2 },
+    // Tolérance à la sécheresse : Niinemets et Valladares 2006, annexe A.
+    eau: { toleranceSecheresse: 3.46, toleranceEngorgement: 0.2 },
     ph: [5.5, 8.5],
     lumiere: { compensation: 0.1, saturation: 0.65, lai: 2.5, houppierRatio: 0.55, caduc: true },
     racines: { profondeurMaxCm: 130 },
@@ -1214,7 +1234,11 @@ export const ESPECES_V0: readonly EspeceV0[] = [
     // lecture.
     pousseMaxMAn: 1.4,
     // Atlas : « nurse (fruticée) », pionnière, cosmopolite tempéré.
-    eau: { seuilConfortSecheresse: 0.6, seuilStressSecheresse: 0.25, toleranceEngorgement: 0.25 },
+    // Tolérance à la sécheresse *(à confirmer)* : la ronce commune est absente
+    // de Niinemets et Valladares 2006 (R. caesius et R. idaeus y sont à 3,04).
+    // Tirée des anciens seuils de la fiche (0,60 / 0,25, sans source) par la loi
+    // inverse, au plus près des deux (moindres carrés).
+    eau: { toleranceSecheresse: 2.9, toleranceEngorgement: 0.25 },
     // pH : **les deux bornes sont sans source**, et la mention qui les portait était
     // fausse (#279). Elle disait « BSBI (Fermanagh) : la plus fréquente à pH 3,5-5,0,
     // et tolère jusqu'au très alcalin » ; le compte d'espèce du BSBI dit « brambles are
@@ -1285,7 +1309,8 @@ export const ESPECES_V0: readonly EspeceV0[] = [
     // sol fertile)*.
     pousseMaxMAn: 0.9,
     // Atlas : « nitrophile, pousse vite », pionnier, très commun.
-    eau: { seuilConfortSecheresse: 0.7, seuilStressSecheresse: 0.3, toleranceEngorgement: 0.3 },
+    // Tolérance à la sécheresse : Niinemets et Valladares 2006, annexe A.
+    eau: { toleranceSecheresse: 3.04, toleranceEngorgement: 0.3 },
     ph: [5.5, 8],
     lumiere: { compensation: 0.1, saturation: 0.55, lai: 2.5, houppierRatio: 0.6, caduc: true },
     racines: { profondeurMaxCm: 80 },
@@ -1342,7 +1367,8 @@ export const ESPECES_V0: readonly EspeceV0[] = [
     // Atlas : sciaphile climacique, « haies ». Il comblait un vrai trou — le
     // hêtre était la seule essence d'ombre du moteur, et une forêt n'a jamais
     // un seul candidat au sous-étage.
-    eau: { seuilConfortSecheresse: 0.7, seuilStressSecheresse: 0.3, toleranceEngorgement: 0.35 },
+    // Tolérance à la sécheresse : Niinemets et Valladares 2006, annexe A.
+    eau: { toleranceSecheresse: 2.66, toleranceEngorgement: 0.35 },
     ph: [4.5, 8],
     // **Marcescent** type : c'est lui qu'on voit roux en janvier dans les haies, et
     // c'est ce qui fait du charme un brise-vent d'hiver quand le hêtre voisin
@@ -1394,7 +1420,8 @@ export const ESPECES_V0: readonly EspeceV0[] = [
     // Atlas : « persistant », sciaphile climacique. C'est le seul couvert
     // **permanent** de sous-bois : en janvier, sous une hêtraie nue, c'est lui qui
     // abrite et nourrit.
-    eau: { seuilConfortSecheresse: 0.75, seuilStressSecheresse: 0.3, toleranceEngorgement: 0.2 },
+    // Tolérance à la sécheresse : Niinemets et Valladares 2006, annexe A.
+    eau: { toleranceSecheresse: 3.04, toleranceEngorgement: 0.2 },
     // pH, littérature : Peterken & Lloyd 1967, Biological Flora : « presque indifférent au pH », de l'acide au riche en calcaire.
     ph: [4, 8],
     // Feuilles : 25 ± 7 mois (Mediavilla et Escudero 2003).
@@ -1445,7 +1472,8 @@ export const ESPECES_V0: readonly EspeceV0[] = [
     // Atlas : « bouture facile, pH indifférent », bords d'eau, pionnier. Avec
     // l'aulne, c'est l'essence des ripisylves — et la seule qui accepte d'avoir
     // les pieds dans l'eau presque en permanence.
-    eau: { seuilConfortSecheresse: 0.85, seuilStressSecheresse: 0.6, toleranceEngorgement: 0.95 },
+    // Tolérance à la sécheresse : Niinemets et Valladares 2006, annexe A.
+    eau: { toleranceSecheresse: 2, toleranceEngorgement: 0.95 },
     ph: [4.5, 8],
     lumiere: { compensation: 0.18, saturation: 0.8, lai: 2, houppierRatio: 0.45, caduc: true },
     racines: { profondeurMaxCm: 120 },
@@ -1505,7 +1533,8 @@ export const ESPECES_V0: readonly EspeceV0[] = [
     // Atlas : « calcicole, floraison précoce ». Il fleurit en février, avant
     // tout le monde — c'est la première ressource de l'année pour les
     // pollinisateurs, et cela compte dans l'indice de biodiversité.
-    eau: { seuilConfortSecheresse: 0.45, seuilStressSecheresse: 0.15, toleranceEngorgement: 0.1 },
+    // Tolérance à la sécheresse : Niinemets et Valladares 2006, annexe A.
+    eau: { toleranceSecheresse: 3.17, toleranceEngorgement: 0.1 },
     // pH, littérature : PFAF : 5,0-8,0, préfère 5,5-7,5, pousse en très alcalin.
     ph: [5, 8.5],
     lumiere: { compensation: 0.06, saturation: 0.5, lai: 2.5, houppierRatio: 0.5, caduc: true },
@@ -1557,7 +1586,8 @@ export const ESPECES_V0: readonly EspeceV0[] = [
     // Atlas : arbuste de demi-ombre à ombre, haies et lisières, surtout sur
     // calcaire. Ses capsules roses à quatre lobes et ses arilles orange sont
     // toxiques — et son bois donne les fusains à dessin.
-    eau: { seuilConfortSecheresse: 0.6, seuilStressSecheresse: 0.25, toleranceEngorgement: 0.2 },
+    // Tolérance à la sécheresse : Niinemets et Valladares 2006, annexe A.
+    eau: { toleranceSecheresse: 3.04, toleranceEngorgement: 0.2 },
     ph: [5.5, 8.5],
     lumiere: { compensation: 0.05, saturation: 0.45, lai: 2.2, houppierRatio: 0.5, caduc: true },
     racines: { profondeurMaxCm: 90 },
@@ -1593,7 +1623,8 @@ export const ESPECES_V0: readonly EspeceV0[] = [
     pousseMaxMAn: 0.35,
     // Atlas : « semi-persistant ; calcicole ; très mellifère (juin) ; supporte
     // la taille → haies ». Ourlets et lisières, surtout sur calcaire.
-    eau: { seuilConfortSecheresse: 0.5, seuilStressSecheresse: 0.2, toleranceEngorgement: 0.2 },
+    // Tolérance à la sécheresse : Niinemets et Valladares 2006, annexe A.
+    eau: { toleranceSecheresse: 3.46, toleranceEngorgement: 0.2 },
     ph: [6, 8.5],
     // **Semi-persistant** : il ne se dénude jamais tout à fait. C'est le seul de
     // l'atlas dans ce cas, et c'est ce qui lui vaut sa place dans les haies —
@@ -1658,7 +1689,8 @@ export const ESPECES_V0: readonly EspeceV0[] = [
     // d'autres régimes, taille commerciale et lande brûlée.
     pousseMaxMAn: 0.45,
     // Atlas : « épineux, landes acides », façade atlantique — **la** nurse de lande.
-    eau: { seuilConfortSecheresse: 0.3, seuilStressSecheresse: 0.08, toleranceEngorgement: 0.15 },
+    // Tolérance à la sécheresse : Niinemets et Valladares 2006, annexe A.
+    eau: { toleranceSecheresse: 3.04, toleranceEngorgement: 0.15 },
     ph: [3.5, 6.5],
     // Rameaux épineux persistants : il ombrage et brise le vent toute l'année.
     // Épines vertes, même ordre que le houx *(à confirmer)*.
@@ -1720,7 +1752,8 @@ export const ESPECES_V0: readonly EspeceV0[] = [
     // cévenoles — deux climats, encore une fois.
     pousseMaxMAn: 0.5,
     // Atlas : « landes acides, améliore le sol » — l'autre pionnière fixatrice.
-    eau: { seuilConfortSecheresse: 0.35, seuilStressSecheresse: 0.1, toleranceEngorgement: 0.1 },
+    // Tolérance à la sécheresse : Niinemets et Valladares 2006, annexe A.
+    eau: { toleranceSecheresse: 3.46, toleranceEngorgement: 0.1 },
     ph: [4, 7],
     // Tiges vertes qui portent la photosynthèse, même ordre que le houx *(à confirmer)*.
     lumiere: {
@@ -1782,7 +1815,8 @@ export const ESPECES_V0: readonly EspeceV0[] = [
     // atlas qui va du sous-arbrisseau au chêne *(à confirmer)*.
     pousseMaxMAn: 0.12,
     // Atlas : « lande acide pauvre, bio-indicatrice acidité » — couvre-sol.
-    eau: { seuilConfortSecheresse: 0.3, seuilStressSecheresse: 0.08, toleranceEngorgement: 0.2 },
+    // Tolérance à la sécheresse : Niinemets et Valladares 2006, annexe A.
+    eau: { toleranceSecheresse: 2.21, toleranceEngorgement: 0.2 },
     ph: [3.5, 6],
     // Même ordre que les persistants mesurés de l'atlas *(à confirmer)*.
     lumiere: {
@@ -1842,7 +1876,8 @@ export const ESPECES_V0: readonly EspeceV0[] = [
     pousseMaxMAn: 0.65,
     // Atlas : mésoxérophile, **acidiphile (calcifuge)** — l'arbre à valoriser
     // sur la lande, mais qui a besoin d'être abrité pour s'installer.
-    eau: { seuilConfortSecheresse: 0.55, seuilStressSecheresse: 0.22, toleranceEngorgement: 0.05 },
+    // Tolérance à la sécheresse : Niinemets et Valladares 2006, annexe A.
+    eau: { toleranceSecheresse: 3.46, toleranceEngorgement: 0.05 },
     ph: [4, 6.5],
     lumiere: { compensation: 0.08, saturation: 0.5, lai: 3.2, houppierRatio: 0.38, caduc: true },
     racines: { profondeurMaxCm: 180 }, // pivot, mais qui redoute l'asphyxie
@@ -1902,7 +1937,11 @@ export const ESPECES_V0: readonly EspeceV0[] = [
     // n'est « la » vitesse de l'essence.
     pousseMaxMAn: 0.3,
     // Atlas : xérophile, **silice/acide**, sempervirent, résiste au feu.
-    eau: { seuilConfortSecheresse: 0.35, seuilStressSecheresse: 0.12, toleranceEngorgement: 0.25 },
+    // Tolérance à la sécheresse *(à confirmer)* : le chêne-liège est absent de
+    // Niinemets et Valladares 2006. Tirée des anciens seuils de la fiche
+    // (0,35 / 0,12, sans source) par la loi inverse, au plus près des deux
+    // (moindres carrés).
+    eau: { toleranceSecheresse: 3.8, toleranceEngorgement: 0.25 },
     // Atlas : « silice/acide » — calcifuge strict des sables siliceux.
     ph: [3.8, 6.8],
     // Semi-héliophile : contrairement au pin, ses jeunes supportent le couvert
@@ -1968,7 +2007,8 @@ export const ESPECES_V0: readonly EspeceV0[] = [
     // Atlas : mésophile à hygrocline, il aime les sols frais et riches et
     // souffre vite en sol sec — c'est **le** frêne des fonds de vallée et des
     // haies bocagères.
-    eau: { seuilConfortSecheresse: 0.8, seuilStressSecheresse: 0.45, toleranceEngorgement: 0.5 },
+    // Tolérance à la sécheresse : Niinemets et Valladares 2006, annexe A.
+    eau: { toleranceSecheresse: 2.5, toleranceEngorgement: 0.5 },
     // pH, littérature : Thomas 2016, Biological Flora : **absent** sous pH 4,2 en surface, tolère 4,5, préfère base-riche au-dessus de 5,5.
     ph: [4.2, 8],
     // Demi-héliophile : il s'installe en lisière et dans les trouées, pas sous
@@ -2013,7 +2053,8 @@ export const ESPECES_V0: readonly EspeceV0[] = [
     // plus lents, mais ce sont des rejets serrés que la concurrence bride.
     pousseMaxMAn: 0.25,
     // Atlas : « méditerranéen, acidiphile, rejette après feu », mycorhize éricoïde.
-    eau: { seuilConfortSecheresse: 0.35, seuilStressSecheresse: 0.12, toleranceEngorgement: 0.05 },
+    // Tolérance à la sécheresse : Niinemets et Valladares 2006, annexe A.
+    eau: { toleranceSecheresse: 3.9, toleranceEngorgement: 0.05 },
     // pH, littérature : van den Berk et World Agroforestry : de 5,0 (grès acide) à 7,8 (limon calcaire) ; tolérance à l'alcalin rare chez une éricacée.
     ph: [4, 7.8],
     // Entre le chêne-liège et le houx, les deux persistants mesurés de l'atlas *(à confirmer)*.

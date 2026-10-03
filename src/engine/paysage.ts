@@ -29,7 +29,7 @@
  */
 
 import { ESPECES_V0, type EspeceV0, getEspece } from "./especes";
-import { phFactor } from "./trees";
+import { phFactor, seuilConfortSecheresse } from "./trees";
 
 /** Ce qu'un paysage apporte à la parcelle, dérivé de sa composition. */
 export interface Paysage {
@@ -396,19 +396,22 @@ export function especeTenable(espece: EspeceV0, phStation: number, ruMm: number)
   // existe jusque vers pH 4 ; ce n'est pas l'acidité qui exclut le hêtre des
   // Landes.
   if (phFactor(espece, phStation) < 0.25) return false;
-  // **C'est la soif qui l'exclut**, et on la lit au bon seuil. `eau` en porte deux,
-  // découplés exprès : celui de la **survie** (le hêtre pousse mal en sec, mais son
-  // semis survit) et celui du **confort**. La question posée ici n'est pas « qui
-  // survivrait » mais « qui **peuple** l'entourage et sème dessus » — donc le
-  // confort. Sur le seuil de survie, ce filtre n'écartait que l'aulne et le
-  // saule, et laissait le hêtre semer sur un sable landais à 92 mm de réserve.
+  // **C'est la soif qui l'exclut**, et on la lit au bon seuil. Le moteur en tire
+  // deux de la tolérance de l'espèce : celui de la **survie** et celui du
+  // **confort**. La question posée ici n'est pas « qui survivrait » mais « qui
+  // **peuple** l'entourage et sème dessus » — donc le confort.
   //
-  // Le seuil de 0,6 sépare la flore réelle de la lande atlantique : restent le
-  // pin, le bouleau, la ronce, l'ajonc, le genêt, la callune, le châtaignier,
-  // le chêne-liège et l'arbousier ; partent le hêtre (0,85), le frêne (0,80),
-  // le charme (0,70), l'aulne et le saule (0,85). Sur un limon profond, la
-  // réserve passe le seuil et plus personne n'est écarté.
-  if (ruMm < 120 && espece.eau.seuilConfortSecheresse > 0.6) return false;
+  // Le seuil de 0,6 *(à calibrer)* a été posé quand chaque fiche déclarait son
+  // confort sans source. Depuis que le confort sort de l'indice de Niinemets et
+  // Valladares (2006) par une loi commune (#312), il écarte d'un sol à moins de
+  // 120 mm toute espèce sous 2,86 sur leur échelle : le hêtre, le frêne, le
+  // charme, l'aulne, le saule, l'abricotier, **et aussi la callune (2,21) et le
+  // bouleau (1,85)**, que la source dit moins tolérants que le hêtre (2,40). Il
+  // laisse entrer le pommier, le sureau et le houx (3,04). Aucun seuil sur cet
+  // indice ne garde la callune en écartant le hêtre : ce qui fait la flore de
+  // la lande n'est pas la seule tolérance à la sécheresse. Sur un limon
+  // profond, la réserve passe le seuil et plus personne n'est écarté.
+  if (ruMm < 120 && seuilConfortSecheresse(espece) > 0.6) return false;
   return true;
 }
 
