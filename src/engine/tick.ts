@@ -887,13 +887,17 @@ export function tick(state: GameState, weather: WeekWeather): TickResult {
    * de la faim d'azote ne bouge pas —, puis dans l'azote minéral : un bois qui
    * pourrit immobilise l'azote du sol, ce que tout forestier sait. Ce que
    * l'azote ne permet pas d'humifier part en CO₂. Rend le carbone humifié.
+   *
+   * `azoteLitiereG` est l'azote de litière où l'humus nouveau peut puiser : celui
+   * de la fraction qui vient de se décomposer, et rien pour le bois mort, qui
+   * n'est pas dans la litière (#309).
    */
-  const humifier = (i: number, carboneG: number, depuisLitiere: boolean): number => {
+  const humifier = (i: number, carboneG: number, azoteLitiereG: number): number => {
     if (carboneG <= 0) return 0;
     const besoin = carboneG / cnHumus;
     let reste = besoin;
-    if (depuisLitiere) {
-      const pris = Math.min(litterNG[i] ?? 0, reste);
+    if (azoteLitiereG > 0) {
+      const pris = Math.min(azoteLitiereG, reste);
       litterNG[i] = (litterNG[i] ?? 0) - pris;
       reste -= pris;
     }
@@ -928,6 +932,10 @@ export function tick(state: GameState, weather: WeekWeather): TickResult {
   const potassiumG = state.soil.potassiumG.slice();
   const potassiumReserveG = state.soil.potassiumReserveG.slice();
   const litterK = state.soil.litterK.slice();
+  // La fraction ligneuse de la litière, sous-pool de la précédente (#309).
+  const litiereBoisCG = state.soil.litiereBoisCG.slice();
+  const litiereBoisNG = state.soil.litiereBoisNG.slice();
+  const litiereBoisK = state.soil.litiereBoisK;
   // Les bases échangeables, et le calcium de la litière qui les nourrit ou les
   // consomme (bases.ts). C'est ce pool-là qui porte le pH de la cellule.
   // La rafale de la semaine, tirée une fois pour toutes (tempete.ts). Elle sert
@@ -1313,22 +1321,49 @@ export function tick(state: GameState, weather: WeekWeather): TickResult {
     // nouveau se servaient dans son azote jusqu'à la vider, son C/N filant vers
     // l'infini (#247). La part décomposée est donc ramenée à ce que l'azote
     // disponible, celui de la litière et celui du sol, permet de digérer.
-    const disponible = (mineralNG[i] ?? 0) + mineralized + depositionG;
-    const manqueSiTout = -azoteNetDecomposition(litterCG[i] ?? 0, litterNG[i] ?? 0);
-    const decayFraction = Math.min(
-      1,
-      (litterK[i] ?? 0) * climate,
-      manqueSiTout > 0 ? disponible / manqueSiTout : 1,
-    );
-    const decayedN = (litterNG[i] ?? 0) * decayFraction;
-    const decayedC = (litterCG[i] ?? 0) * decayFraction;
-    const netN = azoteNetDecomposition(decayedC, decayedN);
-    const transfere = netN >= 0 ? netN : -Math.min(disponible, -netN);
-    litterNG[i] = (litterNG[i] ?? 0) - transfere;
-    litterCG[i] = (litterCG[i] ?? 0) - decayedC;
+    //
+    // **Deux fractions, une seule règle** (#309). La litière fine — feuilles,
+    // herbe, fumier, paille, déjections — et la fraction ligneuse, le broyat, se
+    // décomposent chacune à sa vitesse et selon son propre C/N. Dans un pool
+    // unique, des feuilles d'aulne et le bois broyé avec elles se décomposaient
+    // au même rythme moyen, et les décomposeurs du bois prenaient l'azote des
+    // feuilles avant qu'il ait pu servir. La fine passe la première : ce qu'elle
+    // libère cette semaine, ceux du bois peuvent le prendre ; ce qu'elle
+    // immobilise, ils ne le trouvent plus.
+    let disponible = (mineralNG[i] ?? 0) + mineralized + depositionG;
+    const decomposer = (carboneG: number, azoteG: number, k: number) => {
+      const manqueSiTout = -azoteNetDecomposition(carboneG, azoteG);
+      const part = Math.min(1, k * climate, manqueSiTout > 0 ? disponible / manqueSiTout : 1);
+      const azoteDecompose = azoteG * part;
+      const carboneDecompose = carboneG * part;
+      const netN = azoteNetDecomposition(carboneDecompose, azoteDecompose);
+      const transfere = netN >= 0 ? netN : -Math.min(disponible, -netN);
+      disponible += transfere;
+      return { part, carboneDecompose, transfere };
+    };
+    const carboneAvant = litterCG[i] ?? 0;
+    const boisC = litiereBoisCG[i] ?? 0;
+    const boisN = litiereBoisNG[i] ?? 0;
+    const fineC = carboneAvant - boisC;
+    const fineN = (litterNG[i] ?? 0) - boisN;
+    const fine = decomposer(fineC, fineN, litterK[i] ?? 0);
+    const bois = decomposer(boisC, boisN, litiereBoisK[i] ?? 0);
+    const fineNApres = fineN - fine.transfere;
+    const boisNApres = boisN - bois.transfere;
+    litiereBoisCG[i] = boisC - bois.carboneDecompose;
+    litiereBoisNG[i] = boisNApres;
+    litterNG[i] = fineNApres + boisNApres;
+    litterCG[i] = fineC - fine.carboneDecompose + (litiereBoisCG[i] ?? 0);
+    const decayedC = fine.carboneDecompose + bois.carboneDecompose;
+    const transfere = fine.transfere + bois.transfere;
     // L'enfouie se décompose au même rythme que le reste : enfouir ne change
-    // que ce que la litière couvre, pas ce qu'elle fait (#247).
-    litiereEnfouieCG[i] = (litiereEnfouieCG[i] ?? 0) * (1 - decayFraction);
+    // que ce que la litière couvre, pas ce qu'elle fait (#247). Avec deux
+    // fractions, ce rythme est leur moyenne pondérée par le carbone.
+    if (carboneAvant > 0) {
+      const partDecomposee =
+        (fineC / carboneAvant) * fine.part + (boisC / carboneAvant) * bois.part;
+      litiereEnfouieCG[i] = (litiereEnfouieCG[i] ?? 0) * (1 - partDecomposee);
+    }
     // ── Ce que cette litière-là fait au complexe d'échange (bases.ts) ───────
     // La décomposition produit des acides organiques ; les bases de la litière
     // en neutralisent une part. Au-dessus du seuil de calcium elle rend au
@@ -1354,8 +1389,16 @@ export function tick(state: GameState, weather: WeekWeather): TickResult {
       basesAcideSumEq += tamponne;
       basesAcideNonTamponneSumEq += -effetBases - tamponne;
     }
-    const humifieLitiere = humifier(i, LITTER_HUMIFICATION * decayedC, true);
-    emittedG += decayedC - humifieLitiere;
+    // L'humus nouveau prend son azote à la fraction dont il vient : celui des
+    // feuilles ne paie pas pour le bois.
+    const humifieFine = humifier(i, LITTER_HUMIFICATION * fine.carboneDecompose, fineNApres);
+    const litiereAvantBois = litterNG[i] ?? 0;
+    const humifieBois = humifier(i, LITTER_HUMIFICATION * bois.carboneDecompose, boisNApres);
+    litiereBoisNG[i] = Math.min(
+      litterNG[i] ?? 0,
+      Math.max(0, boisNApres - (litiereAvantBois - (litterNG[i] ?? 0))),
+    );
+    emittedG += decayedC - humifieFine - humifieBois;
     mineralNG[i] = (mineralNG[i] ?? 0) + mineralized + transfere + depositionG;
 
     // ── Les deux formes de l'azote minéral (#280) ──────────────────────────
@@ -1370,16 +1413,23 @@ export function tick(state: GameState, weather: WeekWeather): TickResult {
     // réduite, donc ammoniacale, mais le moteur ne porte qu'une valeur globale
     // sans forme. Les compter tous nitriques **dessert** l'hypothèse qu'on
     // cherche à valider plutôt que de la servir *(à affiner)*.
-    const rendu = mineralized + Math.max(0, transfere);
+    //
+    // Les deux fractions peuvent aller en sens contraire — des feuilles qui
+    // libèrent, un bois qui immobilise —, donc on compte les deux bras et non
+    // leur solde : ce que l'une libère est de l'ammonium, ce que l'autre prend
+    // se prend aux deux formes (#309).
+    const libere = Math.max(0, fine.transfere) + Math.max(0, bois.transfere);
+    const immobilise = Math.min(0, fine.transfere) + Math.min(0, bois.transfere);
+    const rendu = mineralized + libere;
     ammoniacalNG[i] = (ammoniacalNG[i] ?? 0) + rendu;
-    if (transfere < 0) {
+    if (immobilise < 0) {
       // Les décomposeurs puisent dans tout ce qui est là cette semaine, y compris
       // ce que l'humus et les dépôts viennent de rendre — c'est la priorité
       // qu'ils ont sur les racines.
-      const puise = (mineralNG[i] ?? 0) - transfere;
+      const puise = (mineralNG[i] ?? 0) - immobilise;
       // Borné à zéro : à la limite, l'arrondi du produit rend un résidu négatif.
       if (puise > 0)
-        ammoniacalNG[i] = Math.max(0, (ammoniacalNG[i] ?? 0) * (1 + transfere / puise));
+        ammoniacalNG[i] = Math.max(0, (ammoniacalNG[i] ?? 0) * (1 + immobilise / puise));
     }
     // **La nitrification**, et elle ne connaît pas sa cible : la part
     // ammoniacale qui restera en sortie d'hiver tombe du froid et du pH de
@@ -1564,11 +1614,13 @@ export function tick(state: GameState, weather: WeekWeather): TickResult {
     const emporte = fractionEmportee(arrachee, masseSurfaceKgM2);
     if (emporte > 0) {
       // Le sédiment part avec sa charge : humus, litière, azote, phosphore et
-      // potassium de surface s'en vont dans la même proportion.
+      // potassium de surface s'en vont dans la même proportion. De la litière,
+      // il n'emporte que la fraction fine : un copeau de bois ne part pas avec
+      // la lame de boue qui charrie les feuilles *(hypothèse, #309)*.
       const dHumus = (humusCG[i] ?? 0) * emporte;
-      const dLitiere = (litterCG[i] ?? 0) * emporte;
+      const dLitiere = ((litterCG[i] ?? 0) - (litiereBoisCG[i] ?? 0)) * emporte;
       const dNmin = (mineralNG[i] ?? 0) * emporte;
-      const dNlit = (litterNG[i] ?? 0) * emporte;
+      const dNlit = ((litterNG[i] ?? 0) - (litiereBoisNG[i] ?? 0)) * emporte;
       const dP = (phosphoreG[i] ?? 0) * emporte;
       const dK = (potassiumG[i] ?? 0) * emporte;
       humusCG[i] = (humusCG[i] ?? 0) - dHumus;
@@ -3590,7 +3642,7 @@ export function tick(state: GameState, weather: WeekWeather): TickResult {
   deadWoodKgC -= deadDecayKgC;
   const humifiedPerCellG = (deadDecayKgC * DEADWOOD_HUMIFICATION * 1000) / nCells;
   let humifieBoisG = 0;
-  for (let i = 0; i < nCells; i++) humifieBoisG += humifier(i, humifiedPerCellG, false);
+  for (let i = 0; i < nCells; i++) humifieBoisG += humifier(i, humifiedPerCellG, 0);
   emittedG += deadDecayKgC * 1000 - humifieBoisG;
   // Le bois couché se décompose plus vite que le bois debout, et il fait son
   // humus **sur place** : c'est là toute la différence avec le pool de parcelle.
@@ -3599,7 +3651,7 @@ export function tick(state: GameState, weather: WeekWeather): TickResult {
     if (stock <= 0) continue;
     const decompose = stock * ((DECOMPOSITION_AU_SOL_PAR_AN / 52) * meanClimate);
     boisAuSolCG[i] = stock - decompose;
-    emittedG += decompose - humifier(i, decompose * DEADWOOD_HUMIFICATION, false);
+    emittedG += decompose - humifier(i, decompose * DEADWOOD_HUMIFICATION, 0);
   }
 
   // ── 6 bis. Le feu (§7.4, ch5) ─────────────────────────────────────────────
@@ -3779,6 +3831,8 @@ export function tick(state: GameState, weather: WeekWeather): TickResult {
         carboneFeuKgC += (litterCG[i] ?? 0) / 1000;
         litterCG[i] = 0;
         litiereEnfouieCG[i] = 0;
+        litiereBoisCG[i] = 0;
+        litiereBoisNG[i] = 0;
         // L'azote de la litière part en fumée pour l'essentiel ; le reste
         // reste en cendres, immédiatement disponible.
         // L'herbe sur pied brûle de même : sa matière part, son azote suit la
@@ -4258,6 +4312,9 @@ export function tick(state: GameState, weather: WeekWeather): TickResult {
         litterNG,
         litterCG,
         litiereEnfouieCG,
+        litiereBoisCG,
+        litiereBoisNG,
+        litiereBoisK,
         humusCG,
         basesEq,
         basesProfondEq,

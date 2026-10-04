@@ -343,6 +343,31 @@ export interface SoilState {
    * litière, dans la même proportion.
    */
   litiereEnfouieCG: GrilleLongue;
+  /**
+   * Part **ligneuse** de la litière, g C/m² — un sous-pool de `litterCG`, pas
+   * un pool à côté (#309). `litiereBoisNG` en est l'azote, sous-pool de
+   * `litterNG`, et `litiereBoisK` sa vitesse de décomposition.
+   *
+   * Des feuilles d'aulne (C/N 7,5 vertes) rendent leur azote en quelques mois ;
+   * le bois broyé du même arbre (C/N 54) l'immobilise des années. Dans un pool
+   * unique, les deux se décomposaient au même rythme et les décomposeurs du
+   * bois puisaient d'abord dans l'azote des feuilles. Deux fractions suivent
+   * la même règle (C9), chacune avec son C/N et sa vitesse.
+   *
+   * Seul le **broyat** y entre : c'est le seul bois que le moteur verse à la
+   * litière avec son carbone. Le reste (feuilles, herbe, fumier, paille,
+   * déjections) est la fraction fine, `litterCG − litiereBoisCG`. Comme pour
+   * `ammoniacalNG`, les lecteurs du total (paillis, feu, bilans) n'ont rien à
+   * savoir des deux fractions, et l'invariant est `0 ≤ bois ≤ total`.
+   */
+  litiereBoisCG: GrilleLongue;
+  /** azote de la fraction ligneuse de la litière, g/m² — sous-pool de `litterNG` (#309) */
+  litiereBoisNG: GrilleLongue;
+  /**
+   * vitesse de décomposition de la fraction ligneuse, /semaine à T°/humidité
+   * optimales : la même loi que `litterK`, lue sur le C/N du bois versé (#309)
+   */
+  litiereBoisK: Grille;
   /** carbone de l'humus, g/m² — pool lent, alimenté par l'humification */
   humusCG: GrilleLongue;
   /**
@@ -560,8 +585,12 @@ export interface GameState {
    * position sur la parcelle, contrairement à tout le reste du modèle — et
    * c'est bien ce qu'il est dans la réalité, une remorque de plaquettes qu'on
    * ira vider là où on en a besoin.
+   *
+   * `carboneG` et `azoteG` sont le tas entier ; `boisCG` et `boisNG` en sont la
+   * part ligneuse, qui rejoindra `litiereBoisCG` à l'épandage (#309). Le reste
+   * est le feuillage broyé avec.
    */
-  stockBrf: { carboneG: number; azoteG: number };
+  stockBrf: { carboneG: number; azoteG: number; boisCG: number; boisNG: number };
   /**
    * Pression de gibier locale, en part de la densité du paysage ∈ [0,1].
    * La chasse la fait baisser ; l'immigration des voisins la fait remonter —
@@ -883,6 +912,9 @@ export function createGameState(
       litterNG: new Float64Array(n),
       litterCG: new Float64Array(n),
       litiereEnfouieCG: new Float64Array(n),
+      litiereBoisCG: new Float64Array(n),
+      litiereBoisNG: new Float64Array(n),
+      litiereBoisK: new Float32Array(n),
       humusCG: new Float64Array(n).fill(station.initialSoilCTHa * T_HA_TO_G_M2),
       boisAuSolCG: new Float64Array(n),
       boisEnTraversPart: new Float32Array(n),
@@ -951,7 +983,7 @@ export function createGameState(
       litterK: new Float32Array(n),
     },
     trees: [],
-    stockBrf: { carboneG: 0, azoteG: 0 },
+    stockBrf: { carboneG: 0, azoteG: 0, boisCG: 0, boisNG: 0 },
     pressionGibier: 1,
     nextTreeId: 1,
     rng,

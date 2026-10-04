@@ -34,7 +34,12 @@ import { altitudeParCellule } from "./relief";
 import type { GameState } from "./state";
 import { tassementApresLabour } from "./tassement";
 import type { TreeState } from "./trees";
-import { diametreInitialCm, tirerVigueurIndividuelle, volumeTigeM3 } from "./trees";
+import {
+  diametreInitialCm,
+  LITTER_RETURN_FRACTION,
+  tirerVigueurIndividuelle,
+  volumeTigeM3,
+} from "./trees";
 import {
   aireM2DeLaZone,
   cellulesDeLaZone,
@@ -303,12 +308,6 @@ export const FAUCHE_HAUTEUR_TIGE_FAUCHABLE_M = 1;
  * sol moyen, et c'est la seule raison de ne pas l'effacer.
  */
 export const LIME_PH_STEP = 0.5;
-/**
- * C/N du bois raméal fragmenté épandu : du **bois**, pas des feuilles — libération
- * lente sur plusieurs années, c'est toute la valeur du BRF (ch2-B).
- */
-export const BRF_CN_RATIO = 40;
-
 /**
  * C/N d'un fumier de ferme bien décomposé (#140). Bien plus bas que celui du
  * BRF, qui est du bois : un fumier libère son azote sur deux à trois ans au
@@ -1196,7 +1195,10 @@ function applyCouper(
   const litterNG = state.soil.litterNG.slice();
   const litterCG = state.soil.litterCG.slice();
   const litterK = state.soil.litterK.slice();
-  let { deadWoodKgC, exportedEnergyCumKgC, oeuvreCumKgC, oeuvreStockKgC } = state.carbon;
+  const litiereBoisCG = state.soil.litiereBoisCG.slice();
+  const litiereBoisNG = state.soil.litiereBoisNG.slice();
+  const litiereBoisK = state.soil.litiereBoisK.slice();
+  let { deadWoodKgC, exportedEnergyCumKgC, oeuvreCumKgC, oeuvreStockKgC, nppCumKgC } = state.carbon;
   const basesEq = state.soil.basesEq.slice();
   let volumeVenduAnneeM3 = state.economy.volumeVenduAnneeM3;
   let stockBrf = state.stockBrf;
@@ -1273,6 +1275,23 @@ function applyCouper(
     const azotePerenneG = dejaEnBoisMort ? 0 : (tree.reserveAzoteG ?? 0) + (tree.azoteBoisG ?? 0);
     const azoteAerienG = (dejaEnBoisMort ? 0 : tree.uptakeYearG) + partAerienne * azotePerenneG;
     const azoteRacinesG = (1 - partAerienne) * azotePerenneG;
+    /**
+     * Ce que l'aérien porte, **en deux fractions** (#309) : ses feuilles et son
+     * bois. Coupé vert, l'arbre n'a rien résorbé, et la feuille a le C/N de sa
+     * litière fois la part qui tombe avec elle — la feuille verte qu'utilise
+     * déjà `cnBois` (trees.ts). Son carbone n'est pas dans l'allométrie du
+     * tronc et des branches : il est crédité à la production primaire en
+     * entrant au sol, comme il l'aurait été à la chute.
+     */
+    const azoteFeuillesG = dejaEnBoisMort ? 0 : tree.uptakeYearG;
+    const feuillesBroyees = {
+      azoteG: azoteFeuillesG,
+      carboneG: azoteFeuillesG * espece.litiere.cnRatio * LITTER_RETURN_FRACTION,
+    };
+    const boisBroye = {
+      azoteG: partAerienne * azotePerenneG,
+      carboneG: treeAboveCarbonKg(espece, tree.diametreCm, tree.heightM) * 1000,
+    };
     const souche = cellIndexAt(dims, tree.x, tree.y);
     // Les bases du bois (#247) : vendu, l'aérien les emporte ; dans les autres
     // devenirs elles restent à la souche, racines comprises. Le broyat ne les
@@ -1404,13 +1423,15 @@ function applyCouper(
       }
     } else if (action.devenir === "broyer") {
       // Le broyat rejoint le tas : rien ne touche le sol pour l'instant.
+      // L'azote que l'aérien porte vraiment : ses feuilles, et la part aérienne
+      // de sa réserve et de son bois (#247). Le tas garde la part du bois à part
+      // (#309).
+      nppCumKgC += feuillesBroyees.carboneG / 1000;
       stockBrf = {
-        carboneG:
-          stockBrf.carboneG + treeAboveCarbonKg(espece, tree.diametreCm, tree.heightM) * 1000,
-        // L'azote que l'aérien porte vraiment : ses feuilles, et la part
-        // aérienne de sa réserve et de son bois (#247). Le broyat en comptait
-        // une année de besoin, qui n'existait nulle part dans l'arbre.
-        azoteG: stockBrf.azoteG + azoteAerienG,
+        carboneG: stockBrf.carboneG + feuillesBroyees.carboneG + boisBroye.carboneG,
+        azoteG: stockBrf.azoteG + feuillesBroyees.azoteG + boisBroye.azoteG,
+        boisCG: stockBrf.boisCG + boisBroye.carboneG,
+        boisNG: stockBrf.boisNG + boisBroye.azoteG,
       };
     } else {
       // Épandre : l'azote du feuillage de l'année + le houppier broyé (BRF)
@@ -1419,7 +1440,8 @@ function applyCouper(
       // « couper les légumineuses et les épandre » (§16). C'est l'azote que
       // l'aérien porte vraiment : feuilles, réserve et bois. Un arbre coupé vert
       // ne résorbe rien, et le broyat comptait une année de besoin inventée (#247).
-      const depositG = azoteAerienG;
+      // Feuilles et bois vont chacun à leur fraction de la litière (#309).
+      nppCumKgC += feuillesBroyees.carboneG / 1000;
       // On **épand** le broyat sur la zone (pas en tas au pied) : rayon large,
       // pour que les racines des voisins y accèdent.
       const crownR = Math.max(
@@ -1439,16 +1461,16 @@ function applyCouper(
         }
       }
       if (cells.length === 0) cells.push(0);
-      const share = depositG / cells.length;
       // Tout le carbone aérien broyé reste sur place, dans la litière.
-      const shareC =
-        (treeAboveCarbonKg(espece, tree.diametreCm, tree.heightM) * 1000) / cells.length;
-      const kSpecies = 0.6 / BRF_CN_RATIO;
+      const n = cells.length;
+      const sol = { litterNG, litterCG, litterK, litiereBoisCG, litiereBoisNG, litiereBoisK };
       for (const i of cells) {
-        const oldN = litterNG[i] ?? 0;
-        litterK[i] = (oldN * (litterK[i] ?? 0) + share * kSpecies) / (oldN + share);
-        litterNG[i] = oldN + share;
-        litterCG[i] = (litterCG[i] ?? 0) + shareC;
+        verserBroyat(
+          sol,
+          i,
+          { carboneG: feuillesBroyees.carboneG / n, azoteG: feuillesBroyees.azoteG / n },
+          { carboneG: boisBroye.carboneG / n, azoteG: boisBroye.azoteG / n },
+        );
       }
     }
     coupes.push(id);
@@ -1478,10 +1500,22 @@ function applyCouper(
     state: {
       ...state,
       trees,
-      soil: { ...state.soil, litterNG, litterCG, litterK, basesEq, boisAuSolCG, boisEnTraversPart },
+      soil: {
+        ...state.soil,
+        litterNG,
+        litterCG,
+        litterK,
+        litiereBoisCG,
+        litiereBoisNG,
+        litiereBoisK,
+        basesEq,
+        boisAuSolCG,
+        boisEnTraversPart,
+      },
       stockBrf,
       carbon: {
         ...state.carbon,
+        nppCumKgC,
         deadWoodKgC,
         exportedEnergyCumKgC,
         oeuvreCumKgC,
@@ -1500,6 +1534,42 @@ function applyCouper(
     // horaire arrête souvent le chantier en cours de route.
     gestes: coupes.length > 0 ? [{ type: "couper", ids: coupes, retire }] : [],
   };
+}
+
+/**
+ * Verser du broyat sur une cellule : ses feuilles à la litière fine, son bois à
+ * la fraction ligneuse, chacun avec la vitesse que son propre C/N lui donne
+ * (#309). Le broyat avait une vitesse unique, tirée d'un C/N de 40 posé pour
+ * tout BRF quel que soit l'arbre ; il a maintenant le C/N de ce qu'il contient.
+ *
+ * Les deux vitesses se mélangent à celles déjà présentes au prorata de
+ * l'azote de **leur** fraction, comme `litterK` l'a toujours fait.
+ */
+function verserBroyat(
+  soil: Pick<
+    GameState["soil"],
+    "litterNG" | "litterCG" | "litterK" | "litiereBoisCG" | "litiereBoisNG" | "litiereBoisK"
+  >,
+  i: number,
+  feuilles: { carboneG: number; azoteG: number },
+  bois: { carboneG: number; azoteG: number },
+): void {
+  const { litterNG, litterCG, litterK, litiereBoisCG, litiereBoisNG, litiereBoisK } = soil;
+  if (feuilles.azoteG > 0) {
+    const fineN = (litterNG[i] ?? 0) - (litiereBoisNG[i] ?? 0);
+    const k = litterDecayRate(feuilles.carboneG / feuilles.azoteG);
+    litterK[i] = (fineN * (litterK[i] ?? 0) + feuilles.azoteG * k) / (fineN + feuilles.azoteG);
+  }
+  if (bois.azoteG > 0) {
+    const ancienN = litiereBoisNG[i] ?? 0;
+    const k = litterDecayRate(bois.carboneG / bois.azoteG);
+    litiereBoisK[i] =
+      (ancienN * (litiereBoisK[i] ?? 0) + bois.azoteG * k) / (ancienN + bois.azoteG);
+  }
+  litterNG[i] = (litterNG[i] ?? 0) + feuilles.azoteG + bois.azoteG;
+  litterCG[i] = (litterCG[i] ?? 0) + feuilles.carboneG + bois.carboneG;
+  litiereBoisNG[i] = (litiereBoisNG[i] ?? 0) + bois.azoteG;
+  litiereBoisCG[i] = (litiereBoisCG[i] ?? 0) + bois.carboneG;
 }
 
 /**
@@ -1524,26 +1594,35 @@ function applyEpandreBrf(
   const dims = { widthM: cote, heightM: cote };
   const cells: number[] = [];
   pourChaqueCelluleDeLaZone(dims, action, (i) => cells.push(i));
-  const litterNG = state.soil.litterNG.slice();
-  const litterCG = state.soil.litterCG.slice();
-  const litterK = state.soil.litterK.slice();
-  const partN = azoteG / cells.length;
-  const partC = carboneG / cells.length;
-  const kBrf = 0.6 / BRF_CN_RATIO;
+  const boisCG = state.stockBrf.boisCG * part;
+  const boisNG = state.stockBrf.boisNG * part;
+  const sol = {
+    litterNG: state.soil.litterNG.slice(),
+    litterCG: state.soil.litterCG.slice(),
+    litterK: state.soil.litterK.slice(),
+    litiereBoisCG: state.soil.litiereBoisCG.slice(),
+    litiereBoisNG: state.soil.litiereBoisNG.slice(),
+    litiereBoisK: state.soil.litiereBoisK.slice(),
+  };
+  const n = cells.length;
   for (const i of cells) {
-    const oldN = litterNG[i] ?? 0;
-    litterK[i] = (oldN * (litterK[i] ?? 0) + partN * kBrf) / (oldN + partN);
-    litterNG[i] = oldN + partN;
-    litterCG[i] = (litterCG[i] ?? 0) + partC;
+    verserBroyat(
+      sol,
+      i,
+      { carboneG: (carboneG - boisCG) / n, azoteG: (azoteG - boisNG) / n },
+      { carboneG: boisCG / n, azoteG: boisNG / n },
+    );
   }
 
   return {
     state: {
       ...state,
-      soil: { ...state.soil, litterNG, litterCG, litterK },
+      soil: { ...state.soil, ...sol },
       stockBrf: {
         carboneG: state.stockBrf.carboneG - carboneG,
         azoteG: state.stockBrf.azoteG - azoteG,
+        boisCG: state.stockBrf.boisCG - boisCG,
+        boisNG: state.stockBrf.boisNG - boisNG,
       },
       economy: {
         ...state.economy,

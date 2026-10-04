@@ -162,8 +162,17 @@ const MAGIE = "CANOPEE\u0000";
  * inventer un état, c'est écrire celui qu'elle avait. Un bloc de version 8 se
  * relit donc avec `manteauNeigeMm = 0` (`VERSIONS_RELUES`), et seulement lui :
  * un bloc de version 7 n'a pas la mémoire de crue, et reste refusé.
+ *
+ * **10 (issue #309, la litière en deux fractions)** : trois grilles de plus,
+ * `litiereBoisCG`, `litiereBoisNG` et `litiereBoisK`, la part ligneuse de la
+ * litière, et le tas de broyat garde la sienne (`stockBrf.boisCG`, `boisNG`).
+ * Un bloc de version 9 n'a ni ces grilles ni ces champs. Le relire avec une
+ * fraction ligneuse nulle serait défendable pour la litière — la version 9 la
+ * traitait toute d'un bloc, et elle continuerait ainsi —, mais pas pour le
+ * tas : sans part ligneuse, il serait épandu comme du feuillage. On refuse les
+ * blocs 8 et 9, et le journal reprend la main.
  */
-export const VERSION_FORMAT = 9;
+export const VERSION_FORMAT = 10;
 
 /**
  * Les versions d'un bloc que ce moteur sait relire, et ce qu'il faut ajouter à
@@ -172,7 +181,6 @@ export const VERSION_FORMAT = 9;
  */
 const VERSIONS_RELUES: Record<number, Record<string, unknown>> = {
   [VERSION_FORMAT]: {},
-  8: { manteauNeigeMm: 0 },
 };
 
 /** Une grille de sol, telle que l'en-tête la déclare. */

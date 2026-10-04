@@ -363,7 +363,10 @@ describe("le tas de broyat : transporter la fertilité", () => {
 
   it("épandre un gros tas coûte des heures : la manutention n'est pas gratuite", () => {
     let state = createGameState(STATION, rngStateFromSeed(3));
-    state = { ...state, stockBrf: { carboneG: 400_000, azoteG: 4_000 } };
+    state = {
+      ...state,
+      stockBrf: { carboneG: 400_000, azoteG: 4_000, boisCG: 390_000, boisNG: 3_600 },
+    };
     const apres = applyAction(state, {
       type: "epandreBrf",
       week: 1,
