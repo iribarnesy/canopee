@@ -410,15 +410,18 @@ describe("le tas de broyat : transporter la fertilité", () => {
     // Deux tas de même carbone et de même azote. Dans le premier, les feuilles
     // (C/N 7,5) et le bois (C/N 50) sont deux fractions ; dans le second, tout
     // est mêlé dans la litière fine, au C/N moyen de 40, comme le moteur le
-    // faisait avant #309. Épandus en juin, deux mois plus tard, le premier a
-    // laissé plus d'azote minéral sous lui : ses feuilles ont rendu le leur au
-    // lieu de nourrir les décomposeurs du bois. Et la fraction ligneuse reste
-    // un sous-pool : jamais négative, jamais plus grande que la litière.
+    // faisait avant #309. Épandus en juin, deux mois plus tard, la litière du
+    // premier garde moins d'azote : ses feuilles ont rendu le leur au lieu de le
+    // garder pour les décomposeurs du bois. Et la fraction ligneuse reste un
+    // sous-pool : jamais négative, jamais plus grande que la litière.
     //
     // Un premier jet comparait un tas de bois à un tas « compté en feuillage »
     // de **même** C/N, et prédisait que le bois pèserait plus un an après : faux
     // à 0,03 % près, et c'était écrit d'avance. La vitesse sort du C/N, pas de
-    // l'étiquette ; c'est le mélange de deux C/N qui fait la différence.
+    // l'étiquette ; c'est le mélange de deux C/N qui fait la différence. Un
+    // second jet lisait l'azote **minéral** sous les deux tas : zéro des deux
+    // côtés, la strate le vide en juin. La faim et la libération se lisent dans
+    // la litière.
     const tas = (separe: boolean) => ({
       carboneG: 400_000,
       azoteG: 9_700,
@@ -429,7 +432,7 @@ describe("le tas de broyat : transporter la fertilité", () => {
     const zone: number[] = [];
     for (let y = 14; y <= 26; y++) for (let x = 14; x <= 26; x++) zone.push(y * STATION.coteM + x);
     let pire = Number.POSITIVE_INFINITY;
-    const mineralDeuxMoisApres = (separe: boolean) => {
+    const litiereDeuxMoisApres = (separe: boolean) => {
       let state = createGameState(STATION, rngStateFromSeed(3));
       for (let i = 0; i < EPANDAGE + 8; i++) {
         if (i === EPANDAGE) {
@@ -448,9 +451,9 @@ describe("le tas de broyat : transporter la fertilité", () => {
           pire = Math.min(pire, bc, bn, (s.litterCG[k] ?? 0) - bc, (s.litterNG[k] ?? 0) - bn);
         }
       }
-      return zone.reduce((a, k) => a + (state.soil.mineralNG[k] ?? 0), 0);
+      return zone.reduce((a, k) => a + (state.soil.litterNG[k] ?? 0), 0);
     };
-    expect(mineralDeuxMoisApres(true)).toBeGreaterThan(mineralDeuxMoisApres(false));
+    expect(litiereDeuxMoisApres(true)).toBeLessThan(litiereDeuxMoisApres(false));
     expect(pire).toBeGreaterThan(-1e-9);
   });
 });
