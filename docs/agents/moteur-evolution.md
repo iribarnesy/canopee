@@ -69,7 +69,7 @@ décompose à la vitesse de son propre C/N. Sans broyat, la partie est identique
 à main au bit près. Avec, la faim de la première année se creuse moins (+0,022
 de gain à l'an 10) et dure un peu plus : séparer les feuilles ne rend pas le
 gain de « couper les fixateurs et les épandre », parce qu'elles portent 0,4 kg
-d'azote et le bois 2,8. Cinq leçons, dont trois sur un seul essai.
+d'azote et le bois 2,8. Hors geste, les feuilles seules épandues donnent un gain petit et durable (1,006 à l'an 10, 1,012 à l'an 16, 1,007 à 35 ans) : la mécanique passe par elles, et le bois l'efface. Cinq leçons, dont trois sur un seul essai.
 
 ### Un essai peut passer trois fois pour une autre raison que la sienne
 

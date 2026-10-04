@@ -406,38 +406,51 @@ describe("le tas de broyat : transporter la fertilité", () => {
     expect(r.refusals).toHaveLength(1);
   });
 
-  it("le bois du tas reste une fraction à part, et se décompose plus lentement que des feuilles (#309)", () => {
-    // Deux tas de même carbone et de même azote : l'un est surtout du bois
-    // (C/N 50), l'autre est tout entier compté comme feuillage. Un an après
-    // l'épandage, la litière du premier pèse plus. Et la fraction ligneuse reste
+  it("un tas dont les feuilles sont à part rend leur azote plus tôt qu'un tas mêlé (#309)", () => {
+    // Deux tas de même carbone et de même azote. Dans le premier, les feuilles
+    // (C/N 7,5) et le bois (C/N 50) sont deux fractions ; dans le second, tout
+    // est mêlé dans la litière fine, au C/N moyen de 40, comme le moteur le
+    // faisait avant #309. Épandus en juin, deux mois plus tard, le premier a
+    // laissé plus d'azote minéral sous lui : ses feuilles ont rendu le leur au
+    // lieu de nourrir les décomposeurs du bois. Et la fraction ligneuse reste
     // un sous-pool : jamais négative, jamais plus grande que la litière.
-    const tas = (bois: boolean) => ({
+    //
+    // Un premier jet comparait un tas de bois à un tas « compté en feuillage »
+    // de **même** C/N, et prédisait que le bois pèserait plus un an après : faux
+    // à 0,03 % près, et c'était écrit d'avance. La vitesse sort du C/N, pas de
+    // l'étiquette ; c'est le mélange de deux C/N qui fait la différence.
+    const tas = (separe: boolean) => ({
       carboneG: 400_000,
-      azoteG: 8_000,
-      boisCG: bois ? 390_000 : 0,
-      boisNG: bois ? 7_800 : 0,
+      azoteG: 9_700,
+      boisCG: separe ? 385_000 : 0,
+      boisNG: separe ? 7_700 : 0,
     });
-    const litiereApresUnAn = (bois: boolean) => {
+    const EPANDAGE = 22;
+    const zone: number[] = [];
+    for (let y = 14; y <= 26; y++) for (let x = 14; x <= 26; x++) zone.push(y * STATION.coteM + x);
+    let pire = Number.POSITIVE_INFINITY;
+    const mineralDeuxMoisApres = (separe: boolean) => {
       let state = createGameState(STATION, rngStateFromSeed(3));
-      state = applyAction(
-        { ...state, stockBrf: tas(bois) },
-        { type: "epandreBrf", week: 0, x: 20, y: 20, rayonM: 6, part: 1 },
-      ).state;
-      for (let i = 0; i < 52; i++) {
+      for (let i = 0; i < EPANDAGE + 8; i++) {
+        if (i === EPANDAGE) {
+          state = applyAction(
+            { ...state, stockBrf: tas(separe) },
+            { type: "epandreBrf", week: i, x: 20, y: 20, rayonM: 6, part: 1 },
+          ).state;
+        }
         const w = WEATHER[i % WEATHER.length];
         if (!w) throw new Error("météo manquante");
         state = advanceWeek(state, w, []).state;
         const s = state.soil;
-        for (let k = 0; k < s.litterCG.length; k++) {
+        for (const k of zone) {
           const bc = s.litiereBoisCG[k] ?? 0;
           const bn = s.litiereBoisNG[k] ?? 0;
           pire = Math.min(pire, bc, bn, (s.litterCG[k] ?? 0) - bc, (s.litterNG[k] ?? 0) - bn);
         }
       }
-      return state.soil.litterCG.reduce((a, b) => a + b, 0);
+      return zone.reduce((a, k) => a + (state.soil.mineralNG[k] ?? 0), 0);
     };
-    let pire = Number.POSITIVE_INFINITY;
-    expect(litiereApresUnAn(true)).toBeGreaterThan(litiereApresUnAn(false));
+    expect(mineralDeuxMoisApres(true)).toBeGreaterThan(mineralDeuxMoisApres(false));
     expect(pire).toBeGreaterThan(-1e-9);
   });
 });
