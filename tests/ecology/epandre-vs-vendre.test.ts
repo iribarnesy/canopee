@@ -248,6 +248,21 @@ describe("couper les aulnes : épandre ou vendre (16 ans, limon pauvre en N)", (
     // forme** : un aulne entier broyé met l'azote du sol en banque, il ne le
     // porte pas au voisin. Ce sont ses feuilles qui le porteraient, et le
     // moteur les mêle au bois dans une seule litière.
+    //
+    // **Feuilles et bois sont maintenant deux fractions** (#309), chacune à la
+    // vitesse de son C/N : les feuilles vertes (C/N 7,5) rendent leur azote en
+    // quelques mois, le bois (C/N 51) l'immobilise plus lentement qu'au C/N de
+    // 40 posé autrefois pour tout BRF. Gain moyen des trois graines, main
+    // (bce64cd) puis la branche, prédictions écrites avant :
+    //
+    //     an          9      10     12     16     20     25     35
+    //     main      0,942  0,890  0,911  0,954  0,976  0,993  1,003
+    //     branche   0,947  0,912  0,909  0,949  0,972  0,989  1,001
+    //
+    // La faim de la première année se creuse moins (+0,022 à l'an 10, prédit
+    // +0,01 à +0,03), puis dure un peu plus (−0,005 à l'an 16, prédit à moins
+    // de 0,01). Séparer les feuilles ne rend pas le gain : elles portent 0,4 kg
+    // d'azote, le bois 2,8.
     expect(gainA(16)).toBeLessThan(1);
     // Le gain à long terme suit la **masse** épandue, qui vient d'être divisée par
     // trois (#62) : mesuré à +9 % quand un aulne pesait six fois trop, il est

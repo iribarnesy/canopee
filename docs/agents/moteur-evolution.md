@@ -61,7 +61,65 @@ qu'un rapport (voir la note de maintenance).
 Séparer calibration et validation : caler un paramètre sur un âge, garder
 l'autre âge pour vérifier.
 
-## Ce que le dernier lot a appris (la neige, #303)
+## Ce que le dernier lot a appris (la litière en deux fractions, #309)
+
+La litière porte une fraction ligneuse, sous-pool de la litière comme
+l'ammonium l'est du minéral. Seul le broyat y entre, et chaque fraction se
+décompose à la vitesse de son propre C/N. Sans broyat, la partie est identique
+à main au bit près. Avec, la faim de la première année se creuse moins (+0,022
+de gain à l'an 10) et dure un peu plus : séparer les feuilles ne rend pas le
+gain de « couper les fixateurs et les épandre », parce qu'elles portent 0,4 kg
+d'azote et le bois 2,8. Cinq leçons, dont trois sur un seul essai.
+
+### Un essai peut passer trois fois pour une autre raison que la sienne
+
+« Épandre du BRF ponctionne l'azote du sol » est resté vert pendant tout le
+lot, et jamais pour la faim. D'abord par un artefact : `plantAt` pose un arbre
+sans azote dans son bois, et le broyat à vitesse fixe digérait ce bois au C/N
+infini en prenant tout son azote au sol. Puis, ce bois devenu inerte, par le
+paillis : sous le broyat, le sol garde plus d'azote organique et moins de minéral, ce qu'on attend d'un sol couvert qui reste plus humide *(cause supposée, pas tracée)*.
+Un second critère ajouté pour lire la faim (l'azote organique du bloc) passait
+aussi avec le bois inerte, pour la même raison. Ce qui discrimine est ce
+qu'un paillis ne peut pas faire : l'azote **du bois** monte. Avant de garder
+une assertion, la faire tourner sur la variante où le mécanisme est coupé, et
+vérifier qu'elle tombe.
+
+### Le témoin d'un geste fait le même geste, moins ce qu'on mesure
+
+L'essai comparait un broyage à des arbres restés debout. Rendu au bois son
+azote, le broyat donnait **plus** d'azote minéral que le témoin : couper vingt
+arbres arrête leur prélèvement et verse l'azote de leurs racines à la litière.
+Le témoin juste est la coupe vendue : mêmes arbres abattus, mêmes racines,
+seul le broyat diffère. Là, la faim se voit (−0,34 g/m² un mois après).
+
+### Un stock vide ne montre pas une faim
+
+Coupé début avril pour que les décomposeurs travaillent, le broyat de hêtre
+n'a rien changé au minéral du bloc : la strate le vide au printemps sous les
+deux bras, et l'écart vaut zéro. Les décomposeurs passent avant les racines ;
+quand le stock est à zéro, leur faim se lit dans ce que les plantes n'ont pas
+reçu, pas dans le stock. Prédire sur un stock suppose de savoir s'il est
+tenu à zéro par un voisin.
+
+### Une loi tirée des feuilles s'arrête au bord du bois
+
+`litterDecayRate` vaut 0,6/(C/N). Appliquée au bois, elle donne des vitesses
+plausibles aux C/N du moteur (0,011 par semaine pour l'aulne, 0,0034 pour le
+hêtre), mais tend vers zéro quand l'azote manque : un bois sans azote ne se
+décompose jamais. Or une sciure à C/N 500 pourrit, et affame le sol en le
+faisant. Le défaut ne mord aujourd'hui que des arbres posés par `plantAt`,
+mais il est dans la loi. Il est laissé ouvert, avec ses options, plutôt que
+corrigé d'un plancher sans source.
+
+### Une copie de référence se vérifie avant de mesurer
+
+Le premier témoin de ce lot a tourné sur une copie de main restée dans le
+répertoire de travail d'une session précédente : la copie fraîche avait été
+rangée **dans** l'ancienne. Une ligne l'aurait vu, chercher dans la copie un
+symbole du dernier lot fusionné (`manteauNeigeMm`). Le décor ne touchait pas
+la neige, et le témoin remesuré est identique ; ce n'était pas garanti.
+
+## Ce qu'un lot précédent a appris (la neige, #303)
 
 La précipitation tombe en neige sous 2 °C, attend dans un manteau et ne
 recharge le sol qu'en fondant. Quatre leçons, toutes trouvées en mesurant.

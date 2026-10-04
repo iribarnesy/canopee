@@ -196,8 +196,9 @@ describe("la faim d'azote (C9)", () => {
     //   fixe, ce bois au C/N infini se décomposait quand même et prenait tout
     //   son azote au sol : −1,1 g/m² un mois après. Depuis que la fraction
     //   ligneuse a la vitesse de son propre C/N, il ne se décompose plus ;
-    // - l'essai passait alors par le **paillis**, −0,1 g/m² : le sol couvert
-    //   reste plus humide, et son humus s'y minéralise moins ;
+    // - l'essai passait alors par le **paillis**, −0,1 g/m² : sous le broyat
+    //   le sol garde plus d'azote organique et moins de minéral, ce qu'on
+    //   attend d'un sol couvert qui reste plus humide *(cause supposée)* ;
     // - rendu au bois son azote, le broyat donnait **plus** d'azote minéral que
     //   des arbres restés debout. Couper vingt arbres arrête leur prélèvement
     //   et verse l'azote de leurs racines à la litière.

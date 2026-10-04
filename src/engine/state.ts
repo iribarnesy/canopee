@@ -359,13 +359,22 @@ export interface SoilState {
    * déjections) est la fraction fine, `litterCG − litiereBoisCG`. Comme pour
    * `ammoniacalNG`, les lecteurs du total (paillis, feu, bilans) n'ont rien à
    * savoir des deux fractions, et l'invariant est `0 ≤ bois ≤ total`.
+   *
+   * Deux approximations, dites : les apports de litière fine mêlent leur
+   * vitesse à `litterK` au prorata de l'azote **total** de la cellule, bois
+   * compris, si bien que sur une cellule broyée la vitesse de la fraction fine
+   * suit un peu moins vite ce qui tombe ; et l'érosion n'emporte que la
+   * fraction fine *(hypothèse : un copeau ne part pas avec la boue)*.
    */
   litiereBoisCG: GrilleLongue;
   /** azote de la fraction ligneuse de la litière, g/m² — sous-pool de `litterNG` (#309) */
   litiereBoisNG: GrilleLongue;
   /**
    * vitesse de décomposition de la fraction ligneuse, /semaine à T°/humidité
-   * optimales : la même loi que `litterK`, lue sur le C/N du bois versé (#309)
+   * optimales : la même loi que `litterK`, lue sur le C/N du bois versé (#309).
+   * Elle tend vers zéro quand le bois manque d'azote : un bois sans azote ne se
+   * décompose pas, quand une sciure réelle pourrit en affamant le sol
+   * *(limite de la loi, ouverte)*.
    */
   litiereBoisK: Grille;
   /** carbone de l'humus, g/m² — pool lent, alimenté par l'humification */

@@ -1327,9 +1327,12 @@ export function tick(state: GameState, weather: WeekWeather): TickResult {
     // décomposent chacune à sa vitesse et selon son propre C/N. Dans un pool
     // unique, des feuilles d'aulne et le bois broyé avec elles se décomposaient
     // au même rythme moyen, et les décomposeurs du bois prenaient l'azote des
-    // feuilles avant qu'il ait pu servir. La fine passe la première : ce qu'elle
-    // libère cette semaine, ceux du bois peuvent le prendre ; ce qu'elle
-    // immobilise, ils ne le trouvent plus.
+    // feuilles avant qu'il ait pu servir. Le C/N figure parmi les meilleurs
+    // prédicteurs de la vitesse des feuilles (Zhang et al. 2008, *J. Plant
+    // Ecol.* 1 : 85) comme de celle du bois (Weedon et al. 2009, *Ecol. Lett.*
+    // 12 : 45) ; le coefficient de la loi reste *(à calibrer)*. La fine passe
+    // la première : ce qu'elle libère cette semaine, ceux du bois peuvent le
+    // prendre ; ce qu'elle immobilise, ils ne le trouvent plus.
     let disponible = (mineralNG[i] ?? 0) + mineralized + depositionG;
     const decomposer = (carboneG: number, azoteG: number, k: number) => {
       const manqueSiTout = -azoteNetDecomposition(carboneG, azoteG);
