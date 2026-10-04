@@ -405,4 +405,39 @@ describe("le tas de broyat : transporter la fertilité", () => {
     });
     expect(r.refusals).toHaveLength(1);
   });
+
+  it("le bois du tas reste une fraction à part, et se décompose plus lentement que des feuilles (#309)", () => {
+    // Deux tas de même carbone et de même azote : l'un est surtout du bois
+    // (C/N 50), l'autre est tout entier compté comme feuillage. Un an après
+    // l'épandage, la litière du premier pèse plus. Et la fraction ligneuse reste
+    // un sous-pool : jamais négative, jamais plus grande que la litière.
+    const tas = (bois: boolean) => ({
+      carboneG: 400_000,
+      azoteG: 8_000,
+      boisCG: bois ? 390_000 : 0,
+      boisNG: bois ? 7_800 : 0,
+    });
+    const litiereApresUnAn = (bois: boolean) => {
+      let state = createGameState(STATION, rngStateFromSeed(3));
+      state = applyAction(
+        { ...state, stockBrf: tas(bois) },
+        { type: "epandreBrf", week: 0, x: 20, y: 20, rayonM: 6, part: 1 },
+      ).state;
+      for (let i = 0; i < 52; i++) {
+        const w = WEATHER[i % WEATHER.length];
+        if (!w) throw new Error("météo manquante");
+        state = advanceWeek(state, w, []).state;
+        const s = state.soil;
+        for (let k = 0; k < s.litterCG.length; k++) {
+          const bc = s.litiereBoisCG[k] ?? 0;
+          const bn = s.litiereBoisNG[k] ?? 0;
+          pire = Math.min(pire, bc, bn, (s.litterCG[k] ?? 0) - bc, (s.litterNG[k] ?? 0) - bn);
+        }
+      }
+      return state.soil.litterCG.reduce((a, b) => a + b, 0);
+    };
+    let pire = Number.POSITIVE_INFINITY;
+    expect(litiereApresUnAn(true)).toBeGreaterThan(litiereApresUnAn(false));
+    expect(pire).toBeGreaterThan(-1e-9);
+  });
 });
