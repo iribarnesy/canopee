@@ -99,7 +99,8 @@ n'a rien changé au minéral du bloc : la strate le vide au printemps sous les
 deux bras, et l'écart vaut zéro. Les décomposeurs passent avant les racines ;
 quand le stock est à zéro, leur faim se lit dans ce que les plantes n'ont pas
 reçu, pas dans le stock. Prédire sur un stock suppose de savoir s'il est
-tenu à zéro par un voisin.
+tenu à zéro par un voisin. La faute a été refaite dans le même lot, sur un
+second essai épandu en juin : zéro contre zéro. Il lit maintenant la litière.
 
 ### Une loi tirée des feuilles s'arrête au bord du bois
 
