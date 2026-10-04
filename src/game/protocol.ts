@@ -304,6 +304,21 @@ export interface Snapshot {
   paysage: string;
   /** CO₂ de l'année, ppm */
   co2Ppm: number;
+  /**
+   * Part de `weather.rainMm` qui tombe en **neige** cette semaine, mm d'eau
+   * (`neigeDeLaSemaine`, neige.ts). C'est la semaine de `weather`, celle qui
+   * s'ouvre : les flocons à l'écran sont ceux de la pluie qu'on dessine, et la
+   * pluie liquide vaut `weather.rainMm − neigeMm`. À ne pas confondre avec
+   * `fluxes.neigeMm`, qui est la neige de la semaine **déjà simulée**.
+   */
+  neigeMm: number;
+  /**
+   * Manteau neigeux au sol, mm d'équivalent en eau (0 = pas de neige) : celui
+   * que la dernière semaine simulée a laissé, donc celui sur lequel la semaine
+   * s'ouvre. **Un** nombre pour la parcelle — le moteur ne sait pas encore ce que
+   * les houppiers interceptent. La fonte se voit d'un instantané à l'autre.
+   */
+  manteauNeigeMm: number;
   /** broyat en réserve, kg de matière sèche */
   stockBrfKg: number;
   /** pression de gibier locale ∈ [0,1] (la chasse la fait baisser, l'immigration la relève) */

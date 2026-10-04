@@ -94,7 +94,7 @@ avant le tri, ou sur un témoin que le tri n'a pas touché.
 
 | Domaine | ✅ | 🟡 | ❌ | Total |
 |---|---|---|---|---|
-| A. Sol, eau, atmosphère | 30 | 0 | 0 | 30 |
+| A. Sol, eau, atmosphère | 30 | 1 | 0 | 31 |
 | B. Lumière et structure | 8 | 3 | 0 | 11 |
 | C. Nutriments et cycles | 18 | 2 | 0 | 20 |
 | D. Climat et phénologie | 9 | 4 | 0 | 13 |
@@ -104,9 +104,9 @@ avant le tri, ou sur un témoin que le tri n'a pas touché.
 | H. Gestion, économie, travail | 16 | 5 | 0 | 21 |
 | I. Carbone | 10 | 0 | 0 | 10 |
 | J. Biodiversité et structure | 9 | 1 | 0 | 10 |
-| **Total** | **135** | **24** | **1** | **160** |
+| **Total** | **135** | **25** | **1** | **161** |
 
-**Score de réalisme : 135 pleins + 24 partiels sur 160 → 92 %** *(un partiel compte 1/2)*.
+**Score de réalisme : 135 pleins + 25 partiels sur 161 → 92 %** *(un partiel compte 1/2)*.
 
 > **La colonne des ❌ se rouvre, et c'est le lot des tempêtes qui la rouvre.**
 > Le référentiel venait d'atteindre zéro absence ; l'avertissement écrit ce
@@ -284,7 +284,11 @@ sa hauteur, 6,79 m contre 14,91 pour six dixièmes de pH) → 92 % (une cellule
 ne perd plus une terre qu'elle n'a pas : la perte d'horizon n'avait pas de fond,
 et un versant à 25 % en perdait jusqu'à 1,8 m sur 35 cm en quarante ans. Aucun
 point gagné, c'est un correctif — et la masse de terre se conservait déjà, ce
-qui est la leçon : le bilan bouclait sur une terre prise sous l'horizon)
+qui est la leçon : le bilan bouclait sur une terre prise sous l'horizon) → 92 %
+(la neige existe : elle tombe sous 2 °C, attend dans un manteau et ne recharge
+le sol qu'en fondant. Un critère de plus, posé partiel : le mécanisme est là et
+l'eau se conserve, mais rien dans le dépôt ne dit si Dijon a vraiment un manteau
+quatre hivers sur cinq)
 → 92 % (les oiseaux qui ne nichent pas entrent : une parcelle sans arbre creux
 n'avait aucun oiseau, quelle que soit sa haie, et elle reçoit maintenant grives,
 merles et fauvettes de passage selon ses baies mûres et son fourré, chaque
@@ -331,6 +335,7 @@ maladie-là, pas une preuve de santé.*
 | A16 | Le drainage dépend de l'exutoire autant que de la texture | ✅ | `drainageExterneMmSemaine` |
 | A29 | L'eau ruisselle d'une cellule à l'autre : bas de pente frais, crête sèche | ✅ | `relief.ts` ; `relief.test.ts` — le coefficient de ruissellement dépend de la pente, de la **couverture du sol** et de la saturation |
 | A30 | L'altitude refroidit et l'exposition décide du rayonnement (adret/ubac) | ✅ | 0,6 °C/100 m ; ±25 % d'**ETP et** ±1,5 °C entre adret et ubac — c'est la même énergie qui fait les deux, un versant sud n'est pas seulement plus sec |
+| A31 | La précipitation tombe en neige par froid ; la neige attend dans un manteau et ne recharge le sol qu'en fondant | 🟡 | `neige.ts` (#303) : part solide linéaire entre 0 et 2 °C de moyenne hebdomadaire, rampe centrée sur le seuil moyen de l'hémisphère nord (Jennings et al. 2018), largeur *(à confirmer)* ; fonte au degré-jour, 3,51 mm/°C/j **à découvert** (Kuusisto 1980, la méthode recensée par Hock 2003). `neige.test.ts`, `neige-conservation.test.ts`, et `tick-conservation.test.ts` sur un hiver froid : eau tombée = sol + nappe + manteau + sorties. Une station sans semaine sous 2 °C est identique au bit près. **Partiel** pour deux raisons : le niveau n'est confronté à aucune observation (sur les soixante ans de Dijon, 30 mm d'eau par an tombent en neige et un manteau tient 49 hivers sur 60, jamais plus de 62 mm ; aucune série d'enneigement n'est dans le dépôt pour le vérifier) ; et le manteau est **un** pour la parcelle — ni interception par les houppiers, ni fonte retardée à l'ombre, ni sol gelé |
 | A28 | La nappe se voit : profondeur et engorgement, cellule par cellule | ✅ | calques « Nappe » et « Engorgement » alimentés par l'instantané |
 | A12 | La MO du sol augmente la réserve utile (humus = éponge) | ✅ | `ruHorizonMm` + réserve de surface recalculée par cellule selon son humus ; `sol-vivant.test.ts` |
 | A13 | La structure/compaction évolue (tassement, restauration par les racines) | ✅ | `tassement.ts` ; `tassement.test.ts` — un passage d'engin tasse la seule part **mécanisable** de la zone (`mecanisation.ts`) : une parcelle plantée serré ne se tasse pas. Le tassement ferme le sol à l'eau (ruissellement, donc érosion), coûte jusqu'à 30 % de croissance aux arbres **et** à la strate herbacée (fourchette Arvalis 5–30 %), et se répare chaque année d'autant plus vite que l'enracinement est dense *(vitesse de retour à calibrer : aucune source consultée ne la chiffre)*. **Et depuis #141, un labour fait les deux choses qu'il fait vraiment** : le soc casse la structure tassée de l'horizon travaillé — la raison agronomique du geste — et les roues repassent derrière dans la raie ouverte. Le moteur ne modélisait que les roues, si bien qu'un blé continu atteignait `tassement = 1,000` à l'an 16 et y restait à jamais. Deux termes composés dans cet ordre, et un fait tombe que personne n'a écrit : **la même charrue desserre un sol tassé et tasse un sol meuble**, puisque sur la part mécanisée ce qu'elle laisse ne dépend plus de ce qu'elle a trouvé. Le régime n'est plus une saturation mais un **équilibre** — 0,30 au sortir du labour, 0,10 après une année de réparation —, ce qu'un sol labouré depuis 1843 impose. `labour-desserre.test.ts` le tient par les deux bouts : deux conduites parties de 0 et de 1 se rejoignent, et le résidu du soc n'est pas nul **parce que** la semelle de labour, elle, ne se desserre pas — le moteur n'ayant qu'une valeur par cellule, ce résidu est la part qu'elle y occupe. **Limite assumée** : toute partie démarre à structure intacte, y compris sur une parcelle de grande culture qui arriverait déjà tassée — l'historique de la parcelle n'est pas déclaré |
@@ -707,6 +712,41 @@ maintenant des trajectoires **françaises** — estimation observationnellement
 contrainte de Ribes et al., base des paliers TRACC — et ne fait que les
 répartir dans l'année, avec une forme saisonnière de moyenne 1 qui concentre
 l'excès sur juillet-août. L'interface affiche les deux : monde et France.
+
+## La neige : une eau qui attend
+
+`rainMm` était **toute** la précipitation, et elle entrait au sol la semaine
+même : une neige de janvier rechargeait le sol en janvier. Elle attend
+maintenant dans un manteau (`soil.manteauNeigeMm`), et ne rejoint le sol, le
+ruissellement et la nappe qu'en fondant (#303). Trois lois, toutes à la
+semaine : une part solide qui décroît de 1 à 0 entre 0 et 2 °C de moyenne, un
+manteau qui s'en remplit, une fonte de 3,51 mm par degré-jour au-dessus de zéro.
+
+**La moyenne de la semaine, et pas l'écart des nuits.** Une variante étalait les
+journées sur l'écart que creuse la nuit la plus froide (`tMinAbsC`). Elle faisait
+neiger 12,5 mm par an au Luc, contre 1,7 avec la moyenne seule : la nuit la plus
+froide d'une semaine est une nuit claire, donc sèche, et étaler la pluie sur son
+écart fait neiger un jour de ciel bleu.
+
+**Ce que la mesure donne**, sur les séries 1964-2023 : Dijon, la plus froide,
+4,7 semaines de neige par an, 30 mm d'eau, un manteau 49 hivers sur 60 (qui ne
+passe la semaine que 29 hivers sur 60) et 62 mm au plus ; Tours et Abbeville,
+deux à trois semaines et 10 à 11 mm ; Mont-de-Marsan, une semaine et 5 mm ; Le
+Luc, une semaine tous les trois ou quatre ans. Aucune année synthétique ne
+neige. Le réchauffement l'efface vite : sur Dijon en 2070-2099, 2,4 semaines
+de neige par an sous SSP1-2,6, 1,6 sous SSP2-4,5, 0,6 sous SSP5-8,5. L'altitude
+la ramène : à 800 m sur la série de Dijon, 14 semaines et un manteau treize
+semaines par an, jusqu'à 221 mm.
+
+**Ce que le bilan d'eau en fait est petit, et c'est attendu en plaine.** Sur
+Dijon, 1978-1997, trois graines : la recharge nette de la nappe (drainage moins
+remontée) baisse de 0,8 % en décembre-février et monte de 4,0 % en mars-avril,
+pour +0,2 % sur l'année. Le drainage **brut**, lui, **monte** en hiver (+2,5 mm), à
+rebours de ce qui était prédit : sous un manteau, le sol ne reçoit plus rien et la
+nappe remonte davantage par capillarité (+4 mm/an), puis la fonte arrive d'un coup
+et redescend. Le lessivage d'hiver de Dijon perd 7 % (0,06 kg N/ha/an sur 0,9) ;
+celui d'Abbeville 1 %. Les stations plus douces ne bougent pas au-delà du
+millième.
 
 ## Cas d'étude : après l'incendie, l'inondation
 

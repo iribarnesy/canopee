@@ -5,6 +5,7 @@ export * from "./game";
 export * from "./grid";
 export * from "./light";
 export * from "./meteo";
+export * from "./neige";
 export * from "./nitrogen";
 export * from "./phenologie";
 export * from "./rng";

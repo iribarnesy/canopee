@@ -19,6 +19,7 @@ import type { DepartFaune, InstallationFaune } from "../engine/faune";
 import { HERBACEES, N_HERBACEES } from "../engine/herbacees";
 import type { WeekWeather } from "../engine/meteo";
 import { profondeurPourStock } from "../engine/nappe";
+import { neigeDeLaSemaine } from "../engine/neige";
 import type { FrequentationDeGuilde } from "../engine/oiseaux";
 import { contextePhenologique, partFloraison } from "../engine/phenologie";
 import { porositeDrainageMm } from "../engine/soil";
@@ -250,6 +251,10 @@ export function construireSnapshot(e: EntreesSnapshot): Snapshot {
     anneeCivile: e.anneeCivile,
     paysage: e.paysage,
     co2Ppm: e.weather.co2Ppm ?? CO2_ACTUEL_PPM,
+    // La neige de la semaine qui s'ouvre, par la loi même du moteur, et le
+    // manteau sur lequel elle s'ouvre (#303). Rien n'est décidé ici.
+    neigeMm: neigeDeLaSemaine(e.weather),
+    manteauNeigeMm: state.soil.manteauNeigeMm,
     stockBrfKg: state.stockBrf.carboneG / 1000 / CARBON_FRACTION,
     pressionGibier: state.pressionGibier,
     // Le bois **couché** compte autant que le debout, et pas pour les mêmes

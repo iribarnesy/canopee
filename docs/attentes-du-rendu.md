@@ -63,8 +63,8 @@ issue au passage suivant.
 tick), `nappeCm` (champ figé), `enEau`, `eau`, `coteM`, `ruMm`, `phInitial`,
 `nappeEquilibreCm`, `ventExposition`, `meteoLabel`.
 
-**À chaque instantané** (`Snapshot`) : la semaine, la météo, l'année civile, le
-CO₂, l'économie, l'inventaire carbone, la biodiversité, les `fluxes` du tick, la
+**À chaque instantané** (`Snapshot`) : la semaine, la météo, la neige, l'année
+civile, le CO₂, l'économie, l'inventaire carbone, la biodiversité, les `fluxes` du tick, la
 pression de gibier, le stock de BRF, le paysage, et le contexte phénologique
 (`pheno`).
 
@@ -96,6 +96,24 @@ Trois mises en garde, parce que chacune est un contresens possible à l'écran :
    incendie. Ce que le vent règle, c'est que deux feux de la même parcelle
    penchent maintenant **du même côté** au lieu de s'éventer autour de leur
    origine.
+
+**La neige** voyage à côté de la météo, et non dedans, parce qu'une moitié
+d'elle est un **état** du sol (#303) :
+
+| Champ | Ce qu'il porte |
+|---|---|
+| `neigeMm` | part de `weather.rainMm` qui tombe en neige la semaine de `weather`, mm d'eau |
+| `manteauNeigeMm` | manteau neigeux au sol sur lequel cette semaine s'ouvre, mm d'équivalent en eau (0 = pas de neige) |
+
+Deux mises en garde :
+
+1. **`rainMm` est toute la précipitation.** La pluie liquide à dessiner vaut
+   `weather.rainMm − neigeMm`. Dessiner un rideau de `rainMm` **et** des flocons
+   de `neigeMm`, c'est faire tomber la même eau deux fois.
+2. **`neigeMm` n'est pas `fluxes.neigeMm`.** Le premier est la neige de la
+   semaine qui s'ouvre, celle de `weather` ; le second, celle de la semaine que
+   le moteur vient de simuler. Le manteau est **un** nombre pour la parcelle :
+   le moteur ne sait pas encore ce que les houppiers interceptent.
 
 Une rose des vents par station reste à faire : les quatre stations partagent
 aujourd'hui le même régime, faute de données (`SyntheticClimate.ventDominantVersRad`
@@ -471,7 +489,7 @@ se cherche pas ».
 |---|---|
 | **Les animaux d'élevage** (poules, volaille en verger) | **Plus tard**, quand le moteur les aura prévus. Pas de sprite d'élevage avant son module : une poule qu'on ne peut ni déplacer ni nourrir se retourne contre nous. La faune **sauvage**, elle, entre dès le lot L9 — le moteur sait déjà la peupler (pression de gibier, broutage, frottis, biodiversité), et la règle est que le nombre et l'activité des bêtes lisent l'état, l'individu restant du décor. |
 | **La vraie 3D** | Non. Raisons au §0 de `docs/interface-visuelle.md` — la première étant que la qualité d'illustration par jour de travail y est bien plus basse, la seconde que le moteur est plat (couronne = disque, ombre = disque décalé) et que la 3D afficherait une précision que le modèle n'a pas. |
-| **La météo volumétrique** | Non : c'est la simulation de l'atmosphère en volume, elle n'a pas de sens sans 3D. L'**effet** (pluie, neige, gel, brume) est dedans et ne coûte rien — `weather` est déjà dans l'instantané. |
+| **La météo volumétrique** | Non : c'est la simulation de l'atmosphère en volume, elle n'a pas de sens sans 3D. L'**effet** (pluie, neige, gel, brume) est dedans et ne coûte rien — `weather` est déjà dans l'instantané, et la neige y a ajouté deux champs (`neigeMm`, `manteauNeigeMm`, #303) : la température ne disait pas s'il avait neigé. |
 | **Le routage de l'eau de surface dans le temps** | Non demandé. La vague d'une crue est une mise en scène ordonnée d'un état hebdomadaire, explicitement bornée : elle ne mouille que ce que `soilNappeCm` et `soilDebordementMm` déclarent mouillé. Depuis #288 la crue elle-même est un événement (`Snapshot.crues`) : l'ordre d'arrivée et le retrait se lisent, il n'y a plus rien à interpoler d'une semaine à l'autre — seulement à l'intérieur d'une semaine. |
 
 ## Branches absorbées
