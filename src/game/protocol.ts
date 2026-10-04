@@ -11,6 +11,7 @@ import type { ScenarioId } from "../engine/climat";
 import type { EauDeSurface } from "../engine/eau_surface";
 import type { DepartFaune, IndividuFaune, InstallationFaune } from "../engine/faune";
 import type { WeekWeather } from "../engine/meteo";
+import type { FrequentationDeGuilde } from "../engine/oiseaux";
 import type { Bordures } from "../engine/paysage";
 import type { ContextePhenologique } from "../engine/phenologie";
 import type { Relief } from "../engine/relief";
@@ -492,6 +493,22 @@ export interface Snapshot {
    * d'avant #255, qu'on ne peut pas rejouer avec sans la faire diverger.
    */
   faune?: readonly IndividuFaune[];
+  /**
+   * **Les oiseaux qui fréquentent la parcelle sans y nicher**, guilde par guilde
+   * (`oiseaux.ts`, #296) : hivernants frugivores, passereaux de haie,
+   * migrateurs de passage. La fréquentation de la **dernière semaine simulée** —
+   * pas un cumul : ce sont des oiseaux qui passent, pas des habitants.
+   *
+   * Une entrée par guilde présente au calendrier cette semaine-là, même à zéro
+   * oiseau : « les grives sont dans la région et votre parcelle n'a rien pour
+   * elles » n'est pas « ce n'est pas la saison ». Chaque entrée dit combien
+   * d'oiseaux (`oiseaux`, entier), attirés par quoi (`ressource`), et **par quels
+   * arbres** (`arbres`, des ids de `trees`, les plus couvrants d'abord) — c'est
+   * ce qui permet de poser l'oiseau là où il mange plutôt qu'au hasard.
+   *
+   * Absent quand la faune est éteinte, comme `faune`.
+   */
+  oiseauxDePassage?: readonly FrequentationDeGuilde[];
   /**
    * Les gîtes qui ont trouvé preneur depuis le dernier instantané.
    *

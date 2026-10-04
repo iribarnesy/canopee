@@ -13,6 +13,7 @@ import type { AidesAnnuelles } from "./aides";
 import type { CrueResult } from "./crue";
 import type { DepartFaune, InstallationFaune } from "./faune";
 import type { WeekWeather } from "./meteo";
+import type { FrequentationDeGuilde } from "./oiseaux";
 import { rngStateFromSeed } from "./rng";
 import type { GameState, Station, TickFluxes } from "./state";
 import { createGameState } from "./state";
@@ -102,6 +103,8 @@ export function advanceWeek(
   /** faune installée cette semaine, et faune partie (faune.ts) */
   installationsFaune: readonly InstallationFaune[];
   departsFaune: readonly DepartFaune[];
+  /** oiseaux qui fréquentent la parcelle sans y nicher, par guilde (oiseaux.ts) */
+  oiseauxDePassage: readonly FrequentationDeGuilde[];
   /** débordement de la semaine, mm par cellule (tick.ts) */
   debordementParCellule: Float32Array;
   /** lumière arrivant au sol, par cellule (tick.ts) */
@@ -130,6 +133,7 @@ export function advanceWeek(
     aides: ticked.aides,
     installationsFaune: ticked.installationsFaune,
     departsFaune: ticked.departsFaune,
+    oiseauxDePassage: ticked.oiseauxDePassage,
     incendie: ticked.incendie,
     tempete: ticked.tempete,
     crue: ticked.crue,
