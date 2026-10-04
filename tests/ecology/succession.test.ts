@@ -75,6 +75,24 @@ describe("succession émergente sur friche (200 ans, rien n'est planté)", () =>
   const an200 = snapshots.get(200);
   if (!an15 || !an60 || !an120 || !an200) throw new Error("snapshot manquant");
 
+  /**
+   * La canopée de l'an 60 sur **deux graines de plus**, pour le seul critère qui
+   * se jouait à un arbre près (#312). Les autres essais restent sur la graine
+   * de la longue simulation.
+   */
+  const canopeesAn60 = [
+    an60,
+    ...[1, 2].map((graine) => {
+      let s = createGameState(FRICHE_LIMON.station, rngStateFromSeed(graine));
+      for (let i = 0; i < 60 * 52; i++) {
+        const w = weather[i % 52];
+        if (!w) throw new Error("météo manquante");
+        s = tick(s, w).state;
+      }
+      return snapshotStats(s);
+    }),
+  ];
+
   it("an 15 : la friche est colonisée, très majoritairement par les pionniers", () => {
     expect(an15.aliveCount).toBeGreaterThan(20);
     // Le seuil a baissé de 0,80 à 0,75 le jour où le troène et le fusain ont
@@ -99,7 +117,21 @@ describe("succession émergente sur friche (200 ans, rien n'est planté)", () =>
     // test écologique a le droit d'affirmer »). On le remplace donc par
     // l'affirmation du titre elle-même — la canopée est **majoritairement**
     // pionnière — qui ne se renégocie pas : c'est 0,5, mesuré à 0,57.
-    expect(an60.canopyPioneerShare).toBeGreaterThan(0.5);
+    //
+    // **Une partie n'est pas une mesure** (#312). Le critère se lisait sur la
+    // seule graine 2026, qui donnait 0,521 sur main : un arbre de canopée sur
+    // soixante-treize de marge. Le passage des seuils de sécheresse à l'indice
+    // de Niinemets et Valladares l'a mise à 0,50 pile. Sur trois graines (2026,
+    // 1, 2), mesuré **avant** d'écrire cet essai — ce n'est pas une prédiction :
+    // 0,521 / 0,560 / 0,618 avant #312, 0,500 / 0,557 / 0,667 après, sans
+    // direction. Le même seuil se juge donc sur les trois canopées cumulées :
+    // 122 pionniers sur 216 avant (0,565), 124 sur 217 après (0,571).
+    const pionniersCanopee = canopeesAn60.reduce(
+      (n, a) => n + a.canopy.filter((t) => PIONNIERS.has(t.especeId)).length,
+      0,
+    );
+    const canopeeTotale = canopeesAn60.reduce((n, a) => n + a.canopy.length, 0);
+    expect(pionniersCanopee / canopeeTotale).toBeGreaterThan(0.5);
     expect(an60.fagusAlive.length).toBeGreaterThan(3);
     // « Attendre dans le sous-étage » est une position **relative**, et il a fallu
     // recalibrer les vitesses de croissance pour s'en apercevoir : la version

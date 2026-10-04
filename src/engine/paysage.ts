@@ -29,7 +29,7 @@
  */
 
 import { ESPECES_V0, type EspeceV0, getEspece } from "./especes";
-import { phFactor, seuilConfortSecheresse } from "./trees";
+import { phFactor } from "./trees";
 
 /** Ce qu'un paysage apporte à la parcelle, dérivé de sa composition. */
 export interface Paysage {
@@ -384,10 +384,14 @@ export function getPaysage(id: string): Paysage {
 /**
  * Une essence peut-elle vivre sur cette station ? Filtre grossier mais
  * suffisant pour écarter les absurdités : le pH doit être dans sa gamme
- * (bordure comprise, comme pour la croissance) et un sol à faible réserve
- * utile exclut les espèces qui exigent de la fraîcheur.
+ * (bordure comprise, comme pour la croissance). **Rien d'autre** : la soif
+ * trie par la mortalité, pas par une liste.
+ *
+ * `_ruMm` n'est plus lu (#312). Il reste dans la signature parce que le jeu
+ * l'appelle ainsi (`PanneauEssences`, `worker`, `GameView`), et que le retirer
+ * touche son périmètre.
  */
-export function especeTenable(espece: EspeceV0, phStation: number, ruMm: number): boolean {
+export function especeTenable(espece: EspeceV0, phStation: number, _ruMm: number): boolean {
   // On réutilise le facteur pH du moteur plutôt qu'une bordure approximative.
   // Ce commentaire disait auparavant « au bord exact de sa gamme, une espèce ne
   // pousse déjà plus du tout, et c'est le cas du hêtre à pH 4,5 » : c'était vrai
@@ -395,24 +399,17 @@ export function especeTenable(espece: EspeceV0, phStation: number, ruMm: number)
   // mettait le zéro **sur** la borne de l'atlas. Une hêtraie acidiphile à luzule
   // existe jusque vers pH 4 ; ce n'est pas l'acidité qui exclut le hêtre des
   // Landes.
-  if (phFactor(espece, phStation) < 0.25) return false;
-  // **C'est la soif qui l'exclut**, et on la lit au bon seuil. Le moteur en tire
-  // deux de la tolérance de l'espèce : celui de la **survie** et celui du
-  // **confort**. La question posée ici n'est pas « qui survivrait » mais « qui
-  // **peuple** l'entourage et sème dessus » — donc le confort.
   //
-  // Le seuil de 0,6 *(à calibrer)* a été posé quand chaque fiche déclarait son
-  // confort sans source. Depuis que le confort sort de l'indice de Niinemets et
-  // Valladares (2006) par une loi commune (#312), il écarte d'un sol à moins de
-  // 120 mm toute espèce sous 2,86 sur leur échelle : le hêtre, le frêne, le
-  // charme, l'aulne, le saule, l'abricotier, **et aussi la callune (2,21) et le
-  // bouleau (1,85)**, que la source dit moins tolérants que le hêtre (2,40). Il
-  // laisse entrer le pommier, le sureau et le houx (3,04). Aucun seuil sur cet
-  // indice ne garde la callune en écartant le hêtre : ce qui fait la flore de
-  // la lande n'est pas la seule tolérance à la sécheresse. Sur un limon
-  // profond, la réserve passe le seuil et plus personne n'est écarté.
-  if (ruMm < 120 && seuilConfortSecheresse(espece) > 0.6) return false;
-  return true;
+  // **La soif ne filtre plus ici** (#312). Une clause écartait d'un sol à moins
+  // de 120 mm toute espèce dont le confort hydrique dépassait 0,6, un seuil
+  // *(à calibrer)* posé quand chaque fiche déclarait son confort sans source,
+  // et écrit pour qu'il sépare la flore de la lande. Depuis que le confort sort
+  // de l'indice de Niinemets et Valladares (2006), la source met le bouleau
+  // (1,85) et la callune (2,21) **sous** le hêtre (2,40) : aucun seuil sur cet
+  // indice ne garde les uns en écartant l'autre, et la clause retirait le
+  // bouleau des semis de la lande. Les semis arrivent donc, et c'est le moteur
+  // qui décide qui survit à l'été.
+  return phFactor(espece, phStation) >= 0.25;
 }
 
 /**
