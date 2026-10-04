@@ -50,6 +50,7 @@ function entrees(state: ReturnType<typeof etatNeuf>): EntreesSnapshot {
     debordementParCellule: ticked.debordementParCellule,
     lumiereAuSol: ticked.lumiereAuSol,
     pollinisateurs: ticked.pollinisateurs,
+    oiseauxDePassage: ticked.oiseauxDePassage,
     refusals: [],
     events: [],
     morts: ticked.morts,
@@ -500,6 +501,34 @@ describe("l'emprise de chaque herbacée par cellule", () => {
     const s = construireSnapshot(entrees(etatNeuf()));
     const buffers = transferablesDuSnapshot(s);
     for (const grille of s.soilHerbeEmprises) expect(buffers).toContain(grille.buffer);
+  });
+});
+
+describe("les oiseaux de passage (#296)", () => {
+  /** Un roncier d'aubépines adultes qui couvre la parcelle, en novembre. */
+  function aubepinesEnNovembre(faune: boolean) {
+    let state = createGameState({ ...STATION, faune }, rngStateFromSeed(7));
+    for (let x = 1; x < STATION.coteM; x += 2) {
+      for (let y = 1; y < STATION.coteM; y += 2)
+        state = plantAt(state, "crataegus_monogyna", x, y, 4);
+    }
+    // En âge de fructifier : c'est la lecture qu'on éprouve, pas la croissance.
+    return { ...state, week: 45, trees: state.trees.map((t) => ({ ...t, ageWeeks: 20 * 52 })) };
+  }
+
+  it("faune éteinte, pas de champ du tout — comme les habitants", () => {
+    const snapshot = construireSnapshot(entrees(aubepinesEnNovembre(false)));
+    expect(snapshot.oiseauxDePassage).toBeUndefined();
+  });
+
+  it("faune allumée, une entrée par guilde de saison, et des arbres que le rendu connaît", () => {
+    const snapshot = construireSnapshot(entrees(aubepinesEnNovembre(true)));
+    const guildes = snapshot.oiseauxDePassage ?? [];
+    const hivernants = guildes.find((g) => g.guildeId === "hivernants_frugivores");
+    expect(hivernants?.oiseaux).toBeGreaterThan(0);
+    const ids = new Set(snapshot.trees.filter((t) => !t.chandelle).map((t) => t.id));
+    for (const g of guildes)
+      for (const id of g.arbres) expect(ids.has(id), `arbre ${id}`).toBe(true);
   });
 });
 

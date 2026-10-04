@@ -305,7 +305,10 @@ describe("Saumos 2022 : planter des feuillus atténue, sans protéger", () => {
     // tirage, comme la surface, et il n'est plus affirmé.
     const liege = surPlusieursGraines(["quercus_suber"]);
     expect(liege.tuesMoyens).toBeLessThan(0.5 * pin.tuesMoyens);
-  });
+    // Seize parties de vingt-six ans : 168 s sur main en CI, 197 s sur une
+    // machine plus chargée, pour un délai par défaut de 180 s. Le délai suit le
+    // coût de la mesure, comme les autres essais à plusieurs graines.
+  }, 600_000);
 
   it("mais l'atténuation reste partielle : le feu passe quand même", () => {
     // Le point à retenir pour qui voudrait conclure de ce jeu : changer
