@@ -61,7 +61,87 @@ qu'un rapport (voir la note de maintenance).
 Séparer calibration et validation : caler un paramètre sur un âge, garder
 l'autre âge pour vérifier.
 
-## Ce que le dernier lot a appris (les oiseaux de passage, #296)
+## Ce que le dernier lot a appris (la soif des petits arbres, #312, non retenu)
+
+Sur la lande sableuse, le hêtre planté reçoit l'été 11 à 20 % de l'eau qu'il
+demande, comme le pin, et n'en souffre jamais. #312 a essayé de corriger ses
+deux seuils de sécheresse, déclarés sans source dans chaque fiche, et de
+retrouver le critère d'origine (hêtre mort, ou sous 0,6 fois la hauteur du
+pin). La PR #321 n'est pas fusionnée : elle n'a eu **aucun effet sur sa
+cible**, et elle faisait tomber un autre essai.
+
+### Ce qui a été essayé
+
+La fiche portait l'indice de tolérance à la sécheresse de Niinemets et
+Valladares (2006, *Ecol. Monogr.* 76, annexe A, échelle de 0 à 5), et une loi
+commune en tirait les deux seuils. Avec i = (5 − D)/5 : confort =
+min(1 ; 1,4·i), survie = 0,6·i. Les deux pentes étaient *(à calibrer)* et
+gardaient le niveau moyen de l'atlas. Le hêtre (2,40) passait de 0,85 / 0,25 à
+0,73 / 0,31, le pin (4,34) de 0,30 / 0,10 à 0,18 / 0,08. Les anciens seuils ne
+suivaient la source qu'à r = −0,59 : la source met le bouleau (1,85) et la
+callune (2,21) **sous** le hêtre.
+
+### Ce que ça a donné
+
+- **Lande** (graines 42, 1, 2, quinze ans), rapport hêtre/pin : 0,772 / 0,683
+  / 0,716, contre 0,774 / 0,672 / 0,718 avant. Le hêtre passait 95 % des
+  semaines de son premier été sous le nouveau seuil d'apparition du stress
+  (0,14) et finissait l'année à 8 points sur 10. Ses racines rejoignaient
+  ensuite l'eau : 0 % des semaines sous ce seuil des années 3 à 10. Rien ne
+  bougeait à quinze ans.
+- **Massif forestier autour de la lande** (graines 1, 2, 3, trente ans) : une
+  fois la clause d'eau du filtre retirée, le hêtre semé s'installe. 48 / 15 / 50
+  vivants, sous le pin (8,7 / 6,6 / 9,8 m contre 12,4 / 11,4 / 12,1), avec une
+  à trois morts de soif quand le bouleau en compte 42 à 50.
+- **Feu** : le tri par l'écorce de `feu.test.ts` est tombé. Les dates des feux
+  avaient bougé, et un feu à l'an 39,4 sur quarante mettait 424 pins sur le
+  front, alors que leurs morts n'arrivent dans `morts` qu'un an plus tard. Le
+  taux du pin passait de 1,0 à 0,35 sans qu'un seul pin ait mieux résisté.
+  Compté sur `incendie.victimes`, il valait de nouveau 654/654. **La mesure de
+  l'essai garde ce défaut sur main.**
+- **Succession** : la part pionnière de la canopée à soixante ans valait 0,50
+  sur la seule graine de l'essai (0,521 sur main, un arbre de marge). Sur trois
+  graines, 124/217 = 0,571 contre 122/216 = 0,565 : aucune direction.
+
+### Le conflit autour du filtre du paysage
+
+`especeTenable` écartait d'un sol à moins de 120 mm toute espèce dont le
+confort dépassait 0,6. Ce seuil avait été posé sur les conforts déclarés, et
+ceux-ci avaient été écrits pour séparer la flore de la lande. Une fois les
+conforts tirés de la source, le filtre retirait le bouleau des semis de la
+lande, et `fenetres-installation.test.ts` perdait sa colonisation (zéro
+bouleau en quarante-deux ans). Sans la clause, le bouleau revient, mais le
+hêtre aussi, et « pas de hêtre sur un podzol » (`paysage.test.ts:49`) tombe.
+Les deux essais ne tenaient ensemble que par une liste de chiffres sans
+source. Aucun seuil sur l'indice ne garde la callune et le bouleau en écartant
+le hêtre.
+
+### Les prédictions fausses
+
+- Rapport hêtre/pin prédit entre 0,55 et 0,72 : il n'a pas bougé.
+- Stress du hêtre la première année prédit entre 3 et 6 : mesuré 8.
+- Pin prédit plus grand de 15 à 25 % : +3,5 %.
+- Une baisse systématique était prédite pour la succession : il n'y en a pas.
+- La callune ou l'ajonc devaient faire tomber un essai de lande : c'étaient
+  le filtre et le tirage.
+- Le liège devait mourir au feu à un taux de 0,35 à 0,48 : 0,29.
+
+Toutes lisaient le seuil et oubliaient que la satisfaction en eau d'un jeune
+arbre remonte avec ses racines.
+
+### Un seuil sourcé qui ne déplace pas la cible ne soigne rien
+
+Remplacer un nombre sans source par un nombre sourcé est juste en soi. Ce
+n'est pas un correctif si la grandeur visée ne bouge pas. Le hêtre de la
+lande ne meurt pas parce que son stress ne se déclenche pas. Sur main, il
+s'accumule sous 0,45 × 0,25 = 0,11 de satisfaction, et le hêtre reste à 0,11–0,20,
+juste au-dessus. Avec le seuil sourcé, il passe dessous une saison, puis ses
+racines l'en sortent. **C'est le déclenchement du stress qu'il faut
+instruire** : `STRESS_ONSET`, la forme de `parLeManqueSemaine`, et ce qu'un
+été passé à 15 % de sa demande coûte réellement à un hêtre, au lieu du seuil
+de l'espèce.
+
+## Ce qu'un lot précédent a appris (les oiseaux de passage, #296)
 
 Un mécanisme sans état — une fréquentation par guilde et par semaine, lue sur
 les baies mûres et le fourré — repris après la perte des notes d'un premier jet.
