@@ -240,6 +240,47 @@ describe("ce que la parcelle offre décide de qui vient", () => {
   });
 });
 
+describe("la lisière, pas la masse", () => {
+  /** Un massif carré d'aubépines, une tige par mètre, du côté donné. */
+  function massif(cote: number): TreeState[] {
+    const arbres: TreeState[] = [];
+    const x0 = 40 - cote / 2;
+    for (let i = 0; i < cote; i++) {
+      for (let j = 0; j < cote; j++) {
+        arbres.push(tige(arbres.length + 1, "crataegus_monogyna", x0 + i + 0.5, x0 + j + 0.5, 3));
+      }
+    }
+    return arbres;
+  }
+
+  it("un massif fermé ne compte que son pourtour : la surface décuple, les oiseaux non", () => {
+    const petit = entree(frequentationOiseaux(massif(10), 20, DIMS, GRAINE), HAIE);
+    const grand = entree(frequentationOiseaux(massif(40), 20, DIMS, GRAINE), HAIE);
+    if (!petit || !grand) throw new Error("les passereaux de haie sont là toute l'année");
+    // Seize fois la surface, quatre fois le pourtour.
+    expect(grand.surfaceM2 / petit.surfaceM2).toBeGreaterThan(10);
+    expect(grand.lisiereM / petit.lisiereM).toBeLessThan(5);
+    expect(grand.attendus / petit.attendus).toBeLessThan(5);
+  });
+
+  it("une haie de 80 m vaut ses deux bords, et l'oiseau est nommé au bord", () => {
+    const e = entree(frequentationOiseaux(haieFruitiere(), 20, DIMS, GRAINE), HAIE);
+    if (!e) throw new Error("les passereaux de haie sont là toute l'année");
+    // Deux côtés de 80 m, plus les bouts.
+    expect(e.lisiereM).toBeGreaterThanOrEqual(160);
+    expect(e.lisiereM).toBeLessThan(260);
+    const grand = massif(40);
+    const nommes = entree(frequentationOiseaux(grand, 20, DIMS, GRAINE), HAIE)?.arbres ?? [];
+    expect(nommes.length).toBeGreaterThan(0);
+    // Pas un arbre du cœur : tous à moins de trois mètres du bord du massif.
+    for (const id of nommes) {
+      const t = grand.find((a) => a.id === id) as TreeState;
+      const auBord = Math.min(t.x - 20, 60 - t.x, t.y - 20, 60 - t.y);
+      expect(auBord, `arbre ${id}`).toBeLessThan(3);
+    }
+  });
+});
+
 describe("aucune essence n'est un cas particulier", () => {
   it("le module ne nomme aucune essence : il lit le bloc `baies` des fiches", () => {
     const source = readFileSync(new URL("../../src/engine/oiseaux.ts", import.meta.url), "utf8");

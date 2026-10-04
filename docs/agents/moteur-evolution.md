@@ -96,8 +96,21 @@ quelques buissons ; sur un massif en fruits elle donne quatre à cinq cents
 oiseaux à l'hectare. La leçon de #280 (« une ancre se confronte à son domaine »)
 avait été appliquée à la valeur, pas à **la variable** dont elle dépend : ici le
 domaine est un taux de couvert, et c'est le moteur lui-même, en laissant pousser
-la haie, qui l'a quitté. Le choix d'une borne étant un jugement de modèle, il est
-décrit et laissé à l'auteur plutôt que tranché par un plafond sans source.
+la haie, qui l'a quitté. Le choix d'une borne était un jugement de modèle : décrit
+et laissé à l'auteur plutôt que tranché par un plafond sans source, il a été
+réglé par **la forme de l'ancre** plutôt que par un nombre. Newton compte au
+kilomètre de haie, Tellería des buissons tout en pourtour : compter la lisière
+au lieu de la surface rend les mêmes oiseaux sur une haie, et sur un massif la
+saturation tombe de la géométrie — la lisière d'une fruticée culmine puis
+décroît quand elle se ferme. Aucune constante n'a bougé.
+
+**Un compteur de bord se trompe en cascade, et la mesure le voit d'un coup.** Le
+premier jet marquait les cellules de lisière dans la grille même qu'il
+parcourait, et chaque cellule marquée cessait de compter comme couverte pour sa
+voisine : toute la surface devenait lisière. Le banc rendait des lisières
+**égales** aux surfaces à l'unité près sur seize ans et trois graines — une
+égalité exacte entre deux grandeurs qui doivent diverger est un défaut, pas un
+résultat.
 
 **La prédiction ratée a aussi désigné un mot.** « Un verger nu n'a presque pas
 d'oiseau de haie » : le moteur en mettait vingt-quatre, parce qu'un pommier

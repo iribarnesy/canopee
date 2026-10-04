@@ -34,10 +34,22 @@
  *    du houppier (`baseHouppierM`) que la lumière fait déjà monter — un fût de
  *    futaie élagué par l'ombre cesse d'être un fourré sans que rien ne le dise.
  *
- * Les deux se comptent en **mètres carrés couverts**, sur la grille d'un mètre
- * de la parcelle, et pas en somme des couronnes : un roncier de quatre mille
- * tiges qui se chevauchent ne vaut pas quatre mille buissons, il vaut la
- * surface qu'il couvre.
+ * Les deux se peignent sur la grille d'un mètre de la parcelle, sans double
+ * compte — un roncier de quatre mille tiges qui se chevauchent ne vaut pas quatre
+ * mille buissons —, et c'est leur **lisière** qui fait le nombre d'oiseaux, pas
+ * leur surface : les cellules couvertes qui touchent le découvert.
+ *
+ * ── **pourquoi la lisière** ──────────────────────────────────────────────────
+ *
+ * Le premier jet comptait la surface, et il tenait sur une haie et sur quelques
+ * buissons. Mais ses deux ancres sont des mesures de **bord** : Newton compte des
+ * couples par kilomètre de haie, et chez Tellería les buissons en fruits couvrent
+ * 1 à 2 % du sol, si bien que chacun est tout en pourtour. Laissée seize ans, une
+ * haie sème ses arbustes sur toute la parcelle ; comptée en surface, elle
+ * annonçait alors deux à trois cents migrateurs par semaine sur 0,64 ha.
+ * Comptée en lisière, une haie vaut ce qu'elle valait, et un massif ne compte que
+ * son pourtour et ses trouées — **la saturation tombe de la géométrie**, sans
+ * plafond écrit.
  *
  * ── **ce que ce module ne fait pas**, **et pourquoi c'est dit** ──────────────
  *
@@ -56,13 +68,9 @@
  * C'est un vrai chantier (il déplacerait les naissances, donc toutes les parties),
  * pas une ligne : il a son issue (#322).
  *
- * **La densité ne sature pas, et c'est la limite du module.** Le nombre
- * d'oiseaux est **linéaire** en surface, et ses deux ancres viennent de haies et
- * de buissons **épars** — 1 à 2 % de couvert chez Tellería. Une haie laissée seize
- * ans sème ses arbustes sur toute la parcelle, et le module annonce alors deux à
- * trois cents migrateurs par semaine sur 0,64 ha, ce que personne n'a vu. Ce qui
- * borne une foule d'oiseaux à l'hectare n'est pas dans le moteur, et le choix de
- * la borne est une décision de modèle laissée ouverte (`docs/realisme.md`, J11).
+ * **Le cœur d'un massif ne compte pour rien.** C'est faux pour quelques espèces
+ * d'intérieur (le rossignol, la fauvette des jardins), et c'est écrit plutôt que
+ * corrigé par un terme sans source.
  *
  * **Le commutateur est celui de la faune.** Éteint (`station.faune`), le tick
  * ne parcourt rien et rend le même tableau figé, comme pour les nicheurs.
@@ -98,11 +106,11 @@ export interface PresenceDeGuilde {
   finSemaine: number;
   ressource: RessourceDePassage;
   /**
-   * Oiseaux par mètre carré de ressource. **Chaque valeur porte sa dérivation**
-   * dans l'atlas plus bas : c'est le seul chiffre qui fait d'une surface une
-   * foule, et il ne doit pas être réglé sur le moteur.
+   * Oiseaux par mètre de **lisière** de la ressource. **Chaque valeur porte sa
+   * dérivation** dans l'atlas plus bas : c'est le seul chiffre qui fait d'une
+   * lisière une foule, et il ne doit pas être réglé sur le moteur.
    */
-  oiseauxParM2: number;
+  oiseauxParMDeLisiere: number;
 }
 
 /** Une guilde d'oiseaux qui fréquente la parcelle sans y nicher. */
@@ -115,30 +123,32 @@ export interface GuildeDePassage {
 }
 
 /**
- * Densité des **passereaux de haie** au mètre carré de fourré.
+ * Densité des **passereaux de haie** au mètre de **lisière** de fourré.
  *
  * Newton (2017, « In praise of hedgerows », *British Birds* 110 : 77-91) résume
  * la littérature : en saison de nidification, **5 à 14 couples par kilomètre de
- * haie**, davantage dans les haies hautes et larges. Le moteur ne connaît pas de « kilomètre de haie », il connaît
- * des mètres carrés de couronne : on divise par la largeur d'une haie, et le
- * Countryside Survey 2000 en donne la classe la plus fréquente — **68 % des haies
- * de Grande-Bretagne font 1 à 2 m de large** (Barr et al. 2004, rapport M03 du
- * CS2000, « Hedgerows », NERC Open Research Archive 4798). Avec le
- * milieu de la fourchette de Newton et la borne haute de la largeur :
+ * haie**, davantage dans les haies hautes et larges. C'est une mesure **au
+ * linéaire**, et c'est sa forme naturelle : les oiseaux d'une haie nichent dans
+ * son épaisseur et mangent sur ses deux bords. Un kilomètre de haie a deux
+ * kilomètres de lisière, d'où, au milieu de la fourchette :
  *
- *     9,5 couples/km × 2 oiseaux ÷ 2 000 m²/km = 0,0095 oiseau/m²
+ *     9,5 couples/km × 2 oiseaux ÷ 2 000 m de lisière = 0,0095 oiseau/m
  *
- * Deux limites, et elles vont en sens contraire. La largeur prise à 2 m plutôt
- * qu'à 1,5 compte un peu **moins** d'oiseaux par mètre carré. Et appliquer une
- * densité de **haie** à un **massif** de fourré en compte **trop** : une haie est
- * toute en lisière, et ses oiseaux mangent dans le champ voisin. Un hectare de
- * roncier plein recevrait ici 95 oiseaux, ce que personne n'a mesuré *(à
- * confirmer)*.
+ * Sur la grille d'un mètre, une haie de 1 à 2 m de large — 68 % des haies de
+ * Grande-Bretagne (Countryside Survey 2000, Barr et al., rapport M03) — est
+ * **toute** en lisière : ses deux rangs de cellules touchent le champ. Plus large,
+ * elle garde ses deux bords et ne gagne rien par son cœur, ce qui est le sens de
+ * la mesure de Newton à une nuance près : il trouve **plus** d'oiseaux dans les
+ * haies larges, et le modèle autant. Un massif fermé, lui, ne compte que son
+ * pourtour et ses trouées. Qu'un hectare de fruticée pleine reçoive alors une
+ * poignée de couples est *(à confirmer)* : la source mesure des haies, pas des
+ * massifs, et l'intérieur d'une fruticée loge quelques espèces (rossignol,
+ * fauvette des jardins) que la lisière ne voit pas.
  */
-export const OISEAUX_DE_HAIE_PAR_M2 = (9.5 * 2) / 2000;
+export const OISEAUX_DE_HAIE_PAR_M_DE_LISIERE = (9.5 * 2) / 2000;
 
 /**
- * Densité des **frugivores** au mètre carré de couronne en baies.
+ * Densité des **frugivores** au mètre de **lisière** des couronnes en baies.
  *
  * Tellería, Ramírez & Pérez-Tris (2005, *Biological Conservation* 124 :
  * 493-502, annexe A) comptent en janvier, sur quatre hivers, **16,9 à 20,8
@@ -150,9 +160,15 @@ export const OISEAUX_DE_HAIE_PAR_M2 = (9.5 * 2) / 2000;
  *
  *     19,6 oiseaux ÷ (11,4 buissons × 5) ≈ 0,34 oiseau par buisson en fruits
  *
- * Il faut une surface par buisson pour en faire une densité au mètre carré, et la
+ * Il faut une taille de buisson pour en faire une densité à la grille, et la
  * source ne la donne pas : un lentisque de deux à trois mètres de diamètre couvre
- * de l'ordre de **7 m²** *(à confirmer)*, d'où **0,049 oiseau/m²**.
+ * de l'ordre de **7 m²** *(à confirmer)*. Sur la grille d'un mètre, un buisson
+ * isolé de cette taille est **tout en lisière** — chacune de ses sept cellules
+ * touche le découvert —, et c'est bien le cas chez Tellería, où les buissons en
+ * fruits couvrent 1 à 2 % du sol. D'où **0,049 oiseau par mètre de lisière**.
+ * Le compter en lisière plutôt qu'en surface est ce qui garde l'ancre dans son
+ * domaine : un massif en fruits ne compte que son pourtour, là où les grives se
+ * posent, et pas toute sa masse.
  *
  * Un recoupement indépendant, et il tombe dans le même ordre de grandeur. Une
  * haie d'aubépine non taillée porte **0,1 à 0,2 kg de cenelles par mètre carré**
@@ -166,7 +182,7 @@ export const OISEAUX_DE_HAIE_PAR_M2 = (9.5 * 2) / 2000;
  * fauvettes et rouges-gorges, et une haie du nord de la Loire. **C'est donc une
  * borne haute** pour une parcelle tempérée.
  */
-export const FRUGIVORES_PAR_M2_DE_BAIES = 0.34 / 7;
+export const FRUGIVORES_PAR_M_DE_LISIERE = 0.34 / 7;
 
 /**
  * **l'atlas des guildes de passage.** Trois, celles que nomme l'issue, et aucune
@@ -190,7 +206,7 @@ export const GUILDES_DE_PASSAGE: readonly GuildeDePassage[] = [
         debutSemaine: 42,
         finSemaine: 11,
         ressource: "baies",
-        oiseauxParM2: FRUGIVORES_PAR_M2_DE_BAIES,
+        oiseauxParMDeLisiere: FRUGIVORES_PAR_M_DE_LISIERE,
       },
     ],
   },
@@ -208,7 +224,7 @@ export const GUILDES_DE_PASSAGE: readonly GuildeDePassage[] = [
         debutSemaine: 0,
         finSemaine: 51,
         ressource: "fourre",
-        oiseauxParM2: OISEAUX_DE_HAIE_PAR_M2,
+        oiseauxParMDeLisiere: OISEAUX_DE_HAIE_PAR_M_DE_LISIERE,
       },
     ],
   },
@@ -229,7 +245,7 @@ export const GUILDES_DE_PASSAGE: readonly GuildeDePassage[] = [
         debutSemaine: 11,
         finSemaine: 17,
         ressource: "fourre",
-        oiseauxParM2: OISEAUX_DE_HAIE_PAR_M2,
+        oiseauxParMDeLisiere: OISEAUX_DE_HAIE_PAR_M_DE_LISIERE,
       },
       {
         // **Le passage d'automne** : 90 % des gobemouches noirs passent entre la
@@ -247,7 +263,7 @@ export const GUILDES_DE_PASSAGE: readonly GuildeDePassage[] = [
         debutSemaine: 33,
         finSemaine: 42,
         ressource: "baies",
-        oiseauxParM2: FRUGIVORES_PAR_M2_DE_BAIES,
+        oiseauxParMDeLisiere: FRUGIVORES_PAR_M_DE_LISIERE,
       },
     ],
   },
@@ -316,6 +332,12 @@ export interface FrequentationDeGuilde {
   ressource: RessourceDePassage;
   /** surface couverte par la ressource, m² (cellules d'un mètre, sans double compte) */
   surfaceM2: number;
+  /**
+   * **lisière** de la ressource, m : les cellules couvertes qui touchent (par un
+   * côté) une cellule qui ne l'est pas, ou le bord de la parcelle. C'est elle,
+   * et non la surface, qui fait le nombre d'oiseaux.
+   */
+  lisiereM: number;
   /** espérance du nombre d'oiseaux, avant d'en faire un entier */
   attendus: number;
   /**
@@ -326,9 +348,10 @@ export interface FrequentationDeGuilde {
    */
   oiseaux: number;
   /**
-   * Les arbres qui attirent, par id, du plus couvrant au moins couvrant — au plus
-   * `ARBRES_NOMMES_MAX`. Tous vivants et présents dans la parcelle de fin de
-   * semaine.
+   * Les arbres qui attirent, par id : ceux dont la couronne porte de la lisière,
+   * du plus fourni en lisière au moins fourni — au plus `ARBRES_NOMMES_MAX`. Tous
+   * vivants et présents dans la parcelle de fin de semaine. Le cœur d'un massif
+   * n'est pas nommé : l'oiseau se pose au bord.
    */
   arbres: readonly number[];
 }
@@ -356,19 +379,28 @@ export function graineDePassage(guildeId: string, semaine: number, graineParcell
   return (h ^ (h >>> 16)) >>> 0;
 }
 
-/** Une ressource peinte sur la grille, et qui l'a peinte. */
+/** Une ressource peinte sur la grille, sa lisière, et qui la porte. */
 interface Couverture {
   surfaceM2: number;
+  lisiereM: number;
   arbres: number[];
 }
 
+/**
+ * Peint la ressource, puis en tire la **lisière** : une cellule couverte dont un
+ * des quatre voisins ne l'est pas, le bord de la parcelle comptant comme
+ * découvert. Une cellule vaut un mètre de lisière *(à calibrer)* : c'est exact le
+ * long d'un bord droit, et cela compte un peu trop dans les coins et sur les
+ * diagonales, où une cellule touche le découvert par deux côtés.
+ */
 function couvrir(
   trees: readonly TreeState[],
   dims: GridDims,
   retenu: (tree: TreeState) => boolean,
 ): Couverture {
-  const grille = new Uint8Array(dims.widthM * dims.heightM);
-  const contributeurs: { id: number; aire: number }[] = [];
+  const { widthM: w, heightM: h } = dims;
+  const grille = new Uint8Array(w * h);
+  const disques: { id: number; x: number; y: number; r: number }[] = [];
   let surfaceM2 = 0;
   for (const tree of trees) {
     if (!retenu(tree)) continue;
@@ -380,11 +412,35 @@ function couvrir(
         surfaceM2++;
       }
     });
-    contributeurs.push({ id: tree.id, aire: r * r });
+    disques.push({ id: tree.id, x: tree.x, y: tree.y, r });
   }
-  contributeurs.sort((a, b) => b.aire - a.aire || a.id - b.id);
+  if (surfaceM2 === 0) return { surfaceM2, lisiereM: 0, arbres: [] };
+  const couvert = (x: number, y: number) =>
+    x >= 0 && y >= 0 && x < w && y < h && grille[y * w + x] !== 0;
+  let lisiereM = 0;
+  for (let y = 0; y < h; y++) {
+    for (let x = 0; x < w; x++) {
+      const i = y * w + x;
+      if (grille[i] !== 1) continue;
+      if (!couvert(x - 1, y) || !couvert(x + 1, y) || !couvert(x, y - 1) || !couvert(x, y + 1)) {
+        grille[i] = 2;
+        lisiereM++;
+      }
+    }
+  }
+  // Chaque arbre est nommé à proportion de la lisière que sa couronne porte.
+  const contributeurs: { id: number; lisiere: number }[] = [];
+  for (const d of disques) {
+    let lisiere = 0;
+    forEachDiscCell(dims, d.x, d.y, d.r, (i) => {
+      if (grille[i] === 2) lisiere++;
+    });
+    if (lisiere > 0) contributeurs.push({ id: d.id, lisiere });
+  }
+  contributeurs.sort((a, b) => b.lisiere - a.lisiere || a.id - b.id);
   return {
     surfaceM2,
+    lisiereM,
     arbres: contributeurs.slice(0, ARBRES_NOMMES_MAX).map((c) => c.id),
   };
 }
@@ -428,7 +484,7 @@ export function frequentationOiseaux(
       baies ??= couvrir(trees, dims, (t) => porteDesBaies(t, semaineDeLAnnee));
       couverture = baies;
     }
-    const attendus = couverture.surfaceM2 * presence.oiseauxParM2;
+    const attendus = couverture.lisiereM * presence.oiseauxParMDeLisiere;
     const entiers = Math.floor(attendus);
     const tirage = tirageLocal(graineDePassage(guilde.id, semaine, graineParcelle));
     const oiseaux = entiers + (tirage < attendus - entiers ? 1 : 0);
@@ -436,6 +492,7 @@ export function frequentationOiseaux(
       guildeId: guilde.id,
       ressource: presence.ressource,
       surfaceM2: couverture.surfaceM2,
+      lisiereM: couverture.lisiereM,
       attendus,
       oiseaux,
       arbres: oiseaux > 0 ? couverture.arbres : [],
