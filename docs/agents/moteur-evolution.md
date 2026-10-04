@@ -61,7 +61,86 @@ qu'un rapport (voir la note de maintenance).
 Séparer calibration et validation : caler un paramètre sur un âge, garder
 l'autre âge pour vérifier.
 
-## Ce que le dernier lot a appris (la soif des petits arbres, #312, non retenu)
+## Ce que le dernier lot a appris (la litière en deux fractions, #309, non retenu)
+
+**Essayé dans #323, non retenu : le gain visé ne vient pas.** Le code reste
+consultable sur la branche `claude/moteur-litiere-309`.
+
+### Le mécanisme essayé
+
+La litière recevait une fraction ligneuse, sous-pool de la litière comme
+l'ammonium l'est du minéral. Seul le broyat y entrait. Chaque fraction se
+décomposait sous la même règle (C9, `litterDecayRate` = 0,6/(C/N)), à la vitesse
+de **son** C/N : la fine d'abord, puis le bois, qui pouvait prendre ce que les
+feuilles venaient de libérer. L'humus nouveau prenait son azote à la fraction
+dont il venait. Le broyat portait le C/N de ce qu'il contient : les feuilles
+vertes au C/N d'avant résorption (7,5 pour l'aulne), le bois au sien (51 pour un
+aulne de huit ans). `BRF_CN_RATIO` (40, sans source) disparaissait. Sans
+broyat, la partie restait identique à main au bit près.
+
+### Ce qu'il a donné
+
+Gain épandre / vendre des hêtres (`epandre-vs-vendre`), moyenne des graines 5,
+19 et 31, prédictions écrites avant :
+
+| an | 9 | 10 | 12 | 16 | 20 | 25 | 35 |
+|---|---|---|---|---|---|---|---|
+| main (bce64cd) | 0,942 | 0,890 | 0,911 | 0,954 | 0,976 | 0,993 | 1,003 |
+| fractions | 0,947 | 0,912 | 0,909 | 0,949 | 0,972 | 0,989 | 1,001 |
+
+La faim de la première année se creuse moins (+0,022 à l'an 10, prédit +0,01
+à +0,03), puis dure un peu plus, parce que le bois se décompose plus lentement
+qu'au C/N de 40 (−0,005 à l'an 16, toujours sous 1). **Les feuilles portent
+0,4 kg d'azote, le bois 2,8 : c'est le bois qui décide.** Hors geste, vendre
+les vingt aulnes et n'épandre que leurs feuilles vertes donne un gain petit et
+durable : 1,006 à l'an 10, 1,012 à l'an 16, 1,007 à 35 ans. Dans un aulne
+entier broyé, le bois l'efface. Aucun geste du moteur ne rend des feuilles
+seules : l'élagage ne verse rien au sol, la trogne exporte sa tête.
+
+### Les prédictions fausses
+
+- **L'essai de faim du BRF de `sol-vivant` devait casser** : il passait encore,
+  mais pas par la faim (ci-dessous).
+- **Avec l'azote d'un bois d'aulne, la faim d'un mois de février** devait valoir
+  0,2 à 0,6 g/m² : 0,09. L'azote des racines, versé sans carbone, se minéralise
+  vite et la couvre.
+- **Un hêtre broyé en avril** devait creuser le minéral de 0,2 à 1 g/m² : zéro,
+  la strate le vide au printemps sous les deux bras. La même faute a été
+  refaite deux mois plus tard dans le même lot, sur un tas épandu en juin. Un
+  stock vide ne montre pas une faim : elle se lit dans la litière.
+- **Les feuilles seules** devaient rendre un gain qui s'efface à 35 ans : il dure
+  (1,007).
+
+### La vitesse vient du C/N, pas de l'étiquette
+
+Un premier essai du tas comparait un tas de bois à un tas de même carbone et de
+même azote **compté en feuillage**, et prédisait que le bois pèserait plus un an
+après. Faux, à 0,03 % près, et c'était écrit d'avance : sous une seule loi, deux
+fractions de même C/N se décomposent au même rythme, quelle que soit leur
+étiquette. Ce qui sépare deux fractions, c'est qu'elles aient deux C/N. Comparé
+à un tas mêlé au même C/N moyen, le tas aux feuilles séparées rend en effet
+leur azote plus tôt.
+
+### Un essai peut passer pour une autre raison que la sienne
+
+« Épandre du BRF ponctionne l'azote du sol » (`sol-vivant`) broie vingt aulnes
+posés par `plantAt`. Un tel arbre n'a pas d'azote dans son bois, qui ne
+s'accumule que sur le bois neuf. **Sur main**, l'essai passe bien par la faim
+(−0,98 g/m² un mois après, l'azote de la litière monte de 0,01 à 0,34 g/m²),
+mais c'est la faim d'un bois au C/N infini, digéré à la vitesse fixe du BRF.
+**Avec les fractions**, ce bois sans azote ne se décomposait plus, et l'essai
+restait vert par le **paillis** : −0,1 g/m², un sol couvert qui garde plus
+d'azote organique et moins de minéral *(cause supposée)*. Un second critère
+ajouté pour lire la faim, l'azote organique du bloc, passait aussi avec le bois
+inerte. Ce qui discriminait était ce qu'un paillis ne peut pas faire : l'azote
+**du bois** qui monte. Avant de garder une assertion, la faire tourner sur la
+variante où le mécanisme est coupé, et vérifier qu'elle tombe. Et comparer un
+geste au même geste moins ce qu'on mesure : contre des arbres restés debout,
+un broyat dont le bois porte son azote donnait **plus** d'azote minéral, parce
+que couper vingt arbres arrête leur prélèvement et verse l'azote de leurs
+racines.
+
+## Ce qu'un lot précédent a appris (la soif des petits arbres, #312, non retenu)
 
 Sur la lande sableuse, le hêtre planté reçoit l'été 11 à 20 % de l'eau qu'il
 demande, comme le pin, et n'en souffre jamais. #312 a essayé de corriger ses
