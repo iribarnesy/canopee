@@ -77,7 +77,10 @@ travers l'indice sourcé, il retire le bouleau des semis de la lande, et
 `fenetres-installation.test.ts` perd sa colonisation : zéro bouleau en
 quarante-deux ans. Sans la clause d'eau du filtre, le moteur le porte très
 bien (33 années au-dessus de 50 tiges). Le seuil tombe avec les chiffres sur
-lesquels il était posé, même quand on les traduit fidèlement.
+lesquels il était posé, même quand on les traduit fidèlement. La clause a été
+retirée ; un massif voisin sème alors du hêtre sur la lande, et il y tient
+(48 / 15 / 50 vivants à trente ans) : le manque que #312 instruisait se voit
+là, au lieu d'être caché par une liste.
 
 ### Un indice de tolérance ne dit pas qui peuple une station
 
