@@ -61,7 +61,63 @@ qu'un rapport (voir la note de maintenance).
 Séparer calibration et validation : caler un paramètre sur un âge, garder
 l'autre âge pour vérifier.
 
-## Ce que le dernier lot a appris (la neige, #303)
+## Ce que le dernier lot a appris (l'humus stable, #317, non retenu)
+
+Le blé continu sans apport décline encore d'un cinquième tous les vingt ans à
+cent ans, quand la parcelle Nil de Broadbalk ne bouge plus. Le dépôt désignait
+une cause : un humus à un seul pool, sans la fraction stable des jachères nues
+de longue durée (Barré et al. 2010). Elle a été sondée avant d'être écrite.
+Rien n'est entré dans le moteur.
+
+### Un plancher de carbone n'est pas un plancher d'azote
+
+La sonde rendait inerte un quart du stock de départ, la part que Barré trouve
+stable. Le reste se minéralisait à 2 %/an, pour que le sol neuf rende toujours
+le Mh du COMIFER. L'humus du blé finit à 18,5 t C/ha au lieu de 13,5, mais ce
+sont 18,5 t **inertes** : le pool actif est vide. Le blé finit à 0,63 t/ha au
+lieu de 0,89, et l'écart entre ses deux dernières tranches vaut 25 %. À
+l'équilibre, ce que l'humus actif minéralise vaut ce que les résidus lui
+humifient, et ça ne dépend pas de la forme du pool. Un taux actif plus fort
+fait seulement descendre le blé plus vite vers le même point. Avant de poser un
+plancher sous un stock, vérifier que c'est bien ce stock qui nourrit la cible.
+
+### Un déclin qui ne se pose pas peut être un transitoire, pas un mécanisme manquant
+
+Relever les dépôts de 16,2 à 40 kg N/ha/an lève le blé d'un bout à l'autre (1,86
+sur la dernière tranche). Il descend pourtant encore de 10,8 %, au rythme de
+l'humus. L'essai met en blé un sol neuf, riche comme une prairie (74 t C/ha),
+alors que Broadbalk était un champ labouré depuis longtemps en 1843. Le moteur
+vide son pool au temps que Barré mesure (18 à 133 ans) ; il compare un
+transitoire à un équilibre. C'est le dispositif qui est repris (#324), pas le
+moteur.
+
+### Un dispositif d'essai peut cacher la grandeur qu'il prétend isoler
+
+La première jachère nue du banc était en pente (4 %) : l'érosion y a emporté
+46 t C/ha sur 74 en cent vingt ans, et la sonde ne s'y voyait pas. Refaite à
+plat, elle garde 0,37 du carbone à quatre-vingts ans sur main et 0,46 avec la
+sonde, deux valeurs dans la gamme de Barré. Barré choisit des parcelles plates
+et petites, et le banc doit faire de même.
+
+### Le banc du blé sans arbre ne tire rien au hasard
+
+Les graines 4 et 7 rendent le même blé au bit près, et la prairie, la même
+herbe : sans arbre, la parcelle ne consomme aucun tirage. « Une partie n'est
+pas une mesure » ne s'y applique pas, et multiplier les graines n'y achète
+rien. Il faut le dire dans le relevé plutôt que de faire tourner trois fois la
+même partie.
+
+### Les prédictions fausses du lot
+
+Huit prédictions sur treize sont fausses. Elles sont toutes dans les commits
+de la branche, écrites avant la mesure. Celle qui porte la conclusion est
+juste : avec le pool inerte, le blé ne se pose pas. Les autres ratent de beaucoup ce qui bouge
+autour : l'an 2 perd 8 % au lieu de ±3 % ; la jachère garde 9 points de plus
+au lieu de moins de 5 ; le blé relevé par les dépôts monte plus haut que
+prédit. Une prédiction qui donne le bon sens mais pas la bonne taille dit que
+le mécanisme est compris, pas qu'il est quantifié.
+
+## Ce qu'un lot précédent a appris (la neige, #303)
 
 La précipitation tombe en neige sous 2 °C, attend dans un manteau et ne
 recharge le sol qu'en fondant. Quatre leçons, toutes trouvées en mesurant.
