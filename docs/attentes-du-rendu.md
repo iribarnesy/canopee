@@ -394,6 +394,30 @@ la sénescence sur la croissance suppose de recalibrer une seconde fois
 (`docs/realisme.md`, « le houppier doré produit encore »). L'écart vaut deux
 semaines par an sur vingt-six.
 
+**Les oiseaux de passage** (`Snapshot.oiseauxDePassage`, #296) : ceux qui
+fréquentent la parcelle sans y nicher, la **dernière semaine simulée** — pas un
+cumul, ce sont des oiseaux qui passent. Une entrée par guilde présente au
+calendrier cette semaine-là (`hivernants_frugivores`, `passereaux_de_haie`,
+`migrateurs_de_passage`), **même à zéro oiseau** : « les grives sont dans la
+région et la parcelle n'a rien pour elles » n'est pas « ce n'est pas la
+saison ». Chaque entrée porte `oiseaux` (entier, à poser), `ressource` (`baies`
+ou `fourre`, ce qui dit où et comment les poser), `surfaceM2`, `lisiereM` (la
+lisière de la ressource, qui fait le nombre) et `attendus` (l'espérance avant
+l'arrondi), et **`arbres`** : les ids des arbres dont la couronne porte cette
+lisière, vivants et présents dans `trees`, les plus fournis d'abord,
+vingt-quatre au plus, vide quand il n'y a personne. Le cœur d'un massif n'est
+jamais nommé : l'oiseau se pose au bord. C'est l'équivalent du gîte d'`IndividuFaune` :
+l'oiseau se pose là où il mange, pas au hasard. Absent quand la faune est
+éteinte, comme `faune`.
+
+**Ce qu'il faut savoir avant de dessiner** : les oiseaux se comptent à la
+**lisière** de la ressource, pas à sa surface. Une haie de 80 m en reçoit deux ou
+trois toute l'année et une demi-douzaine de grives en novembre ; une fruticée
+qui se ferme en reçoit **moins** qu'une haie qui s'élargit, parce que sa lisière
+se réduit au pourtour (`docs/realisme.md`, J11). Les nombres restent de l'ordre
+de la dizaine sur une parcelle, quelques dizaines au plus pour les grives sur un
+massif en fruits.
+
 ## Ce qui voyage et que personne ne lit encore
 
 Ce contrat trace les demandes du rendu — une demande, une issue, fermée par la

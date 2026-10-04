@@ -119,6 +119,119 @@ rangée **dans** l'ancienne. Une ligne l'aurait vu, chercher dans la copie un
 symbole du dernier lot fusionné (`manteauNeigeMm`). Le décor ne touchait pas
 la neige, et le témoin remesuré est identique ; ce n'était pas garanti.
 
+## Ce qu'un lot précédent a appris (les oiseaux de passage, #296)
+
+Un mécanisme sans état — une fréquentation par guilde et par semaine, lue sur
+les baies mûres et le fourré — repris après la perte des notes d'un premier jet.
+Trois leçons, et la troisième a laissé le critère à moitié.
+
+### Une reprise relit toutes les citations, pas seulement les nombres
+
+Les notes perdues, il restait le code et ses commentaires sourcés. Relues une à
+une, **deux citations sur neuf ne disaient pas ce qu'on leur faisait dire** : le
+passage de printemps du gobemouche était attribué à un article qui ne traite que
+de l'automne, et les dates de la litorne à un auteur qui n'étudie que la grive
+mauvis. Les nombres étaient plausibles, les sources réelles, et le lien entre
+les deux faux. C'est la leçon de #262 (« une citation dans un commentaire n'est
+pas une source ») vérifiée sur un code qu'on n'a pas écrit soi-même — et c'est
+justement là qu'on est tenté de la sauter.
+
+### Un scénario nommé « haie » ne le reste pas : compter ce qu'il est devenu
+
+La haie fruitière plantée pour le banc comptait 80 tiges. Seize ans plus tard,
+elle en comptait 1 400 à 2 000 et couvrait la parcelle : les baies semées « n'importe
+où » par la dissémination « oiseaux » et la ronce qui drageonne en ont fait une
+fruticée. Un banc qui n'aurait imprimé que les oiseaux aurait conclu que « une
+haie attire trois cents migrateurs ». **Imprimer l'effectif à côté de la
+mesure** a dit tout de suite que le dispositif avait changé de nature, et c'est
+ce qui a permis de lire la haie à six ans, quand elle était encore une haie.
+
+### Une ancre a un domaine de couvert, et le moteur sort de lui-même du domaine
+
+La densité de frugivores vient d'un recensement où les buissons en fruits
+couvraient 1 à 2 % du sol. Linéaire en surface, elle tient sur une haie et sur
+quelques buissons ; sur un massif en fruits elle donne quatre à cinq cents
+oiseaux à l'hectare. La leçon de #280 (« une ancre se confronte à son domaine »)
+avait été appliquée à la valeur, pas à **la variable** dont elle dépend : ici le
+domaine est un taux de couvert, et c'est le moteur lui-même, en laissant pousser
+la haie, qui l'a quitté. Le choix d'une borne était un jugement de modèle : décrit
+et laissé à l'auteur plutôt que tranché par un plafond sans source, il a été
+réglé par **la forme de l'ancre** plutôt que par un nombre. Newton compte au
+kilomètre de haie, Tellería des buissons tout en pourtour : compter la lisière
+au lieu de la surface rend les mêmes oiseaux sur une haie, et sur un massif la
+saturation tombe de la géométrie — la lisière d'une fruticée culmine puis
+décroît quand elle se ferme. Aucune constante n'a bougé.
+
+**Un compteur de bord se trompe en cascade, et la mesure le voit d'un coup.** Le
+premier jet marquait les cellules de lisière dans la grille même qu'il
+parcourait, et chaque cellule marquée cessait de compter comme couverte pour sa
+voisine : toute la surface devenait lisière. Le banc rendait des lisières
+**égales** aux surfaces à l'unité près sur seize ans et trois graines — une
+égalité exacte entre deux grandeurs qui doivent diverger est un défaut, pas un
+résultat.
+
+**La prédiction ratée a aussi désigné un mot.** « Un verger nu n'a presque pas
+d'oiseau de haie » : le moteur en mettait vingt-quatre, parce qu'un pommier
+jamais taillé est branchu à 10 % de sa hauteur et passe pour du fourré. La
+définition par la structure lit ce que le moteur fait pousser, pas ce que le mot
+« verger » évoque — un verger haute tige, élagué à 1,8 m, n'en a aucun.
+
+## Ce qu'un lot précédent a appris (l'humus stable, #317, non retenu)
+
+Le blé continu sans apport décline encore d'un cinquième tous les vingt ans à
+cent ans, quand la parcelle Nil de Broadbalk ne bouge plus. Le dépôt désignait
+une cause : un humus à un seul pool, sans la fraction stable des jachères nues
+de longue durée (Barré et al. 2010). Elle a été sondée avant d'être écrite.
+Rien n'est entré dans le moteur.
+
+### Un plancher de carbone n'est pas un plancher d'azote
+
+La sonde rendait inerte un quart du stock de départ, la part que Barré trouve
+stable. Le reste se minéralisait à 2 %/an, pour que le sol neuf rende toujours
+le Mh du COMIFER. L'humus du blé finit à 18,5 t C/ha au lieu de 13,5, mais ce
+sont 18,5 t **inertes** : le pool actif est vide. Le blé finit à 0,63 t/ha au
+lieu de 0,89, et l'écart entre ses deux dernières tranches vaut 25 %. À
+l'équilibre, ce que l'humus actif minéralise vaut ce que les résidus lui
+humifient, et ça ne dépend pas de la forme du pool. Un taux actif plus fort
+fait seulement descendre le blé plus vite vers le même point. Avant de poser un
+plancher sous un stock, vérifier que c'est bien ce stock qui nourrit la cible.
+
+### Un déclin qui ne se pose pas peut être un transitoire, pas un mécanisme manquant
+
+Relever les dépôts de 16,2 à 40 kg N/ha/an lève le blé d'un bout à l'autre (1,86
+sur la dernière tranche). Il descend pourtant encore de 10,8 %, au rythme de
+l'humus. L'essai met en blé un sol neuf, riche comme une prairie (74 t C/ha),
+alors que Broadbalk était un champ labouré depuis longtemps en 1843. Le moteur
+vide son pool au temps que Barré mesure (18 à 133 ans) ; il compare un
+transitoire à un équilibre. C'est le dispositif qui est repris (#324), pas le
+moteur.
+
+### Un dispositif d'essai peut cacher la grandeur qu'il prétend isoler
+
+La première jachère nue du banc était en pente (4 %) : l'érosion y a emporté
+46 t C/ha sur 74 en cent vingt ans, et la sonde ne s'y voyait pas. Refaite à
+plat, elle garde 0,37 du carbone à quatre-vingts ans sur main et 0,46 avec la
+sonde, deux valeurs dans la gamme de Barré. Barré choisit des parcelles plates
+et petites, et le banc doit faire de même.
+
+### Le banc du blé sans arbre ne tire rien au hasard
+
+Les graines 4 et 7 rendent le même blé au bit près, et la prairie, la même
+herbe : sans arbre, la parcelle ne consomme aucun tirage. « Une partie n'est
+pas une mesure » ne s'y applique pas, et multiplier les graines n'y achète
+rien. Il faut le dire dans le relevé plutôt que de faire tourner trois fois la
+même partie.
+
+### Les prédictions fausses du lot
+
+Huit prédictions sur treize sont fausses. Elles sont toutes dans les commits
+de la branche, écrites avant la mesure. Celle qui porte la conclusion est
+juste : avec le pool inerte, le blé ne se pose pas. Les autres ratent de beaucoup ce qui bouge
+autour : l'an 2 perd 8 % au lieu de ±3 % ; la jachère garde 9 points de plus
+au lieu de moins de 5 ; le blé relevé par les dépôts monte plus haut que
+prédit. Une prédiction qui donne le bon sens mais pas la bonne taille dit que
+le mécanisme est compris, pas qu'il est quantifié.
+
 ## Ce qu'un lot précédent a appris (la neige, #303)
 
 La précipitation tombe en neige sous 2 °C, attend dans un manteau et ne

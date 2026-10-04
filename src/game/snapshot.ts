@@ -20,6 +20,7 @@ import { HERBACEES, N_HERBACEES } from "../engine/herbacees";
 import type { WeekWeather } from "../engine/meteo";
 import { profondeurPourStock } from "../engine/nappe";
 import { neigeDeLaSemaine } from "../engine/neige";
+import type { FrequentationDeGuilde } from "../engine/oiseaux";
 import { contextePhenologique, partFloraison } from "../engine/phenologie";
 import { porositeDrainageMm } from "../engine/soil";
 import type { GameState, TickFluxes } from "../engine/state";
@@ -208,6 +209,8 @@ export interface EntreesSnapshot {
   lumiereAuSol?: Float32Array;
   /** pollinisateurs de la dernière semaine simulée, par cellule (`TickResult`) */
   pollinisateurs?: Float32Array;
+  /** oiseaux de passage de la dernière semaine simulée, par guilde (`TickResult`, #296) */
+  oiseauxDePassage?: readonly FrequentationDeGuilde[];
   refusals: ActionRefusal[];
   events: GameEvent[];
   morts: MortDeLaSemaine[];
@@ -349,6 +352,11 @@ export function construireSnapshot(e: EntreesSnapshot): Snapshot {
     // du tick, ils sont là. On recopie l'absence telle quelle — elle dit « pas
     // de faune dans cette partie », ce qu'un tableau vide ne dirait pas.
     ...(state.faune ? { faune: state.faune } : {}),
+    // **Les oiseaux de passage**, eux, sont un flux du tick (#296) : la
+    // fréquentation de la dernière semaine simulée. Même convention que les
+    // habitants pour l'absence — faune éteinte, pas de champ du tout ; allumée
+    // mais aucun tick encore, une liste vide.
+    ...(station.faune ? { oiseauxDePassage: e.oiseauxDePassage ?? [] } : {}),
     installationsFaune: e.installationsFaune,
     departsFaune: e.departsFaune,
     incendie: e.incendie,
