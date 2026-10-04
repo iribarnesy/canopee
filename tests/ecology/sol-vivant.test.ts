@@ -184,22 +184,28 @@ describe("la faim d'azote (C9)", () => {
   });
 
   it("épandre du BRF ponctionne l'azote du sol avant de le rendre", () => {
-    // Deux parcelles identiques ; sur l'une, on broie vingt hêtres sur place.
+    // Deux parcelles identiques ; sur l'une on broie vingt hêtres sur place, sur
+    // l'autre on les vend.
     //
-    // **L'essai a changé de broyat, et c'est le critère qui l'a demandé** (#309).
-    // Il broyait vingt aulnes posés à six mètres par `plantAt`, en février. Un
-    // arbre posé ainsi n'a pas d'azote dans son bois — il ne s'accumule que sur
-    // le bois neuf —, et le broyat avait une vitesse fixe : ce bois sans azote
-    // se décomposait quand même, au C/N infini, et affamait le sol (−1,1 g/m²
-    // un mois après). Depuis que la fraction ligneuse a la vitesse de son
-    // propre C/N, un bois sans azote ne se décompose plus, et l'essai passait
-    // par le **paillis** (−0,1 g/m² : le sol couvert reste plus humide), pas par
-    // la faim qu'il nomme.
+    // **L'essai a été réécrit sur son critère** (#309). Il broyait vingt aulnes
+    // posés à six mètres par `plantAt`, et les comparait à des aulnes laissés
+    // debout. Trois choses le faisaient passer, dont aucune n'était la faim :
     //
-    // Rendu à l'aulne l'azote de son bois (`cnBois`, 54), la faim d'un mois de
-    // février se perd dans l'azote que les racines rendent : −0,09 g/m². Le
-    // critère (C9) parle d'un matériau à C/N **élevé** : c'est le bois de hêtre
-    // (`cnBois`, 179), coupé au printemps, quand les décomposeurs travaillent.
+    // - un arbre posé par `plantAt` n'a pas d'azote dans son bois (il ne
+    //   s'accumule que sur le bois neuf). Tant que le broyat avait une vitesse
+    //   fixe, ce bois au C/N infini se décomposait quand même et prenait tout
+    //   son azote au sol : −1,1 g/m² un mois après. Depuis que la fraction
+    //   ligneuse a la vitesse de son propre C/N, il ne se décompose plus ;
+    // - l'essai passait alors par le **paillis**, −0,1 g/m² : le sol couvert
+    //   reste plus humide, et son humus s'y minéralise moins ;
+    // - rendu au bois son azote, le broyat donnait **plus** d'azote minéral que
+    //   des arbres restés debout. Couper vingt arbres arrête leur prélèvement
+    //   et verse l'azote de leurs racines à la litière.
+    //
+    // Le témoin est donc une coupe **vendue** : mêmes arbres abattus, mêmes
+    // racines laissées, seul le broyat diffère. Et le bois est celui que le
+    // critère (C9) désigne, à C/N élevé : du hêtre, à l'azote que le moteur
+    // assigne à son bois (`cnBois`, 179).
     const construire = () => {
       let state = createGameState(STATION, rngStateFromSeed(2));
       const ids: number[] = [];
@@ -230,28 +236,34 @@ describe("la faim d'azote (C9)", () => {
       const idx = cellules();
       return idx.reduce((a, i) => a + (s.soil.mineralNG[i] ?? 0), 0) / idx.length;
     };
-    const COUPE = 14; // début avril
-    const suivre = (epandre: boolean) => {
+    const COUPE = 5;
+    const azoteDuBois = (s: typeof base.state) =>
+      cellules().reduce((a, i) => a + (s.soil.litiereBoisNG[i] ?? 0), 0);
+    const boisN: number[] = [];
+    const suivre = (devenir: "epandre" | "vendre") => {
       let state = construire().state;
-      const actions: GameAction[] = epandre
-        ? [{ type: "couper", week: COUPE, treeIds: base.ids, devenir: "epandre" }]
-        : [];
+      const actions: GameAction[] = [{ type: "couper", week: COUPE, treeIds: base.ids, devenir }];
       const serie: number[] = [];
       for (let i = 0; i < 60; i++) {
         const w = WEATHER[i % WEATHER.length];
         if (!w) throw new Error("météo manquante");
         state = advanceWeek(state, w, actions).state;
         serie.push(azoteMineral(state));
+        if (devenir === "epandre") boisN.push(azoteDuBois(state));
       }
       return serie;
     };
-    const avecBrf = suivre(true);
-    const sans = suivre(false);
-    // Un mois après le broyage, le sol **en a moins** que s'il n'avait rien reçu :
+    const avecBrf = suivre("epandre");
+    const sans = suivre("vendre");
+    // Un mois après le broyage, le sol **en a moins** que si le bois était parti :
     // les décomposeurs se servent avant les plantes. C'est la raison pour
     // laquelle on n'enfouit pas du BRF juste avant de planter.
     const apresUnMois = COUPE + 4;
     expect(avecBrf[apresUnMois] ?? 0).toBeLessThan(sans[apresUnMois] ?? 0);
+    // Et c'est bien la faim, pas le paillis : l'azote du bois **monte** après
+    // l'épandage. Un paillis ne peut rien y ajouter ; seuls les décomposeurs,
+    // qui le prennent au sol pour digérer un bois trop pauvre (C9).
+    expect(boisN[apresUnMois] ?? 0).toBeGreaterThan(boisN[COUPE] ?? 0);
     // Rien n'est perdu pour autant : le total (minéral + litière) reste
     // supérieur, c'est ce que vérifie epandre-vs-vendre.test.ts.
   });
