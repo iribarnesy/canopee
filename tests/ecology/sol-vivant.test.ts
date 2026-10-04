@@ -12,7 +12,13 @@ import { describe, expect, it } from "vitest";
 import { serieMeteoPour } from "../../src/data/meteo";
 import type { GameAction } from "../../src/engine/actions";
 import { applyAction, LABOUR_PERTE_HUMUS } from "../../src/engine/actions";
-import { CN_HUMUS, T_HA_TO_G_M2 } from "../../src/engine/carbon";
+import {
+  CN_HUMUS,
+  cnHumusDuProfil,
+  T_HA_TO_G_M2,
+  treeTotalCarbonKg,
+} from "../../src/engine/carbon";
+import { getEspece } from "../../src/engine/especes";
 import { advanceWeek } from "../../src/engine/game";
 import { serieToWeeks } from "../../src/engine/meteo";
 import { azoteNetDecomposition } from "../../src/engine/nitrogen";
@@ -20,6 +26,7 @@ import { rngStateFromSeed } from "../../src/engine/rng";
 import { ruHorizonMm } from "../../src/engine/soil";
 import { createGameState, plantAt, type Station } from "../../src/engine/state";
 import { LIMON_RICHE } from "../../src/engine/stations";
+import { cnBois } from "../../src/engine/trees";
 
 const SERIE = serieMeteoPour("limon-riche");
 if (!SERIE) throw new Error("série manquante");
@@ -183,6 +190,16 @@ describe("la faim d'azote (C9)", () => {
 
   it("épandre du BRF ponctionne l'azote du sol avant de le rendre", () => {
     // Deux parcelles identiques ; sur l'une, on broie vingt aulnes sur place.
+    //
+    // **Les aulnes portent l'azote de leur bois** (#309). `plantAt` pose un
+    // arbre de six mètres sans azote dans le bois : celui-ci ne s'accumule que
+    // sur le bois neuf. Tant que le broyat avait une vitesse fixe, ce bois sans
+    // azote se décomposait quand même et affamait le sol. Depuis que la
+    // fraction ligneuse a la vitesse de son propre C/N, un bois sans azote a un
+    // C/N infini et ne se décompose pas : l'essai passait encore, mais par le
+    // paillis (−0,1 g/m² un mois après, contre −1,1 avec la faim), et plus par
+    // la faim qu'il nomme. On donne donc au bois l'azote d'un bois d'aulne, au
+    // C/N que le moteur lui assigne (`cnBois`, 54).
     const construire = () => {
       let state = createGameState(STATION, rngStateFromSeed(2));
       const ids: number[] = [];
@@ -191,7 +208,15 @@ describe("la faim d'azote (C9)", () => {
         const dernier = state.trees[state.trees.length - 1];
         if (dernier) ids.push(dernier.id);
       }
-      return { state, ids };
+      const trees = state.trees.map((t) => {
+        const e = getEspece(t.especeId);
+        return {
+          ...t,
+          azoteBoisG: (treeTotalCarbonKg(e, t.diametreCm, t.heightM) * 1000) / cnBois(e),
+        };
+      });
+      const avecBois: typeof state = { ...state, trees };
+      return { state: avecBois, ids };
     };
     const base = construire();
     const cellules = () => {
@@ -203,6 +228,16 @@ describe("la faim d'azote (C9)", () => {
       const idx = cellules();
       return idx.reduce((a, i) => a + (s.soil.mineralNG[i] ?? 0), 0) / idx.length;
     };
+    // L'azote organique du bloc : litière et humus.
+    const azoteOrganique = (s: typeof base.state) =>
+      cellules().reduce(
+        (a, i) =>
+          a +
+          (s.soil.litterNG[i] ?? 0) +
+          (s.soil.humusCG[i] ?? 0) / cnHumusDuProfil(STATION.profil),
+        0,
+      );
+    const gainOrganique = { avec: 0, sans: 0 };
     const suivre = (epandre: boolean) => {
       let state = construire().state;
       const actions: GameAction[] = epandre
@@ -214,11 +249,18 @@ describe("la faim d'azote (C9)", () => {
         if (!w) throw new Error("météo manquante");
         state = advanceWeek(state, w, actions).state;
         serie.push(azoteMineral(state));
+        // Après la semaine de la coupe (le broyat est au sol), puis un mois plus tard.
+        if (i === 5) gainOrganique[epandre ? "avec" : "sans"] -= azoteOrganique(state);
+        if (i === 5 + 4) gainOrganique[epandre ? "avec" : "sans"] += azoteOrganique(state);
       }
       return serie;
     };
     const avecBrf = suivre(true);
     const sans = suivre(false);
+    // La faim elle-même : l'azote **passe** du sol minéral à la matière organique
+    // — au bois qui se décompose, puis à l'humus qu'il forme (C9). C'est ce qui
+    // la distingue d'un paillis qui changerait seulement l'eau du sol.
+    expect(gainOrganique.avec).toBeGreaterThan(gainOrganique.sans);
     // Un mois après le broyage, le sol **en a moins** que s'il n'avait rien reçu :
     // les décomposeurs se servent avant les plantes. C'est la raison pour
     // laquelle on n'enfouit pas du BRF juste avant de planter.
