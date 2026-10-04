@@ -199,9 +199,9 @@ describe("ce que le blé rend, contre une source extérieure au moteur", () => {
     // 0,96 / 0,78 ; avec en plus l'ancienne perte d'humus au labour (5 %, sans
     // source, trois à quatre fois West et Post 2002) : 2,94 / 1,18 / 0,83 / 0,79
     // / 0,79 / 0,70. La dernière tranche s'écarte de la précédente de 11,5 % :
-    // il ralentit encore à cent vingt ans, un humus à un seul pool n'ayant pas
-    // la fraction stable que les jachères nues de longue durée isolent (Barré
-    // et al. 2010).
+    // il ralentit encore à cent vingt ans. La fraction d'humus stable des
+    // jachères nues de longue durée (Barré et al. 2010) n'en est pas la cause
+    // (#317, voir plus bas).
     const r = culture({ ans: 121, cote: 30, rayonM: 14 });
     const an2 = r[2] ?? 0;
     const tranche = (debut: number) => {
@@ -230,7 +230,10 @@ describe("ce que le blé rend, contre une source extérieure au moteur", () => {
     // soixante-dix ans, et le moteur ne sait pas encore la tenir : un humus à
     // un seul pool, sans fraction stable, se vide sans plancher (Barré et al.
     // 2010). La borne est retirée, avec l'accord de l'auteur sur les bornes sans
-    // source ; le manque est porté par #317, et C16 le dit.
+    // source. #317 a sondé la fraction d'humus stable : elle pose un plancher
+    // au carbone, pas à l'azote, et le blé descend plus vite (0,63 au lieu de
+    // 0,89). Ce qui reste est le transitoire d'un sol neuf mis en blé, et c'est
+    // le dispositif qui est repris (#324) ; C16 le dit.
   }, 900_000);
 });
 
