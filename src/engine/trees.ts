@@ -650,20 +650,48 @@ const ROOT_CROWN_RATIO = 1.2;
 const TRANSPIRATION_COEFF = 0.9;
 
 /**
+ * Ce qu'un arbre met de racines en profondeur, au plus, par mètre de hauteur
+ * quand il est encore petit.
+ *
+ * Christina et al. (2011, *Ecosphere* 2 : art27) ont suivi le front racinaire
+ * d'une chronoséquence de plantations d'eucalyptus sur sol profond, sans
+ * obstacle : il se tient à 85 % de la hauteur moyenne des peuplements de moins
+ * de vingt mètres, et les deux avancent presque au même rythme. Un plant de
+ * trente centimètres n'a donc pas vingt-cinq centimètres de racines du seul fait
+ * d'exister : il en a ce que sa taille lui a laissé le temps de faire.
+ *
+ * *(À confirmer pour les essences tempérées.)* La mesure est faite sur un
+ * eucalyptus, qui pousse vite en haut comme en bas. Un semis de hêtre d'un an
+ * mesure 12 à 18 cm (Bolte et al. 2016, *Front. Plant Sci.* 7 : 751), et son
+ * pivot est du même ordre *(à confirmer, aucune mesure trouvée)*. Le pin
+ * sylvestre fait mentir la règle dans l'autre sens : son pivot peut atteindre
+ * 40 cm six mois après la germination (Moser et al. 2015, cité par Moser et al.
+ * 2016, *Ann. For. Sci.* 73 : 959), bien plus que sa tige. La règle est donc un
+ * plafond commun, qui ignore les pivots précoces de certaines espèces.
+ */
+const FRONT_RACINAIRE_PAR_HAUTEUR = 0.85;
+
+/**
  * Profondeur que l'arbre **pourrait** atteindre : ce que son espèce et sa taille
  * permettent, borné par ce que le sol laisse pénétrer (roche, alios).
  * C'est un plafond, pas la profondeur réelle — voir `nouvelleProfondeurRacines`.
+ *
+ * Deux bornes de taille. La courbe d'espèce sature vers la taille adulte ; elle
+ * part de 25 cm *(à calibrer)*, ce qui donnait vingt-cinq centimètres à un arbre
+ * de hauteur nulle et vingt-trois à tout semis dès sa levée (#312). Le front
+ * racinaire, lui, ne dépasse pas `FRONT_RACINAIRE_PAR_HAUTEUR` fois la hauteur :
+ * c'est lui qui borne un arbre de moins de quarante centimètres environ, la
+ * courbe d'espèce ensuite.
  */
 export function profondeurRacinesCm(
   espece: EspeceV0,
   heightM: number,
   solPenetrableCm: number,
 ): number {
-  // Un jeune plant explore déjà 20-30 cm ; l'approfondissement suit la
-  // croissance et sature quand l'arbre atteint sa taille adulte.
   const maturite = Math.min(1, (heightM / (0.6 * espece.hauteurMaxM)) ** 0.7);
-  const potentiel = 25 + (espece.racines.profondeurMaxCm - 25) * maturite;
-  return Math.max(15, Math.min(potentiel, solPenetrableCm));
+  const parEspece = 25 + (espece.racines.profondeurMaxCm - 25) * maturite;
+  const parLaTaille = FRONT_RACINAIRE_PAR_HAUTEUR * heightM * 100;
+  return Math.min(parEspece, parLaTaille, solPenetrableCm);
 }
 
 /**
@@ -676,8 +704,7 @@ export function profondeurRacinesCm(
  * d'un an reste sous 60 cm (`racines.test.ts`), et qu'un hêtre de vingt mètres
  * jamais assoiffé ne porte pas 36 à 44 cm de racines (rapport racines/hauteur
  * 0,018 à 0,022, contre 0,04 à 0,06 aux relevés d'arrachage). Une fraction
- * constante de 0,8 tient les deux : le **potentiel** d'un semis est déjà faible
- * (`profondeurRacinesCm`, 40 cm pour un chêne d'un an, donc 32 cm de plancher).
+ * constante de 0,8 tient les deux : le **potentiel** d'un semis est déjà faible.
  *
  * Et c'est la mesure qui le demande. Bakker et al. (2008, *J. For. Res.*
  * 13 : 176) ont suivi des hêtraies de 9, 26, 82 et 146 ans jusqu'à 120 cm : la
@@ -690,15 +717,29 @@ export function profondeurRacinesCm(
  *
  * Ce n'est pas la plasticité qui change : au-dessus du plancher, la soif fait
  * toujours descendre les racines jusqu'au potentiel (`nouvelleProfondeurRacines`).
+ *
+ * Il n'a plus de minimum en centimètres (#312). Les 15 cm d'ici et les 20 cm des
+ * semeurs donnaient à tout semis une profondeur que sa taille ne justifiait
+ * pas ; le plancher suit maintenant le potentiel jusqu'à zéro.
  */
 const RACINES_PLANCHER = 0.8;
 
 /**
- * Part du potentiel garantie à cette taille. Constante (voir `RACINES_PLANCHER`) ;
- * la signature garde l'espèce et la hauteur, que lisent ses appelants.
+ * Profondeur racinaire d'un arbre qu'on **instancie** à une taille donnée, cm :
+ * le plancher que `nouvelleProfondeurRacines` lui garantirait de toute façon.
+ *
+ * Les semeurs posaient 20 cm quelle que soit la hauteur demandée (#84) : un arbre
+ * instancié à vingt-cinq mètres avait les racines d'un semis pendant sa première
+ * semaine, et un semis de trente centimètres celles d'un plant plus grand que lui
+ * (#312). Ce n'est pas une faveur : c'est l'état qu'il aurait s'il avait poussé
+ * jusque-là sans manquer d'eau.
  */
-export function partPlancherRacines(_espece: EspeceV0, _heightM: number): number {
-  return RACINES_PLANCHER;
+export function racinesDeDepartCm(
+  espece: EspeceV0,
+  heightM: number,
+  solPenetrableCm: number,
+): number {
+  return RACINES_PLANCHER * profondeurRacinesCm(espece, heightM, solPenetrableCm);
 }
 /** Vitesse maximale d'approfondissement d'un arbre assoiffé, cm/an *(à calibrer)*. */
 const APPROFONDISSEMENT_CM_AN = 25;
@@ -717,10 +758,7 @@ export function nouvelleProfondeurRacines(
   season: number,
 ): number {
   const potentiel = profondeurRacinesCm(espece, tree.heightM, solPenetrableCm);
-  const plancher = Math.min(
-    potentiel,
-    Math.max(15, partPlancherRacines(espece, tree.heightM) * potentiel),
-  );
+  const plancher = RACINES_PLANCHER * potentiel;
   // La soif (et elle seule) déclenche l'investissement vers le bas.
   const soif = Math.max(0, 1 - waterSatisfaction);
   const gain = (APPROFONDISSEMENT_CM_AN / 52) * season * soif;

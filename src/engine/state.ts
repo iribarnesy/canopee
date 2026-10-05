@@ -33,8 +33,7 @@ import { profondeurPenetrableCm, ruHorizonMm } from "./soil";
 import { geometrieTranches } from "./tranches";
 import {
   diametreInitialCm,
-  partPlancherRacines,
-  profondeurRacinesCm,
+  racinesDeDepartCm,
   type TreeState,
   tirerVigueurIndividuelle,
 } from "./trees";
@@ -958,20 +957,6 @@ export function createGameState(
   };
 }
 
-/** Proto-action : planter un plant à une position donnée (30 cm par défaut). */
-/**
- * Profondeur racinaire d'un arbre qu'on **instancie** à une taille donnée, cm.
- *
- * Les deux semeurs posaient 20 cm quelle que soit la hauteur demandée (#84) :
- * un arbre instancié à vingt-cinq mètres — ce que font une bonne part des essais
- * écologiques et le laboratoire — avait donc les racines d'un semis pendant sa
- * première semaine. Tout le reste de son état est pourtant dérivé de sa hauteur,
- * le diamètre compris.
- *
- * On lui donne donc le **plancher** que `nouvelleProfondeurRacines` lui garantirait
- * de toute façon, et jamais moins que les 20 cm d'un semis. Ce n'est pas une
- * faveur : c'est l'état qu'il aurait s'il avait poussé jusque-là.
- */
 /** Les tranches de nitrate au premier jour : tout l'azote de départ en surface. */
 function nitrateTranchesInitiales(station: Station, n: number): Float64Array {
   const g = geometrieTranches(station.profil);
@@ -986,15 +971,12 @@ function nitrateTranchesInitiales(station: Station, n: number): Float64Array {
   return out;
 }
 
+/** Profondeur racinaire d'un arbre qu'on instancie (`racinesDeDepartCm`, trees.ts). */
 function racinesInitialesCm(especeId: string, heightM: number, station: Station): number {
-  const penetrable = profondeurPenetrableCm(station.profil);
-  const potentiel = profondeurRacinesCm(getEspece(especeId), heightM, penetrable);
-  // Le plancher que `nouvelleProfondeurRacines` lui garantirait (trees.ts) : la
-  // constante figée ici à 0,35 avait divergé de celle des arbres (#247).
-  const espece = getEspece(especeId);
-  return Math.max(20, Math.min(potentiel, partPlancherRacines(espece, heightM) * potentiel));
+  return racinesDeDepartCm(getEspece(especeId), heightM, profondeurPenetrableCm(station.profil));
 }
 
+/** Proto-action : planter un plant à une position donnée (30 cm par défaut). */
 export function plantAt(
   state: GameState,
   especeId: string,
