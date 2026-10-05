@@ -570,7 +570,6 @@ describe("un incendie sur la lande, en conditions de jeu", () => {
       state = r.state;
       for (const m of r.morts) {
         mortsTotales[m.especeId] = (mortsTotales[m.especeId] ?? 0) + 1;
-        if (m.cause === "feu") tuesParLeFeu[m.especeId] = (tuesParLeFeu[m.especeId] ?? 0) + 1;
       }
       if (r.incendie) {
         incendies++;
@@ -585,6 +584,17 @@ describe("un incendie sur la lande, en conditions de jeu", () => {
           if (brulees.has(celluleDe(t.x, t.y))) {
             dansLeFront[t.especeId] = (dansLeFront[t.especeId] ?? 0) + 1;
           }
+        }
+        // Le **numérateur**, relevé la même semaine : les victimes que le feu a
+        // tuées sans rejet, celles qui deviendront des morts « feu ». Les compter
+        // dans `morts` les faisait arriver un an plus tard, et un feu de la
+        // dernière année mettait ses arbres au dénominateur sans jamais les
+        // mettre au numérateur.
+        const especeDe = new Map(avant.trees.map((t) => [t.id, t.especeId]));
+        for (const v of r.incendie.victimes) {
+          if (v.rejet) continue;
+          const especeId = especeDe.get(v.id);
+          if (especeId) tuesParLeFeu[especeId] = (tuesParLeFeu[especeId] ?? 0) + 1;
         }
         semainesDIncendie.push({
           victimes: r.incendie.victimes,
@@ -678,6 +688,16 @@ describe("un incendie sur la lande, en conditions de jeu", () => {
     // En taux, le tri est net et bien plus fort que ce que l'ancienne
     // assertion pouvait montrer : le pin y passe en entier, le liège en
     // réchappe largement.
+    //
+    // **Le numérateur se lit dans `incendie.victimes`, pas dans les morts.** Un
+    // arbre tué par le feu reste debout et n'entre dans `morts` qu'un an plus
+    // tard. Quand une branche du moteur a déplacé le tirage (#321, non
+    // fusionnée), un feu est tombé à l'an 39,4 sur quarante (graine 7) : 424
+    // pins et 69 lièges sur le front, aucun dans les morts, et le taux du pin
+    // tombait de 1,0 à 0,35 sans qu'un seul pin ait mieux résisté. Le critère
+    // n'a pas bougé, la mesure si. Relevé sur main, sept graines, prédit avant
+    // la mesure (pin au moins 0,95, liège entre 0,20 et 0,45) : pin 230 sur 230,
+    // liège 26 sur 68, soit 0,38.
     const taux = (id: string) => (tuesParLeFeu[id] ?? 0) / (dansLeFront[id] ?? 1);
     // Les deux espèces ont bien été exposées : sans ça, un taux ne veut rien dire.
     expect(dansLeFront.pinus_sylvestris ?? 0).toBeGreaterThan(0);
