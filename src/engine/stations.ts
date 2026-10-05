@@ -92,9 +92,19 @@ export const LANDE_SECHE: StationClimat = {
     // Podzol landais : un horizon de surface acide, un sable lessivé épais où
     // les racines descendent, puis l'alios induré qui les arrête et fait
     // stagner l'eau l'hiver.
+    //
+    // **Le sable lessivé est tenu en trois couches de même texture** (#312), pas
+    // en une de 55 cm. Un horizon est une seule cellule d'eau : une racine qui y
+    // entrait d'un centimètre buvait au remplissage moyen des 55 cm, et ce
+    // remplissage ne descendait pas sous 0,18 à 0,23 de la réserve, même en
+    // 2022. Dans le sol, le haut du sable sèche avant le bas, sous les racines
+    // de la lande et des jeunes arbres. Même texture, même matière organique,
+    // même réserve utile totale ; seule la résolution change.
     profil: [
       horizon(20, { sable: 85, limon: 10, argile: 5 }, { moPct: 1.8, ph: 4.5 }),
-      horizon(55, { sable: 92, limon: 6, argile: 2 }, { moPct: 0.4, ph: 4.8 }),
+      horizon(18, { sable: 92, limon: 6, argile: 2 }, { moPct: 0.4, ph: 4.8 }),
+      horizon(18, { sable: 92, limon: 6, argile: 2 }, { moPct: 0.4, ph: 4.8 }),
+      horizon(19, { sable: 92, limon: 6, argile: 2 }, { moPct: 0.4, ph: 4.8 }),
       horizon(40, { sable: 88, limon: 8, argile: 4 }, { moPct: 0.3, ph: 5, induration: 0.9 }),
     ],
     initialMineralNKgHa: 15,
