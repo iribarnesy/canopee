@@ -42,7 +42,7 @@ import {
   sujetsDuJournal,
 } from "../render/temps/changements";
 import { combiner, DEBOUT, type Deformation } from "../render/temps/chute";
-import { crueDeLaSemaine } from "../render/temps/crue";
+import { type CrueDeLaSemaine, courantDeLaSemaine } from "../render/temps/crue";
 import { dureeBloquanteMs, planAuRythmeNaturel, planDEllipse } from "../render/temps/ellipse";
 import { SANS_VENT, type VentAPencher } from "../render/temps/feu";
 import type { ArbreRemodele, TigeAbattue } from "../render/temps/geste";
@@ -295,10 +295,15 @@ const RIEN: EllipseDuJeu = {
  * `vitesse` est en semaines par seconde, comme le HUD la donne ; zéro = en
  * pause.
  */
+/** Pas de crue : une constante, pour que le mémo de l'ellipse ne se refasse pas à chaque rendu. */
+const AUCUN_PASSAGE: readonly CrueDeLaSemaine[] = [];
+
 export function useEllipse(
   snapshot: Snapshot | undefined,
   station: StationInfo | undefined,
   vitesse: number,
+  /** la montée et le retrait de la crue à jouer (`useCrue`), dans l'ordre */
+  passagesDeCrue: readonly CrueDeLaSemaine[] = AUCUN_PASSAGE,
 ): EllipseDuJeu {
   // Le temps d'écran d'une semaine borne l'ellipse : une animation remplacée
   // avant sa fin bouge sans rien dire.
@@ -328,14 +333,15 @@ export function useEllipse(
   // Tout sauf la saison, qui se calcule après pour pouvoir lire l'attente.
   const noyau = useMemo<Omit<EllipseDuJeu, "saison">>(() => {
     if (!snapshot || !station) return RIEN;
-    // **La crue de la semaine**, qui n'est pas un événement du moteur mais la
-    // grandeur qu'il donne pour elle (#127) : `soilDebordementMm`, dont il dit
-    // lui-même qu'elle est « la seule base honnête pour une crue ». Elle rejoint
-    // le journal ici, et non dans `journalDe` : celui-ci est **structurel** — il
-    // sert aussi au worker, qui replie un `TickResult` où le champ ne porte pas
-    // le même nom — et il n'a pas d'altitudes sous la main.
-    const crue = crueDeLaSemaine(snapshot.soilDebordementMm, station.altitudesM);
-    const journal = { ...journalDe(snapshot), ...(crue ? { crue } : {}) };
+    // **L'eau de la semaine** (#127, #288) : le courant, que le débit
+    // (`soilDebordementMm`) fait descendre la pente, puis la montée et le
+    // retrait de la crue, que l'événement du moteur ordonne et que `useCrue`
+    // suit d'un instantané à l'autre. Ils rejoignent le journal ici, et non
+    // dans `journalDe` : celui-ci est **structurel** — il sert aussi au worker —
+    // et il n'a ni les altitudes ni la mémoire de l'emprise.
+    const courant = courantDeLaSemaine(snapshot.soilDebordementMm, station.altitudesM);
+    const eaux = [...(courant ? [courant] : []), ...passagesDeCrue];
+    const journal = { ...journalDe(snapshot), ...(eaux.length > 0 ? { crues: eaux } : {}) };
     const plan = auRythmeNaturel
       ? planAuRythmeNaturel([journal])
       : planDEllipse([journal], budgetMs);
@@ -484,7 +490,7 @@ export function useEllipse(
           }
         : {}),
     };
-  }, [snapshot, station, budgetMs, auRythmeNaturel, enMarche]);
+  }, [snapshot, station, budgetMs, auRythmeNaturel, enMarche, passagesDeCrue]);
 
   /**
    * Le contexte de la semaine **précédente**, pour avoir d'où l'on part.

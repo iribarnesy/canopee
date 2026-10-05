@@ -1,56 +1,64 @@
 /**
- * **La crue qui passe** : l'eau qui traverse la parcelle, et le sens dans
- * lequel elle va (docs/interface-visuelle.md §9, lot L7 ; #127).
+ * **La crue** : l'eau qui monte, qui reste, qui court et qui se retire
+ * (docs/interface-visuelle.md §6.5, lot L7 ; #127, #288).
  *
- * ── **ce que le moteur donne, et ce qu'il ne donne pas** ─────────────────────
+ * ── **trois choses, trois sources du moteur** ────────────────────────────────
  *
- * Il n'existe pas d'`IncendieResult` de la crue : pas d'événement daté, pas
- * d'emprise, pas de hauteur de montée, pas de victimes nommées. Ce qui existe
- * est une grandeur **de la semaine**, et le moteur dit lui-même ce qu'elle
- * vaut : `TickResult.debordementParCellule`, « ce qui n'a pas pu rentrer dans
- * le sol de chaque cellule cette semaine — **la seule base honnête pour une
- * crue, une lame d'eau ou une ravine** ».
+ * - **La lame**, l'eau qui **reste** sur une cellule : l'emprise de la crue de
+ *   la semaine et la hauteur posée sur chaque cellule (`CrueResult.cellules`,
+ *   `lamesMm`). C'est un **état** : le terrain la cuit (`lameDeLaCrue`).
+ * - **La montée et le retrait** : les cellules que l'eau a gagnées cette
+ *   semaine, dans l'ordre où le moteur dit qu'elle les a atteintes
+ *   (`CrueResult.rangs`), et celles qu'elle a quittées. Ce sont des
+ *   **passages** de l'ellipse, qui ne laissent rien derrière eux.
+ * - **Le courant**, l'eau qui ne fait que **passer** : `soilDebordementMm`,
+ *   que le moteur dit être un **débit** — le long d'un talweg il cumule tout
+ *   l'amont, jusqu'à des centaines de milliers de millimètres. Ce n'est pas une
+ *   hauteur, et il ne pose donc aucune lame : il fait courir des reflets dans
+ *   le sens de la pente.
  *
- * Ce module s'en tient là. Il ne déduit rien d'un écart entre deux
- * instantanés — ce serait la faute que l'issue nomme —, il montre l'eau **de
- * cette semaine-là**, et il laisse au moteur ce qui manque encore : la montée,
- * le retrait, et qui s'est noyé (issue ouverte).
- *
- * ── **pourquoi un passage et non une couche de plus** ────────────────────────
- *
- * La lame d'eau est **déjà dessinée** : le terrain la cuit dans ses morceaux
- * (`couleurInondee`), à sa profondeur, et c'est l'état. En redessiner une
- * seconde par-dessus mettrait la même information sur deux chemins, et le §2.1
- * dit ce qui leur arrive. Ce module ne dessine donc pas de l'eau : il dessine
- * son **mouvement**, une onde qui descend la parcelle et ne laisse rien
- * derrière elle — la même règle que le voile d'un geste, et elle se teste.
+ * Le premier jet de ce module lisait le débit comme une lame, faute
+ * d'événement : un talweg d'orage se noyait à l'écran sans qu'aucune eau y
+ * reste. Le moteur a donné l'événement en #288 ; la lame vient de lui.
  *
  * ── **le sens de l'eau vient du moteur** ────────────────────────────────────
  *
- * `ordreDeDescente` est la fonction que le moteur emploie pour faire cascader
- * son ruissellement, du plus haut au plus bas. On l'appelle, on ne la recopie
- * pas : le jour où le routage changera, l'onde suivra.
+ * La montée suit l'ordre de l'événement. Le courant suit `ordreDeDescente`, la
+ * fonction avec laquelle le moteur fait cascader son ruissellement : on
+ * l'appelle, on ne la recopie pas. Le retrait, lui, va du plus haut au plus
+ * bas — l'eau quitte d'abord ce qu'elle a gagné en dernier — et c'est de la
+ * mise en scène : le moteur dit quelles cellules se sont asséchées dans la
+ * semaine, pas dans quel ordre.
  *
  * Module **pur** : des nombres et des teintes, aucun sprite, aucun canvas.
  */
 
+import type { CrueResult } from "../../engine/crue";
 import { ordreDeDescente } from "../../engine/relief";
 import type { Teinte } from "../palette";
 import { couleurEau, DEBORDEMENT_PLEIN_MM, estInondee, melange } from "../palette";
 import type { CelluleVoilee } from "./voile";
 
 /**
- * La crue d'une semaine : les cellules noyées, dans l'ordre où l'eau les
- * atteint.
+ * Ce que fait l'eau dans un acte : elle **court** (le débit de la semaine),
+ * elle **monte** (les cellules que la crue gagne) ou elle **se retire** (celles
+ * qu'elle quitte).
+ */
+export type SensDeLEau = "court" | "monte" | "retire";
+
+/**
+ * Un passage d'eau dans l'ellipse : des cellules, dans l'ordre où l'onde les
+ * touche.
  *
  * `rangs` est **normalisé** entre 0 et 1, pour que l'onde se joue de la même
  * façon sur une parcelle d'un hectare et sur un mouchoir de poche : c'est un
  * avancement, pas une distance.
  */
 export interface CrueDeLaSemaine {
-  /** indices de cellule `y * coteM + x`, rangés du haut vers le bas du versant */
+  sens: SensDeLEau;
+  /** indices de cellule `y * coteM + x`, dans l'ordre de passage */
   cellules: readonly number[];
-  /** ce que chacune a refusé cette semaine, mm — même ordre */
+  /** l'eau de chacune, mm — même ordre : le débit pour le courant, la lame sinon */
   lamesMm: readonly number[];
   /** quand l'onde atteint chacune ∈ [0,1] — même ordre */
   rangs: readonly number[];
@@ -81,6 +89,13 @@ export const LARGEUR_DU_FRONT = 0.34;
 export const OPACITE_DE_LONDE = 0.62;
 
 /**
+ * Opacité de l'eau qui se retire, avant que le front ne la quitte : celle de la
+ * lame la plus franche que le terrain dessine (`couleurInondee` mêle au plus
+ * trois quarts d'eau au sol).
+ */
+export const OPACITE_DU_RETRAIT = 0.75;
+
+/**
  * De combien l'onde **éclaircit** l'eau de la saison.
  *
  * **Mesuré, et c'est ce qui a décidé de la valeur.** Une onde de la couleur de
@@ -96,14 +111,14 @@ export const ECLAT_DE_LONDE = 0.5;
 const REFLET: Teinte = { r: 236, g: 244, b: 248 };
 
 /**
- * La crue de la semaine, telle que l'instantané la donne — ou rien.
+ * Le **courant** de la semaine : les cellules où l'eau a passé, dans l'ordre
+ * de la descente — ou rien.
  *
- * `undefined` quand aucune cellule n'est noyée, et c'est le cas ordinaire :
- * pas d'acte, pas de créneau pris dans l'ellipse. Le seuil de « noyée » n'est
- * pas choisi ici — c'est `estInondee`, celui-là même qui décide que le terrain
- * dessine une lame. Deux seuils pour une même question dériveraient (§2.1).
+ * `undefined` quand aucune n'a vu passer d'eau visible, et c'est le cas
+ * ordinaire : pas d'acte, pas de créneau pris dans l'ellipse. Le seuil est
+ * `estInondee`, celui de toute l'eau de surface du rendu (§2.1).
  */
-export function crueDeLaSemaine(
+export function courantDeLaSemaine(
   debordementMm: ArrayLike<number> | undefined,
   altitudesM: readonly number[],
 ): CrueDeLaSemaine | undefined {
@@ -134,7 +149,76 @@ export function crueDeLaSemaine(
   // Plate, la parcelle n'a pas de sens : tout monte ensemble. En pente, le rang
   // suit la descente, et c'est lui qui fait courir l'onde.
   const rangs = cellules.map((_, k) => (plat ? 0 : k / dernier));
-  return { cellules, lamesMm, rangs };
+  return { sens: "court", cellules, lamesMm, rangs };
+}
+
+/**
+ * L'eau posée au plus bas sur une cellule de l'emprise, mm : un sol détrempé
+ * jusqu'en surface **brille**, même quand aucune pluie n'y est restée. Le moteur
+ * met dans l'emprise les cellules où la nappe affleure ; une lame nulle y veut
+ * dire « pas d'eau en plus », pas « sec ». Vingt millimètres donnent le plus
+ * discret des reflets du terrain (`couleurInondee` : un dixième d'eau mêlé au
+ * sol) — au seuil de visibilité même, le mélange est encore nul.
+ */
+export const LAME_DETREMPEE_MM = 20;
+
+/**
+ * La **lame** d'une semaine de crue, cellule par cellule, mm : l'état que le
+ * terrain cuit. Zéro hors de l'emprise. `undefined` sans crue.
+ */
+export function lameDeLaCrue(
+  crue: CrueResult | undefined,
+  nCells: number,
+): Float32Array | undefined {
+  if (!crue || crue.cellules.length === 0) return undefined;
+  const lame = new Float32Array(nCells);
+  for (let k = 0; k < crue.cellules.length; k++) {
+    const i = crue.cellules[k];
+    if (i === undefined || i < 0 || i >= nCells) continue;
+    lame[i] = Math.max(LAME_DETREMPEE_MM, crue.lamesMm[k] ?? 0);
+  }
+  return lame;
+}
+
+/**
+ * La **montée** d'une semaine : les cellules que l'eau a gagnées **cette**
+ * semaine, dans l'ordre du moteur — ou rien. Celles qu'elle tenait déjà ne
+ * rejouent pas leur arrivée : la crue s'étend, elle ne recommence pas.
+ */
+export function monteeDeLaCrue(crue: CrueResult): CrueDeLaSemaine | undefined {
+  const cellules: number[] = [];
+  const lamesMm: number[] = [];
+  for (let k = 0; k < crue.cellules.length; k++) {
+    if (crue.rangs[k] !== crue.semaine) continue;
+    cellules.push(crue.cellules[k] ?? 0);
+    lamesMm.push(Math.max(LAME_DETREMPEE_MM, crue.lamesMm[k] ?? 0));
+  }
+  if (cellules.length === 0) return undefined;
+  const dernier = Math.max(1, cellules.length - 1);
+  // Déjà rangées par le moteur, du plus bas au plus haut : le rang suit.
+  return { sens: "monte", cellules, lamesMm, rangs: cellules.map((_, k) => k / dernier) };
+}
+
+/**
+ * Le **retrait** : les cellules que l'eau a quittées, du plus haut au plus bas
+ * — ou rien. L'ordre est de la mise en scène (le moteur dit lesquelles, pas
+ * dans quel ordre) ; il est celui que suit une eau qui baisse.
+ */
+export function retraitDeLaCrue(
+  quittees: readonly number[],
+  altitudesM: readonly number[],
+): CrueDeLaSemaine | undefined {
+  if (quittees.length === 0) return undefined;
+  const cellules = [...quittees].sort(
+    (a, b) => (altitudesM[b] ?? 0) - (altitudesM[a] ?? 0) || a - b,
+  );
+  const dernier = Math.max(1, cellules.length - 1);
+  return {
+    sens: "retire",
+    cellules,
+    lamesMm: cellules.map(() => DEBORDEMENT_PLEIN_MM),
+    rangs: cellules.map((_, k) => k / dernier),
+  };
 }
 
 /**
@@ -153,16 +237,28 @@ export function ondeDeLaCrue(
   if (!crue) return [];
   const t = Math.min(1, Math.max(0, avancement));
   const front = t * (1 + LARGEUR_DU_FRONT);
-  const teinte = melange(couleurEau(semaineAnnee), REFLET, ECLAT_DE_LONDE);
+  const retrait = crue.sens === "retire";
+  // Le retrait montre l'**eau** qui s'en va, pas un reflet : la cellule garde
+  // la couleur de la lame jusqu'au passage du front, puis la perd.
+  const teinte = retrait
+    ? couleurEau(semaineAnnee)
+    : melange(couleurEau(semaineAnnee), REFLET, ECLAT_DE_LONDE);
   const sorties: CelluleVoilee[] = [];
   for (let k = 0; k < crue.cellules.length; k++) {
     const rang = crue.rangs[k] ?? 0;
-    const ecart = Math.abs(front - rang);
-    if (ecart >= LARGEUR_DU_FRONT) continue;
+    let part: number;
+    if (retrait) {
+      // Pleine avant le front, nulle une largeur après : à la fin de l'acte,
+      // le front a dépassé la dernière cellule d'une largeur, tout est sec.
+      part = front <= rang ? 1 : 1 - (front - rang) / LARGEUR_DU_FRONT;
+    } else {
+      part = 1 - Math.abs(front - rang) / LARGEUR_DU_FRONT;
+    }
+    if (part <= 0) continue;
     // Une cellule qui reçoit un torrent brille plus qu'une flaque : la force de
-    // l'onde suit la lame, sur l'échelle que le terrain emploie déjà.
+    // l'onde suit l'eau, sur l'échelle que le terrain emploie déjà.
     const force = Math.min(1, (crue.lamesMm[k] ?? 0) / DEBORDEMENT_PLEIN_MM);
-    const opacite = OPACITE_DE_LONDE * (1 - ecart / LARGEUR_DU_FRONT) * (0.4 + 0.6 * force);
+    const opacite = (retrait ? OPACITE_DU_RETRAIT : OPACITE_DE_LONDE) * part * (0.4 + 0.6 * force);
     if (opacite <= 0) continue;
     const cellule = crue.cellules[k];
     if (cellule === undefined) continue;

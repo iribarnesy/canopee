@@ -455,18 +455,18 @@ describe("l'eau libre, qui ne s'interpole pas", () => {
 
   it("entre dans la signature : sinon une crue monterait sans rien redessiner", () => {
     const sec = solPlat();
-    const debordementMm = new Float32Array(COTE * COTE);
-    debordementMm[18 * COTE + 18] = DEBORDEMENT_PLEIN_MM;
-    expect(signatureMorceau(solPlat({ debordementMm }), 1, 1, 20)).not.toBe(
+    const lameMm = new Float32Array(COTE * COTE);
+    lameMm[18 * COTE + 18] = DEBORDEMENT_PLEIN_MM;
+    expect(signatureMorceau(solPlat({ lameMm }), 1, 1, 20)).not.toBe(
       signatureMorceau(sec, 1, 1, 20),
     );
   });
 
-  it("mais le débordement est quantifié : un millimètre de plus ne recuit rien", () => {
+  it("mais la lame est quantifiée : un millimètre de plus ne recuit rien", () => {
     const a = new Float32Array(COTE * COTE).fill(10);
     const b = new Float32Array(COTE * COTE).fill(10.4);
-    expect(signatureMorceau(solPlat({ debordementMm: b }), 1, 1, 20)).toBe(
-      signatureMorceau(solPlat({ debordementMm: a }), 1, 1, 20),
+    expect(signatureMorceau(solPlat({ lameMm: b }), 1, 1, 20)).toBe(
+      signatureMorceau(solPlat({ lameMm: a }), 1, 1, 20),
     );
   });
 
@@ -487,12 +487,12 @@ describe("l'eau libre, qui ne s'interpole pas", () => {
     expect(avec.compte.remplissages - sans.compte.remplissages).toBe(1);
   });
 
-  it("ne dessine rien là où il n'y a ni eau libre ni débordement", () => {
+  it("ne dessine rien là où il n'y a ni eau libre ni lame", () => {
     const bouchon = fabriqueBouchon();
-    const debordementMm = new Float32Array(COTE * COTE); // tout à zéro
+    const lameMm = new Float32Array(COTE * COTE); // tout à zéro
     const reference = fabriqueBouchon();
     cuireMorceau(solPlat(), 1, 1, 20, vue(), reference.fabriquer);
-    cuireMorceau(solPlat({ debordementMm }), 1, 1, 20, vue(), bouchon.fabriquer);
+    cuireMorceau(solPlat({ lameMm }), 1, 1, 20, vue(), bouchon.fabriquer);
     expect(bouchon.compte.remplissages).toBe(reference.compte.remplissages);
   });
 });

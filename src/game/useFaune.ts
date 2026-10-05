@@ -21,10 +21,11 @@ const PERSONNE: readonly PoseDuChevreuil[] = [];
 export function useFaune(
   snapshot: Snapshot | undefined,
   station: StationInfo | undefined,
+  /** la lame de la crue en cours, mm (`useCrue`) ; absente sans crue */
+  lameMm?: ArrayLike<number>,
 ): (maintenantMs: number) => readonly PoseDuChevreuil[] {
   const monde = useMemo<MondeDuGibier | undefined>(() => {
     if (!snapshot || !station) return undefined;
-    const debordement = snapshot.soilDebordementMm;
     return {
       coteM: station.coteM,
       semaine: snapshot.week,
@@ -33,10 +34,11 @@ export function useFaune(
       // Seuls les vivants se broutent : une chandelle garde sa dernière date
       // de broutage, mais aucune bête ne vient plus la visiter.
       arbres: snapshot.trees.filter((t) => t.mortSemaine === undefined && !t.chandelle),
-      // On n'envoie pas brouter dans l'eau : le seuil est celui du terrain.
-      interdite: (i) => estInondee(debordement[i] ?? 0),
+      // On n'envoie pas brouter dans l'eau qui **reste** — la lame de la crue,
+      // au seuil du terrain. L'eau qui ne fait que passer ne l'arrête pas.
+      interdite: (i) => estInondee(lameMm?.[i] ?? 0),
     };
-  }, [snapshot, station]);
+  }, [snapshot, station, lameMm]);
 
   const troupeau = useRef(new Troupeau());
   const dernier = useRef(monde);

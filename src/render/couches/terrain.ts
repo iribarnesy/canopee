@@ -239,10 +239,12 @@ export interface DonneesSol {
    */
   enEau?: readonly boolean[];
   /**
-   * `Snapshot.soilDebordementMm` : ce qui n'a pas pu rentrer dans le sol cette
-   * semaine. La flaque de novembre, la lame d'une crue.
+   * La **lame** d'eau posée sur chaque cellule, mm : l'emprise et les
+   * `lamesMm` de la crue de la semaine (`lameDeLaCrue`, #288). Pas
+   * `soilDebordementMm`, qui est un débit : le long d'un talweg il cumule tout
+   * l'amont, et le lire comme une hauteur noyait un fossé d'orage.
    */
-  debordementMm?: Float32Array;
+  lameMm?: Float32Array;
   /**
    * `Snapshot.soilBoisAuSol` : le bois mort **couché**, g C par m².
    *
@@ -414,7 +416,7 @@ export function signatureMorceau(
       // sinon chaque millimètre invaliderait le morceau.
       const eau =
         (donnees.enEau?.[i] ? 1 : 0) |
-        (palier((donnees.debordementMm?.[i] ?? 0) / DEBORDEMENT_PLEIN_MM) << 1);
+        (palier((donnees.lameMm?.[i] ?? 0) / DEBORDEMENT_PLEIN_MM) << 1);
       // Note : le palier suffit à la signature. Le seuil de visibilité, lui,
       // est dans `estInondee` — deux cellules sous le seuil tombent de toute
       // façon dans le même palier, donc rien ne se recuit pour rien.
@@ -936,22 +938,22 @@ export function cuireMorceau(
       }
     }
 
-    // ── La **lame** d'eau : un débordement, qui n'a pas de rive ──────────────
+    // ── La **lame** d'eau : une crue, qui n'a pas de rive ────────────────────
     // Une flaque n'a pas de bord franc, elle s'étale : elle se dessine donc à
     // la cellule et se mélange au sol au lieu de le couvrir. C'est ce qui la
     // distingue d'un plan d'eau, et c'est vrai — on voit la litière sous deux
     // centimètres d'eau.
-    if (donnees.debordementMm) {
+    if (donnees.lameMm) {
       for (let cy2 = y; cy2 < Math.min(yFin, y + hauteurPave); cy2++) {
         for (let cx2 = x; cx2 < Math.min(xFin, x + largeurPave); cx2++) {
           const i = cy2 * donnees.coteM + cx2;
           if (donnees.enEau?.[i]) continue;
-          const deborde = donnees.debordementMm[i] ?? 0;
-          if (!estInondee(deborde)) continue;
+          const lame = donnees.lameMm[i] ?? 0;
+          if (!estInondee(lame)) continue;
           const zc = donnees.altitudesM[i] ?? centre.z;
           const teinteEau = couleurInondee(
             lireChamp(champ, cx2 + 0.5, cy2 + 0.5).teinte,
-            deborde,
+            lame,
             semaineAnnee,
           );
           const c = versEcranVue({ x: cx2 + 0.5, y: cy2 + 0.5, z: zc }, vue);
