@@ -1234,7 +1234,6 @@ export class SceneParcelle {
     this.couches.ombres.alpha = 1 - OMBRE_SUR_NEIGE * k;
   }
 
-
   /**
    * Le calque des changements : un marqueur par changement, à taille **fixe**.
    *
