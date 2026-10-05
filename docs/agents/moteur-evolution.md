@@ -61,7 +61,140 @@ qu'un rapport (voir la note de maintenance).
 Séparer calibration et validation : caler un paramètre sur un âge, garder
 l'autre âge pour vérifier.
 
-## Ce que le dernier lot a appris (la litière en deux fractions, #309, non retenu)
+## Ce que le dernier lot a appris (la soif des petits arbres, #312)
+
+Le premier essai de #312 (#321) avait remplacé les seuils de sécheresse du
+hêtre par des seuils sourcés, sans que la cible bouge. Le diagnostic qui a
+suivi a montré que le seuil n'était pas en cause : la satisfaction en eau est
+bien proportionnelle aux racines qui touchent l'eau, mais **tout petit arbre
+avait 20 à 24 cm de racines dès sa levée**, et l'horizon de 20 à 75 cm de la
+lande, d'un seul tenant, servait à la racine qui y entrait d'un centimètre le
+remplissage moyen de ses 55 cm. Deux corrections, avec le feu vert de
+l'auteur :
+
+- **le front racinaire d'un petit arbre suit sa taille** : la profondeur
+  potentielle est bornée par 0,85 fois la hauteur (Christina et al. 2011,
+  *Ecosphere* 2 : art27, sur eucalyptus, *à confirmer* pour les essences
+  tempérées). Le potentiel ne vaut plus 25 cm à hauteur nulle ; les minimums de
+  15 et 20 cm sont retirés, avec `partPlancherRacines` qui ne rendait plus
+  qu'une constante ;
+- **le sable lessivé de la lande est tenu en trois couches** de 18, 18 et
+  19 cm, même texture, même réserve utile totale.
+
+Un garde-fou demandé par l'auteur (`soif-proportionnelle.test.ts`) vérifie la
+proportionnalité elle-même : un hêtre dont la surface est sèche reçoit 6,6 fois
+plus d'eau avec dix centimètres de racines dans l'horizon humide qu'avec un.
+
+### Ce que ça donne
+
+Lande sableuse, graines 42, 1, 2, prédictions écrites avant chaque mesure dans
+les commits de la branche. « Semis » : 20 semis par an et par espèce venus du
+voisinage, plus dix plants de 0,30 m par espèce ; « tol » : le scénario de
+`tolerances.test.ts`.
+
+| météo synthétique, 15 ans | main | front seul | découpage seul | les deux |
+|---|---|---|---|---|
+| hêtres plantés morts de soif (tol) | 0/30 | 19/30 | 29/30 | 29/30 |
+| semis de hêtre morts de soif | 0,1 % | 4,5 % | 14,4 % | 14,6 % |
+| semis de pin | 0,1 % | 0,1 % | 0 % | 0 % |
+| semis de bouleau | 15,8 % | 15,2 % | 35,7 % | 35,7 % |
+
+Premier été d'un plant posé en janvier, météo réelle de Mont-de-Marsan : en
+2003, les trente hêtres plantés et 56 semis de hêtre sur 59 meurent de soif
+avec les deux corrections, **et aucun avec une seule** ; aucun pin, aucun
+bouleau. En 2005 et en 2022, aucune mort, sur main comme sur la branche.
+
+Sur 1993-2022 en météo réelle, part des semis morts de soif :
+
+| 1993-2022 | main | front seul | découpage seul | les deux |
+|---|---|---|---|---|
+| hêtre | 42 % | 26 % | 32 % | 30 % |
+| pin | 34 % | 17 % | 25 % | 7 % |
+| bouleau | 73 % | 37 % | 74 % | 63 % |
+
+Le limon riche ne bouge pas : aucune mort de soif, et les hauteurs des plantés
+à quinze ans sont celles de main au centimètre près.
+
+### Une jeunesse plus dure peut faire un âge plus facile
+
+Sur trente ans réels, les deux corrections **réduisent** la mortalité de soif
+de toutes les espèces, et celle du pin de 34 à 7 %. Toutes les prédictions sur
+ce banc allaient dans l'autre sens (hêtre 60 à 75 %, pin 40 à 50 %, bouleau 75
+à 85 %). La cause supposée est la plasticité : un jeune arbre qui a soif tôt
+descend ses racines (`nouvelleProfondeurRacines`), et arrive aux étés secs de
+2012 à 2022 mieux enraciné qu'un arbre que le plancher gardait au confort. Le
+front seul fait le même effet (26 / 17 / 37 %). C'est la mise en garde de
+`ruHorizonMm` vue dans l'autre sens : un arbre comblé se fait surprendre par
+la première vraie sécheresse. *(Non sondé : la profondeur des racines des
+arbres de cinq à quinze ans n'a pas été relevée.)* Le contraste entre espèces,
+lui, va où il doit : le hêtre meurt quatre fois plus que le pin, contre 1,2 fois
+sur main.
+
+### L'été synthétique est plus dur que tous les étés réels pour un plant de l'année
+
+Les essais tournent en météo synthétique, le jeu en météo réelle. Pour un plant
+de l'année, l'été synthétique est le plus dur des cinquante-neuf étés de la
+série (satisfaction moyenne 0,20, contre 0,31 en 2022 et 0,34 en 2003) : une
+pluie lissée semaine après semaine n'a pas les orages qui rechargent le haut du
+sable. Les deux corrections tuent le hêtre dans l'été synthétique chacune de
+son côté, et seulement ensemble dans un été réel. Prédire sur l'un ne dit rien
+de l'autre ; et un banc de trois ans dont l'année sèche tombe la troisième ne
+mesure pas un premier été (2001-2003 et 2020-2022 : aucune mort, prédit 10 à
+50 %).
+
+### Découper un horizon touche plus que l'eau
+
+Le carbone initial d'un profil pondère chaque horizon par la profondeur de son
+**sommet** (`poidsBiologique`, soil.ts). Couper 55 cm en trois fait descendre
+deux sommets, et le carbone de la lande passe de 44,0 à 40,4 t C/ha. Le pin
+planté y perd 4 % de hauteur à quinze ans ; remis à 44,04 dans la sonde, il
+n'en perd plus que 1,3 %. Le découpage rapproche la pondération de son
+intégrale, mais toutes les autres stations gardent l'erreur d'un horizon
+épais : c'est signalé, pas corrigé.
+
+### La première mesure du garde-fou était fausse
+
+Prédit 2,5 % et 16,5 % de la demande, mesuré d'abord 57 % dans les deux cas :
+la transpiration de la parcelle comptait le tapis herbacé repoussé en
+vingt-huit semaines, cent fois plus gourmand qu'un plant de trente
+centimètres. La part de l'arbre se lit comme une différence avec la parcelle
+sans lui. Et le profil « plein » ne sert pas toute la demande : la surface y
+perd une douzaine de millimètres d'évaporation avant que les racines puisent.
+L'essai lit donc le rapport des deux profondeurs (6,58 mesuré, 6,6 prédit).
+
+### Les prédictions fausses
+
+- Front seul, tol : 0 à 5 hêtres morts prédits, 19.
+- Découpage seul, tol : 0 à 10 prédits, 29.
+- Semis de bouleau, les deux : 15 à 30 % prédits, 35,7 %.
+- Premier été 2022 : 5 à 25 hêtres morts prédits, 0 ; 2003 : 0 à 15, 30.
+- 1993-2022 : toutes, et dans le mauvais sens (ci-dessus) ; découpage seul,
+  pin sous 15 % prédit, 25 %.
+- Carbone remis : pin à 1 % de main prédit, 1,3 %.
+
+### Ce qui reste ouvert
+
+- Les semis naissent à 0,30 m. Un hêtre d'un an mesure 12 à 18 cm (Bolte et al.
+  2016), un pin d'un an quelques centimètres : la taille de naissance est
+  environ double pour le hêtre et bien plus pour le pin et le bouleau. La
+  changer touche au broutage, à la concurrence herbacée et au sanglier ; non
+  fait.
+- La borne de 0,85 vient d'un eucalyptus. Le pivot précoce du pin la contredit
+  (40 cm six mois après la germination, Moser et al. 2015).
+- Quand un arbre perd de la hauteur (recépage, rejet après le feu, broutage),
+  `nouvelleProfondeurRacines` rabat ses racines au potentiel de sa nouvelle
+  taille, alors que le commentaire dit qu'elles ne régressent jamais. Le défaut
+  existait ; la borne par la hauteur le rend plus sensible chez un semis brouté.
+- Toutes les stations ont un deuxième horizon de 45 à 70 cm sous la surface.
+  Le défaut de la lande y existe dès qu'une racine finit dans cet horizon, et
+  compte surtout sur les sables secs (`SABLE_PROFOND`, 45 cm sous 25 ;
+  `SUBERAIE_MAURES`, 45 sous 25). Non changé sans accord.
+- La réserve utile du sable (0,74 mm/cm) est 1,8 fois celle que donnent les
+  équations de Saxton et Rawls (2006) pour la même texture (0,42), mais proche
+  des classes françaises de Jamagne et al. (1977, environ 0,7 mm/cm pour un
+  sable, *à confirmer*). Les deux sources se contredisent : non touchée.
+
+## Ce qu'un lot précédent a appris (la litière en deux fractions, #309, non retenu)
 
 **Essayé dans #323, non retenu : le gain visé ne vient pas.** Le code reste
 consultable sur la branche `claude/moteur-litiere-309`.
@@ -140,7 +273,7 @@ un broyat dont le bois porte son azote donnait **plus** d'azote minéral, parce
 que couper vingt arbres arrête leur prélèvement et verse l'azote de leurs
 racines.
 
-## Ce qu'un lot précédent a appris (la soif des petits arbres, #312, non retenu)
+## Ce qu'un lot précédent a appris (les seuils de la soif, premier essai de #312, non retenu)
 
 Sur la lande sableuse, le hêtre planté reçoit l'été 11 à 20 % de l'eau qu'il
 demande, comme le pin, et n'en souffre jamais. #312 a essayé de corriger ses
