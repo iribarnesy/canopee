@@ -975,7 +975,8 @@ demandé deux champs, que le moteur porte depuis #303.
 | Quatre palettes de saison interpolées en continu | `Snapshot.pheno` | `M` | — |
 | **Pluie** : rideau de gouttes obliques, intensité ∝ `rainMm`, sol qui fonce | `weather.rainMm`, `ventVersRad`, `ventRecuParLeSite` ✅ | `M` | ✅ #130 |
 | Gouttes qui rebondissent, flaques dans les creux | — | `S` | non fait |
-| **Neige** : flocons, tuiles blanchies, couronnes chargées, fonte progressive | `Snapshot.neigeMm` (part solide de la semaine), `Snapshot.manteauNeigeMm` (manteau au sol) ✅ | `M` | données livrées (#303), dessin à faire |
+| **Neige** : flocons, sol blanchi, fonte progressive | `Snapshot.neigeMm` (part solide de la semaine), `Snapshot.manteauNeigeMm` (manteau au sol) ✅ | `M` | ✅ #130 |
+| Couronnes chargées de neige | **aucune** — le manteau est un nombre pour la parcelle, le moteur ne sait pas ce que les houppiers retiennent | `S` | non fait, et c'est voulu |
 | **Gel** : givre blanc au sol au petit matin | `tMinAbsC` + `tMinimumSousCouvert` ✅ | `S` | ✅ #130 |
 | Les fleurs qui brunissent quand `bloomFrosted` passe | `bloomFrosted` ✅ | `S` | — |
 | **Brume** : nappe basse dans les creux quand la nappe affleure | `soilNappeCm` = 0, vent reçu ✅ | `M` | ✅ #130 |
@@ -1041,6 +1042,26 @@ sur deux, et jamais plus de 62 mm d'équivalent en eau. Au Luc, la plus douce,
 une semaine de neige tous les trois ou quatre ans, et un manteau trois hivers
 sur soixante. Une parcelle en altitude change tout : à 800 m sur la série de
 Dijon, le manteau tient treize semaines par an.
+
+**Ce que le rendu en fait** (`render/temps/neige.ts`) :
+
+- **les flocons** suivent `neigeMm`, et le rideau de pluie ne garde que la part
+  liquide : sous une semaine toute en neige, aucune goutte ne tombe. Ils tombent
+  lentement, se balancent, et le vent les emporte du même côté que la pluie, plus
+  loin. La neige grise le ciel comme la pluie mais ne mouille pas le sol, et elle
+  ne s'entend pas : le son de pluie ne lit que la part liquide ;
+- **le sol blanchit** avec `manteauNeigeMm`, par un filtre de couche sur le sol et
+  le décor — un manteau de dix millimètres d'eau, une dizaine de centimètres de
+  neige, le rend tout blanc ; deux millimètres le blanchissent déjà franchement.
+  **Aucun recuit** : c'est un filtre, posé ou retiré, et la fonte se voit d'un
+  instantané à l'autre. La couche d'ombre s'allège sous le manteau : elle
+  multiplie ce qui est dessous après le filtre, et relevée au banc, l'ombre d'une
+  friche dense refaisait un sol gris sur la neige ;
+- **les couronnes ne sont pas chargées**, et c'est voulu : le manteau est un
+  nombre pour toute la parcelle, et le moteur ne sait pas ce que les houppiers
+  interceptent. Poser de la neige sur les branches serait décider côté rendu où
+  elle tient. Le sol blanchit donc partout pareil, sous le couvert comme au
+  découvert.
 
 **Le voile de chaleur et les flaques** restent à faire. Aucun ne manque au
 moteur (`tMax`, les creux et la crue sont là), ils ne sont simplement pas dans

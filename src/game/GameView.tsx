@@ -1502,7 +1502,12 @@ export function GameView({ surPartie }: { surPartie?: (enPartie: boolean) => voi
   const temps = useMemo(
     () =>
       snapshot && station
-        ? { pluieMm: snapshot.weather.rainMm, vent: ventDuSite(snapshot, station) }
+        ? {
+            pluieMm: snapshot.weather.rainMm,
+            neigeMm: snapshot.neigeMm,
+            manteauNeigeMm: snapshot.manteauNeigeMm,
+            vent: ventDuSite(snapshot, station),
+          }
         : undefined,
     [snapshot, station],
   );

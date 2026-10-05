@@ -30,12 +30,14 @@ const vue = (orientation: 0 | 1 | 2 | 3 = 0, largeurPx = 1200, hauteurPx = 800):
 
 const temps = (pluieMm: number, versRad = 0, recuMs = 0): TempsQuIlFait => ({
   pluieMm,
+  neigeMm: 0,
+  manteauNeigeMm: 0,
   vent: { versRad, recuMs },
 });
 
 describe("une semaine sèche", () => {
   it("a un ciel dégagé, un sol sec et pas une goutte", () => {
-    expect(cielDeLaSemaine(temps(0))).toEqual({ couvert: 0, mouille: 0 });
+    expect(cielDeLaSemaine(temps(0))).toEqual({ couvert: 0, mouille: 0, blanc: 0 });
     expect(gouttesDeLaPluie(temps(0), vue(), 1234)).toEqual([]);
   });
 
@@ -51,7 +53,7 @@ describe("la pluie", () => {
     const averse = cielDeLaSemaine(temps(40));
     expect(averse.couvert).toBeGreaterThan(bruine.couvert);
     expect(averse.mouille).toBeGreaterThan(bruine.mouille);
-    expect(cielDeLaSemaine(temps(500))).toEqual({ couvert: 1, mouille: 1 });
+    expect(cielDeLaSemaine(temps(500))).toEqual({ couvert: 1, mouille: 1, blanc: 0 });
   });
 
   it("le ciel se couvre avant que l'averse soit franche", () => {

@@ -50,10 +50,12 @@ import type { ArbreRemodele } from "../render/temps/geste";
 import type { GiteOccupe } from "../render/temps/habitants";
 import { type IncendieAPoser, RIEN_NE_BRULE } from "../render/temps/lecteur";
 import type { ArbreVivant, EtatMourant } from "../render/temps/mort";
+import { floconsDeLaNeige } from "../render/temps/neige";
 import {
   CIEL_DEGAGE,
   cielDeLaSemaine,
   gouttesDeLaPluie,
+  inclinaisonDuRideau,
   type TempsQuIlFait,
 } from "../render/temps/pluie";
 import type { CelluleVoilee } from "../render/temps/voile";
@@ -570,6 +572,9 @@ export function VueParcelle(props: VueParcelleProps): React.ReactElement {
         scene.current?.faireLeTemps(
           p.temps ? cielDeLaSemaine(p.temps) : CIEL_DEGAGE,
           p.temps ? gouttesDeLaPluie(p.temps, v, horloge) : [],
+          p.temps
+            ? floconsDeLaNeige(p.temps.neigeMm, inclinaisonDuRideau(p.temps.vent, v), v, horloge)
+            : [],
         );
         scene.current?.surlignerLesArbres(p.surbrillance ?? AUCUN, survole.current);
         // **Le disque se centre sous le curseur, la bande porte son centre.**
