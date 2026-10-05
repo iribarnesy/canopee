@@ -7,8 +7,10 @@
  */
 
 import { coutDuDepassement, depassementHoraire } from "../../engine/actions";
+import type { FenetreDuChangement } from "../ceQuiAChange";
 import type { Snapshot } from "../protocol";
 import type { ReglagesDuSon } from "../son/useSon";
+import type { CeQuiAChange } from "../useCeQuiAChange";
 import type { GameApi } from "../useGame";
 import { btn } from "./styles";
 
@@ -41,11 +43,14 @@ export function Bandeau({
   game,
   snapshot,
   son,
+  changement,
 }: {
   game: GameApi;
   snapshot: Snapshot;
   /** le son de la parcelle (#129) ; absent = pas de commande */
   son?: ReglagesDuSon & { regler: (r: Partial<ReglagesDuSon>) => void };
+  /** le bouton « ce qui a changé » ; absent = pas de commande */
+  changement?: CeQuiAChange;
 }) {
   // L'économie coupée ne facture pas les heures : voir `factureDeLaSemaine`.
   const depassement = snapshot.economy.active ? depassementHoraire(snapshot.economy) : 0;
@@ -100,8 +105,26 @@ export function Bandeau({
           {depassement > 0 &&
             ` · +${depassement.toFixed(0)} h à payer (${coutDuDepassement(depassement).eur} €)`}
         </span>
+        {/*
+          **Le temps qu'il fait dit ce qu'on voit.** Le givre et la neige
+          blanchissent la parcelle ; sans un mot ici, un sol blanc en janvier
+          ne s'explique pas. La nuit la plus froide est dite quand elle a gelé,
+          la neige quand il en est tombé (#130).
+        */}
         <span>
           🌡 {snapshot.weather.tMean.toFixed(0)} °C · 🌧 {snapshot.weather.rainMm.toFixed(0)} mm
+          {snapshot.weather.tMinAbsC < 0 && (
+            <span title="La nuit la plus froide de la semaine : là où le sol est à découvert, il a givré">
+              {" "}
+              · ❄ gel {snapshot.weather.tMinAbsC.toFixed(0)} °C
+            </span>
+          )}
+          {snapshot.neigeMm > 0.5 && (
+            <span title="La part de la précipitation tombée en neige">
+              {" "}
+              · 🌨 neige {snapshot.neigeMm.toFixed(0)} mm
+            </span>
+          )}
         </span>
         {snapshot.economy.bankrupt && <strong style={{ color: "#c0392b" }}>FAILLITE</strong>}
       </p>
@@ -215,7 +238,11 @@ export function Bandeau({
         <button
           type="button"
           style={{ ...btn(), marginRight: 0, marginBottom: 0 }}
-          onClick={() => game.avancerDe(SEMAINES_PAR_MOIS, 4, "un mois plus tard")}
+          onClick={() => {
+            game.avancerDe(SEMAINES_PAR_MOIS, 4, "un mois plus tard");
+            // En arrivant, la question est « qu'est-ce qui a changé ce mois-ci ? ».
+            changement?.montrer("mois");
+          }}
           title="Avance d'un mois, puis s'arrête"
         >
           ⏩ +1 mois
@@ -223,11 +250,50 @@ export function Bandeau({
         <button
           type="button"
           style={{ ...btn(), marginRight: 0, marginBottom: 0 }}
-          onClick={() => game.avancerDe(52, 13, "un an plus tard")}
+          onClick={() => {
+            game.avancerDe(52, 13, "un an plus tard");
+            changement?.montrer("an");
+          }}
           title="Avance d'un an, puis s'arrête"
         >
           ⏭ +1 an
         </button>
+        {/*
+          **Ce qui a changé, à la demande.** Éteint par défaut : en lecture
+          normale on voit les arbres changer, et estomper le reste à chaque
+          semaine faisait clignoter la parcelle. Allumé, ce qui n'a pas changé
+          dans la fenêtre choisie passe en transparence ; les arbres suivis et
+          la sélection restent nets.
+        */}
+        {changement && (
+          <span style={{ display: "inline-flex", gap: 4, alignItems: "center", marginLeft: 6 }}>
+            <button
+              type="button"
+              style={{ ...btn(changement.actif), marginRight: 0, marginBottom: 0 }}
+              onClick={changement.basculer}
+              aria-pressed={changement.actif}
+              title={
+                changement.actif
+                  ? "Tout montrer : ne plus estomper ce qui n'a pas changé"
+                  : "Voir ce qui a changé : ce qui n'a pas changé passe en transparence"
+              }
+            >
+              👁 Ce qui a changé
+            </button>
+            {changement.actif && (
+              <select
+                value={changement.fenetre}
+                onChange={(e) => changement.choisir(e.target.value as FenetreDuChangement)}
+                aria-label="Depuis quand"
+                style={{ fontSize: 13 }}
+              >
+                <option value="semaine">cette semaine</option>
+                <option value="mois">ce mois-ci</option>
+                <option value="an">cette année</option>
+              </select>
+            )}
+          </span>
+        )}
         {/*
           **Le son, à côté du temps**, parce qu'on le règle au même moment :
           quand on lance la parcelle. Allumé par défaut, il ne démarre qu'au

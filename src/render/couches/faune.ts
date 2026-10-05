@@ -81,6 +81,14 @@ const MUFLE = "#1c1612";
 const BOIS = "#d9c7a0";
 const LISERE = "rgba(28, 22, 16, 0.55)";
 
+/**
+ * Où est le bout du museau, en avant du point posé, m : la tête, plus la
+ * longueur du mufle. C'est ce point que la scène pose sur le pied brouté.
+ */
+export function museauDe(figure: Figure): number {
+  return teteDe(figure).x + 0.16;
+}
+
 /** Ce que la tête fait dans chaque figure : où est-elle, en mètres. */
 function teteDe(figure: Figure): { x: number; y: number; incline: number } {
   switch (figure) {

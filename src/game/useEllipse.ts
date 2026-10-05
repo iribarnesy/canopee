@@ -34,13 +34,7 @@ import {
   senescenceDans,
 } from "../engine/phenologie";
 import type { Vue } from "../render/camera";
-import {
-  type Marqueur,
-  marqueursDuJournal,
-  OPACITE_HORS_SUJET,
-  PLAFOND_DE_MARQUEURS,
-  sujetsDuJournal,
-} from "../render/temps/changements";
+import { type Marqueur, marqueursDuJournal } from "../render/temps/changements";
 import { combiner, DEBOUT, type Deformation } from "../render/temps/chute";
 import { type CrueDeLaSemaine, courantDeLaSemaine } from "../render/temps/crue";
 import { dureeBloquanteMs, planAuRythmeNaturel, planDEllipse } from "../render/temps/ellipse";
@@ -371,28 +365,11 @@ export function useEllipse(
     // Le doigt qui montre (§6.8) : sur deux mille tiges de dix pixels, une
     // semaine ordinaire ne se **voit** pas sans lui.
     const ou = new Map(snapshot.trees.map((t) => [t.id, { x: t.x, y: t.y }]));
-    /**
-     * **L'estompe, enfin branchée dans le jeu** (#233).
-     *
-     * Elle existait, mesurée et documentée, et n'était appelée que par le banc
-     * d'aperçu : ce qui n'a pas changé s'efface pour laisser voir ce qui a
-     * changé. Le jeu, lui, ne s'en servait pas — d'où la plainte qui ouvre
-     * l'issue, « ça se met en pause pour dire qu'il y a eu des événements, et
-     * je n'ai vu aucune animation ».
-     *
-     * **Elle ne s'allume pas toujours, et c'est le cœur du correctif.** Deux
-     * mesures la bornent, et aucune n'est choisie ici :
-     *
-     * - **par la taille**, dans `sujetsDuJournal` : un fût de trois pixels ne se
-     *   cherche pas, et en garder neuf cents nets délave l'image entière ;
-     * - **par le nombre**, avec le plafond du calque : au-delà, le module dit
-     *   lui-même qu'un phénomène de masse « ne se cherche pas, il se lit dans
-     *   une phrase », et c'est le bilan de période qui prend le relais.
-     *
-     * Le même seuil que les marqueurs, et pas un second à tenir d'accord.
-     */
-    const sujets = sujetsDuJournal(journal);
-    const estompe = sujets.size > 0 && sujets.size <= PLAFOND_DE_MARQUEURS;
+    // **L'estompe n'est plus jouée ici** (retour de jeu du 2026-10-05). Elle
+    // s'allumait d'elle-même à chaque semaine qui portait des événements, et en
+    // lecture normale la parcelle clignotait d'une semaine à l'autre. Elle est
+    // devenue une question qu'on pose au bandeau (`ceQuiAChange.ts`), et la vue
+    // l'applique par-dessus l'ellipse.
     // La tempête ne dit que « qui » et « de quelle hauteur » : le reste se lit
     // dans l'instantané, où les victimes sont encore là — un chablis devient
     // chandelle sur-le-champ et n'est rapporté mort qu'un an plus tard.
@@ -438,9 +415,6 @@ export function useEllipse(
         // Quatre canaux de **pose** qui se composent : tomber, mourir, sortir de
         // terre, et plier sous la rafale. `DEBOUT` est neutre pour cette
         // composition, donc on les additionne sans se demander lequel a lieu.
-        //
-        // L'estompe est un **cinquième** canal, et elle se compose comme les
-        // autres : ce qui n'est pas sujet du journal s'efface.
         const pose = combiner(
           combiner(
             combiner(deformationDe(chutes, ecoule, id, vue), poseDeLaMort(morts, ecoule, id)),
@@ -448,8 +422,7 @@ export function useEllipse(
           ),
           poseDeLaRafale(tempete, ecoule, id, vue),
         );
-        if (!estompe || sujets.has(id)) return pose;
-        return combiner(pose, { rotationRad: 0, hauteur: 1, opacite: OPACITE_HORS_SUJET });
+        return pose;
       },
       mourant: (id, maintenantMs, vivant) => {
         const ecoule = depuis(maintenantMs);
