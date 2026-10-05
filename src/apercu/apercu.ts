@@ -131,9 +131,6 @@ function donneesDe(scene: Scene): DonneesSol {
     ...(scene.sol.boisEnTravers
       ? { boisEnTravers: Float32Array.from(scene.sol.boisEnTravers) }
       : {}),
-    ...(scene.sol.debordementMm
-      ? { debordementMm: Float32Array.from(scene.sol.debordementMm) }
-      : {}),
   };
 }
 

@@ -673,18 +673,21 @@ export function couleurEau(semaineAnnee: number): Teinte {
  * litière sous vingt millimètres d'eau, et c'est ce qui distingue une flaque
  * d'un étang.
  */
-export function couleurInondee(sol: Teinte, debordementMm: number, semaineAnnee: number): Teinte {
-  if (debordementMm < DEBORDEMENT_VISIBLE_MM) return sol;
+export function couleurInondee(sol: Teinte, eauMm: number, semaineAnnee: number): Teinte {
+  if (eauMm < DEBORDEMENT_VISIBLE_MM) return sol;
   const part = Math.min(
     1,
-    (debordementMm - DEBORDEMENT_VISIBLE_MM) / (DEBORDEMENT_PLEIN_MM - DEBORDEMENT_VISIBLE_MM),
+    (eauMm - DEBORDEMENT_VISIBLE_MM) / (DEBORDEMENT_PLEIN_MM - DEBORDEMENT_VISIBLE_MM),
   );
   return melange(sol, couleurEau(semaineAnnee), 0.75 * part);
 }
 
-/** Une cellule mérite-t-elle d'être dessinée comme mouillée ? */
-export function estInondee(debordementMm: number): boolean {
-  return debordementMm >= DEBORDEMENT_VISIBLE_MM;
+/**
+ * Une cellule mérite-t-elle d'être dessinée comme mouillée ? Le même seuil pour
+ * l'eau qui reste (la lame d'une crue) et pour l'eau qui passe (le courant).
+ */
+export function estInondee(eauMm: number): boolean {
+  return eauMm >= DEBORDEMENT_VISIBLE_MM;
 }
 
 /**

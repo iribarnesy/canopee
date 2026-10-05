@@ -69,8 +69,8 @@ export interface SolSource {
   herbesIds?: readonly string[];
   /** `StationInfo.enEau` */
   enEau?: readonly boolean[];
-  /** `Snapshot.soilDebordementMm` */
-  debordementMm?: ArrayLike<number>;
+  /** la lame de la crue de la semaine, mm (`useCrue`) — pas le débit `soilDebordementMm` */
+  lameMm?: ArrayLike<number>;
   /** `Snapshot.soilBoisAuSol` */
   boisAuSol?: ArrayLike<number>;
   /** `Snapshot.soilBoisEnTravers` */
@@ -114,7 +114,7 @@ export function donneesSolDe(src: SolSource): DonneesSol {
       ? { herbeEmprises: src.herbeEmprises, herbesIds: src.herbesIds }
       : {}),
     ...(src.enEau ? { enEau: src.enEau } : {}),
-    ...(src.debordementMm ? { debordementMm: Float32Array.from(src.debordementMm) } : {}),
+    ...(src.lameMm ? { lameMm: Float32Array.from(src.lameMm) } : {}),
     ...(src.boisAuSol ? { boisAuSol: Float32Array.from(src.boisAuSol) } : {}),
     ...(src.boisEnTravers ? { boisEnTravers: Float32Array.from(src.boisEnTravers) } : {}),
   };

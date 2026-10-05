@@ -1887,13 +1887,41 @@ la propagation anisotrope dans le sens du vent.
 | Montée | l'eau gagne les cellules dans l'ordre où le moteur dit qu'elle les a atteintes : `Snapshot.crues[].cellules`, rangées par `rangs` (semaine d'arrivée) puis du plus bas au plus haut (#288) | ✅ d'une semaine à l'autre : c'est l'événement du moteur. ⚠️ **mise en scène** à l'intérieur d'une semaine : le moteur calcule un état hebdomadaire, la vague qui court dans la semaine est une interpolation ordonnée, et elle ne mouille que ce que l'événement déclare mouillé. |
 | Nappe d'eau | lame d'eau réfléchissante sur les cellules de l'emprise, profondeur ∝ `lamesMm` | ✅ données réelles. **Pas** ∝ `soilDebordementMm` : c'est un débit, qui cumule tout l'amont le long d'un talweg (650 000 mm sous un bassin de 6 ha) |
 | Courant | le ruissellement suit la pente (`penteParCellule`), son intensité ∝ `soilDebordementMm` | ✅ |
-| Retrait | `phase === "retrait"`, puis plus aucun `CrueResult` sous cet identifiant : l'eau redescend, laisse du limon clair et des débris à la ligne de crue | ✅ la date ; `M` pour l'image |
+| Retrait | les cellules que l'emprise quitte d'une semaine à l'autre, et toute l'emprise quand plus aucun `CrueResult` ne porte son identifiant : l'eau s'en va, du plus haut au plus bas | ✅ quelles cellules et quand ; ⚠️ l'ordre dans la semaine est de la mise en scène |
 | Victimes | `crues[].victimes` : les morts d'`engorgement` de la semaine sur l'emprise — les mêmes que dans `morts`, donc §6.3, pas d'animation spécifique. Vide aujourd'hui sur toutes les stations mesurées | — |
 
 **Ce que vaut une crue dans ce moteur** (mesuré, fond de vallée engorgé, trente
 ans) : un hiver d'eau de plusieurs mois, qui monte presque tout du long et se
 retire en une ou deux semaines. Sans ruisseau ni mare déclarés, `monteeM` vaut
 zéro : la nappe monte sous terre, et ce qui se voit est l'emprise qui grandit.
+
+**Ce que le rendu en fait** (#127, `render/temps/crue.ts`, `game/useCrue.ts`).
+Trois choses, trois sources :
+
+- **la lame**, l'eau qui reste : l'emprise de la crue de la dernière semaine
+  simulée et ses `lamesMm`, cuites dans le terrain. Une cellule de l'emprise à
+  lame nulle est un sol détrempé — la nappe affleure — et brille d'un reflet
+  discret. **Le terrain lisait jusque-là `soilDebordementMm`** comme une lame : un
+  talweg d'orage s'y noyait sans qu'aucune eau n'y reste. Le chevreuil (qui
+  n'entre pas dans l'eau) et le son (qui la fait couler) lisent aussi la lame,
+  et non plus le débit ;
+- **la montée et le retrait**, des passages de l'ellipse qui ne laissent rien :
+  les cellules gagnées cette semaine, dans l'ordre du moteur ; celles que
+  l'emprise a quittées, du plus haut au plus bas. Le worker oublie les
+  `CrueResult` après chaque instantané : le jeu garde donc l'emprise d'un
+  instantané à l'autre, et applique la règle du moteur — une crue n'est finie
+  que quand des semaines ont passé sans elle. Un instantané de la même semaine
+  (une action en pause) ne fait rien partir ;
+- **le courant**, l'eau qui passe : le débit `soilDebordementMm`, en reflets qui
+  descendent la pente dans l'ordre où le moteur cascade son ruissellement. Il
+  ne pose aucune lame.
+
+**Limites dites** : une partie reprise en pleine crue n'a pas d'eau à l'écran
+avant la semaine suivante — la sauvegarde garde la mémoire de la crue, mais
+l'instantané de chargement ne porte pas de `CrueResult`. L'ordre du retrait,
+du haut vers le bas, est de la mise en scène. Et le limon laissé à la ligne de
+crue n'est pas dessiné par la crue : ce qui reste au sol est la grille de dépôt
+de l'érosion, que le terrain lit déjà.
 
 Charge totale : `L`.
 

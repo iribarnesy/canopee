@@ -42,7 +42,7 @@ import type {
   TempeteResult,
 } from "../../engine/tick";
 import type { CauseMort } from "../../engine/trees";
-import type { CrueDeLaSemaine } from "./crue";
+import type { CrueDeLaSemaine, SensDeLEau } from "./crue";
 
 /**
  * Le journal des changements, tel que le protocole le livre.
@@ -93,16 +93,12 @@ export interface JournalDeSemaine {
    */
   franchissements?: readonly FranchissementDeStade[];
   /**
-   * L'eau que la semaine n'a pas pu faire rentrer dans le sol (#127).
-   *
-   * **Ce n'est pas un événement du moteur, et c'est assumé** : il n'existe pas
-   * d'`IncendieResult` de la crue. Ce qui existe est la grandeur de la semaine
-   * — `TickResult.debordementParCellule` —, dont le moteur dit lui-même qu'elle
-   * est « la seule base honnête pour une crue, une lame d'eau ou une ravine ».
-   * L'acte joue donc l'eau **de cette semaine-là**, jamais un écart entre deux
-   * instantanés.
+   * Les passages d'eau de la période (#127, #288) : le courant de la semaine,
+   * et la montée et le retrait de chaque semaine de crue, dans l'ordre. Le
+   * courant vient du débit (`soilDebordementMm`), la montée et le retrait de
+   * l'événement du moteur (`Snapshot.crues`).
    */
-  crue?: CrueDeLaSemaine;
+  crues?: readonly CrueDeLaSemaine[];
 }
 
 /** Ce qu'un acte montre. Une union, pour que le dessin sache quoi faire. */
@@ -151,9 +147,11 @@ export type Sujet =
     }
   | {
       quoi: "crue";
-      /** les cellules noyées, rangées du haut vers le bas du versant */
+      /** ce que fait l'eau : elle court, monte ou se retire */
+      sens: SensDeLEau;
+      /** les cellules, dans l'ordre de passage de l'onde */
       cellules: readonly number[];
-      /** ce que chacune a refusé cette semaine, mm — même ordre */
+      /** l'eau de chacune, mm — même ordre : le débit pour le courant, la lame sinon */
       lamesMm: readonly number[];
       /** quand l'onde atteint chacune ∈ [0,1] — même ordre */
       rangs: readonly number[];
@@ -380,7 +378,7 @@ function regrouper(journaux: readonly JournalDeSemaine[]): Sujet[] {
     // Une crue par **semaine**, et non fusionnées, pour la même raison que les
     // rafales : deux crues de deux hivers ne noient pas les mêmes cellules, et
     // les confondre ferait courir l'onde de l'une sur l'emprise de l'autre.
-    if (j.crue) crues.push(j.crue);
+    if (j.crues) crues.push(...j.crues);
     for (const m of j.morts ?? []) {
       const deja = parCause.get(m.cause);
       if (deja) deja.push(m);
@@ -419,7 +417,13 @@ function regrouper(journaux: readonly JournalDeSemaine[]): Sujet[] {
     });
   }
   for (const c of crues) {
-    sujets.push({ quoi: "crue", cellules: c.cellules, lamesMm: c.lamesMm, rangs: c.rangs });
+    sujets.push({
+      quoi: "crue",
+      sens: c.sens,
+      cellules: c.cellules,
+      lamesMm: c.lamesMm,
+      rangs: c.rangs,
+    });
   }
   for (const [cause, morts] of parCause) sujets.push({ quoi: "mort", cause, morts });
   if (chutes.length > 0) sujets.push({ quoi: "chute", chutes });

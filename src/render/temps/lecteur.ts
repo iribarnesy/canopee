@@ -575,6 +575,7 @@ export function indexerLesCrues(plan: PlanDEllipse): CruesIndexees {
     index.push({
       acte,
       crue: {
+        sens: acte.sujet.sens,
         cellules: acte.sujet.cellules,
         lamesMm: acte.sujet.lamesMm,
         rangs: acte.sujet.rangs,

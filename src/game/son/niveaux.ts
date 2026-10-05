@@ -14,7 +14,8 @@
  *   bruisse ; le même vent sur une friche nue en hiver siffle à peine.
  * - **la pluie** : `weather.rainMm`, la pluie de la semaine.
  * - **l'eau** : l'eau libre de la station (`eau`). Un ruisseau coule ; une
- *   mare ne fait pas de bruit, sauf quand la crue la déborde (`estInondee`).
+ *   mare ne fait pas de bruit, sauf quand une crue du moteur s'étend
+ *   (`Snapshot.crues`, la part de la parcelle sous l'eau).
  * - **le feu** : les particules que l'ellipse fait voler — un grand front
  *   gronde plus qu'une lisière qui fume.
  * - **les chantiers** : les gestes du joueur qui démontent une tige, dans

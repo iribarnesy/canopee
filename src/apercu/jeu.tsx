@@ -44,7 +44,13 @@ import {
   sujetsDuJournal,
 } from "../render/temps/changements";
 import { combiner, DEBOUT, type Deformation } from "../render/temps/chute";
-import { crueDeLaSemaine } from "../render/temps/crue";
+import {
+  type CrueDeLaSemaine,
+  courantDeLaSemaine,
+  lameDeLaCrue,
+  monteeDeLaCrue,
+  retraitDeLaCrue,
+} from "../render/temps/crue";
 import { type JournalDeSemaine, planAuRythmeNaturel } from "../render/temps/ellipse";
 import { SANS_VENT } from "../render/temps/feu";
 import { type CelluleGelee, cellulesGelees, givreEnCours } from "../render/temps/givre";
@@ -247,7 +253,10 @@ function donneesDe(scene: Scene): DonneesSol {
     ...(scene.sol.lumiere ? { lumiere: scene.sol.lumiere } : {}),
     ...(scene.sol.herbeHumidite ? { herbeHumidite: scene.sol.herbeHumidite } : {}),
     ...(scene.sol.enEau ? { enEau: scene.sol.enEau } : {}),
-    ...(scene.sol.debordementMm ? { debordementMm: scene.sol.debordementMm } : {}),
+    // La lame vient d'une crue, et une scène cuite n'en porte pas : seule celle
+    // que le banc fabrique (`?crue=montee`) en pose une. Le débit de la scène
+    // fait le courant, pas une lame (#288).
+    ...(crueDuBanc(scene).lame ? { lameMm: crueDuBanc(scene).lame } : {}),
     ...(scene.sol.boisAuSol ? { boisAuSol: scene.sol.boisAuSol } : {}),
     ...(scene.sol.boisEnTravers ? { boisEnTravers: scene.sol.boisEnTravers } : {}),
   });
@@ -377,6 +386,48 @@ function voilesDuMatin(scene: Scene, ecouleMs: number) {
  * ni la grille des ravageurs ni la température ; le banc les donne, comme il
  * donne la densité de gibier.
  */
+/**
+ * `?crue=montee` ou `?crue=retrait` : une crue fabriquée sur le quart le plus bas
+ * de la parcelle, rangée du plus bas au plus haut comme le moteur range une
+ * emprise (#127). La montée pose la lame et fait courir l'arrivée de l'eau ; le
+ * retrait la fait partir. Les scènes cuites ne portent pas l'événement.
+ */
+let crueFabriquee: { cote: number; passages: CrueDeLaSemaine[]; lame?: Float32Array } | undefined;
+function crueDuBanc(scene: Scene): { passages: CrueDeLaSemaine[]; lame?: Float32Array } {
+  const quoi = new URLSearchParams(location.search).get("crue");
+  if (quoi !== "montee" && quoi !== "retrait") return { passages: [] };
+  if (crueFabriquee?.cote === scene.coteM) return crueFabriquee;
+  const altitudes = scene.sol.altitudesM;
+  const parAltitude = altitudes
+    .map((z, i) => ({ z, i }))
+    .sort((a, b) => a.z - b.z || a.i - b.i)
+    .slice(0, Math.floor(altitudes.length / 4))
+    .map((c) => c.i);
+  const evenement = {
+    id: 0,
+    semaine: 0,
+    phase: "montée" as const,
+    monteeM: 0,
+    cellules: Int32Array.from(parAltitude),
+    rangs: new Int32Array(parAltitude.length),
+    lamesMm: Float32Array.from(parAltitude, (_, k) => 160 * (1 - k / parAltitude.length)),
+    victimes: [],
+    emprisePic: parAltitude.length,
+  };
+  const n = scene.coteM * scene.coteM;
+  const montee = monteeDeLaCrue(evenement);
+  const retrait = retraitDeLaCrue(parAltitude, altitudes);
+  crueFabriquee =
+    quoi === "montee"
+      ? {
+          cote: scene.coteM,
+          passages: montee ? [montee] : [],
+          ...(lameDeLaCrue(evenement, n) ? { lame: lameDeLaCrue(evenement, n) } : {}),
+        }
+      : { cote: scene.coteM, passages: retrait ? [retrait] : [] };
+  return crueFabriquee;
+}
+
 let essaimsDuBanc: { cote: number; pression: number; essaims: Essaim[] } | undefined;
 function nueeDuBanc(scene: Scene, maintenantMs: number) {
   const pression = Number(new URLSearchParams(location.search).get("nuee") ?? "0");
@@ -561,9 +612,15 @@ function Demo(): React.ReactElement {
   // render ». La page ne chargeait plus du tout.
   const ellipse = useMemo(() => {
     const params = new URLSearchParams(location.search);
-    // Ce que la scène dit de l'eau refusée cette semaine-là : la même grandeur
-    // que `Snapshot.soilDebordementMm`, sous le même nom.
-    const crueDeLaScene = crueDeLaSemaine(scene?.sol.debordementMm, scene?.sol.altitudesM ?? []);
+    // Ce que la scène dit de l'eau passée cette semaine-là : la même grandeur
+    // que `Snapshot.soilDebordementMm`, un débit, qui fait le **courant**. La
+    // montée et le retrait d'une crue viennent du banc (`?crue=`).
+    const courant = courantDeLaSemaine(scene?.sol.debordementMm, scene?.sol.altitudesM ?? []);
+    const eaux: CrueDeLaSemaine[] = [
+      ...(courant ? [courant] : []),
+      ...(scene ? crueDuBanc(scene).passages : []),
+    ];
+    const crueDeLaScene = eaux.length > 0 ? eaux : undefined;
     const tout = params.get("ellipse-tout") === "1";
     // `?mort=secheresse` fait mourir de cette cause **tous** les arbres vivants —
     // banc de mécanisme, comme `ellipse-tout`. C'est le seul moyen de juger les
@@ -599,7 +656,7 @@ function Demo(): React.ReactElement {
         // donc ici aussi. Sans cette ligne, le banc verrait la lame d'eau
         // cuite dans le terrain et jamais l'eau passer — l'écart banc/jeu qui
         // avait laissé #246 invisible.
-        ...(crueDeLaScene ? { crue: crueDeLaScene } : {}),
+        ...(crueDeLaScene ? { crues: crueDeLaScene } : {}),
         ...(incendieBrut
           ? {
               incendie: {
@@ -737,7 +794,7 @@ function Demo(): React.ReactElement {
       // fabriquée comme la rafale ou les morts ci-dessous, elle est là dès que
       // la scène porte de l'eau refusée. Une scène sans journal — la plupart —
       // passe par ici, et c'est le seul chemin où elle pouvait se perdre.
-      ...(crueDeLaScene ? { crue: crueDeLaScene } : {}),
+      ...(crueDeLaScene ? { crues: crueDeLaScene } : {}),
       ...(rafale
         ? {
             tempete: {

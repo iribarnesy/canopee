@@ -84,6 +84,7 @@ import {
 } from "./sauvegardes";
 import { useSon } from "./son/useSon";
 import { useBilan } from "./useBilan";
+import { useCrue } from "./useCrue";
 import { useEllipse, ventDuSite, vitesseDeRelecture } from "./useEllipse";
 import { useFaune } from "./useFaune";
 import { useGame } from "./useGame";
@@ -1298,7 +1299,11 @@ export function GameView({ surPartie }: { surPartie?: (enPartie: boolean) => voi
     const hauteurs = new Map(snapshot?.trees.map((t) => [t.id, t.heightM]) ?? []);
     return gitesOccupes(snapshot?.faune ?? [], (id) => hauteurs.get(id));
   }, [snapshot]);
-  const faune = useFaune(snapshot, station);
+  // La crue suivie d'un instantané à l'autre (#127, #288) : la lame que le
+  // terrain cuit, la montée et le retrait que l'ellipse joue, l'eau que le
+  // chevreuil évite et que le son fait couler.
+  const crue = useCrue(snapshot, station);
+  const faune = useFaune(snapshot, station, crue.lameMm);
   const enNiveau = useNiveau(game);
 
   /**
@@ -1374,12 +1379,12 @@ export function GameView({ surPartie }: { surPartie?: (enPartie: boolean) => voi
             herbeEmprises: snapshot.soilHerbeEmprises,
             herbesIds: snapshot.herbesIds,
             enEau: station.enEau,
-            debordementMm: snapshot.soilDebordementMm,
+            ...(crue.lameMm ? { lameMm: crue.lameMm } : {}),
             boisAuSol: snapshot.soilBoisAuSol,
             boisEnTravers: snapshot.soilBoisEnTravers,
           })
         : undefined,
-    [station, snapshot],
+    [station, snapshot, crue.lameMm],
   );
 
   /**
@@ -1387,7 +1392,7 @@ export function GameView({ surPartie }: { surPartie?: (enPartie: boolean) => voi
    * morts, les chutes, les gestes, l'incendie. C'est ce qui fait qu'un arbre
    * coupé **tombe** au lieu de s'escamoter.
    */
-  const ellipse = useEllipse(snapshot, station, game.speed);
+  const ellipse = useEllipse(snapshot, station, game.speed, crue.actes);
 
   /**
    * **le bilan de la période** (#128, §6.8 №2) : ce qui s'est passé pendant qu'on
@@ -1511,7 +1516,7 @@ export function GameView({ surPartie }: { surPartie?: (enPartie: boolean) => voi
         : undefined,
     [snapshot, station],
   );
-  const son = useSon(snapshot, station, ellipse.feu, residents);
+  const son = useSon(snapshot, station, ellipse.feu, residents, crue.partNoyee);
 
   /**
    * La cellule survolée, et ce que le moteur en dit.
