@@ -150,6 +150,13 @@ export interface PoseDuChevreuil {
   pas: 0 | 1;
   opacite: number;
   brocard: boolean;
+  /**
+   * Le pied qu'elle broute ou frotte, quand elle est à un arbre. La scène y
+   * pose le **museau** : la bête est dessinée de profil, et sans ce point la
+   * gueule tombait à côté du tronc dès que l'arbre n'était pas à sa droite ou à
+   * sa gauche à l'écran.
+   */
+  auPied?: Point;
 }
 
 interface Point {
@@ -527,6 +534,7 @@ export function poseDansLaVisite(visite: Visite, tMs: number): PoseDuChevreuil |
       pas: 0,
       opacite,
       brocard: visite.brocard,
+      ...(e.arbreId !== undefined ? { auPied: e.cap } : {}),
     };
   }
   return undefined;

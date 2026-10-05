@@ -45,9 +45,11 @@ import type { PoseDHabitant } from "../render/faune/residents";
 import { type Compte, type Fantome, SceneParcelle } from "../render/pixi/scene";
 import type { Orientation } from "../render/projection";
 import type { BouffeeDeBrume } from "../render/temps/brume";
+import type { OndeDeChaleur } from "../render/temps/chaleur";
 import type { Marqueur } from "../render/temps/changements";
 import { combiner, DEBOUT, type Deformation, troncCouche } from "../render/temps/chute";
 import type { ArbreRemodele } from "../render/temps/geste";
+import type { GivreDeLaSemaine } from "../render/temps/givre";
 import type { GiteOccupe } from "../render/temps/habitants";
 import { type IncendieAPoser, RIEN_NE_BRULE } from "../render/temps/lecteur";
 import type { ArbreVivant, EtatMourant } from "../render/temps/mort";
@@ -162,6 +164,10 @@ export interface VueParcelleProps {
    * Absent, le ciel est dégagé et le sol sec.
    */
   temps?: TempsQuIlFait;
+  /** Le voile de chaleur à cet instant (§5.7). */
+  chaleur?: (maintenantMs: number) => readonly OndeDeChaleur[];
+  /** Le givre de la semaine (#130) ; absent si elle n'a pas gelé. */
+  givre?: GivreDeLaSemaine;
   /** La brume d'un matin, bouffée par bouffée (#130). */
   brume?: (maintenantMs: number) => readonly BouffeeDeBrume[];
   /**
@@ -573,6 +579,8 @@ export function VueParcelle(props: VueParcelleProps): React.ReactElement {
         scene.current?.montrerLaNuee(p.nuee?.(horloge) ?? []);
         scene.current?.montrerLesPollinisateurs(p.pollinisateurs?.(horloge) ?? []);
         scene.current?.montrerLaBrume(p.brume?.(horloge) ?? []);
+        scene.current?.givrer(p.givre);
+        scene.current?.faireTrembler(p.chaleur?.(horloge) ?? []);
         scene.current?.faireLeTemps(
           p.temps ? cielDeLaSemaine(p.temps) : CIEL_DEGAGE,
           p.temps ? gouttesDeLaPluie(p.temps, v, horloge) : [],

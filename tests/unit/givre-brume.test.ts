@@ -1,10 +1,10 @@
 /**
- * **Le givre et la brume disent le moteur, et ne restent pas** (#130, lot L10).
+ * **Le givre et la brume disent le moteur** (#130, lot L10).
  *
  * Le givre tombe là où la nuit la plus froide est passée sous zéro **au sol**,
- * couvert compris, et c'est la fonction du moteur qui le décide. La brume se
- * pose là où la nappe affleure, et le vent la chasse. Tous deux sont des
- * matins : à la fin, il n'en reste rien.
+ * couvert compris, et c'est la fonction du moteur qui le décide ; il reste la
+ * semaine qui a gelé. La brume se pose là où la nappe affleure, le vent la
+ * chasse, et c'est un matin : à la fin, il n'en reste rien.
  */
 
 import { describe, expect, it } from "vitest";
@@ -15,7 +15,12 @@ import {
   LEVEE_DE_LA_BRUME_MS,
   VENT_QUI_CHASSE_MS,
 } from "../../src/render/temps/brume";
-import { cellulesGelees, FONTE_DU_GIVRE_MS, givreEnCours } from "../../src/render/temps/givre";
+import {
+  cellulesGelees,
+  givreDeLaSemaine,
+  HERBE_QUI_GIVRE,
+  OPACITE_DU_GIVRE,
+} from "../../src/render/temps/givre";
 import { CIEL_D_ETE, CIEL_D_HIVER, fondDuCiel, GRIS_DE_PLUIE } from "../../src/render/temps/pluie";
 
 describe("le givre", () => {
@@ -38,26 +43,31 @@ describe("le givre", () => {
     expect(franc?.force).toBe(1);
   });
 
-  it("est un matin : là à l'arrivée de la semaine, fondu ensuite, sans rien laisser", () => {
-    // Une gelée légère : les plaques ne fondent pas toutes au même instant.
-    const gelees = cellulesGelees(-1, new Float32Array(64).fill(1));
-    expect(givreEnCours(gelees, 0).length).toBe(64);
-    expect(givreEnCours(gelees, FONTE_DU_GIVRE_MS * 0.8).length).toBeLessThan(64);
-    expect(givreEnCours(gelees, FONTE_DU_GIVRE_MS)).toEqual([]);
-    // Et à aucun instant, un voile ne dépasse ce que la cellule a à dire.
-    for (const t of [0, 500, 1500, 3000]) {
-      for (const v of givreEnCours(gelees, t)) expect(v.opacite).toBeLessThanOrEqual(1);
-    }
+  it("est un état de la semaine : un calque, une opacité, sur les cellules gelées", () => {
+    // −0,5 °C à découvert : sous un couvert fermé, le moteur remonte le minimum.
+    const gelees = cellulesGelees(-0.5, Float32Array.from([1, 1, 0.05, 1]));
+    const givre = givreDeLaSemaine(gelees);
+    expect(givre?.cellules).toEqual([0, 1, 3]);
+    expect(givre?.opacite).toBeGreaterThan(0);
+    // Léger : une gelée blanche laisse voir le sol.
+    expect(givre?.opacite).toBeLessThanOrEqual(OPACITE_DU_GIVRE);
   });
 
-  it("s'estompe sans remonter : le blanc d'une cellule ne revient pas", () => {
-    const gelees = cellulesGelees(-3, [1]);
-    let avant = Number.POSITIVE_INFINITY;
-    for (let t = 0; t < FONTE_DU_GIVRE_MS; t += 100) {
-      const o = givreEnCours(gelees, t)[0]?.opacite ?? 0;
-      expect(o).toBeLessThanOrEqual(avant);
-      avant = o;
-    }
+  it("une nuit franche blanchit plus qu'une gelée légère", () => {
+    const leger = givreDeLaSemaine(cellulesGelees(-0.5, [1, 1]));
+    const franc = givreDeLaSemaine(cellulesGelees(-6, [1, 1]));
+    expect(franc?.opacite ?? 0).toBeGreaterThan(leger?.opacite ?? 0);
+  });
+
+  it("pose ses brins givrés sur l'herbe, et un simple voile sur la terre nue", () => {
+    const gelees = cellulesGelees(-3, [1, 1, 1]);
+    const givre = givreDeLaSemaine(gelees, [0.8, HERBE_QUI_GIVRE / 2, HERBE_QUI_GIVRE]);
+    expect(givre?.cellules).toEqual([0, 1, 2]);
+    expect(givre?.brins).toEqual([0, 2]);
+  });
+
+  it("une semaine sans gel n'a pas de givre", () => {
+    expect(givreDeLaSemaine(cellulesGelees(3, [1, 1]))).toBeUndefined();
   });
 });
 

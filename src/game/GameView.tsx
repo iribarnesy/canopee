@@ -36,10 +36,14 @@ import {
 } from "../engine/relief";
 import { STATIONS_V0 } from "../engine/stations";
 import type { Zone } from "../engine/zone";
+import type { Vue } from "../render/camera";
 import { bandeDuTrace, type EmpriseDuGeste } from "../render/emprise";
 import type { Orientation } from "../render/projection";
+import { combiner } from "../render/temps/chute";
+import { flaquesDeLaSemaine } from "../render/temps/flaques";
 import { gitesOccupes } from "../render/temps/habitants";
 import { lignesDuBilan } from "./bilan";
+import { ESTOMPE } from "./ceQuiAChange";
 import { EditeurTerrain, terrainInitial } from "./EditeurTerrain";
 import { useEcranEmpile } from "./ecranEmpile";
 import type { Niveau } from "./niveaux";
@@ -84,6 +88,8 @@ import {
 } from "./sauvegardes";
 import { useSon } from "./son/useSon";
 import { useBilan } from "./useBilan";
+import { useCeQuiAChange } from "./useCeQuiAChange";
+import { useChaleur } from "./useChaleur";
 import { useCrue } from "./useCrue";
 import { useEllipse, ventDuSite, vitesseDeRelecture } from "./useEllipse";
 import { useFaune } from "./useFaune";
@@ -1394,6 +1400,28 @@ export function GameView({ surPartie }: { surPartie?: (enPartie: boolean) => voi
    * coupé **tombe** au lieu de s'escamoter.
    */
   const ellipse = useEllipse(snapshot, station, game.speed, crue.actes);
+  // **Ce qui a changé, à la demande** : l'estompe ne s'allume plus d'elle-même
+  // (elle faisait clignoter la parcelle chaque semaine), elle se demande au
+  // bandeau. Les arbres suivis et la sélection ne s'effacent jamais : on les a
+  // choisis pour les voir.
+  const ceQuiAChange = useCeQuiAChange(snapshot);
+  const deformerLEllipse = ellipse.deformer;
+  const deformer = useCallback(
+    (id: number, maintenantMs: number, vue: Vue) => {
+      const pose = deformerLEllipse(id, maintenantMs, vue);
+      if (
+        !ceQuiAChange.actif ||
+        id < 0 ||
+        ceQuiAChange.changes.has(id) ||
+        suivis.suivis.has(id) ||
+        selectedIds.has(id)
+      ) {
+        return pose;
+      }
+      return combiner(pose, ESTOMPE);
+    },
+    [deformerLEllipse, ceQuiAChange, suivis.suivis, selectedIds],
+  );
 
   /**
    * **le bilan de la période** (#128, §6.8 №2) : ce qui s'est passé pendant qu'on
@@ -1492,17 +1520,31 @@ export function GameView({ surPartie }: { surPartie?: (enPartie: boolean) => voi
   const residents = useResidents(snapshot, arbresPoses, station?.coteM);
   const nuee = useNuee(snapshot, station?.coteM);
   const pollinisateurs = usePollinisateurs(snapshot, station?.coteM);
-  // Le givre et la brume passent par la même couche que les voiles de
-  // l'ellipse (#130) : une cellule, une teinte, une opacité.
+  // Le givre de la semaine et la brume du matin (#130).
   const matin = useMatin(snapshot, station);
+  // Le voile de chaleur au-dessus du sol nu, et les flaques dans les creux
+  // mouillés hors crue (§5.7).
+  const chaleur = useChaleur(snapshot, station?.coteM);
+  const flaques = useMemo(
+    () =>
+      snapshot && station
+        ? flaquesDeLaSemaine(
+            snapshot.soilNappeCm,
+            Math.max(0, snapshot.weather.rainMm - snapshot.neigeMm),
+            crue.lameMm !== undefined,
+            snapshot.week % 52,
+            station.enEau,
+          )
+        : [],
+    [snapshot, station, crue.lameMm],
+  );
   const voilerLEllipse = ellipse.voiler;
   const voiler = useCallback(
     (maintenantMs: number) => {
-      const avant = matin.givre(maintenantMs);
-      const ellipseEnCours = voilerLEllipse(maintenantMs);
-      return avant.length === 0 ? ellipseEnCours : [...avant, ...ellipseEnCours];
+      const enCours = voilerLEllipse(maintenantMs);
+      return flaques.length === 0 ? enCours : [...flaques, ...enCours];
     },
-    [matin, voilerLEllipse],
+    [flaques, voilerLEllipse],
   );
   // Le temps qu'il fait (#130) : la pluie de la semaine et le vent que le site
   // en reçoit, tels que le moteur les donne.
@@ -1841,7 +1883,7 @@ export function GameView({ surPartie }: { surPartie?: (enPartie: boolean) => voi
             {...(empriseDuGeste ? { emprise: empriseDuGeste } : {})}
             {...(fantome ? { fantome } : {})}
             surSurvol={setSurvol}
-            deformer={ellipse.deformer}
+            deformer={deformer}
             mourant={ellipse.mourant}
             remodeler={ellipse.remodeler}
             surOrientation={setOrientation}
@@ -1856,6 +1898,8 @@ export function GameView({ surPartie }: { surPartie?: (enPartie: boolean) => voi
             pollinisateurs={pollinisateurs}
             temps={temps}
             brume={matin.brume}
+            chaleur={chaleur}
+            {...(matin.givre ? { givre: matin.givre } : {})}
             {...(cadrage ? { cadrerSur: cadrage } : {})}
           />
         )}
@@ -1898,7 +1942,7 @@ export function GameView({ surPartie }: { surPartie?: (enPartie: boolean) => voi
           }}
         >
           <div style={{ ...VOLET, position: "static", pointerEvents: "auto" }}>
-            <Bandeau game={game} snapshot={snapshot} son={son} />
+            <Bandeau game={game} snapshot={snapshot} son={son} changement={ceQuiAChange} />
           </div>
           {/*
           L'OBJECTIF (#188), sous le bandeau et par-dessus la vue : c'est le
