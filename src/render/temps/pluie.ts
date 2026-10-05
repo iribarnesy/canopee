@@ -33,6 +33,7 @@ import { hacher } from "../hachage";
 import { melange, phaseAnnuelle, type Teinte } from "../palette";
 import { versEcran } from "../projection";
 import type { VentAPencher } from "./feu";
+import { blancheurDuSol } from "./neige";
 
 const borne = (v: number) => Math.min(1, Math.max(0, v));
 
@@ -68,21 +69,40 @@ export function couvertDuCiel(pluieMm: number): number {
 
 /** Ce que le rendu lit de la semaine pour le temps qu'il fait. */
 export interface TempsQuIlFait {
-  /** `weather.rainMm` */
+  /** `weather.rainMm` : **toute** la précipitation, neige comprise */
   pluieMm: number;
+  /** `Snapshot.neigeMm` : la part de `pluieMm` qui tombe solide (#303) */
+  neigeMm: number;
+  /** `Snapshot.manteauNeigeMm` : le manteau au sol, mm d'équivalent en eau */
+  manteauNeigeMm: number;
   vent: VentAPencher;
+}
+
+/**
+ * La pluie **liquide** de la semaine, mm : la précipitation moins sa part de
+ * neige. Le moteur le dit en toutes lettres — dessiner un rideau de `rainMm`
+ * **et** des flocons de `neigeMm`, c'est faire tomber la même eau deux fois.
+ */
+export function pluieLiquide(t: TempsQuIlFait): number {
+  return Math.max(0, t.pluieMm - t.neigeMm);
 }
 
 /** Le ciel et le sol de la semaine, ce que la scène teinte. */
 export interface CielDeLaSemaine {
-  /** de combien le ciel est chargé ∈ [0,1] */
+  /** de combien le ciel est chargé ∈ [0,1] : une semaine de neige est grise aussi */
   couvert: number;
   /** de combien le sol fonce ∈ [0,1] : il est mouillé autant qu'il pleut */
   mouille: number;
+  /** de combien le sol est blanc ∈ [0,1] : le manteau du moteur */
+  blanc: number;
 }
 
 export function cielDeLaSemaine(t: TempsQuIlFait): CielDeLaSemaine {
-  return { couvert: couvertDuCiel(t.pluieMm), mouille: intensiteDeLaPluie(t.pluieMm) };
+  return {
+    couvert: couvertDuCiel(t.pluieMm),
+    mouille: intensiteDeLaPluie(pluieLiquide(t)),
+    blanc: blancheurDuSol(t.manteauNeigeMm),
+  };
 }
 
 /** Une goutte à l'écran : un trait, du haut vers le bas. */
@@ -135,7 +155,7 @@ export function inclinaisonDuRideau(vent: VentAPencher, vue: Vue): number {
  * devant la parcelle, pas des objets du monde.
  */
 export function gouttesDeLaPluie(t: TempsQuIlFait, vue: Vue, maintenantMs: number): Goutte[] {
-  const force = intensiteDeLaPluie(t.pluieMm);
+  const force = intensiteDeLaPluie(pluieLiquide(t));
   if (force <= 0) return [];
   const { largeurPx: l, hauteurPx: h } = vue;
   const n = Math.min(GOUTTES_MAX, Math.round(force * GOUTTES_PAR_1E5_PX * ((l * h) / 1e5)));
@@ -175,7 +195,7 @@ export const VOILE_DE_PLUIE_MAX = 0.22;
 export const SOL_MOUILLE_MAX = 0.2;
 
 /** Le ciel d'une semaine sans pluie, ou d'une scène qui n'en dit rien. */
-export const CIEL_DEGAGE: CielDeLaSemaine = { couvert: 0, mouille: 0 };
+export const CIEL_DEGAGE: CielDeLaSemaine = { couvert: 0, mouille: 0, blanc: 0 };
 
 /**
  * Le ciel de chaque saison, par beau temps : un hiver froid et pâle, un été

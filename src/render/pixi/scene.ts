@@ -38,7 +38,16 @@
  * Canvas 2D, transposé.
  */
 
-import { Application, Container, Graphics, RenderTexture, Sprite, Texture } from "pixi.js";
+import {
+  Application,
+  ColorMatrixFilter,
+  Container,
+  type Filter,
+  Graphics,
+  RenderTexture,
+  Sprite,
+  Texture,
+} from "pixi.js";
 import type { Zone } from "../../engine/zone";
 import { ficheDe } from "../arbres/especes";
 import { type Vue, versEcranVue } from "../camera";
@@ -111,6 +120,7 @@ import type { Marqueur } from "../temps/changements";
 import { DEBOUT, type Deformation } from "../temps/chute";
 import { CIEL, CIEL_LE_PLUS_CHARGE, type Particule } from "../temps/feu";
 import type { GiteOccupe } from "../temps/habitants";
+import { BLANC_DE_NEIGE, BLANC_DE_NEIGE_MAX, type Flocon, OMBRE_SUR_NEIGE } from "../temps/neige";
 import {
   type CielDeLaSemaine,
   fondDuCiel,
@@ -383,7 +393,12 @@ export class SceneParcelle {
   private nuee: readonly PointDeNuee[] = [];
   private pointDeNuee?: HTMLCanvasElement;
   /** Le ciel et le sol de la semaine (#130). Dégagé et sec par défaut. */
-  private tempsDuCiel: CielDeLaSemaine = { couvert: 0, mouille: 0 };
+  private tempsDuCiel: CielDeLaSemaine = { couvert: 0, mouille: 0, blanc: 0 };
+  /** Les flocons à cette image (#130). Vide = il ne neige pas. */
+  private flocons: readonly Flocon[] = [];
+  private textureFlocon?: Texture;
+  /** Les filtres qui blanchissent le sol et le décor sous le manteau, posés une fois. */
+  private filtresNeige?: { sol: ColorMatrixFilter; decor: ColorMatrixFilter };
   /** Les gouttes à cette image (#130). Vide = il ne pleut pas. */
   private gouttes: readonly Goutte[] = [];
   private textureGoutte?: Texture;
@@ -609,9 +624,14 @@ export class SceneParcelle {
    * Le temps qu'il fait (#130) : le ciel de la semaine, et les gouttes à cette
    * image. Rien n'est décidé ici — `temps/pluie.ts` a tout dit.
    */
-  public faireLeTemps(ciel: CielDeLaSemaine, gouttes: readonly Goutte[]): void {
+  public faireLeTemps(
+    ciel: CielDeLaSemaine,
+    gouttes: readonly Goutte[],
+    flocons: readonly Flocon[] = [],
+  ): void {
     this.tempsDuCiel = ciel;
     this.gouttes = gouttes;
+    this.flocons = flocons;
   }
 
   /**
@@ -1085,11 +1105,12 @@ export class SceneParcelle {
    * pleut aussi chez le voisin.
    */
   private poserLeTemps(semaineAnnee: number): number {
-    const { couvert, mouille } = this.tempsDuCiel;
+    const { couvert, mouille, blanc } = this.tempsDuCiel;
     this.app.renderer.background.color = versEntier(fondDuCiel(semaineAnnee, couvert));
     const sol = versEntier(eclairer({ r: 255, g: 255, b: 255 }, 1 - SOL_MOUILLE_MAX * mouille));
     this.couches.sol.tint = sol;
     this.couches.decor.tint = sol;
+    this.poserLeManteau(blanc);
     let poses = 0;
     if (couvert > 0) {
       if (!this.spriteCouvert) {
@@ -1135,9 +1156,84 @@ export class SceneParcelle {
         sprite.alpha = goutte.opacite;
       }
     }
+    if (this.flocons.length > 0 && !this.textureFlocon) {
+      // Un disque blanc au bord adouci : à deux ou trois pixels, un flocon
+      // n'a pas d'autre forme.
+      const c = this.fabriquer(8, 8);
+      const g = c.getContext("2d");
+      if (g) {
+        const d = g.createRadialGradient(4, 4, 0, 4, 4, 4);
+        d.addColorStop(0, "rgba(250, 252, 255, 1)");
+        d.addColorStop(0.6, "rgba(244, 248, 252, 0.8)");
+        d.addColorStop(1, "rgba(240, 244, 250, 0)");
+        g.fillStyle = d;
+        g.fillRect(0, 0, 8, 8);
+      }
+      this.textureFlocon = Texture.from(c);
+    }
+    if (this.textureFlocon) {
+      for (const f of this.flocons) {
+        const sprite = SceneParcelle.sprite(this.couches.pluie, rang++, this.textureFlocon);
+        sprite.anchor.set(0.5, 0.5);
+        sprite.x = f.sx;
+        sprite.y = f.sy;
+        sprite.rotation = 0;
+        sprite.scale.set((2 * f.rayonPx) / 8);
+        sprite.alpha = f.opacite;
+      }
+    }
     SceneParcelle.tailler(this.couches.pluie, rang);
     return poses + rang;
   }
+
+  /**
+   * **Le manteau blanchit le sol et le décor, par un filtre de couche** (#130).
+   *
+   * Le manteau est un nombre pour toute la parcelle : un seul filtre suffit, et
+   * il ne recuit rien. Une teinte de couche ne sait qu'assombrir — elle
+   * multiplie —, donc elle ne peut pas blanchir ; le filtre mêle chaque pixel
+   * vers le blanc de la neige, à proportion du manteau. Les arbres ne sont
+   * **pas** blanchis : le moteur ne sait pas ce que les houppiers retiennent.
+   */
+  private poserLeManteau(blanc: number): void {
+    if (blanc <= 0) {
+      if (this.couches.sol.filters) this.couches.sol.filters = null;
+      if (this.couches.decor.filters) this.couches.decor.filters = null;
+      this.couches.ombres.alpha = 1;
+      return;
+    }
+    // Un filtre par couche : un même filtre posé sur deux conteneurs partage
+    // son état de rendu entre eux.
+    this.filtresNeige ??= { sol: new ColorMatrixFilter(), decor: new ColorMatrixFilter() };
+    const k = BLANC_DE_NEIGE_MAX * blanc;
+    const { r, g, b } = BLANC_DE_NEIGE;
+    // Chaque canal garde (1 − k) de lui-même et reçoit k du blanc de neige.
+    // Les décalages sont en fraction de 1, comme les couleurs du filtre.
+    // biome-ignore format: une matrice 4 × 5 se lit ligne à ligne
+    const matrice: [
+      number, number, number, number, number,
+      number, number, number, number, number,
+      number, number, number, number, number,
+      number, number, number, number, number,
+    ] = [
+      1 - k, 0, 0, 0, (k * r) / 255,
+      0, 1 - k, 0, 0, (k * g) / 255,
+      0, 0, 1 - k, 0, (k * b) / 255,
+      0, 0, 0, 1, 0,
+    ];
+    this.filtresNeige.sol.matrix = matrice;
+    this.filtresNeige.decor.matrix = matrice;
+    if (!this.couches.sol.filters) this.couches.sol.filters = [this.filtresNeige.sol];
+    if (!this.couches.decor.filters) this.couches.decor.filters = [this.filtresNeige.decor];
+    // **L'ombre s'éclaircit aussi.** La couche d'ombre multiplie ce qui est
+    // dessous, après le sol : sur une neige blanchie, l'ombre d'une friche
+    // dense en refaisait un sol gris — relevé au banc, couche par couche. Un
+    // filtre n'y peut rien, le mélange se fait après lui ; l'opacité d'une
+    // couche en `multiply` en dose l'effet. La neige renvoie la lumière jusque
+    // dans l'ombre : celle des arbres reste lisible, mais claire.
+    this.couches.ombres.alpha = 1 - OMBRE_SUR_NEIGE * k;
+  }
+
 
   /**
    * Le calque des changements : un marqueur par changement, à taille **fixe**.
@@ -1916,11 +2012,16 @@ export class SceneParcelle {
     // jeu au tour. Ces deux passes-ci ne se paient donc plus qu'aux images qui
     // changent vraiment.
     this.silhouette ??= RenderTexture.create({ width: largeur, height: hauteur });
+    // La silhouette ne veut que l'**alpha** du sol : le filtre du manteau n'a
+    // rien à y faire, et rendu hors écran il la noircissait.
+    const filtres = this.couches.sol.filters as Filter[] | null;
+    this.couches.sol.filters = null;
     this.app.renderer.render({
       container: this.couches.sol,
       target: this.silhouette,
       clear: true,
     });
+    this.couches.sol.filters = filtres;
     if (!this.decoupeOmbres) {
       this.decoupeOmbres = new Sprite(this.silhouette);
       this.couches.ombres.addChild(this.decoupeOmbres);

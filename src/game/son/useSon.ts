@@ -129,7 +129,8 @@ export function entreeDuSon(
     ventMoyMs: s.weather.ventMoyMs,
     ventExposition: st.ventExposition,
     lumiereAuSol: s.soilLumiere,
-    pluieMm: s.weather.rainMm,
+    // La neige ne crépite pas : on n'entend que la pluie liquide (#303).
+    pluieMm: Math.max(0, s.weather.rainMm - s.neigeMm),
     eau,
     partNoyee: noyees / Math.max(1, s.soilDebordementMm.length),
     particulesDeFeu: feu.particules.length,

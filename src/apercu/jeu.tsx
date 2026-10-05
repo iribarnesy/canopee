@@ -315,22 +315,21 @@ function mondeDuBanc(scene: Scene): { monde?: MondeDuGibier; figeMs?: number } {
 let rechauffe = false;
 
 /**
- * `?nuee=0.6` : une pullulation à cette pression, en tache de quinze mètres au
- * centre de la parcelle, un jour à 20 °C (#129). Les scènes cuites ne portent
- * ni la grille des ravageurs ni la température ; le banc les donne, comme il
- * donne la densité de gibier.
- */
-/**
  * `?pluie=30&vent=8&vent-vers=0` : une semaine à tant de millimètres, sous un
  * vent reçu de tant de mètres par seconde qui souffle **vers** ce cap, en
- * degrés (0 = vers l'est) (#130). Les scènes cuites ne portent pas la météo ;
- * le banc la donne.
+ * degrés (0 = vers l'est) (#130). `?neige=8&manteau=12` : la part de neige de
+ * la semaine et le manteau au sol, mm d'eau ; la neige compte dans la
+ * précipitation, comme dans le moteur. Les scènes cuites ne portent pas la
+ * météo ; le banc la donne.
  */
 function tempsDuBanc(): TempsQuIlFait | undefined {
   const q = new URLSearchParams(location.search);
-  if (!q.has("pluie")) return undefined;
+  if (!q.has("pluie") && !q.has("neige") && !q.has("manteau")) return undefined;
+  const neigeMm = Number(q.get("neige") ?? "0");
   return {
-    pluieMm: Number(q.get("pluie") ?? "0"),
+    pluieMm: Math.max(neigeMm, Number(q.get("pluie") ?? "0")),
+    neigeMm,
+    manteauNeigeMm: Number(q.get("manteau") ?? "0"),
     vent: {
       versRad: (Number(q.get("vent-vers") ?? "0") * Math.PI) / 180,
       recuMs: Number(q.get("vent") ?? "0"),
@@ -372,6 +371,12 @@ function voilesDuMatin(scene: Scene, ecouleMs: number) {
   };
 }
 
+/**
+ * `?nuee=0.6` : une pullulation à cette pression, en tache de quinze mètres au
+ * centre de la parcelle, un jour à 20 °C (#129). Les scènes cuites ne portent
+ * ni la grille des ravageurs ni la température ; le banc les donne, comme il
+ * donne la densité de gibier.
+ */
 let essaimsDuBanc: { cote: number; pression: number; essaims: Essaim[] } | undefined;
 function nueeDuBanc(scene: Scene, maintenantMs: number) {
   const pression = Number(new URLSearchParams(location.search).get("nuee") ?? "0");
