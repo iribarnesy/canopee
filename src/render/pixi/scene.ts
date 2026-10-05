@@ -80,6 +80,7 @@ import {
   cuireLueur,
   ETALEMENT_DE_LA_BRULURE,
 } from "../couches/feu";
+import { cuireLesInsectes } from "../couches/insectes";
 import {
   cuireChevron,
   cuireGite,
@@ -112,6 +113,11 @@ import { cuireLosangeVoile } from "../couches/voile";
 import { contourDeLaZone } from "../emprise";
 import { boisDuBrocard, type PoseDuChevreuil, pelageDEte } from "../faune/chevreuils";
 import { type PointDeNuee, TAILLE_DU_POINT_PX } from "../faune/nuee";
+import {
+  type PoseDInsecte,
+  TAILLE_DE_L_ABEILLE_PX,
+  TAILLE_DU_PAPILLON_PX,
+} from "../faune/pollinisateurs";
 import type { PoseDHabitant } from "../faune/residents";
 import { eclairer, versCss, versEntier } from "../palette";
 import { METRE_VERTICAL_PX, profondeur, TUILE_HAUTEUR_PX, TUILE_LARGEUR_PX } from "../projection";
@@ -392,6 +398,10 @@ export class SceneParcelle {
   /** Les points de la nuée de ravageurs à cette image (#129). Vide = pas de pullulation. */
   private nuee: readonly PointDeNuee[] = [];
   private pointDeNuee?: HTMLCanvasElement;
+  /** Les papillons et les abeilles à cette image (#129). Vide = personne ne butine. */
+  private insectes: readonly PoseDInsecte[] = [];
+  /** Leurs figures, cuites une fois : deux battements par sorte. */
+  private figuresDInsectes?: Record<string, HTMLCanvasElement>;
   /** Le ciel et le sol de la semaine (#130). Dégagé et sec par défaut. */
   private tempsDuCiel: CielDeLaSemaine = { couvert: 0, mouille: 0, blanc: 0 };
   /** Les flocons à cette image (#130). Vide = il ne neige pas. */
@@ -618,6 +628,14 @@ export class SceneParcelle {
    */
   public montrerLaNuee(points: readonly PointDeNuee[]): void {
     this.nuee = points;
+  }
+
+  /**
+   * Les papillons et les abeilles (#129). Posés parmi les arbres comme la
+   * nuée : ils butinent **dans** la haie, pas devant elle.
+   */
+  public montrerLesPollinisateurs(insectes: readonly PoseDInsecte[]): void {
+    this.insectes = insectes;
   }
 
   /**
@@ -1347,6 +1365,7 @@ export class SceneParcelle {
       this.faune.length === 0 &&
       this.residents.length === 0 &&
       this.nuee.length === 0 &&
+      this.insectes.length === 0 &&
       this.brume.length === 0
     ) {
       return [];
@@ -1479,6 +1498,32 @@ export class SceneParcelle {
           echelle,
           versLaGauche: false,
           opacite: p.opacite,
+        });
+      }
+    }
+    if (this.insectes.length > 0) {
+      // Taille fixe à l'écran, comme la nuée : à l'échelle, un papillon ferait
+      // deux pixels au zoom de parcelle.
+      this.figuresDInsectes ??= cuireLesInsectes(this.fabriquer);
+      const figures = this.figuresDInsectes;
+      for (const i of this.insectes) {
+        const q = versEcranVue({ x: i.x, y: i.y, z: sol(i.x, i.y) + i.hauteurM }, vue);
+        if (horsCadre(q)) continue;
+        const cle = `${i.sorte}:${i.ouvert ? 1 : 0}`;
+        const image = figures[cle];
+        if (!image) continue;
+        const taille = i.sorte === "papillon" ? TAILLE_DU_PAPILLON_PX : TAILLE_DE_L_ABEILLE_PX;
+        sorties.push({
+          sx: q.sx,
+          sy: q.sy,
+          profondeur: profondeur(i.x, i.y, vue.cam),
+          cle: `insecte:${cle}`,
+          image,
+          piedX: image.width / 2,
+          piedY: image.height / 2,
+          echelle: taille / image.width,
+          versLaGauche: i.versXNegatif,
+          opacite: 1,
         });
       }
     }

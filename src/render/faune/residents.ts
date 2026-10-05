@@ -56,7 +56,12 @@ export type Dessin =
   | "cheveche"
   | "buse"
   | "ecureuil"
-  | "geai";
+  | "geai"
+  // Les oiseaux de passage (#296) : une figure par guilde du moteur.
+  | "grive"
+  | "merle"
+  | "rougegorge"
+  | "fauvette";
 
 /** Ce que fait l'animal à un instant. */
 export type Geste = "perche" | "vol" | "grimpe" | "plane" | "course" | "fouille";

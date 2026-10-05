@@ -91,6 +91,7 @@ import { useGame } from "./useGame";
 import { useMatin } from "./useMatin";
 import { useNiveau } from "./useNiveau";
 import { useNuee } from "./useNuee";
+import { usePollinisateurs } from "./usePollinisateurs";
 import { useResidents } from "./useResidents";
 import { useSuivis } from "./useSuivis";
 import { VueParcelle } from "./VueParcelle";
@@ -1490,6 +1491,7 @@ export function GameView({ surPartie }: { surPartie?: (enPartie: boolean) => voi
   );
   const residents = useResidents(snapshot, arbresPoses, station?.coteM);
   const nuee = useNuee(snapshot, station?.coteM);
+  const pollinisateurs = usePollinisateurs(snapshot, station?.coteM);
   // Le givre et la brume passent par la même couche que les voiles de
   // l'ellipse (#130) : une cellule, une teinte, une opacité.
   const matin = useMatin(snapshot, station);
@@ -1851,6 +1853,7 @@ export function GameView({ surPartie }: { surPartie?: (enPartie: boolean) => voi
             faune={faune}
             residents={residents}
             nuee={nuee}
+            pollinisateurs={pollinisateurs}
             temps={temps}
             brume={matin.brume}
             {...(cadrage ? { cadrerSur: cadrage } : {})}

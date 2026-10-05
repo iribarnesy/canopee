@@ -1,5 +1,6 @@
 /**
- * **Les habitants dessinés** : mésanges, pic, chevêche, buse, écureuil (#129).
+ * **Les habitants dessinés** : mésanges, pic, chevêche, buse, écureuil, geai, et
+ * les oiseaux de passage — grive, merle, rouge-gorge, fauvette (#129).
  *
  * La règle des arbres et du chevreuil (§5.11) : rien ne se dessine à la pose.
  * Chaque silhouette est cuite une fois par figure — perché, deux images de
@@ -85,6 +86,8 @@ interface Robe {
   queue?: string;
   /** le miroir de l'aile : le bleu du geai */
   miroir?: string;
+  /** le bec, quand il se voit : l'orange du merle */
+  bec?: string;
 }
 
 const ROBES: Record<Dessin, Robe> = {
@@ -131,6 +134,28 @@ const ROBES: Record<Dessin, Robe> = {
     queue: "#1c1c1c",
     miroir: "#3a6fcf",
   },
+  // **Les oiseaux de passage** (#296). La grive litorne : tête et croupion gris,
+  // dos châtain, poitrine crème tachetée — de loin, un oiseau bicolore.
+  grive: {
+    dos: "#8a5a3a",
+    ventre: "#e3cfa2",
+    aile: "#7a5034",
+    tete: "#8d939a",
+    queue: "#3a3430",
+    accent: "#5a4636",
+  },
+  // Le merle : tout noir, et le bec orange qu'on voit d'abord.
+  merle: { dos: "#1e1c1a", ventre: "#26231f", aile: "#1a1816", tete: "#1e1c1a", bec: "#e8a020" },
+  // Le rouge-gorge : la face et la poitrine orangées sur un dos brun.
+  rougegorge: {
+    dos: "#7a6a4e",
+    ventre: "#d8cdb6",
+    aile: "#6e5f45",
+    tete: "#7a6a4e",
+    joue: "#e0743a",
+  },
+  // La fauvette à tête noire : gris-olive, la calotte noire du mâle.
+  fauvette: { dos: "#8a8a74", ventre: "#c9c8bb", aile: "#7c7c68", tete: "#1e1e1e" },
 };
 
 type Ctx = CanvasRenderingContext2D;
@@ -198,8 +223,24 @@ function perche(ctx: Ctx, d: Dessin, r: Robe, picore = false): void {
       ovale(ctx, x, y, 0.03, 0.025);
     }
   }
+  if (d === "grive" && r.accent) {
+    // Les taches de la poitrine : trois points sombres suffisent à la dire.
+    ctx.fillStyle = r.accent;
+    for (const [x, y] of [
+      [0.12, 0.4],
+      [0.2, 0.34],
+      [0.06, 0.3],
+    ] as const) {
+      ovale(ctx, x, y, 0.03, 0.025);
+    }
+  }
+  if (d === "rougegorge" && r.joue) {
+    // La gorge orange descend sur la poitrine : c'est tout l'oiseau.
+    ctx.fillStyle = r.joue;
+    ovale(ctx, 0.2, 0.44, 0.13, 0.13);
+  }
   // Le bec.
-  ctx.fillStyle = d === "pic" ? "#2a2a2a" : "#3a3228";
+  ctx.fillStyle = r.bec ?? (d === "pic" ? "#2a2a2a" : "#3a3228");
   ctx.beginPath();
   if (rond) {
     ctx.moveTo(0.24, 0.66);

@@ -40,6 +40,7 @@ import type { DonneesSol } from "../render/couches/terrain";
 import type { EmpriseDuGeste } from "../render/emprise";
 import type { PoseDuChevreuil } from "../render/faune/chevreuils";
 import type { PointDeNuee } from "../render/faune/nuee";
+import type { PoseDInsecte } from "../render/faune/pollinisateurs";
 import type { PoseDHabitant } from "../render/faune/residents";
 import { type Compte, type Fantome, SceneParcelle } from "../render/pixi/scene";
 import type { Orientation } from "../render/projection";
@@ -154,6 +155,8 @@ export interface VueParcelleProps {
   residents?: (maintenantMs: number) => readonly PoseDHabitant[];
   /** La nuée de ravageurs à cet instant (#129) : des points qui dansent. */
   nuee?: (maintenantMs: number) => readonly PointDeNuee[];
+  /** Les papillons et les abeilles à cet instant (#129). */
+  pollinisateurs?: (maintenantMs: number) => readonly PoseDInsecte[];
   /**
    * Le temps qu'il fait cette semaine (#130) : la pluie et le vent du moteur.
    * Absent, le ciel est dégagé et le sol sec.
@@ -568,6 +571,7 @@ export function VueParcelle(props: VueParcelleProps): React.ReactElement {
         scene.current?.montrerLesHabitants(p.habitants ?? []);
         scene.current?.montrerLaFaune(p.faune?.(horloge) ?? [], p.residents?.(horloge) ?? []);
         scene.current?.montrerLaNuee(p.nuee?.(horloge) ?? []);
+        scene.current?.montrerLesPollinisateurs(p.pollinisateurs?.(horloge) ?? []);
         scene.current?.montrerLaBrume(p.brume?.(horloge) ?? []);
         scene.current?.faireLeTemps(
           p.temps ? cielDeLaSemaine(p.temps) : CIEL_DEGAGE,

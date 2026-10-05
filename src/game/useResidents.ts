@@ -14,6 +14,7 @@ import { useCallback, useMemo, useRef } from "react";
 import { getEspece } from "../engine/especes";
 import type { ArbreAPoser } from "../render/couches/arbres";
 import { posesDesGeais, type VisiteDuGeai, visitesDuGeai } from "../render/faune/geai";
+import { posesDesOiseauxDePassage } from "../render/faune/passage";
 import {
   type Derangement,
   derangementsDuJournal,
@@ -78,10 +79,33 @@ export function useResidents(
   const dernier = useRef(monde);
   dernier.current = monde;
 
+  // **Les oiseaux de passage** (#296) : ceux que la fréquentation de la semaine
+  // compte, posés sur les arbres qu'elle nomme. La graine est la semaine : la
+  // bande de cette semaine n'est pas celle de la suivante.
+  const passage = useMemo(
+    () =>
+      snapshot?.oiseauxDePassage?.some((g) => g.oiseaux > 0)
+        ? {
+            guildes: snapshot.oiseauxDePassage,
+            arbres: new Map(arbres.map((a) => [a.id, a])),
+            graine: snapshot.week,
+          }
+        : undefined,
+    [snapshot, arbres],
+  );
+  const dernierPassage = useRef(passage);
+  dernierPassage.current = passage;
+
   return useCallback((maintenantMs: number) => {
     const m = dernier.current;
     const habitants = m ? residents.current.poses(m, maintenantMs) : PERSONNE;
-    if (derniersGeais.current.length === 0) return habitants;
-    return [...habitants, ...posesDesGeais(derniersGeais.current, maintenantMs)];
+    const p = dernierPassage.current;
+    const geais = derniersGeais.current;
+    if (geais.length === 0 && !p) return habitants;
+    return [
+      ...habitants,
+      ...(geais.length > 0 ? posesDesGeais(geais, maintenantMs) : []),
+      ...(p ? posesDesOiseauxDePassage(p.guildes, p.arbres, p.graine, maintenantMs) : []),
+    ];
   }, []);
 }
