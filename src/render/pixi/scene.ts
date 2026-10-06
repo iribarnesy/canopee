@@ -39,6 +39,7 @@
  */
 
 import {
+  AlphaFilter,
   Application,
   ColorMatrixFilter,
   Container,
@@ -70,6 +71,7 @@ import {
   type ClasseChevreuil,
   cleChevreuil,
   type Figure,
+  museauDe,
   palierDe,
 } from "../couches/faune";
 import {
@@ -80,6 +82,13 @@ import {
   cuireLueur,
   ETALEMENT_DE_LA_BRULURE,
 } from "../couches/feu";
+import {
+  cuireTouffeGivree,
+  HAUTEUR_TOUFFE_PX,
+  LARGEUR_TOUFFE_PX,
+  PIED_TOUFFE_Y_PX,
+  TOUFFES_MAX,
+} from "../couches/givre";
 import { cuireLesInsectes } from "../couches/insectes";
 import {
   cuireChevron,
@@ -119,12 +128,15 @@ import {
   TAILLE_DU_PAPILLON_PX,
 } from "../faune/pollinisateurs";
 import type { PoseDHabitant } from "../faune/residents";
+import { hacher } from "../hachage";
 import { eclairer, versCss, versEntier } from "../palette";
 import { METRE_VERTICAL_PX, profondeur, TUILE_HAUTEUR_PX, TUILE_LARGEUR_PX } from "../projection";
 import { type BouffeeDeBrume, TEINTE_DE_LA_BRUME } from "../temps/brume";
+import type { OndeDeChaleur } from "../temps/chaleur";
 import type { Marqueur } from "../temps/changements";
 import { DEBOUT, type Deformation } from "../temps/chute";
 import { CIEL, CIEL_LE_PLUS_CHARGE, type Particule } from "../temps/feu";
+import { type GivreDeLaSemaine, TEINTE_DU_GIVRE, VOILE_SOUS_LES_BRINS } from "../temps/givre";
 import type { GiteOccupe } from "../temps/habitants";
 import { BLANC_DE_NEIGE, BLANC_DE_NEIGE_MAX, type Flocon, OMBRE_SUR_NEIGE } from "../temps/neige";
 import {
@@ -294,6 +306,7 @@ export class SceneParcelle {
     decor: new Container(),
     sol: new Container(),
     voiles: new Container(),
+    givre: new Container(),
     ombres: new Container(),
     feu: new Container(),
     arbres: new Container(),
@@ -413,6 +426,17 @@ export class SceneParcelle {
   private gouttes: readonly Goutte[] = [];
   private textureGoutte?: Texture;
   private spriteCouvert?: Sprite;
+  /** Le givre de la semaine (#130) ; absent = la semaine n'a pas gelé. */
+  private givre?: GivreDeLaSemaine;
+  private traitsDuGivre?: Graphics;
+  private touffesDuGivre?: Container;
+  private texturesTouffes?: Texture[];
+  private filtreDuGivre?: AlphaFilter;
+  private signatureDuGivre = "";
+  private givreDessine?: GivreDeLaSemaine;
+  /** Les ondes du voile de chaleur à cette image (§5.7). Vide = pas de chaleur. */
+  private ondes: readonly OndeDeChaleur[] = [];
+  private ondeCuite?: HTMLCanvasElement;
   /** Les bouffées de brume à cette image (#130). Vide = pas de brume. */
   private brume: readonly BouffeeDeBrume[] = [];
   private bouffee?: HTMLCanvasElement;
@@ -502,6 +526,10 @@ export class SceneParcelle {
       // poussière de chaux.
       this.couches.voiles,
       this.couches.ombres,
+      // **Le givre, au-dessus de l'ombre** : posé dessous, l'ombre d'une friche
+      // dense le multipliait en gris sale — relevé au banc, comme pour la
+      // neige. Un sol givré reste clair jusque sous les arbres.
+      this.couches.givre,
       // **Les flammes sont sur l'ombre et sous les arbres.** Sur l'ombre,
       // parce qu'un feu éclaire au lieu d'être éclairé : une flamme assombrie
       // par l'ombre du houppier qu'elle est en train de brûler serait une
@@ -653,6 +681,19 @@ export class SceneParcelle {
   }
 
   /**
+   * Le givre de la semaine (#130) : les cellules gelées, et l'opacité du
+   * calque. Posé tel quel tant que la semaine dure.
+   */
+  public givrer(givre: GivreDeLaSemaine | undefined): void {
+    this.givre = givre;
+  }
+
+  /** Le voile de chaleur (§5.7) : des ondes claires qui montent du sol nu. */
+  public faireTrembler(ondes: readonly OndeDeChaleur[]): void {
+    this.ondes = ondes;
+  }
+
+  /**
    * La brume d'un matin, bouffée par bouffée (#130). Posée parmi les arbres,
    * comme les bêtes : elle noie les troncs de derrière.
    */
@@ -740,6 +781,7 @@ export class SceneParcelle {
     spritesPoses += this.poserDecor(vue);
     spritesPoses += this.poserSol(vue);
     spritesPoses += this.poserVoiles(etat, vue);
+    spritesPoses += this.poserLeGivre(etat, vue);
     spritesPoses += this.poserFeu(etat, vue);
     spritesPoses += this.poserLeCiel();
     spritesPoses += this.poserLeTemps(etat.semaineAnnee);
@@ -1253,6 +1295,116 @@ export class SceneParcelle {
   }
 
   /**
+   * **Le givre en un seul calque** (#130). Des losanges **opaques**, dans un
+   * `Graphics` redessiné seulement quand le givre ou la caméra changent, et une
+   * opacité posée sur le calque entier par un filtre : deux losanges voisins qui
+   * débordent l'un sur l'autre ne s'additionnent plus, et le quadrillage
+   * gris-bleu que faisaient les carreaux semi-transparents disparaît.
+   */
+  private poserLeGivre(etat: EtatScene, vue: Vue): number {
+    const g = this.givre;
+    if (!g || g.cellules.length === 0) {
+      this.couches.givre.visible = false;
+      return 0;
+    }
+    this.couches.givre.visible = true;
+    if (!this.traitsDuGivre) {
+      this.traitsDuGivre = new Graphics();
+      this.touffesDuGivre = new Container();
+      // Le voile a son propre calque et son propre filtre : des losanges
+      // opaques, rendus transparents d'un bloc, ne se recouvrent pas sur
+      // leurs bords — sinon un fin quadrillage revenait.
+      const voile = new Container();
+      voile.addChild(this.traitsDuGivre);
+      voile.filters = [new AlphaFilter({ alpha: VOILE_SOUS_LES_BRINS })];
+      this.couches.givre.addChild(voile, this.touffesDuGivre);
+      this.filtreDuGivre = new AlphaFilter({ alpha: g.opacite });
+      this.couches.givre.filters = [this.filtreDuGivre];
+      this.texturesTouffes = [0, 1, 2].map((v) => {
+        const t = Texture.from(cuireTouffeGivree(this.fabriquer, v));
+        t.source.scaleMode = "linear";
+        t.source.autoGenerateMipmaps = true;
+        t.source.update();
+        return t;
+      });
+    }
+    if (this.filtreDuGivre) this.filtreDuGivre.alpha = g.opacite;
+    const signature = `${vue.cam.zoom}|${vue.cam.orientation}|${vue.centre.x},${vue.centre.y}|${vue.largeurPx}x${vue.hauteurPx}`;
+    if (signature === this.signatureDuGivre && this.givreDessine === g) {
+      return this.touffesDuGivre?.children.length ?? 0;
+    }
+    this.signatureDuGivre = signature;
+    this.givreDessine = g;
+    const cote = etat.sol.coteM;
+    const demiL = (TUILE_LARGEUR_PX * vue.cam.zoom) / 2 + 0.5;
+    const demiH = (TUILE_HAUTEUR_PX * vue.cam.zoom) / 2 + 0.25;
+    const ecran = (c: number) =>
+      versEcranVue(
+        { x: (c % cote) + 0.5, y: Math.floor(c / cote) + 0.5, z: etat.sol.altitudesM[c] ?? 0 },
+        vue,
+      );
+    const dehors = (p: { sx: number; sy: number }) =>
+      p.sx < -demiL ||
+      p.sx > vue.largeurPx + demiL ||
+      p.sy < -demiH * 4 ||
+      p.sy > vue.hauteurPx + demiH;
+    // Le voile : la terre blanchit à peine, l'herbe porte le givre.
+    const t = this.traitsDuGivre;
+    t.clear();
+    for (const c of g.cellules) {
+      const p = ecran(c);
+      if (dehors(p)) continue;
+      t.poly([p.sx, p.sy - demiH, p.sx + demiL, p.sy, p.sx, p.sy + demiH, p.sx - demiL, p.sy]);
+    }
+    t.fill(versEntier(TEINTE_DU_GIVRE));
+    // Les brins : une touffe par cellule herbue, dans l'ordre du peintre pour
+    // que la touffe de devant passe devant celle de derrière.
+    const couche = this.touffesDuGivre;
+    const textures = this.texturesTouffes;
+    let n = 0;
+    if (couche && textures) {
+      // Chaque touffe est **décalée dans sa cellule**, plus ou moins grande et
+      // parfois retournée : posées au centre des cellules, toutes pareilles,
+      // elles dessinaient sur un champ uni des rangées de moquette.
+      const h = (c: number, k: number) => hacher(c, k, 0x61f7);
+      const visibles = g.brins
+        .map((c) => {
+          const p = versEcranVue(
+            {
+              x: (c % cote) + 0.5 + (h(c, 1) - 0.5) * 0.9,
+              y: Math.floor(c / cote) + 0.5 + (h(c, 2) - 0.5) * 0.9,
+              z: etat.sol.altitudesM[c] ?? 0,
+            },
+            vue,
+          );
+          return { c, p };
+        })
+        .filter((r) => !dehors(r.p));
+      // **Au plus `TOUFFES_MAX` touffes à l'écran**, un peu plus grandes quand
+      // on éclaircit : une parcelle d'un hectare gelée d'un bout à l'autre en
+      // demandait dix mille, et la pose montait à cinquante millisecondes. On
+      // compte celles qu'on voit : au zoom rapproché, l'herbe garde tous ses brins.
+      const part = Math.min(1, TOUFFES_MAX / Math.max(1, visibles.length));
+      const echelle = (2 * demiL) / LARGEUR_TOUFFE_PX / part ** 0.25;
+      const rangees = visibles
+        .filter((r) => part >= 1 || h(r.c, 7) < part)
+        .sort((a, b) => a.p.sy - b.p.sy);
+      for (const { c, p } of rangees) {
+        const tex = textures[Math.floor(h(c, 5) * textures.length)] ?? textures[0];
+        if (!tex) continue;
+        const sprite = SceneParcelle.sprite(couche, n++, tex);
+        sprite.anchor.set(0.5, PIED_TOUFFE_Y_PX / HAUTEUR_TOUFFE_PX);
+        sprite.x = p.sx;
+        sprite.y = p.sy;
+        const taille = echelle * (0.7 + 0.6 * h(c, 3));
+        sprite.scale.set(h(c, 4) < 0.5 ? -taille : taille, taille);
+      }
+      SceneParcelle.tailler(couche, n);
+    }
+    return n;
+  }
+
+  /**
    * Le calque des changements : un marqueur par changement, à taille **fixe**.
    *
    * **La taille en pixels et non en mètres est tout l'intérêt.** Un halo de
@@ -1366,6 +1518,7 @@ export class SceneParcelle {
       this.residents.length === 0 &&
       this.nuee.length === 0 &&
       this.insectes.length === 0 &&
+      this.ondes.length === 0 &&
       this.brume.length === 0
     ) {
       return [];
@@ -1398,6 +1551,31 @@ export class SceneParcelle {
           b.attitude === "marche" ? (b.pas === 0 ? "marche0" : "marche1") : b.attitude;
         const classe: ClasseChevreuil = { figure, ete, bois: b.brocard && bois, palier };
         const v = this.atlasFaune.vignette(classe);
+        // **Au pied d'un arbre, le museau sur le pied.** La bête est de profil :
+        // sa tête part à l'horizontale à l'écran, quel que soit le cap sur la
+        // carte. On la pose donc à l'écran, une longueur de museau à côté du
+        // pied, tournée vers lui — et juste devant le tronc, qui sinon lui
+        // mangeait la tête.
+        if (b.auPied && b.attitude !== "marche") {
+          const pied = versEcranVue({ ...b.auPied, z: sol(b.auPied.x, b.auPied.y) }, vue);
+          const versLaGauche = pied.sx < p.sx;
+          const museauPx = museauDe(figure) * pxParM;
+          sorties.push({
+            sx: pied.sx + (versLaGauche ? museauPx : -museauPx),
+            sy: pied.sy + 1,
+            profondeur:
+              Math.max(profondeur(b.x, b.y, vue.cam), profondeur(b.auPied.x, b.auPied.y, vue.cam)) +
+              1e-6,
+            cle: `faune:${cleChevreuil(classe)}`,
+            image: v.image,
+            piedX: v.piedX,
+            piedY: v.piedY,
+            echelle: pxParM / v.pxParM,
+            versLaGauche,
+            opacite: b.opacite,
+          });
+          continue;
+        }
         sorties.push({
           sx: p.sx,
           sy: p.sy,
@@ -1524,6 +1702,47 @@ export class SceneParcelle {
           echelle: taille / image.width,
           versLaGauche: i.versXNegatif,
           opacite: 1,
+        });
+      }
+    }
+    if (this.ondes.length > 0) {
+      // Une onde, cuite une fois : une bande claire et ondulée, au bord perdu.
+      if (!this.ondeCuite) {
+        const c = this.fabriquer(64, 16);
+        const g = c.getContext("2d");
+        if (g) {
+          const d = g.createLinearGradient(0, 0, 64, 0);
+          d.addColorStop(0, "rgba(255, 250, 236, 0)");
+          d.addColorStop(0.5, "rgba(255, 250, 236, 1)");
+          d.addColorStop(1, "rgba(255, 250, 236, 0)");
+          g.strokeStyle = d;
+          g.lineWidth = 3;
+          g.beginPath();
+          for (let x = 0; x <= 64; x += 2) {
+            const y = 8 + 3.5 * Math.sin((x / 64) * Math.PI * 3);
+            if (x === 0) g.moveTo(x, y);
+            else g.lineTo(x, y);
+          }
+          g.stroke();
+        }
+        this.ondeCuite = c;
+      }
+      const pxParMSol = (TUILE_LARGEUR_PX * vue.cam.zoom) / Math.SQRT2;
+      for (const o of this.ondes) {
+        if (o.opacite <= 0) continue;
+        const q = versEcranVue({ x: o.x, y: o.y, z: sol(o.x, o.y) + o.hauteurM }, vue);
+        if (horsCadre(q)) continue;
+        sorties.push({
+          sx: q.sx,
+          sy: q.sy,
+          profondeur: profondeur(o.x, o.y, vue.cam),
+          cle: "chaleur:onde",
+          image: this.ondeCuite,
+          piedX: 32,
+          piedY: 8,
+          echelle: (o.largeurM * pxParMSol) / 64,
+          versLaGauche: false,
+          opacite: o.opacite,
         });
       }
     }

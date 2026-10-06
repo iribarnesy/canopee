@@ -39,6 +39,7 @@ import { type Butinage, butinages, insectesEnVol } from "../render/faune/pollini
 import { type Derangement, type PoseDHabitant, Residents } from "../render/faune/residents";
 import type { Compte } from "../render/pixi/scene";
 import { brumeEnCours, cellulesAffleurantes } from "../render/temps/brume";
+import { type FoyerDeChaleur, foyersDeChaleur, ondesDeChaleur } from "../render/temps/chaleur";
 import {
   type Marqueur,
   marqueursDuJournal,
@@ -55,7 +56,13 @@ import {
 } from "../render/temps/crue";
 import { type JournalDeSemaine, planAuRythmeNaturel } from "../render/temps/ellipse";
 import { SANS_VENT } from "../render/temps/feu";
-import { type CelluleGelee, cellulesGelees, givreEnCours } from "../render/temps/givre";
+import { flaquesDeLaSemaine } from "../render/temps/flaques";
+import {
+  type CelluleGelee,
+  cellulesGelees,
+  type GivreDeLaSemaine,
+  givreDeLaSemaine,
+} from "../render/temps/givre";
 import {
   AUCUNE_TORCHE,
   chandellesTombees,
@@ -86,6 +93,7 @@ import {
   voilesEnCours,
 } from "../render/temps/lecteur";
 import type { TempsQuIlFait } from "../render/temps/pluie";
+import type { CelluleVoilee } from "../render/temps/voile";
 import { especeSiConnue } from "./atlasDuBanc";
 
 interface Scene {
@@ -355,24 +363,31 @@ const TEMPS_DU_BANC = tempsDuBanc();
  * la nappe ; le banc prend pour creux le dixième le plus bas de la parcelle, ce
  * qui est l'endroit où le moteur la fait affleurer.
  */
-let matinDuBanc: { gelees: CelluleGelee[]; affleurantes: number[] } | undefined;
+let matinDuBanc:
+  | { gelees: CelluleGelee[]; affleurantes: number[]; givre?: GivreDeLaSemaine }
+  | undefined;
 function voilesDuMatin(scene: Scene, ecouleMs: number) {
   const q = new URLSearchParams(location.search);
-  if (!q.has("gel") && !q.has("brume")) return { givre: [], brume: [] };
+  if (!q.has("gel") && !q.has("brume")) return { givre: undefined, brume: [] };
   if (!matinDuBanc) {
     const n = scene.coteM * scene.coteM;
     const lumiere = scene.sol.lumiere ?? new Array<number>(n).fill(1);
     const altitudes = scene.sol.altitudesM;
     const seuil = [...altitudes].sort((a, b) => a - b)[Math.floor(altitudes.length * 0.1)] ?? 0;
+    const gelees = q.has("gel") ? cellulesGelees(Number(q.get("gel")), lumiere) : [];
+    const givre = givreDeLaSemaine(gelees, scene.sol.herbeCouverture);
     matinDuBanc = {
-      gelees: q.has("gel") ? cellulesGelees(Number(q.get("gel")), lumiere) : [],
+      gelees,
+      ...(givre ? { givre } : {}),
       affleurantes: q.has("brume")
         ? cellulesAffleurantes(altitudes.map((z) => (z <= seuil ? 0 : 300)))
         : [],
     };
   }
   return {
-    givre: givreEnCours(matinDuBanc.gelees, ecouleMs),
+    // Le même objet d'une image à l'autre : la scène ne repose le givre que
+    // quand il change.
+    givre: matinDuBanc.givre,
     brume: brumeEnCours(
       matinDuBanc.affleurantes,
       scene.coteM,
@@ -428,6 +443,43 @@ function crueDuBanc(scene: Scene): { passages: CrueDeLaSemaine[]; lame?: Float32
         }
       : { cote: scene.coteM, passages: retrait ? [retrait] : [] };
   return crueFabriquee;
+}
+
+/**
+ * `?chaleur=36` : la chaleur maximale de la semaine, °C, et `?flaques=1` : la
+ * nappe affleure dans le dixième le plus bas de la parcelle après une semaine de
+ * pluie (§5.7). Les scènes cuites ne portent ni la météo ni la nappe.
+ */
+let foyersDuBanc: FoyerDeChaleur[] | undefined;
+function chaleurDuBanc(scene: Scene, maintenantMs: number) {
+  const t = new URLSearchParams(location.search).get("chaleur");
+  if (t === null) return [];
+  if (!foyersDuBanc) {
+    const n = scene.coteM * scene.coteM;
+    foyersDuBanc = foyersDeChaleur(
+      Number(t),
+      scene.sol.lumiere ?? new Array<number>(n).fill(1),
+      scene.sol.herbeCouverture,
+      scene.coteM,
+    );
+  }
+  return ondesDeChaleur(foyersDuBanc, maintenantMs);
+}
+let flaquesDuBanc: CelluleVoilee[] | undefined;
+function flaquesDeLaScene(scene: Scene): CelluleVoilee[] {
+  if (!new URLSearchParams(location.search).has("flaques")) return [];
+  if (!flaquesDuBanc) {
+    const altitudes = scene.sol.altitudesM;
+    const seuil = [...altitudes].sort((a, b) => a - b)[Math.floor(altitudes.length * 0.1)] ?? 0;
+    flaquesDuBanc = flaquesDeLaSemaine(
+      altitudes.map((z) => (z <= seuil ? 0 : 300)),
+      TEMPS_DU_BANC?.pluieMm ?? 15,
+      false,
+      scene.week % 52,
+      scene.sol.enEau,
+    );
+  }
+  return flaquesDuBanc;
 }
 
 let essaimsDuBanc: { cote: number; pression: number; essaims: Essaim[] } | undefined;
@@ -1207,6 +1259,8 @@ function Demo(): React.ReactElement {
       marqueurs={ellipse.marqueurs}
       {...(choisis.size > 0 ? { surbrillance: choisis } : {})}
       {...(TEMPS_DU_BANC ? { temps: TEMPS_DU_BANC } : {})}
+      {...(voilesDuMatin(scene, 0).givre ? { givre: voilesDuMatin(scene, 0).givre } : {})}
+      chaleur={(maintenantMs) => chaleurDuBanc(scene, maintenantMs)}
       brume={(maintenantMs) =>
         voilesDuMatin(scene, ouLire(maintenantMs, fige, ellipse.dureeMs)).brume
       }
@@ -1281,7 +1335,7 @@ function Demo(): React.ReactElement {
         // Le front d'incendie et le voile d'un geste passent par la **même**
         // couche : deux choses différentes qui se dessinent pareil.
         return [
-          ...voilesDuMatin(scene, ou).givre,
+          ...flaquesDeLaScene(scene),
           ...voilesEnCours(ellipse.voiles, ou),
           ...feuEnCours(ellipse.feu, ou),
           ...crueEnCours(ellipse.crues, ou, scene.week % 52),

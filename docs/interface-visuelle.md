@@ -974,13 +974,14 @@ demandé deux champs, que le moteur porte depuis #303.
 |---|---|---|---|
 | Quatre palettes de saison interpolées en continu | `Snapshot.pheno` | `M` | — |
 | **Pluie** : rideau de gouttes obliques, intensité ∝ `rainMm`, sol qui fonce | `weather.rainMm`, `ventVersRad`, `ventRecuParLeSite` ✅ | `M` | ✅ #130 |
-| Gouttes qui rebondissent, flaques dans les creux | — | `S` | non fait |
+| Flaques dans les creux, hors crue | `soilNappeCm` ≤ `NAPPE_AFFLEURANTE_CM`, pluie liquide de la semaine ✅ | `S` | ✅ |
+| Gouttes qui rebondissent | — | `S` | non fait |
 | **Neige** : flocons, sol blanchi, fonte progressive | `Snapshot.neigeMm` (part solide de la semaine), `Snapshot.manteauNeigeMm` (manteau au sol) ✅ | `M` | ✅ #130 |
 | Couronnes chargées de neige | **aucune** — le manteau est un nombre pour la parcelle, le moteur ne sait pas ce que les houppiers retiennent | `S` | non fait, et c'est voulu |
-| **Gel** : givre blanc au sol au petit matin | `tMinAbsC` + `tMinimumSousCouvert` ✅ | `S` | ✅ #130 |
+| **Gel** : givre blanc au sol, la semaine qui a gelé | `tMinAbsC` + `tMinimumSousCouvert` ✅ | `S` | ✅ #130, revu |
 | Les fleurs qui brunissent quand `bloomFrosted` passe | `bloomFrosted` ✅ | `S` | — |
 | **Brume** : nappe basse dans les creux quand la nappe affleure | `soilNappeCm` = 0, vent reçu ✅ | `M` | ✅ #130 |
-| **Voile de chaleur** : l'air tremble au-dessus du sol nu en canicule | `tMax` ✅ | `S` | non fait |
+| **Voile de chaleur** : l'air tremble au-dessus du sol nu en canicule | `tMax` + `tMaximumSousCouvert`, `soilHerbe` ✅ | `S` | ✅ |
 | Ciel : teinte selon la saison, gris selon la pluie, orangé pendant un incendie | semaine, `rainMm` ✅ | `S` | ✅ #130 |
 | Ombres qui s'allongent et tournent avec la saison | semaine ✅ | `S` | — |
 
@@ -1002,10 +1003,19 @@ demandé deux champs, que le moteur porte depuis #303.
   plus froide y passe sous zéro **au sol**. Le minimum est tamponné par le
   couvert grâce à la fonction du moteur, celle-là même qui décide si les fleurs
   d'un fruitier gèlent. Sous une futaie fermée, le même froid ne blanchit donc
-  rien. Le givre est un **matin** : il est là quand la semaine arrive et fond
-  par plaques en trois secondes et demie, sans rien laisser derrière lui.
-  **Un carreau et non une tache** : la tache étalée d'une brûlure donnait, sur
-  une friche gelée d'un bout à l'autre, un grillage de points gris.
+  rien. **Le givre est un état de la semaine qui a gelé**, léger, et le bandeau
+  dit « gel » à côté de la température. Le premier jet en faisait un matin qui
+  fondait en trois secondes et demie au début de chaque semaine : relu en jeu,
+  c'était un sol qui passait du blanc au vert sans qu'on sache pourquoi, dès
+  l'ouverture de la partie. Il est dessiné **en un seul calque** — des losanges
+  opaques et une opacité posée sur le calque entier — : des carreaux
+  semi-transparents qui débordent l'un sur l'autre dessinaient un quadrillage
+  gris-bleu. Même sans quadrillage, un voile blanc ne se lisait pas comme du
+  givre : on y dessine donc des **brins d'herbe givrés** (`couches/givre.ts`),
+  des touffes de tiges blanches à pointe de rime, sur les cellules gelées où
+  l'herbe pousse (`soilHerbe` ≥ 0,2). La terre nue ne reçoit qu'un voile léger
+  sous les brins. Le calque passe au-dessus des ombres : sous elles, le blanc
+  virait au gris.
 - **La brume** (`render/temps/brume.ts`). Elle se pose sur les cellules où la
   nappe **affleure** (`soilNappeCm` = 0, c'est le moteur qui le dit, pas un seuil
   d'ici), et le vent reçu la chasse : par six mètres par seconde, il n'y en a
@@ -1063,9 +1073,18 @@ Dijon, le manteau tient treize semaines par an.
   elle tient. Le sol blanchit donc partout pareil, sous le couvert comme au
   découvert.
 
-**Le voile de chaleur et les flaques** restent à faire. Aucun ne manque au
-moteur (`tMax`, les creux et la crue sont là), ils ne sont simplement pas dans
-ce lot.
+**Le voile de chaleur** (`render/temps/chaleur.ts`) : des ondes claires et
+minces qui montent du sol et s'effacent, là où le sol est nu (`soilHerbe`) et où
+le maximum de la semaine, tamponné par le couvert (`tMaximumSousCouvert`),
+dépasse 27 °C ; pleines à 34 °C. La rampe est une convention d'image — le moteur
+n'a pas de seuil de canicule —, choisie autour des seuils de vigilance de
+Météo-France pour qu'une journée chaude ordinaire ne miroite presque pas.
+
+**Les flaques** (`render/temps/flaques.ts`) : des taches d'eau là où la nappe
+affleure (`NAPPE_AFFLEURANTE_CM`, le seuil même de la crue) après une semaine de
+pluie liquide, et seulement **hors crue** — quand ces cellules couvrent assez de
+parcelle, le moteur en fait une crue, et c'est sa lame qui les dessine. Le débit
+`soilDebordementMm` n'y est pas : c'est l'eau qui passe.
 
 ### 5.8 Le hors-parcelle
 
@@ -1506,9 +1525,17 @@ budget entier — ce qui est le cas du §6.2 de toute façon : on clique
 « abattre » à l'arrêt, l'action s'applique sur-le-champ (`worker.ts` :
 « la semaine est déjà ouverte ») et son instantané arrive aussitôt.
 
-**L'estompe reste éteinte dans le jeu**, les marqueurs non. Griser la parcelle
-entière parce que trois arbres sont morts serait violent pour rien ; le doigt
-qui montre, lui, répond au défaut mesuré juste au-dessus.
+**L'estompe est à la demande** (retour de jeu du 2026-10-05). Branchée en #233,
+elle s'allumait d'elle-même à chaque semaine qui portait des événements : en
+lecture normale, la parcelle clignotait d'une semaine à l'autre et on ne
+pouvait plus suivre un arbre des yeux. Elle est devenue une question qu'on pose
+au bandeau, « 👁 Ce qui a changé », sur une fenêtre au choix — cette semaine, ce
+mois-ci, cette année (`game/ceQuiAChange.ts`). « +1 mois » et « +1 an »
+l'allument d'eux-mêmes sur la période qu'ils sautent. Les arbres **suivis** et
+la **sélection** ne s'effacent jamais : on les a choisis pour les voir — un
+pommier suivi disparaissait sous l'estompe, c'était un défaut. Et elle laisse
+les arbres à **0,4** d'opacité, pas à 0,14 : à ce niveau, « on dirait
+carrément que tous les arbres disparaissent ».
 
 **Le fourré ne peut pas s'animer, et il faut le savoir.** `separerLeFourre`
 agrège les ronces par carreau : elles n'ont pas d'identité individuelle, donc
