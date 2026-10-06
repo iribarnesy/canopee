@@ -85,72 +85,121 @@ Un garde-fou demandé par l'auteur (`soif-proportionnelle.test.ts`) vérifie la
 proportionnalité elle-même : un hêtre dont la surface est sèche reçoit 6,6 fois
 plus d'eau avec dix centimètres de racines dans l'horizon humide qu'avec un.
 
+Trois suites, après un premier arrêt du lot : le carbone du profil ne dépend
+plus du découpage (ci-dessous), l'essai de la callune tourne sur la météo
+réelle (ci-dessous), et le format des sauvegardes passe à 10. Une sauvegarde de
+la lande écrite avant porte une grille d'eau à trois horizons : elle était
+refusée par accident, à la longueur de ses grilles ; elle l'est maintenant par
+son numéro, comme toute sauvegarde de version 8 ou 9, et le journal reprend la
+main.
+
 ### Ce que ça donne
 
 Lande sableuse, graines 42, 1, 2, prédictions écrites avant chaque mesure dans
 les commits de la branche. « Semis » : 20 semis par an et par espèce venus du
 voisinage, plus dix plants de 0,30 m par espèce ; « tol » : le scénario de
-`tolerances.test.ts`.
+`tolerances.test.ts`. La dernière colonne est l'état final, carbone corrigé.
 
-| météo synthétique, 15 ans | main | front seul | découpage seul | les deux |
+| météo synthétique, 15 ans | main | front seul | découpage seul ¹ | les deux |
 |---|---|---|---|---|
 | hêtres plantés morts de soif (tol) | 0/30 | 19/30 | 29/30 | 29/30 |
-| semis de hêtre morts de soif | 0,1 % | 4,5 % | 14,4 % | 14,6 % |
+| semis de hêtre morts de soif | 0,1 % | 4,5 % | 14,4 % | 14,4 % |
 | semis de pin | 0,1 % | 0,1 % | 0 % | 0 % |
-| semis de bouleau | 15,8 % | 15,2 % | 35,7 % | 35,7 % |
+| semis de bouleau | 15,8 % | 15,2 % | 35,7 % | 31,4 % |
 
-Premier été d'un plant posé en janvier, météo réelle de Mont-de-Marsan : en
-2003, les trente hêtres plantés et 56 semis de hêtre sur 59 meurent de soif
-avec les deux corrections, **et aucun avec une seule** ; aucun pin, aucun
-bouleau. En 2005 et en 2022, aucune mort, sur main comme sur la branche.
+¹ Mesuré avant la correction du carbone (40,4 t C/ha au lieu de 44,0).
+
+Rapport hêtre/pin à quinze ans (mort = 0) : 0 / 0,596 / 0, contre 0,774 /
+0,672 / 0,718 sur main ; pins plantés à 1,3 % de main. Premier été d'un plant
+posé en janvier, météo réelle de Mont-de-Marsan : en 2003, les trente hêtres
+plantés et 56 semis de hêtre sur 59 meurent de soif avec les deux corrections,
+**et aucun avec une seule** ; aucun pin, aucun bouleau. En 2005 et en 2022,
+aucune mort, sur main comme sur la branche.
 
 Sur 1993-2022 en météo réelle, part des semis morts de soif :
 
-| 1993-2022 | main | front seul | découpage seul | les deux |
-|---|---|---|---|---|
-| hêtre | 42 % | 26 % | 32 % | 30 % |
-| pin | 34 % | 17 % | 25 % | 7 % |
-| bouleau | 73 % | 37 % | 74 % | 63 % |
+| 1993-2022 | main | front seul | découpage seul ¹ | les deux ¹ | les deux, carbone corrigé |
+|---|---|---|---|---|---|
+| hêtre | 42 % | 26 % | 32 % | 30 % | 40 % |
+| pin | 34 % | 17 % | 25 % | 7 % | 23 % |
+| bouleau | 73 % | 37 % | 74 % | 63 % | 62 % |
 
 Le limon riche ne bouge pas : aucune mort de soif, et les hauteurs des plantés
 à quinze ans sont celles de main au centimètre près.
 
-### Une jeunesse plus dure peut faire un âge plus facile
+### Sur trente ans réels, la mortalité de soif baisse, et le banc est fragile
 
-Sur trente ans réels, les deux corrections **réduisent** la mortalité de soif
-de toutes les espèces, et celle du pin de 34 à 7 %. Toutes les prédictions sur
-ce banc allaient dans l'autre sens (hêtre 60 à 75 %, pin 40 à 50 %, bouleau 75
-à 85 %). La cause supposée est la plasticité : un jeune arbre qui a soif tôt
-descend ses racines (`nouvelleProfondeurRacines`), et arrive aux étés secs de
-2012 à 2022 mieux enraciné qu'un arbre que le plancher gardait au confort. Le
-front seul fait le même effet (26 / 17 / 37 %). C'est la mise en garde de
-`ruHorizonMm` vue dans l'autre sens : un arbre comblé se fait surprendre par
-la première vraie sécheresse. *(Non sondé : la profondeur des racines des
-arbres de cinq à quinze ans n'a pas été relevée.)* Le contraste entre espèces,
-lui, va où il doit : le hêtre meurt quatre fois plus que le pin, contre 1,2 fois
-sur main.
+Toutes les prédictions sur ce banc allaient dans l'autre sens (hêtre 60 à 75 %,
+pin 40 à 50 %, bouleau 75 à 85 %) : la mortalité de soif **baisse** pour les
+trois espèces, et le contraste monte (le hêtre meurt 1,7 fois plus que le pin,
+1,2 fois sur main). Le front seul la fait baisser le plus (26 / 17 / 37 %).
+Cause supposée : un jeune arbre qui a soif tôt descend ses racines
+(`nouvelleProfondeurRacines`), et arrive aux étés secs de 2012 à 2022 mieux
+enraciné qu'un arbre que le plancher gardait au confort — la mise en garde de
+`ruHorizonMm` vue dans l'autre sens. *(Non sondé : la profondeur des racines
+des arbres de cinq à quinze ans n'a pas été relevée.)*
+
+**Le même banc a donné 7 % de pins morts, puis 23 %, pour 8 % de carbone
+initial en plus.** Avant la correction du carbone, la lande démarrait avec
+40,4 t C/ha au lieu de 44,0 : moins d'humus, moins d'azote, des arbres plus
+petits, qui boivent moins. Trente ans réels avec des feux amplifient tout
+écart : ce banc dit une direction sur trois graines, pas un taux.
 
 ### L'été synthétique est plus dur que tous les étés réels pour un plant de l'année
 
 Les essais tournent en météo synthétique, le jeu en météo réelle. Pour un plant
 de l'année, l'été synthétique est le plus dur des cinquante-neuf étés de la
-série (satisfaction moyenne 0,20, contre 0,31 en 2022 et 0,34 en 2003) : une
-pluie lissée semaine après semaine n'a pas les orages qui rechargent le haut du
-sable. Les deux corrections tuent le hêtre dans l'été synthétique chacune de
-son côté, et seulement ensemble dans un été réel. Prédire sur l'un ne dit rien
-de l'autre ; et un banc de trois ans dont l'année sèche tombe la troisième ne
-mesure pas un premier été (2001-2003 et 2020-2022 : aucune mort, prédit 10 à
-50 %).
+série : un hêtre planté à trente centimètres y reçoit en moyenne 0,20 de sa
+demande d'eau, contre 0,31 au plus sec des étés réels (1964 et 2022) et 0,34 en
+2003 (mesuré sur main, graine 42). Une pluie lissée semaine après semaine n'a
+pas les orages qui rechargent le haut du sable. Les deux corrections tuent le
+hêtre dans l'été synthétique chacune de son côté, et seulement ensemble dans un
+été réel. Prédire sur l'un ne dit rien de l'autre ; et un banc de trois ans
+dont l'année sèche tombe la troisième ne mesure pas un premier été (2001-2003
+et 2020-2022 : aucune mort, prédit 10 à 50 %).
 
-### Découper un horizon touche plus que l'eau
+### La callune de six centimètres, et pourquoi son essai a changé de météo
+
+`hauteur-des-semis.test.ts` plante vingt callunes de 6 cm sur la lande et
+n'accepte que cinq morts hors feu. Sur main, une callune de 6 cm portait 30 cm
+de racines, cinq fois sa taille : le défaut même de ce lot. Avec le front, elle
+en a 5, et l'été synthétique les tue toutes à la vingt-sixième semaine (20 /
+20 / 20, graines 3, 7, 9) ; le découpage seul n'y est pour rien (4 / 2 / 0
+morts, toutes de boutis, comme sur main).
+
+L'auteur a gardé la borne et le critère. Dans le terrain, 93,7 % des semis
+naturels de callune passent leur premier été sur un sable acide à 560 mm par
+an, et 25,8 % sont encore là au bout de trois ans (Henning et al. 2017,
+*Ecol. Evol.* 7 : 2091). L'essai tourne donc sur la météo de Mont-de-Marsan,
+**fenêtre fixée avant la mesure** : les vingt dernières années de la série,
+2004-2023, la durée de l'essai. Prédit 0 à 5 mortes hors feu par graine,
+mesuré 5 / 2 / 0, adulte à l'an 11 ; main donne exactement les mêmes nombres
+sur cette fenêtre, parce que la callune y passe son premier été et ne revoit un
+été sec qu'avec trente centimètres de racines. Les autres fenêtres ne sont pas
+dans l'essai, et elles disent deux choses. Commencée en 2003, elle tue les
+vingt callunes au premier été (prédit). Commencée en 1993, l'hiver noyé de
+2000-2001 en tue douze à seize par **engorgement**, sur main comme sur la
+branche (prédit 0 à 5) : la nappe perchée sur l'alios noie une callune adulte,
+défaut préexistant que ce lot n'a pas instruit.
+
+### Découper un horizon ne doit pas changer le carbone
 
 Le carbone initial d'un profil pondère chaque horizon par la profondeur de son
-**sommet** (`poidsBiologique`, soil.ts). Couper 55 cm en trois fait descendre
-deux sommets, et le carbone de la lande passe de 44,0 à 40,4 t C/ha. Le pin
-planté y perd 4 % de hauteur à quinze ans ; remis à 44,04 dans la sonde, il
-n'en perd plus que 1,3 %. Le découpage rapproche la pondération de son
-intégrale, mais toutes les autres stations gardent l'erreur d'un horizon
-épais : c'est signalé, pas corrigé.
+**sommet** (`poidsBiologique`, soil.ts). Couper 55 cm en trois faisait
+descendre deux sommets, et le carbone de la lande passait de 44,0 à 40,4 t C/ha
+sans qu'un gramme de matière organique ait bougé ; le pin planté y perdait 4 %
+de hauteur. Les couches voisines de même matière sont maintenant réunies en un
+horizon pédologique avant la pondération (`horizonsPedologiques`) : la lande
+retrouve 44,042 t C/ha, et le carbone, la minéralisation potentielle, la
+réserve utile, la porosité et le drainage des huit stations sont ceux de main
+**au bit près**. Le pin planté revient à 1,3 % de main (3,70 / 4,14 / 3,75 m
+contre 3,75 / 4,19 / 3,80).
+
+Une pondération intégrée sur chaque horizon rendait aussi le calcul
+indépendant du découpage, mais changeait toutes les stations : de −9 à −20 % en
+n'intégrant que sous la surface, de −26 à −36 % en intégrant aussi l'horizon de
+surface. Ce serait corriger une approximation de la vie du sol, pas la
+résolution de l'eau : non retenu.
 
 ### La première mesure du garde-fou était fausse
 
@@ -170,7 +219,10 @@ L'essai lit donc le rapport des deux profondeurs (6,58 mesuré, 6,6 prédit).
 - Premier été 2022 : 5 à 25 hêtres morts prédits, 0 ; 2003 : 0 à 15, 30.
 - 1993-2022 : toutes, et dans le mauvais sens (ci-dessus) ; découpage seul,
   pin sous 15 % prédit, 25 %.
-- Carbone remis : pin à 1 % de main prédit, 1,3 %.
+- Carbone forcé dans la sonde : pin à 1 % de main prédit, 1,3 % (corrigé dans
+  soil.ts, prédit à 1,5 % : juste, 1,3 %).
+- Callune sur 1993-2012 : 0 à 5 mortes prédites, 17 / 19 / 14, par
+  engorgement.
 
 ### Ce qui reste ouvert
 
@@ -184,7 +236,10 @@ L'essai lit donc le rapport des deux profondeurs (6,58 mesuré, 6,6 prédit).
 - Quand un arbre perd de la hauteur (recépage, rejet après le feu, broutage),
   `nouvelleProfondeurRacines` rabat ses racines au potentiel de sa nouvelle
   taille, alors que le commentaire dit qu'elles ne régressent jamais. Le défaut
-  existait ; la borne par la hauteur le rend plus sensible chez un semis brouté.
+  existait ; la borne par la hauteur le rend plus sensible chez un semis brouté
+  (#334).
+- L'hiver noyé de 2000-2001 tue par engorgement la callune adulte de la lande,
+  sur main comme sur la branche.
 - Toutes les stations ont un deuxième horizon de 45 à 70 cm sous la surface.
   Le défaut de la lande y existe dès qu'une racine finit dans cet horizon, et
   compte surtout sur les sables secs (`SABLE_PROFOND`, 45 cm sous 25 ;
