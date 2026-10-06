@@ -127,11 +127,15 @@ describe("une partie reprise continue comme une partie qui ne s'est pas arrêté
   }, 900_000);
 });
 
-describe("un bloc d'avant la neige se relit, avec un manteau nul (#303)", () => {
-  it("la version 8 n'avait pas de manteau : son eau est déjà toute au sol", () => {
+describe("un bloc d'avant la lande en couches est refusé (#312)", () => {
+  it("la version 8, qui se relisait avec un manteau nul (#303), ne se relit plus", () => {
     // Un moteur de version 8 versait toute la précipitation au sol la semaine
-    // même. Son état relu avec un manteau nul est donc **son** état, pas un état
-    // inventé — c'est ce qui permet de ne pas refuser le bloc.
+    // même, et son bloc se relisait avec un manteau nul : c'était **son** état.
+    // Depuis la version 10, la lande tient son sable lessivé en trois couches,
+    // et un bloc écrit avant ne porte pas la même grille d'eau. Le refus est
+    // explicite, pour toutes les stations, plutôt qu'accidentel sur la seule
+    // lande par la longueur de ses grilles : le journal reprend la main. Le
+    // bloc est fabriqué comme avant, et c'est son numéro qui le fait refuser.
     const partieV8 = partie(1);
     const avant: GameState = { ...partieV8, soil: { ...partieV8.soil, manteauNeigeMm: 0 } };
     const b = ecrireEtat(avant);
@@ -158,16 +162,11 @@ describe("un bloc d'avant la neige se relit, avec un manteau nul (#303)", () => 
     v8.set(neuf, 14);
     v8.set(grilles, debutNeuf + bourrageNeuf);
 
-    const relu = lireEtat(v8, STATION);
-    if (!relu) throw new Error("un bloc de version 8 doit se relire");
-    expect(relu.soil.manteauNeigeMm).toBe(0);
-    expect(stateHash(relu)).toBe(stateHash(avant));
-    // Et la partie reprise continue comme celle qui ne s'est pas arrêtée.
-    expect(stateHash(partie(1, relu))).toBe(stateHash(partie(1, avant)));
+    expect(lireEtat(v8, STATION)).toBeUndefined();
   }, 300_000);
 
-  it("une version plus ancienne que 8 reste refusée", () => {
-    for (const v of [7, 6]) {
+  it("la version 9 et les plus anciennes sont refusées", () => {
+    for (const v of [9, 8, 7, 6]) {
       const b = ecrireEtat(partie(1));
       new DataView(b.buffer).setUint16(8, v);
       expect(lireEtat(b, STATION)).toBeUndefined();
