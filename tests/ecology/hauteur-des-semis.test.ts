@@ -13,8 +13,9 @@
  */
 
 import { describe, expect, it } from "vitest";
+import { serieMeteoPour } from "../../src/data/meteo";
 import { getEspece } from "../../src/engine/especes";
-import { syntheticYear } from "../../src/engine/meteo";
+import { serieToWeeks } from "../../src/engine/meteo";
 import { hauteurDuSemisM } from "../../src/engine/regeneration";
 import { rngStateFromSeed } from "../../src/engine/rng";
 import { createGameState, plantScattered } from "../../src/engine/state";
@@ -54,8 +55,33 @@ describe("la phase pionnière existe enfin, et elle dure", () => {
     // correctif ; qu'elle y arrive quand même prouve qu'on n'a pas simplement
     // rendu les sous-arbrisseaux incapables de s'installer sur la lande, qui
     // est pourtant leur terrain.
+    //
+    // **La météo est celle de Mont-de-Marsan, 2004-2023, pas l'été synthétique**
+    // (#312). Depuis que le front racinaire d'un petit arbre suit sa taille,
+    // une callune de six centimètres n'a plus trente centimètres de racines
+    // mais cinq, et l'été synthétique les tue toutes, vingt sur vingt, à la
+    // vingt-sixième semaine (graines 3, 7 et 9). Or cet été-là est plus dur
+    // pour un plant de l'année que chacun des cinquante-neuf étés réels de la
+    // station : un hêtre planté à trente centimètres y reçoit en moyenne 0,20
+    // de sa demande d'eau, contre 0,31 au plus sec des étés réels, 1964 et 2022
+    // (mesuré sur main avant #312, graine 42) — une pluie lissée semaine après
+    // semaine n'a pas les orages qui rechargent le haut du sable. Dans le
+    // terrain, 93,7 % des semis naturels de callune passent leur premier été
+    // sur un sable acide à 560 mm par an (Henning et al. 2017, *Ecol. Evol.*
+    // 7 : 2091), 25,8 % sont encore là au bout de trois ans.
+    //
+    // La fenêtre a été fixée avant la mesure : les vingt dernières années de
+    // la série, la durée de l'essai. Elle contient les étés secs de 2005 et de
+    // 2022, pas au premier été. Mesuré : 5 / 2 / 0 mortes d'autre chose que le
+    // feu (graines 3, 7, 9), adulte à l'an 11 sur la graine 3. Commencée en
+    // 2003, la fenêtre les tue toutes au premier été ; commencée en 1993,
+    // l'hiver noyé de 2000-2001 en tue douze à seize par engorgement, sur main
+    // comme sur la branche.
     const station = { ...LANDE_SECHE.station, coteM: 30, gibierParHa: 0, voisinage: [] };
-    const meteo = syntheticYear(LANDE_SECHE.climat);
+    const serie = serieMeteoPour(LANDE_SECHE.station.id);
+    if (!serie) throw new Error("série météo manquante");
+    const debut = (2004 - serie.periode[0]) * 52;
+    const meteo = serieToWeeks(serie, LANDE_SECHE.climat).slice(debut, debut + 20 * 52);
     let state = createGameState(station, rngStateFromSeed(3));
     state = plantScattered(
       state,
@@ -67,7 +93,9 @@ describe("la phase pionnière existe enfin, et elle dure", () => {
     let anAdulte = -1;
     let morteAutrementQueParLeFeu = 0;
     for (let i = 0; i < 20 * 52; i++) {
-      const r = tick(state, meteo[i % 52] as never);
+      const semaine = meteo[i];
+      if (!semaine) throw new Error("météo manquante");
+      const r = tick(state, semaine);
       state = r.state;
       for (const m of r.morts) if (m.id <= 20 && m.cause !== "feu") morteAutrementQueParLeFeu++;
       const vivantes = state.trees.filter((t) => t.alive && t.id <= 20);

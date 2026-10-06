@@ -79,6 +79,16 @@ describe("sécheresse (lande sableuse, RU faible)", () => {
     // l'auteur, n'exige plus que la direction. Elle n'est pas rien : sur bien des
     // sables acides d'Europe du Nord, la végétation naturelle est une
     // chênaie-hêtraie, et c'est l'été sec du climat landais qui exclut le hêtre.
+    //
+    // **Depuis #312, le hêtre a de nouveau soif.** Ce n'était pas le seuil : un
+    // plant de trente centimètres avait 23 cm de racines du seul fait d'exister,
+    // et l'horizon de 20 à 75 cm, d'un seul tenant, lui servait son remplissage
+    // moyen. Le front racinaire suit maintenant la taille, et le sable lessivé
+    // est tenu en trois couches : 29 hêtres sur 30 meurent de soif (graines 42,
+    // 1, 2), le rapport vaut 0 / 0,596 / 0 (mort = 0), aucun pin ne meurt de
+    // plus. L'ancien critère (« mort, ou sous 0,6 du pin ») tiendrait sur ces
+    // trois graines, à 0,004 près sur la graine 1 ; le rétablir est laissé à
+    // l'auteur.
     const fagus = meanHeight(state, "fagus_sylvatica", 30);
     const pinus = meanHeight(state, "pinus_sylvestris", 30);
     expect(fagus).toBeLessThan(pinus);

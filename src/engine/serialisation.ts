@@ -162,8 +162,18 @@ const MAGIE = "CANOPEE\u0000";
  * inventer un état, c'est écrire celui qu'elle avait. Un bloc de version 8 se
  * relit donc avec `manteauNeigeMm = 0` (`VERSIONS_RELUES`), et seulement lui :
  * un bloc de version 7 n'a pas la mémoire de crue, et reste refusé.
+ *
+ * **10 (issue #312, la lande en couches)** : le sable lessivé de la lande est
+ * tenu en trois couches au lieu d'une, et sa grille d'eau compte cinq horizons
+ * par cellule au lieu de trois. Un bloc de version 9 écrit sur la lande était
+ * déjà refusé, mais par accident : la longueur de ses grilles ne collait plus.
+ * Le refus devient explicite, et il vaut pour toutes les stations, puisque la
+ * version est celle du format et non d'une station. Les blocs de version 8, qui
+ * se relisaient avec un manteau nul, sont refusés avec eux : ils portent la même
+ * grille d'eau. Le journal reprend la main, et le rejeu recalcule aussi les
+ * racines des arbres sous la nouvelle règle (#312).
  */
-export const VERSION_FORMAT = 9;
+export const VERSION_FORMAT = 10;
 
 /**
  * Les versions d'un bloc que ce moteur sait relire, et ce qu'il faut ajouter à
@@ -172,7 +182,6 @@ export const VERSION_FORMAT = 9;
  */
 const VERSIONS_RELUES: Record<number, Record<string, unknown>> = {
   [VERSION_FORMAT]: {},
-  8: { manteauNeigeMm: 0 },
 };
 
 /** Une grille de sol, telle que l'en-tête la déclare. */

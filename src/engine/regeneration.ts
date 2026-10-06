@@ -24,7 +24,13 @@ import {
 } from "./light";
 import type { RngState } from "./rng";
 import { rngFloat } from "./rng";
-import { diametreInitialCm, phFactor, type TreeState, tirerVigueurIndividuelle } from "./trees";
+import {
+  diametreInitialCm,
+  phFactor,
+  racinesDeDepartCm,
+  type TreeState,
+  tirerVigueurIndividuelle,
+} from "./trees";
 
 /** distance moyenne de dispersion par le vent, m (exponentielle) */
 const WIND_MEAN_DISTANCE_M = 25;
@@ -152,6 +158,8 @@ export interface RecruitmentInput {
    * ce que la même bête fait aux glands.
    */
   partRetournee?: number;
+  /** Profondeur que le sol laisse aux racines, cm : celle d'un semis en dépend. */
+  solPenetrableCm: number;
   nextTreeId: number;
 }
 
@@ -467,7 +475,11 @@ export function yearlyRecruitment(input: RecruitmentInput): RecruitmentResult {
       fruitsKg: 0,
       fruitProgress: 0,
       bloomFrosted: false,
-      rootDepthCm: 20,
+      rootDepthCm: racinesDeDepartCm(
+        espece,
+        hauteurDuSemisM(espece.hauteurMaxM),
+        input.solPenetrableCm,
+      ),
       hauteurElagueeM: 0,
       pousseTendreM: 0,
       vigueur: 1,

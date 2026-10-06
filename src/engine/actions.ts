@@ -31,10 +31,16 @@ import { partMecanisable } from "./mecanisation";
 import { SURVIE_APRES_LABOUR, TYPES_MYCORHIZE } from "./mycorhizes";
 import { KG_PER_HA_TO_G_PER_M2, litterDecayRate } from "./nitrogen";
 import { altitudeParCellule } from "./relief";
+import { profondeurPenetrableCm } from "./soil";
 import type { GameState } from "./state";
 import { tassementApresLabour } from "./tassement";
 import type { TreeState } from "./trees";
-import { diametreInitialCm, tirerVigueurIndividuelle, volumeTigeM3 } from "./trees";
+import {
+  diametreInitialCm,
+  racinesDeDepartCm,
+  tirerVigueurIndividuelle,
+  volumeTigeM3,
+} from "./trees";
 import {
   aireM2DeLaZone,
   cellulesDeLaZone,
@@ -1117,7 +1123,11 @@ function applyPlanter(
       fruitsKg: 0,
       fruitProgress: 0,
       bloomFrosted: false,
-      rootDepthCm: 20,
+      rootDepthCm: racinesDeDepartCm(
+        getEspece(action.especeId),
+        0.3,
+        profondeurPenetrableCm(state.station.profil),
+      ),
       hauteurElagueeM: 0,
       pousseTendreM: 0,
       vigueur: 1,

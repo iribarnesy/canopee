@@ -282,6 +282,51 @@ function poidsBiologique(profondeurSommetCm: number): number {
   return profondeurSommetCm <= 0 ? 1 : Math.max(0.15, Math.exp(-profondeurSommetCm / 45));
 }
 
+/** Deux horizons voisins ne diffèrent que par leur épaisseur. */
+function memeMatiere(a: Horizon, b: Horizon): boolean {
+  return (
+    a.sable === b.sable &&
+    a.limon === b.limon &&
+    a.argile === b.argile &&
+    a.pierrosite === b.pierrosite &&
+    a.moPct === b.moPct &&
+    a.ph === b.ph &&
+    a.induration === b.induration &&
+    a.cnHumus === b.cnHumus
+  );
+}
+
+/**
+ * Le profil **pédologique** : les couches voisines de même matière réunies en
+ * un seul horizon.
+ *
+ * Un profil peut être tenu plus finement que ses horizons, pour que l'eau y ait
+ * une profondeur (#312 : le sable lessivé de la lande en trois couches). C'est
+ * une résolution, pas un fait du sol. Or `poidsBiologique` pondère chaque
+ * horizon par la profondeur de son **sommet** : couper 55 cm en trois faisait
+ * descendre deux sommets, et le carbone initial de la lande passait de 44,0 à
+ * 40,4 t C/ha sans qu'un gramme de matière organique ait bougé. Le carbone et
+ * la minéralisation se calculent donc sur les horizons réunis, et ne dépendent
+ * plus du découpage.
+ *
+ * Pondérer par la moyenne du poids intégrée sur chaque horizon rendrait aussi
+ * le calcul indépendant du découpage, mais changerait le carbone de toutes les
+ * stations (de −9 à −20 % en n'intégrant que sous l'horizon de surface, de
+ * −26 à −36 % en l'intégrant aussi) : c'est une autre affaire que celle-ci.
+ */
+function horizonsPedologiques(profil: SoilProfile): Horizon[] {
+  const reunis: Horizon[] = [];
+  for (const h of profil) {
+    const dessus = reunis[reunis.length - 1];
+    if (dessus && memeMatiere(dessus, h)) {
+      reunis[reunis.length - 1] = { ...dessus, epaisseurCm: dessus.epaisseurCm + h.epaisseurCm };
+    } else {
+      reunis.push(h);
+    }
+  }
+  return reunis;
+}
+
 /** Profondeur de sol pénétrable par les racines, cm (l'induration forte les arrête). */
 export function profondeurPenetrableCm(profil: SoilProfile): number {
   let total = 0;
@@ -318,7 +363,7 @@ export function porositeProfilMm(profil: SoilProfile): number {
 export function mineralisationPotentielleKgHaSemaine(profil: SoilProfile): number {
   let profondeur = 0;
   let kgAn = 0;
-  for (const h of profil) {
+  for (const h of horizonsPedologiques(profil)) {
     kgAn += 1.7 * h.moPct * h.epaisseurCm * (1 - h.pierrosite) * poidsBiologique(profondeur);
     profondeur += h.epaisseurCm;
   }
@@ -334,7 +379,7 @@ export function mineralisationPotentielleKgHaSemaine(profil: SoilProfile): numbe
 export function carboneProfilTHa(profil: SoilProfile): number {
   let profondeur = 0;
   let tC = 0;
-  for (const h of profil) {
+  for (const h of horizonsPedologiques(profil)) {
     const masseMoTHa = (h.moPct / 100) * h.epaisseurCm * densiteApparente(h) * 100;
     tC += masseMoTHa * 0.58 * (1 - h.pierrosite) * poidsBiologique(profondeur);
     profondeur += h.epaisseurCm;

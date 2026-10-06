@@ -4104,6 +4104,7 @@ export function tick(state: GameState, weather: WeekWeather): TickResult {
       // Et l'autre face du sanglier : le lit de germination qu'il ouvre pour
       // les petites graines (sanglier.ts).
       partRetournee: partRetourneeAn,
+      solPenetrableCm,
       nextTreeId,
     });
     // Le carbone des recrues vient d'ailleurs : de la graine, produite par un
