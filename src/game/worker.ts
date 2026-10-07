@@ -646,6 +646,42 @@ function ouvrirLaSemaine(etat: GameState): void {
 }
 
 /**
+ * **Les gestes de la semaine ouverte, à la reprise d'une sauvegarde.**
+ *
+ * Une sauvegarde se prend semaine ouverte : ce que le joueur y a posé — planter
+ * en pause, puis quitter — est déjà dans l'état qu'il quitte **et** dans le
+ * journal, daté de cette semaine-là. Le rejeu, lui, s'arrête à l'ouverture de
+ * la semaine : `advanceWeek` n'applique les actions d'une semaine qu'en la
+ * fermant. Sans ce qui suit, la reprise rendait une parcelle **sans** ces
+ * gestes ; la semaine se fermait sans eux, et ils reparaissaient au chargement
+ * d'après, rejoués par le journal qui les gardait — deux parties différentes
+ * pour une même sauvegarde (recette v0.4, mesuré : deux pommiers plantés en
+ * semaine 6, zéro après la reprise, deux après la reprise suivante).
+ *
+ * On les applique donc ici, dans l'ordre du journal et par le même
+ * `applyAction` que le rejeu, en les comptant comme `performAction` les compte
+ * — mais **sans** les réécrire au journal, qui les porte déjà. Ils redeviennent
+ * les actions de la semaine : la facture et le retour sous le plafond (#133)
+ * les retrouvent comme si la partie ne s'était jamais arrêtée.
+ */
+function rejouerLaSemaineOuverte(): void {
+  if (!state) return;
+  for (const action of journal) {
+    if (action.week !== state.week) continue;
+    const result = applyAction(state, action);
+    state = result.state;
+    actionsDeLaSemaine.push(action);
+    const gestes = result.gestes ?? [];
+    cumuls = accumuler(cumuls, gestes, state.trees);
+    replierLeBilan(gestesSeuls(gestes), state.week, state.trees);
+    suivisDeLaSemaine.push(...retenirCeQuiArrive(gestesSeuls(gestes), state.week, state.trees));
+  }
+  // Le journal finit par les actions de la semaine ouverte : elles seules
+  // tombent si la semaine est ramenée sous le plafond.
+  journalAuDebut = journal.length - actionsDeLaSemaine.length;
+}
+
+/**
  * Ce qu'une action a produit, pour qui veut le compter (#117) : le mouvement de
  * trésorerie qu'elle a causé, et les gestes que le moteur en a rapportés.
  */
@@ -2010,6 +2046,7 @@ self.addEventListener("message", (event: MessageEvent<ToWorker>) => {
       aCompter = new Map();
       actionsDeLaSemaine = [];
       ouvrirLaSemaine(replayed);
+      rejouerLaSemaineOuverte();
       compteAnnee = msg.save.compteDeLAnnee ?? COMPTE_VIDE;
       // Le rejeu n'a rien à raconter : ce sont des semaines déjà vécues.
       pendingRefusals = [];

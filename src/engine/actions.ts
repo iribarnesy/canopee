@@ -1049,6 +1049,20 @@ function refuse(week: number, action: GameAction["type"], reason: string): Actio
   return { week, action, reason };
 }
 
+/**
+ * Pourquoi un geste qui veut un arbre **vivant** ne trouve pas celui qu'on lui
+ * désigne.
+ *
+ * Une chandelle — l'arbre mort resté debout — est dans `state.trees` et se
+ * sélectionne comme un autre (boisMort.ts). Le refus disait « arbre 14
+ * introuvable » pour elle, sur un arbre que le joueur voit à l'écran : en
+ * recette (suberaie, an 20), sept des dix plus grands chênes-lièges d'une
+ * levée d'écorce refusés ainsi, tous debout et morts. On dit ce qui est.
+ */
+function absentOuMort(trees: readonly TreeState[], id: number): string {
+  return trees.some((t) => t.id === id) ? `arbre ${id} mort sur pied` : `arbre ${id} introuvable`;
+}
+
 function applyPlanter(
   state: GameState,
   action: Extract<GameAction, { type: "planter" }>,
@@ -2194,7 +2208,7 @@ function applyElaguer(
     const idx = trees.findIndex((t) => t.id === id && t.alive);
     const tree = idx >= 0 ? trees[idx] : undefined;
     if (!tree) {
-      refusals.push(refuse(action.week, "elaguer", `arbre ${id} introuvable`));
+      refusals.push(refuse(action.week, "elaguer", absentOuMort(state.trees, id)));
       continue;
     }
     // On n'élague que jusqu'à la moitié de la hauteur : au-delà, on ampute
@@ -2272,7 +2286,7 @@ function applyTrogner(
     const idx = trees.findIndex((t) => t.id === id && t.alive);
     const tree = idx >= 0 ? trees[idx] : undefined;
     if (!tree) {
-      refusals.push(refuse(action.week, "trogner", `arbre ${id} introuvable`));
+      refusals.push(refuse(action.week, "trogner", absentOuMort(state.trees, id)));
       continue;
     }
     const espece = getEspece(tree.especeId);
@@ -2555,7 +2569,7 @@ function applyProteger(
     const idx = trees.findIndex((t) => t.id === id && t.alive);
     const tree = idx >= 0 ? trees[idx] : undefined;
     if (!tree) {
-      refusals.push(refuse(action.week, "proteger", `arbre ${id} introuvable`));
+      refusals.push(refuse(action.week, "proteger", absentOuMort(state.trees, id)));
       continue;
     }
     if (tree.protege) {
@@ -2600,7 +2614,7 @@ function applyReceper(
     const idx = trees.findIndex((t) => t.id === id && t.alive);
     const tree = idx >= 0 ? trees[idx] : undefined;
     if (!tree) {
-      refusals.push(refuse(action.week, "receper", `arbre ${id} introuvable`));
+      refusals.push(refuse(action.week, "receper", absentOuMort(state.trees, id)));
       continue;
     }
     const espece = getEspece(tree.especeId);
@@ -2737,7 +2751,7 @@ function applyLeverEcorce(
     const idx = trees.findIndex((t) => t.id === id && t.alive);
     const tree = idx >= 0 ? trees[idx] : undefined;
     if (!tree) {
-      refusals.push(refuse(action.week, "leverEcorce", `arbre ${id} introuvable`));
+      refusals.push(refuse(action.week, "leverEcorce", absentOuMort(state.trees, id)));
       continue;
     }
     const ecorce = getEspece(tree.especeId).ecorce;
