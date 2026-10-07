@@ -296,6 +296,31 @@ describe("ce que l'action rapporte au rendu", () => {
     expect(retire?.find((a) => a.id === vivant)?.mortAvantLeGeste).toBe(false);
   });
 
+  it("un geste sur un arbre mort sur pied dit qu'il est mort, pas qu'il est introuvable", () => {
+    // Recette v0.4 : une levée d'écorce sur dix chênes-lièges sélectionnés en
+    // rendait sept « introuvables » — debout à l'écran, mais morts. Le refus
+    // reste un refus ; il dit seulement ce qui est.
+    let state = createGameState(STATION, rngStateFromSeed(13));
+    state = plantAt(state, "quercus_suber", 25, 25, 12);
+    const mort = state.trees[0]?.id ?? 0;
+    state = { ...state, trees: state.trees.map((t) => ({ ...t, alive: false })) };
+    const absent = 9999;
+    const gestes: GameAction[] = [
+      { type: "leverEcorce", week: state.week, treeIds: [mort, absent] },
+      { type: "elaguer", week: state.week, treeIds: [mort, absent], hauteurM: 4 },
+      { type: "trogner", week: state.week, treeIds: [mort, absent], hauteurTeteM: 2 },
+      { type: "receper", week: state.week, treeIds: [mort, absent] },
+      { type: "proteger", week: state.week, treeIds: [mort, absent] },
+    ];
+    for (const geste of gestes) {
+      const raisons = applyAction(state, geste).refusals.map((r) => r.reason);
+      expect(raisons, geste.type).toEqual([
+        `arbre ${mort} mort sur pied`,
+        `arbre ${absent} introuvable`,
+      ]);
+    }
+  });
+
   it("l'éclaircie se distingue de la coupe : ce n'est pas la même animation", () => {
     const { state } = troisFrenes();
     const r = applyAction(state, {
