@@ -606,7 +606,27 @@ export const SABLE_PROFOND: StationClimat = {
     initialMineralNKgHa: 25,
     // Veldpodzol : la nappe est à portée du pivot, et c'est ce qui sépare un
     // site de classe médiane d'une dune sèche.
-    profondeurNappeEquilibreCm: 200,
+    //
+    // **La cible est sourcée, la valeur ne l'est pas** (#337). La cible est la
+    // classe de nappe VI de la carte des sols néerlandaise (Bodemkaart van
+    // Nederland, 1:50 000) : niveau moyen le plus haut (GHG) entre 40 et 80 cm
+    // sous la surface, le plus bas (GLG) au-delà de 120 cm. Le chiffre déclaré
+    // est un **réglage calé sur le moteur** pour l'atteindre, comme `nappe.ts`
+    // le prévoit, et non une ancre : l'échange régional ne rappelle la nappe
+    // vers ce niveau qu'à 3 % par semaine, et ce sable reçoit quelque 370 mm de
+    // recharge par an, si bien que la nappe réalisée se tient bien au-dessus
+    // du niveau déclaré.
+    //
+    // Déclarée à 200 cm, elle se tenait à 47 cm en médiane. Au milieu de la
+    // parcelle, son niveau haut moyen (GHG) valait 23 cm et son niveau bas
+    // (GLG) 70 cm : un sable humide de classe II à III, pas un veldpodzol. Sa
+    // moitié basse affleurait chaque hiver, et la partie libre du jeu comptait
+    // 136 crues en trente ans. La règle de calage, fixée avant la mesure :
+    // partie libre, trente ans de météo réelle, GHG et GLG relevés au milieu de
+    // la parcelle, pas de 10 cm, et on retient le GHG le plus proche de 60 cm
+    // avec un GLG au-delà de 120. À 250 cm : GHG 61, GLG 119, hors classe. À
+    // 260 cm : GHG 67 à 69, GLG 127 à 129 sur trois graines.
+    profondeurNappeEquilibreCm: 260,
     remonteeNappeMmSemaine: 0,
     // Sable de couverture sur sable : l'exutoire n'est jamais le goulot.
     drainageExterneMmSemaine: Number.POSITIVE_INFINITY,
