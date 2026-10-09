@@ -13,7 +13,7 @@ import {
   saturationDepuisPh,
 } from "./bases";
 import type { CarbonState } from "./carbon";
-import { createCarbonState, T_HA_TO_G_M2 } from "./carbon";
+import { createCarbonState, T_HA_TO_G_M2, treeTotalCarbonKg } from "./carbon";
 import type { MemoireDeCrue } from "./crue";
 import type { EauDeSurface } from "./eau_surface";
 import { getEspece } from "./especes";
@@ -32,6 +32,7 @@ import type { Horizon, SoilProfile } from "./soil";
 import { profondeurPenetrableCm, ruHorizonMm } from "./soil";
 import { geometrieTranches } from "./tranches";
 import {
+  cnBois,
   diametreInitialCm,
   racinesDeDepartCm,
   type TreeState,
@@ -976,6 +977,22 @@ function racinesInitialesCm(especeId: string, heightM: number, station: Station)
   return racinesDeDepartCm(getEspece(especeId), heightM, profondeurPenetrableCm(station.profil));
 }
 
+/**
+ * L'azote qu'un arbre de cette taille a mis dans son bois en poussant, g (#328).
+ *
+ * Le moteur ne met de l'azote que dans le bois **neuf**, au C/N du bois de
+ * l'espèce (`cnBois`). Un arbre posé d'emblée à six mètres n'avait donc pas
+ * d'azote dans le bois qu'il n'avait pas fait pousser : un bois au C/N infini,
+ * qui ne rendait rien à sa mort et affamait le sol plus que n'importe quel bois
+ * réel une fois broyé. On lui donne celui qu'il aurait accumulé. Sa réserve,
+ * elle, reste vide : elle n'a pas de taille d'équilibre que le moteur sache
+ * dire, et elle se remplit dès la première chute de feuilles.
+ */
+function azoteDuBoisPoseG(especeId: string, heightM: number): number {
+  const espece = getEspece(especeId);
+  return (treeTotalCarbonKg(espece, diametreInitialCm(heightM), heightM) * 1000) / cnBois(espece);
+}
+
 /** Proto-action : planter un plant à une position donnée (30 cm par défaut). */
 export function plantAt(
   state: GameState,
@@ -1000,6 +1017,7 @@ export function plantAt(
     stress: 0,
     alive: true,
     uptakeYearG: 0,
+    azoteBoisG: azoteDuBoisPoseG(especeId, heightM),
     fruitsKg: 0,
     fruitProgress: 0,
     bloomFrosted: false,
@@ -1050,6 +1068,7 @@ export function plantScattered(
       stress: 0,
       alive: true,
       uptakeYearG: 0,
+      azoteBoisG: azoteDuBoisPoseG(especeId, heightM),
       fruitsKg: 0,
       fruitProgress: 0,
       bloomFrosted: false,

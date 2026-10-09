@@ -312,6 +312,13 @@ export const LIME_PH_STEP = 0.5;
 /**
  * C/N du bois raméal fragmenté épandu : du **bois**, pas des feuilles — libération
  * lente sur plusieurs années, c'est toute la valeur du BRF (ch2-B).
+ *
+ * Il ne sert qu'à la **vitesse** de décomposition du broyat épandu (0,6 / 40 par
+ * semaine), pas à son azote : celui-là est l'azote que l'arbre portait. Tout
+ * broyat se décompose donc à la vitesse d'un C/N de 40, quel que soit son C/N
+ * réel (47 pour vingt aulnes de huit ans, bien plus pour un hêtre), et quel
+ * que soit ce que le tas a perdu de carbone en attendant *(à calibrer, sans
+ * source ; lire la vitesse sur le C/N réel du broyat est ouvert, #328)*.
  */
 export const BRF_CN_RATIO = 40;
 
