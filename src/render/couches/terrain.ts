@@ -55,6 +55,7 @@ import {
   eclairer,
   estInondee,
   type MelangeDuTapis,
+  matieresDuSol,
   melange,
   palier,
   quantifier,
@@ -810,6 +811,48 @@ export function cuireMorceau(
   const sous = sousDivisions(demiLargeur * 2 * pas);
   const finesse = pas / sous;
 
+  // ── **Le fond d'un seul tenant**, sous les quads (#362) ─────────────────────
+  // Deux quads voisins remplis séparément laissent, à chaque sommet partagé,
+  // un demi-pixel d'antialiasing par où passait le fond de page, clair : la
+  // parcelle sortait parcourue de pointillés pâles, alignés en diagonales — la
+  // grille de calcul lue à l'écran. Le trait de même couleur qui devait les
+  // fermer en ajoutait d'autres, dans l'ordre du peintre. Le fond est donc tracé
+  // d'abord, **un seul chemin** pour toute la surface du morceau, dans la teinte
+  // du champ au centre : la règle de remplissage fond les losanges en une nappe
+  // sans arête intérieure (la même astuce que l'eau libre, plus bas), et ce
+  // qu'un interstice laisse voir est un sol de la même couleur.
+  {
+    const fond = lireChamp(champ, (x0 + xFin) / 2, (y0 + yFin) / 2).teinte;
+    ctx.fillStyle = versCss(fond);
+    ctx.beginPath();
+    for (let qy = y0; qy < yFin; qy += finesse) {
+      for (let qx = x0; qx < xFin; qx += finesse) {
+        const ql = Math.min(finesse, xFin - qx);
+        const qh = Math.min(finesse, yFin - qy);
+        const coins = [
+          [qx, qy],
+          [qx + ql, qy],
+          [qx + ql, qy + qh],
+          [qx, qy + qh],
+        ] as const;
+        coins.forEach(([px, py], k) => {
+          const e = versEcranVue({ x: px, y: py, z: lireChamp(champ, px, py).z }, vue);
+          if (k === 0) ctx.moveTo(e.sx - decalage.dx, e.sy - decalage.dy);
+          else ctx.lineTo(e.sx - decalage.dx, e.sy - decalage.dy);
+        });
+        ctx.closePath();
+      }
+    }
+    ctx.fill();
+    // **Le trait du fond déborde d'un demi-pixel**, et c'est voulu : dedans, les
+    // quads le recouvrent ; dehors, il recouvre le bord du morceau voisin. Sans
+    // lui, chaque morceau s'arrêtait sur un demi-pixel d'antialiasing et la
+    // parcelle se lisait en damier de seize mètres, par des liserés clairs.
+    ctx.strokeStyle = ctx.fillStyle;
+    ctx.lineWidth = 1.5;
+    ctx.stroke();
+  }
+
   for (const { x, y } of paves) {
     const largeurPave = Math.min(pas, xFin - x);
     const hauteurPave = Math.min(pas, yFin - y);
@@ -885,10 +928,7 @@ export function cuireMorceau(
         // échelle. Par les coins, deux quads voisins partagent leurs sommets :
         // la surface est continue par construction, une pente est une pente, et
         // seuls les vrais accidents font des arêtes.
-        const css = versCss(teinteQuad);
-        ctx.fillStyle = css;
-        ctx.strokeStyle = css;
-        ctx.lineWidth = 1;
+        ctx.fillStyle = versCss(teinteQuad);
         ctx.beginPath();
         for (const [k, [px, py]] of (
           [
@@ -905,10 +945,9 @@ export function cuireMorceau(
           else ctx.lineTo(ex, ey);
         }
         ctx.closePath();
+        // Pas de trait : le fond d'un seul tenant, posé dessous, ferme le
+        // demi-pixel d'antialiasing entre deux quads (#362).
         ctx.fill();
-        // Le trait de même couleur ferme le demi-pixel d'antialiasing entre
-        // deux quads, ce que le débordement d'un losange faisait avant lui.
-        ctx.stroke();
       }
     }
     // ── Le tapis : les marques qui font la matière ───────────────────────
@@ -922,8 +961,21 @@ export function cuireMorceau(
           if (donnees.enEau?.[i]) continue; // rien ne pousse dans l'eau libre
           const q = celluleA(donnees, i);
           const zc = donnees.altitudesM[i] ?? centre.z;
+          // **Chaque marque dans la couleur de sa matière** (#360) : une touffe
+          // est verte même sur la terre, une plaque de terre est brune même
+          // dans l'herbe. Elles prenaient toutes la couleur du fond, à
+          // quelques pour cent près, et un sol couvert au quart ressemblait à
+          // un sol couvert aux trois quarts. Le relief les éclaire comme le
+          // fond qu'elles recouvrent.
+          const matieres = matieresDuSol(q, semaineAnnee);
+          const relief = facteurRelief(donnees.altitudesM, donnees.coteM, cx2, cy2, penteReference);
           for (const brin of brinsDeLaCellule(cx2, cy2, q, densite)) {
-            const fond = lireChamp(champ, brin.x, brin.y).teinte;
+            const matiere =
+              brin.motif === "touffe"
+                ? matieres.herbe
+                : brin.motif === "feuille"
+                  ? matieres.litiere
+                  : matieres.nu;
             const b = versEcranVue({ x: brin.x, y: brin.y, z: zc }, vue);
             dessinerBrin(
               ctx,
@@ -931,7 +983,7 @@ export function cuireMorceau(
               b.sx - decalage.dx,
               b.sy - decalage.dy,
               demiLargeur,
-              versCss(eclairer(fond, clarteDuMotif(brin.motif) * brin.nuance)),
+              versCss(eclairer(matiere, relief * clarteDuMotif(brin.motif) * brin.nuance)),
             );
           }
         }

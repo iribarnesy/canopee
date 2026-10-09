@@ -55,6 +55,24 @@ export function PanneauMenu({
         </p>
       )}
       {/*
+        **Le réglage refusé sur l'avis se retrouve ici** (#359) : un choix fait
+        d'un clic, au moment où il agaçait, doit pouvoir se défaire ailleurs
+        qu'à la prochaine mort — qui, justement, ne s'annoncera plus.
+      */}
+      {!game.arretSurLesMorts && (
+        <p style={{ margin: "0 0 10px", fontSize: 13 }}>
+          Mort d'un arbre suivi : <strong>le temps continue</strong>{" "}
+          <button
+            type="button"
+            style={btn()}
+            onClick={() => game.setArretSurLesMorts(true)}
+            title="Arrêter de nouveau le temps quand un arbre suivi meurt"
+          >
+            ↺ m'arrêter de nouveau
+          </button>
+        </p>
+      )}
+      {/*
         La seule porte de sortie : il n'y a plus d'en-tête de site par-dessus le
         jeu. Elle sauvegarde d'abord, et le dit — voir `quit`.
       */}

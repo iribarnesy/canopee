@@ -61,6 +61,12 @@ import { agreger, type MasseFourre, type TigeFourre } from "./fourre";
 /** Ce que la couche a besoin de savoir d'un arbre. Un sous-ensemble strict du protocole. */
 export interface ArbreAPoser {
   id: number;
+  /**
+   * Les tiges qu'une **masse de fourré** réunit (#356) : un clic dessus les
+   * désigne toutes, et elle s'éclaire dès que l'une d'elles est choisie.
+   * Absent pour un arbre, qui n'est que lui-même.
+   */
+  tiges?: readonly number[];
   especeId: string;
   x: number;
   y: number;
@@ -2166,7 +2172,7 @@ export function separerLeFourre(arbres: readonly ArbreAPoser[]): {
   const reste: ArbreAPoser[] = [];
   for (const a of arbres) {
     if (ficheDe(a.especeId)?.fourre) {
-      tiges.push({ especeId: a.especeId, x: a.x, y: a.y, z: a.z, heightM: a.heightM });
+      tiges.push({ id: a.id, especeId: a.especeId, x: a.x, y: a.y, z: a.z, heightM: a.heightM });
     } else {
       reste.push(a);
     }
@@ -2178,14 +2184,19 @@ export function separerLeFourre(arbres: readonly ArbreAPoser[]): {
  * Une masse de fourré, ramenée à ce qu'un arbre doit être pour la couche.
  *
  * La masse garde son `especeId` — c'est lui qui donne les couleurs — et sa
- * densité devient la part foliaire, parce que c'est bien ce qu'elle dit : un
- * carreau à deux tiges de ronce montre le sol, un carreau à trente ne le montre
- * plus. L'identifiant vient du carreau, pas d'une tige, donc deux images
- * successives donnent la même variante et le fourré ne grouille pas.
+ * densité devient la part foliaire, parce que c'est bien ce qu'elle dit : une
+ * tige seule montre le sol, deux sur le même mètre ne le montrent plus.
+ *
+ * **Son identifiant est celui de sa plus petite tige** (#356) : un vrai arbre du
+ * moteur, donc rien qui puisse en heurter un autre — l'ancien, tiré du carreau,
+ * tombait sur des identifiants d'arbres réels. Il reste stable tant que la
+ * masse garde ses tiges, et la variante dessinée avec lui. Ses tiges voyagent
+ * à côté, pour le clic et la surbrillance.
  */
 export function fourreEnArbre(masse: MasseFourre): ArbreAPoser {
   return {
-    id: Math.round(masse.x) * 7919 + Math.round(masse.y),
+    id: masse.ids[0] ?? -1,
+    tiges: masse.ids,
     especeId: masse.especeId,
     x: masse.x,
     y: masse.y,
