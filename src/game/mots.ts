@@ -288,6 +288,7 @@ export function capitale(texte: string): string {
 /** Pourquoi un habitant s'en va, dit en clair (`CauseDepart`). */
 const DEPART_DIT: Record<CauseDepart, string> = {
   arbreDisparu: "son arbre n'est plus là",
+  arbreMort: "son arbre est mort",
   giteTropPetit: "son gîte ne lui suffit plus",
   tableVide: "il n'y a plus assez à manger",
 };
