@@ -543,9 +543,9 @@ export function prelevementProfondEq(
 export const AMPLIFICATION_CHARGE = 3;
 
 /**
- * **d'où viennent les vingt-six valeurs de** `litiere.calciumMgG`.
+ * **d'où viennent les vingt-sept valeurs de** `litiere.calciumMgG`.
  *
- * Il faut le dire net : **quatre sont ancrées, les vingt-deux autres sont des
+ * Il faut le dire net : **quatre sont ancrées, les vingt-trois autres sont des
  * placements dans une gamme.** Ce n'est pas rien — la gamme, elle, est mesurée,
  * et le rang des essences ancrées l'est aussi — mais une fiche qui porte 13
  * plutôt que 12 porte un jugement, pas une mesure. Toutes sont marquées
@@ -581,6 +581,7 @@ export const AMPLIFICATION_CHARGE = 3;
  * | bouleau | 9 | essence dite améliorante sans l'être franchement : posé **au seuil**, donc neutre |
  * | aulne, saule, charme, prunellier | 11-12 | feuillus à litière tendre, au-dessus du seuil |
  * | noyer, sureau, cornouiller, fusain, noisetier, aubépine, pommier, abricotier, troène, ronce | 10-15 | litières tendres de sols riches, placées haut |
+ * | noyer hybride | 14 | celle du noyer commun, reprise : aucune source ne sépare leurs litières |
  *
  * Ce qu'il faudrait pour lever le *(à confirmer)* : une table de teneurs
  * foliaires européennes essence par essence. Les synthèses existent ; aucune
