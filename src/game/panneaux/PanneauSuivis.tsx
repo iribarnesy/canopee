@@ -320,6 +320,8 @@ export function PanneauSuivis({
   aLArret,
   oublier,
   selectionner,
+  arretSurLesMorts = true,
+  reglerArretSurLesMorts,
 }: {
   suivis: ReadonlySet<number>;
   /**
@@ -352,6 +354,10 @@ export function PanneauSuivis({
   aLArret: boolean;
   oublier: (id: number) => void;
   selectionner: (id: number) => void;
+  /** La mort d'un suivi arrête-t-elle le temps (#359) ? */
+  arretSurLesMorts?: boolean;
+  /** Le régler d'ici aussi : c'est là qu'on lit ce que la règle concerne. */
+  reglerArretSurLesMorts?: (oui: boolean) => void;
 }) {
   /**
    * **les plus faibles en haut**, par vigueur croissante.
@@ -405,7 +411,17 @@ export function PanneauSuivis({
     <div style={{ fontSize: 13 }}>
       <div style={{ color: "var(--encre-douce)", marginBottom: 6 }}>
         {suivis.size} arbre{suivis.size > 1 ? "s" : ""} suivi{suivis.size > 1 ? "s" : ""}, le moins
-        vigoureux en tête — le temps s'arrête quand l'un d'eux meurt.
+        vigoureux en tête.
+        {reglerArretSurLesMorts && (
+          <label style={{ display: "block", marginTop: 4 }}>
+            <input
+              type="checkbox"
+              checked={arretSurLesMorts}
+              onChange={(e) => reglerArretSurLesMorts(e.target.checked)}
+            />{" "}
+            arrêter le temps quand l'un d'eux meurt
+          </label>
+        )}
       </div>
       {ordre.map((id) => {
         const arbre = tous.find((t) => t.id === id);

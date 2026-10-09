@@ -519,6 +519,24 @@ let fractionalWeeks = 0;
 let semaineDArret: number | undefined;
 /** Ce que l'arrivée annoncera — posé par le jeu, qui sait nommer un mois. */
 let libelleDArrivee = "";
+/** La vitesse de la traversée en cours : « continuer » la reprend telle quelle (#359). */
+let vitesseDeLaTraversee = 0;
+/** La mort d'un arbre suivi arrête-t-elle le temps ? Le joueur peut dire non (#359). */
+let arretSurLesMorts = true;
+
+/**
+ * **Toutes les pauses passent par ici**, pour qu'aucune n'oublie de dire si
+ * elle coupe une traversée : sans ça, l'avis n'offrait que « revoir », et un
+ * « +1 an » interrompu en juin ne pouvait plus aller jusqu'en décembre (#359).
+ */
+function pause(reason: string, extra: { scene?: number; motif?: "mortSuivie" } = {}): void {
+  post({
+    type: "autopause",
+    reason,
+    ...extra,
+    ...(semaineDArret !== undefined ? { enRoute: true as const } : {}),
+  });
+}
 let prevFruitsReadyKg = 0;
 let autoHarvest = true;
 let pendingEvents: GameEvent[] = [];
@@ -1486,11 +1504,7 @@ function stepWeeks(n: number) {
       if (weeksPerSecond > 1 && estUneTempeteAVoir(t.arbresVerses)) {
         weeksPerSecond = 0;
         scenePosee = true;
-        post({
-          type: "autopause",
-          reason: `Tempête : ${t.arbresVerses} arbres couchés`,
-          scene: sceneDeLaSemaine(),
-        });
+        pause(`Tempête : ${t.arbresVerses} arbres couchés`, { scene: sceneDeLaSemaine() });
       }
     }
     // **Une mortalité de masse est une scène**, et c'est la troisième que le
@@ -1516,14 +1530,12 @@ function stepWeeks(n: number) {
       const trouvables = ticked.morts.filter((m) => m.heightM >= HAUTEUR_TROUVABLE_M).length;
       weeksPerSecond = 0;
       scenePosee = true;
-      post({
-        type: "autopause",
-        reason:
-          trouvables < ticked.morts.length
-            ? `${ticked.morts.length} arbres meurent d'un coup, dont ${trouvables} de plus d'un mètre`
-            : `${ticked.morts.length} arbres meurent d'un coup (${Math.round(part * 100)} % du peuplement)`,
-        scene: sceneDeLaSemaine(),
-      });
+      pause(
+        trouvables < ticked.morts.length
+          ? `${ticked.morts.length} arbres meurent d'un coup, dont ${trouvables} de plus d'un mètre`
+          : `${ticked.morts.length} arbres meurent d'un coup (${Math.round(part * 100)} % du peuplement)`,
+        { scene: sceneDeLaSemaine() },
+      );
     }
     // Incendie : l'événement le plus marquant d'une partie sur lande.
     if (ticked.incendie) {
@@ -1537,11 +1549,7 @@ function stepWeeks(n: number) {
       );
       if (weeksPerSecond > 1) {
         weeksPerSecond = 0;
-        post({
-          type: "autopause",
-          reason: `Incendie : ${f.arbresTues} arbres perdus`,
-          scene: sceneDeLaSemaine(),
-        });
+        pause(`Incendie : ${f.arbresTues} arbres perdus`, { scene: sceneDeLaSemaine() });
         // **Pas d'instantané ici**, et c'est le correctif de l'incendie
         // invisible. `startLoop` en poste un dès que `stepWeeks` rend la main ;
         // en poster un de plus depuis ici en faisait **deux** pour la même
@@ -1556,10 +1564,12 @@ function stepWeeks(n: number) {
     // même de l'issue — « pas qu'ils meurent sans que je comprenne rien ». Ici
     // et pas côté jeu, parce qu'ici seulement la mort est connue à la semaine
     // où elle arrive : l'instantané, lui, peut en porter vingt-six.
-    const morts = ticked.morts.filter((m) => suivis.has(m.id));
+    // Le joueur peut l'avoir refusé (#359) : la mort reste alors au volet des
+    // suivis et à son 🔔, qui la notent qu'on s'arrête ou non.
+    const morts = arretSurLesMorts ? ticked.morts.filter((m) => suivis.has(m.id)) : [];
     if (morts.length > 0) {
       weeksPerSecond = 0;
-      post({ type: "autopause", reason: raisonDesMorts(morts) });
+      pause(raisonDesMorts(morts), { motif: "mortSuivie" });
       return;
     }
     // Faillite : le temps s'arrête, le joueur doit regarder ses comptes.
@@ -1567,10 +1577,7 @@ function stepWeeks(n: number) {
       bankruptcyAnnounced = true;
       event("💸", "FAILLITE : le découvert a dépassé −20 000 €");
       weeksPerSecond = 0;
-      post({
-        type: "autopause",
-        reason: "FAILLITE — le découvert a dépassé −20 000 €. Vendez, licenciez, ou recommencez.",
-      });
+      pause("FAILLITE — le découvert a dépassé −20 000 €. Vendez, licenciez, ou recommencez.");
       return;
     }
     // Fruits mûrs : récolte auto, ou pause pour laisser la main. Les deux
@@ -1600,7 +1607,7 @@ function stepWeeks(n: number) {
       } else if (weeksPerSecond > 4) {
         prevFruitsReadyKg = murs.kg;
         weeksPerSecond = 0;
-        post({ type: "autopause", reason: `${Math.round(murs.kg)} kg de fruits sont mûrs` });
+        pause(`${Math.round(murs.kg)} kg de fruits sont mûrs`);
         return;
       }
     }
@@ -1784,7 +1791,7 @@ function startLoop() {
         semaineDArret = undefined;
         weeksPerSecond = 0;
         fractionalWeeks = 0;
-        post({ type: "autopause", reason: libelleDArrivee });
+        pause(libelleDArrivee);
       }
     }
   }, 100);
@@ -1890,6 +1897,7 @@ function init(
     economie,
   });
   politiqueHoraire = "demander";
+  arretSurLesMorts = true;
   // Une partie neuve n'a rien récolté : le cumul de la précédente ne survit pas.
   cumuls = CUMULS_VIDES;
   bilan = BILAN_VIDE;
@@ -1940,6 +1948,7 @@ function init(
   erosionAnnee = 0;
   prevFruitsReadyKg = 0;
   post({ type: "ready", station: stationInfo() });
+  post({ type: "arretSurLesMorts", oui: arretSurLesMorts });
   postSnapshot();
   startLoop();
 }
@@ -1983,6 +1992,7 @@ self.addEventListener("message", (event: MessageEvent<ToWorker>) => {
       // #255 n'a jamais eu d'habitants, et la rejouer avec les ferait diverger.
       faune = msg.save.faune ?? false;
       politiqueHoraire = msg.save.politiqueHoraire ?? "demander";
+      arretSurLesMorts = msg.save.sansArretSurLesMorts !== true;
       niveauId = msg.save.niveauId;
       paliersAcquis = msg.save.paliersAcquis ? [...msg.save.paliersAcquis] : [];
       anneeDepart = msg.save.anneeDepart;
@@ -2063,6 +2073,7 @@ self.addEventListener("message", (event: MessageEvent<ToWorker>) => {
       post({ type: "ready", station: stationInfo() });
       // La consigne vient de la sauvegarde : l'écran ne la devinerait pas.
       post({ type: "politiqueHoraire", politique: politiqueHoraire });
+      post({ type: "arretSurLesMorts", oui: arretSurLesMorts });
       // Le niveau vient de la sauvegarde : l'écran ne le devinerait pas.
       post({ type: "niveau", id: niveauId, acquis: [...paliersAcquis] });
       majRecolteAuto();
@@ -2103,6 +2114,16 @@ self.addEventListener("message", (event: MessageEvent<ToWorker>) => {
       definirLaPolitique(msg.politique);
       postSnapshot();
       break;
+    case "arretSurLesMorts":
+      arretSurLesMorts = msg.oui;
+      post({ type: "arretSurLesMorts", oui: arretSurLesMorts });
+      break;
+    case "continuer":
+      // Rien à reprendre si la traversée est déjà arrivée, ou si le joueur l'a
+      // annulée en choisissant lui-même une vitesse.
+      if (!state || relecture || semaineDArret === undefined) return;
+      weeksPerSecond = vitesseDeLaTraversee;
+      break;
     case "attendre":
       // On ne touche **ni** à `weeksPerSecond` **ni** à `semaineDArret` : c'est une
       // retenue, pas une reprise en main. Une traversée « +1 mois » qui
@@ -2120,6 +2141,7 @@ self.addEventListener("message", (event: MessageEvent<ToWorker>) => {
       if (!state || relecture) return;
       semaineDArret = state.week + Math.max(1, Math.round(msg.semaines));
       weeksPerSecond = msg.weeksPerSecond;
+      vitesseDeLaTraversee = msg.weeksPerSecond;
       libelleDArrivee = msg.libelle;
       break;
     }
@@ -2182,6 +2204,7 @@ self.addEventListener("message", (event: MessageEvent<ToWorker>) => {
         // La consigne suit la partie : c'est un choix de conduite, pas un
         // réglage de la session (#133).
         ...(politiqueHoraire === "demander" ? {} : { politiqueHoraire }),
+        ...(arretSurLesMorts ? {} : { sansArretSurLesMorts: true as const }),
         ...(Object.keys(choixRecolte).length > 0 ? { recolteAuto: { ...choixRecolte } } : {}),
         // Le compte de l'année en cours, **y compris** la semaine ouverte : ce
         // qu'elle a cueilli est déjà dans l'état qu'on sauve, et la reprise ne

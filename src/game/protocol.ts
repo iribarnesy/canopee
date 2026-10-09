@@ -82,6 +82,11 @@ export interface SaveGame {
    */
   politiqueHoraire?: PolitiqueHoraire;
   /**
+   * Le joueur a demandé que la mort d'un arbre suivi **n'arrête plus** le temps
+   * (#359). Absent = elle l'arrête, comme depuis #149.
+   */
+  sansArretSurLesMorts?: true;
+  /**
    * Le niveau joué, s'il y en a un (#188). Absent = bac à sable.
    *
    * Seul l'**identifiant** est rangé, pas la fiche : un niveau corrigé doit
@@ -759,6 +764,20 @@ export type ToWorker =
   /** Changer la consigne sans qu'une facture soit posée — pour la révoquer. */
   | { type: "politiqueHoraire"; politique: PolitiqueHoraire }
   /**
+   * La mort d'un arbre suivi arrête-t-elle le temps (#359) ? Le joueur qui
+   * suit vingt pommiers pour les voir vivre ne veut pas forcément qu'on
+   * l'arrête à chaque perte : il la lira dans le volet des suivis.
+   */
+  | { type: "arretSurLesMorts"; oui: boolean }
+  /**
+   * **Reprendre la traversée qu'une pause a coupée** (#359).
+   *
+   * Distinct de `speed`, qui annule la traversée — c'est voulu : un joueur qui
+   * choisit lui-même une vitesse reprend la main. « Continuer », lui, dit « je
+   * l'ai lu, va jusqu'où j'avais demandé ».
+   */
+  | { type: "continuer" }
+  /**
    * **revenir en arrière** et rejouer jusqu'au présent (#128, §6.8 №3).
    *
    * Une **relecture**, pas une reprise : le présent est mis de côté et retrouvé
@@ -876,7 +895,20 @@ export type FromWorker =
    * ×1 »*. Absente pour une pause qui n'a rien à montrer — l'arrivée d'un saut
    * « +1 an », des fruits mûrs, une faillite.
    */
-  | { type: "autopause"; reason: string; scene?: number }
+  | {
+      type: "autopause";
+      reason: string;
+      scene?: number;
+      /**
+       * Une traversée « +1 mois » / « +1 an » est en cours et la pause l'a
+       * coupée : `continuer` la reprend (#359). Absent à l'arrivée elle-même.
+       */
+      enRoute?: true;
+      /** La pause vient de la mort d'un arbre suivi : on peut la refuser (#359). */
+      motif?: "mortSuivie";
+    }
+  /** Le réglage en vigueur, pour l'écran — il vient de la sauvegarde. */
+  | { type: "arretSurLesMorts"; oui: boolean }
   /**
    * « Votre semaine dépasse : vous embauchez, ou on s'en tient à 60 h ? »
    *

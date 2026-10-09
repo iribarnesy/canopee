@@ -108,6 +108,34 @@ export function Avis({
         <div style={{ ...panel, background: "#f3e6c4" }}>
           ⏸ {game.notice}
           {/*
+            **Lu, on repart (#359).** La pause coupe un « +1 an » en juin : le
+            seul bouton était « revoir », et l'année ne pouvait plus aller à son
+            terme qu'en la redemandant — douze mois de plus. « Continuer » mène
+            la traversée où elle allait ; sans traversée, une mort suivie qu'on a
+            lue se reprend à la vitesse d'avant.
+          */}
+          {game.enRoute ? (
+            <button
+              type="button"
+              style={{ ...btn(true), marginLeft: 10, marginRight: 0, marginBottom: 0 }}
+              onClick={game.continuer}
+              title="Reprendre l'avance là où elle s'est arrêtée, jusqu'à son terme"
+            >
+              ▶ Continuer
+            </button>
+          ) : (
+            game.pauseSurUneMort && (
+              <button
+                type="button"
+                style={{ ...btn(true), marginLeft: 10, marginRight: 0, marginBottom: 0 }}
+                onClick={game.basculer}
+                title="Reprendre à la vitesse d'avant"
+              >
+                ▶ Reprendre
+              </button>
+            )
+          )}
+          {/*
             **Le bouton qui répond à « on ne voit pas l'incendie » (#157).**
             L'ellipse se joue une fois, à l'instant précis où ce bandeau
             apparaît — donc au moment où le joueur lit le bandeau et pas la
@@ -152,6 +180,22 @@ export function Avis({
             >
               ↺ Revoir la scène
             </button>
+          )}
+          {/*
+            **Refuser l'interruption, là où elle arrive** (#359). On ne va pas
+            chercher un réglage dans un menu au moment où il agace : la case est
+            sur l'avis. Elle se décoche dans « La partie » et dans le volet des
+            suivis, où la mort reste notée avec son 🔔.
+          */}
+          {game.pauseSurUneMort && (
+            <label style={{ display: "block", marginTop: 6, fontSize: 13 }}>
+              <input
+                type="checkbox"
+                checked={!game.arretSurLesMorts}
+                onChange={(e) => game.setArretSurLesMorts(!e.target.checked)}
+              />{" "}
+              ne plus m'interrompre quand un arbre suivi meurt
+            </label>
           )}
         </div>
       )}

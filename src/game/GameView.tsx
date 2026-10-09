@@ -2231,6 +2231,8 @@ export function GameView({ surPartie }: { surPartie?: (enPartie: boolean) => voi
                 aLArret={game.speed === 0}
                 oublier={suivis.oublier}
                 selectionner={(id) => setSelectedIds(new Set([id]))}
+                arretSurLesMorts={game.arretSurLesMorts}
+                reglerArretSurLesMorts={game.setArretSurLesMorts}
               />
             </Volet>
           ) : undefined
