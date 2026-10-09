@@ -4,7 +4,7 @@
  * **Une fiche d'attente, pas un dessin.** L'hybride est entré à l'atlas du moteur
  * (#213) et l'essai du catalogue refuse une espèce sans fiche : il reprend donc
  * le dessin du noyer commun, avec les deux seuls écarts que le moteur et les
- * sources imposent. Le vrai dessin revient au rendu.
+ * sources imposent. Le vrai dessin revient au rendu (#376).
  *
  *  - **pas de fruit** : le moteur ne suit pas sa fructification — il est planté
  *    pour le bois, rien ne s'y récolte —, et une fiche ne dessine un fruit que

@@ -121,19 +121,19 @@ quand la citation vient d'un lot du dépôt.
 
 ### Ce qui reste ouvert
 
-- La sensibilité des noyers à la juglone de leurs congénères (issue ouverte,
-  options écrites, rien de tranché).
+- La sensibilité des noyers à la juglone de leurs congénères (#375, options
+  écrites, rien de tranché).
 - Le LER plante le commun là où Restinclières a des hybrides.
 - La phénologie de l'hybride : trois sources le disent tardif, la fiche
   wallonne le fait feuiller un mois avant le commun ; aucune ne donne de
   date. Le calendrier du commun est repris.
 - Sa moindre sensibilité aux gelées tardives n'a pas où s'écrire : le moteur
-  ne gèle que les fleurs, et l'hybride n'en a pas de suivies.
+  ne gèle que les fleurs, et l'hybride n'en a pas de suivies (#371).
 - La fiche du commun, que sa fiche wallonne contredit sur trois points : elle
   ne rejette pas de souche, vit 150 ans au lieu de 200 à 300, et descend à
-  160 cm sans source.
+  160 cm sans source (#377).
 - Le dessin de l'hybride : une fiche d'attente reprise du commun, le vrai
-  dessin revient au rendu (issue ouverte).
+  dessin revient au rendu (#376).
 
 ## Ce qu'un lot précédent a appris (les gestes de la v0.5, #349, #350, #339)
 

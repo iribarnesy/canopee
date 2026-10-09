@@ -2259,7 +2259,7 @@ export const ESPECES_V0: readonly EspeceV0[] = [
     // plantation pure, parce que le blé occupe la surface (Cardinael 2015). Le
     // fichier wallon : « enracinement très pivotant », « profond et puissant ».
     // C'est un enracinement **si le sol le permet** : sur le limon riche, le profil
-    // s'arrête à un mètre.
+    // s'arrête à un mètre (#257).
     racines: { profondeurMaxCm: 400 },
     // **La juglone est un trait du genre, et l'hybride la porte** : sa propre fiche
     // wallonne le dit (« malgré son couvert peu dense, le noyer sécrète de la
@@ -2271,7 +2271,7 @@ export const ESPECES_V0: readonly EspeceV0[] = [
     // **Et il la subit** : ni lui ni le commun ne déclarent de sensibilité, la
     // médiane s'applique, et un noyer planté à cinq mètres d'un autre voit sa
     // croissance plafonnée à la moitié. Aucune source du dépôt ne dit ce que
-    // vaut la juglone pour un noyer : question ouverte, pas tranchée ici.
+    // vaut la juglone pour un noyer : question ouverte, pas tranchée ici (#375).
     allelopathie: { porteeM: 17.5 },
     // « Assez exigeant en chaleur » pour l'hybride comme pour le commun (fichier
     // wallon) : la température de démarrage du commun est reprise.
@@ -2296,7 +2296,10 @@ export const ESPECES_V0: readonly EspeceV0[] = [
     // débourrement tardif (Heim 2023). Aucune date mesurée, et une source
     // discorde : le fichier wallon donne sa foliation de mi-avril à fin octobre,
     // celle du commun de mi-mai à mi-octobre. Le calendrier du commun est repris,
-    // et le désaccord reste ouvert *(à confirmer)*.
+    // et le désaccord reste ouvert *(à confirmer)*. Sa moindre sensibilité au gel
+    // tardif (« serait moins sensible que les deux espèces parents », fichier
+    // wallon) n'a pas de champ où s'écrire : le moteur ne gèle que les fleurs
+    // (#371).
     phenologie: { debourrementDJ: 290, seuilJourH: 13.5, besoinFroidSemaines: 14 },
     // Prix du commun repris *(à calibrer)*.
     economie: { prixPlantEur: 15 },

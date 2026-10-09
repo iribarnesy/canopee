@@ -137,7 +137,7 @@ describe("le noyer hybride contre ses références (#213)", () => {
     // elle, en mémoire et sur les mêmes graines, l'hybride fait 13,19 m et
     // 31,0 cm à dix-neuf ans. La sensibilité d'un noyer à la juglone de ses
     // congénères n'a pas de source dans le dépôt : c'est une décision à
-    // prendre, pas un réglage à faire ici.
+    // prendre, pas un réglage à faire ici (#375).
     //
     // Le plafond tombe le jour où elle sera prise : il faudra alors refaire la
     // campagne et réécrire cette ligne. Le plancher dit que l'écart, lui, ne
