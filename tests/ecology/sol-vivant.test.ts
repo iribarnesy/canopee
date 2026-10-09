@@ -196,11 +196,12 @@ describe("la faim d'azote (C9)", () => {
     // geste moins ce qu'on mesure : une coupe **vendue**, mêmes arbres abattus,
     // mêmes racines laissées, seul le broyat diffère (−0,72).
     //
-    // Et un sol couvert garde aussi moins d'azote minéral, parce qu'il reste plus
-    // humide : un paillis seul suffisait à faire passer l'essai, sans faim (#309).
-    // D'où le second bras : le même broyat, de même masse, rendu riche à la main
-    // (bois à C/N 20, sous la bascule de 27). Même tapis, même humidité ; seul
-    // le C/N diffère.
+    // Et le broyat abaisse le minéral du bloc même quand il ne se décompose pas :
+    // un essai de #309 passait ainsi, sans faim, et la variante où sa vitesse est
+    // nulle garde ici −0,44 g/m² contre la coupe vendue (cause non tracée). D'où
+    // le second bras : le même broyat, de même masse, rendu riche à la main (bois
+    // à C/N 20, sous la bascule de 27). Même tapis, même geste ; seul le C/N
+    // diffère.
     const COUPE = 5;
     const construire = (cnBoisImpose?: number) => {
       let state = createGameState(STATION, rngStateFromSeed(2));
@@ -238,10 +239,12 @@ describe("la faim d'azote (C9)", () => {
     // les décomposeurs se servent avant les plantes. C'est la raison pour
     // laquelle on n'enfouit pas du BRF juste avant de planter.
     expect(faim).toBeLessThan(0);
-    // Et c'est la faim, pas le paillis : le broyat ligneux prend au sol plus que
-    // le même tapis rendu riche. Vérifié sur une variante où le broyat ne se
-    // décompose pas : les deux écarts sont égaux, et cette ligne tombe.
-    expect(faim).toBeLessThan(faimRiche);
+    // Et c'est la faim, pas le tapis : le broyat ligneux prend au sol plus que le
+    // même broyat rendu riche, d'au moins 0,1 g/m² (1 kg N/ha). Mesuré : −0,72
+    // contre −0,05. Sur la variante où le broyat ne se décompose pas, les deux
+    // écarts ne diffèrent que d'un millième (−0,444 et −0,443), et cette ligne
+    // tombe.
+    expect(faim).toBeLessThan(faimRiche - 0.1);
     // Rien n'est perdu pour autant : le total (minéral + litière) reste
     // supérieur, c'est ce que vérifie epandre-vs-vendre.test.ts.
   });
