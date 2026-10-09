@@ -2292,8 +2292,9 @@ export const ESPECES_V0: readonly EspeceV0[] = [
     litiere: { cnRatio: 35, calciumMgG: 14 },
     // **Tardif**, et c'est ce que l'agroforesterie lui demande : les trois variétés
     // « débourrent suffisamment tard pour échapper à la plupart des gelées
-    // tardives du printemps » (MAA 2024), et Restinclières le choisit pour son
-    // débourrement tardif (Heim 2023). Aucune date mesurée, et une source
+    // tardives du printemps » (MAA 2024), et l'équipe de Restinclières fait de ce
+    // débourrement tardif l'atout des noyers en agroforesterie (Heim 2023,
+    // d'après Dufour 2013). Aucune date mesurée, et une source
     // discorde : le fichier wallon donne sa foliation de mi-avril à fin octobre,
     // celle du commun de mi-mai à mi-octobre. Le calendrier du commun est repris,
     // et le désaccord reste ouvert *(à confirmer)*. Sa moindre sensibilité au gel

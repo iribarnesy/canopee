@@ -124,7 +124,7 @@ quand la citation vient d'un lot du dépôt.
 - La sensibilité des noyers à la juglone de leurs congénères (#375, options
   écrites, rien de tranché).
 - Le LER plante le commun là où Restinclières a des hybrides.
-- La phénologie de l'hybride : trois sources le disent tardif, la fiche
+- La phénologie de l'hybride : deux sources le disent tardif, la fiche
   wallonne le fait feuiller un mois avant le commun ; aucune ne donne de
   date. Le calendrier du commun est repris.
 - Sa moindre sensibilité aux gelées tardives n'a pas où s'écrire : le moteur
