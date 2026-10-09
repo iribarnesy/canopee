@@ -61,7 +61,86 @@ qu'un rapport (voir la note de maintenance).
 Séparer calibration et validation : caler un paramètre sur un âge, garder
 l'autre âge pour vérifier.
 
-## Ce que le dernier lot a appris (le carbone affiché et le broyat, #340, #341, #328)
+## Ce que le dernier lot a appris (les crues du sable profond, #337)
+
+La recette v0.4 comptait 137 débuts de crue en trente ans sur le sable profond
+(contre 31 dans la vallée engorgée). Il y avait trois défauts superposés, et
+un seul a été corrigé en v0.5, par arbitrage : la donnée de station. Les deux
+autres sont en v0.6 (#380, #381).
+
+### Un niveau déclaré n'est pas le niveau atteint
+
+`nappe.ts` le dit : la recharge tient la nappe au-dessus de son équilibre, et
+le niveau déclaré doit être calé pour que le niveau **atteint** soit celui du
+terrain. Le sable profond, arrivé après le modèle de nappe (#254), avait
+déclaré le niveau du terrain lui-même, 200 cm. L'échange régional (3 % par
+semaine) doit évacuer quelque 370 mm de recharge par an, et il lui faut pour
+cela 160 cm de surélévation dans un sable à 1,47 mm/cm. La nappe se tenait à
+47 cm. Au milieu de la parcelle, son niveau haut moyen (GHG) valait 23 cm et
+son niveau bas (GLG) 70 cm : un sable humide, pas le veldpodzol annoncé.
+Redéclarée à 260 cm, réglage calé sur le moteur pour une cible sourcée (classe
+de nappe VI : GHG 40-80, GLG au-delà de 120), elle rend 67-69 / 127-129 cm.
+**Quand une donnée décrit le terrain, demander si le moteur la lit comme une
+cible ou comme une consigne.**
+
+### Une oscillation peut venir de la plomberie et non du temps
+
+La nappe du sable sautait de 10 cm d'une semaine à l'autre (autocorrélation
+de rang 1 −0,90). Une colonne seule, sans pluie, partie de 60 cm, donne
+60 → 128 → 60 → 106 cm. La saturation imposée aux horizons noyés est prise au
+stock de l'aquifère, dont la conversion en profondeur compte déjà ces
+horizons ; le profil la rend la semaine suivante. Quand les porosités sont
+égales, le stock d'une semaine ne dépend plus que de celui d'il y a deux
+semaines. #291 avait vu la même boucle, mais par les solutés seulement.
+**Une colonne isolée, sans pluie, est le premier banc à passer** : si elle
+bouge, c'est le code.
+
+### Retirer un défaut ne retire pas forcément le symptôme
+
+La variante qui retirait le cycle (hors dépôt) laissait 106 crues sur 136. Il
+restait un plafond : une cellule dont l'aquifère est plein cède encore 0,5 %
+par semaine vers l'aval, sa nappe ne remonte jamais au-dessus de 4,6 cm, et
+le seuil d'affleurement est à 5 cm. Inondée veut donc dire « au plafond », et
+une semaine sèche suffit à vider toute l'emprise. La même variante doublait
+les crues de la vallée, dont le comportement reposait sur l'eau comptée deux
+fois. **Une correction se mesure aussi sur les stations qu'elle ne visait
+pas**, comme le banc apparié de #291 l'avait déjà appris.
+
+### L'hydrologie de ces bancs ne dépend presque pas de la graine
+
+136 / 139 / 135 crues sur main, 55 / 55 / 55 à 260 cm, 106 sur les trois
+graines de la variante. C'est la météo réelle qui fixe la nappe, pas le
+tirage. Trois graines restent la règle, mais un écart d'une unité n'est pas
+du bruit ici : c'est un effet.
+
+### Les prédictions fausses
+
+- 80 % de crues d'une ou deux semaines prédits, 75 % mesurés ; 90 % des
+  cellules inondées dans les quinze lignes du bas prédits, alors que
+  l'emprise au pic vaut 40 % de la parcelle.
+- La variante sans cycle devait diviser les crues par deux (106 contre 136)
+  et laisser la vallée à 30 % près (63 contre 31).
+- Avec la variante et 280 cm, aucune crue prédite : 41.
+- Code de main et 280 cm : 40 à 80 crues prédites, 29 ; GHG 40-80 prédit, 85.
+- Main relu au milieu de la parcelle : GHG sous 10 cm prédit, 23.
+- 260 cm : au moins 90 % de crues courtes prédits, 89 % ; quatre semaines
+  au plus prédites, six.
+- Le pin, prédit de 0 à +8 % à quarante ans : +0,4 %. Juste, et c'est la
+  nouvelle : il ne reposait pas sur la nappe haute.
+
+### Ce qui reste ouvert
+
+- Les crues du sable restent courtes (55 en trente ans, 89 % d'une ou deux
+  semaines) tant que #380 et #381 ne sont pas réglés. #337 n'est pas fermée.
+- La porosité drainable du sable vaut 15 %, contre 21 à 27 % de rendement
+  spécifique pour un sable fin à grossier (Johnson 1967, USGS WSP 1662-D).
+  La nappe bat donc 1,5 à 1,8 fois trop par millimètre, et la surélévation
+  due à la recharge suit le même facteur. Y toucher change tous les profils.
+- Le moteur n'a pas de stockage d'eau en surface : la nappe qui affleure fait
+  ressortir son eau, qui part dans la semaine. Une inondation par la nappe ne
+  peut donc pas durer plus longtemps que la pluie qui la nourrit.
+
+## Ce qu'un lot précédent a appris (le carbone affiché et le broyat, #340, #341, #328)
 
 Trois défauts, et deux fois la même forme : une grandeur tenue à deux endroits,
 ou un stock qu'aucun flux ne vide. Banc des mesures : limon riche, 0,09 ha, un
