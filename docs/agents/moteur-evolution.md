@@ -61,7 +61,136 @@ qu'un rapport (voir la note de maintenance).
 Séparer calibration et validation : caler un paramètre sur un âge, garder
 l'autre âge pour vérifier.
 
-## Ce que le dernier lot a appris (la soif des petits arbres, #312)
+## Ce que le dernier lot a appris (le carbone affiché et le broyat, #340, #341, #328)
+
+Trois défauts, et deux fois la même forme : une grandeur tenue à deux endroits,
+ou un stock qu'aucun flux ne vide. Banc des mesures : limon riche, 0,09 ha, un
+chêne pubescent de 18 m posé, point zéro figé à la semaine 0, coupe à la
+semaine 1, graines 1, 2 et 3. Les parties où l'on coupe sont identiques au
+centième d'une graine à l'autre ; « ne rien couper » va de +9,98 à +10,16.
+
+### Deux totaux d'une même grandeur finissent par diverger
+
+La propriété de conservation suivait le bois couché et les arbres tués encore
+récupérables ; l'inventaire affiché non. **Le moteur conservait, l'écran ne le
+savait pas** : un fût laissé au sol faisait perdre 4,13 t C/ha au bilan, la
+chandelle qui s'abat 3,24, et un arbre tué par le feu 5,28 pendant un an,
+rendues d'un coup à la cinquante-deuxième semaine. La propriété était juste et
+ne protégeait rien de ce que le joueur lit. Un seul total (`stocksCarbone`)
+sert maintenant aux deux, et la propriété lit chaque semaine le bilan net tel
+qu'il s'affiche. Sur l'inventaire d'avant, quatre de ses nouveaux cas échouent.
+
+### Un stock qu'aucun flux ne vide est une erreur de comptabilité
+
+Le tas de broyat ne se décomposait jamais. Il perd maintenant 2 % de sa matière
+sèche par mois (milieu des 0,9 à 4,5 % européens, Therasme et al. 2020) :
+
+| bilan affiché à dix ans, t C/ha | main | ce lot |
+|---|---|---|
+| ne rien couper (graine 1) | +9,98 | +9,98 |
+| broyer et garder le tas | +9,37 | +5,61 |
+| vendre | +5,25 | +5,25 |
+| broyer et épandre | +5,17 | +5,17 |
+
+Garder un tas reste devant, de 0,36 t au lieu de 4,12 : il retarde l'émission,
+il ne l'évite plus. Ce qui le garde devant est ailleurs, et c'est un équilibre
+que ce lot ne touche pas : **épandre coûte 3,9 t C/ha de production herbacée en
+dix ans** (40,66 contre 44,58 t C/ha de NPP cumulée), la faim d'azote du
+broyat sur la strate. Ce que le broyat laisse en humus et en litière, l'herbe
+qu'il affame ne le fabrique pas : à dix ans, épandre et vendre finissent à
+0,08 t l'un de l'autre.
+
+Le tas est plus lent qu'un broyat épandu sur les huit stations : un
+cinquième par an, contre 25 à 58 % au plafond selon le climat (0,6/40 par
+semaine fois le facteur de climat moyen, sans faim d'azote).
+
+### Un témoin d'arrêt doit tomber d'une marge, pas d'un arrondi
+
+L'essai de la faim du BRF (`sol-vivant`) donne à ses aulnes l'azote de leur
+bois, et compare maintenant à une coupe vendue (−0,72 g/m² un mois après, contre
+−0,39 face à des arbres debout) et à un broyat de même masse rendu riche (bois à
+C/N 20, −0,05). Sur la variante où le
+broyat ne se décompose pas, les deux écarts valaient −0,444 et −0,443 g/m² : égaux,
+comme prédit, et l'assertion stricte **passait quand même**, d'un millième.
+Elle exige maintenant un kilo d'azote par hectare d'écart. Une assertion de
+contrôle se vérifie sur la variante coupée, et une inégalité stricte entre deux
+nombres presque égaux ne prouve rien.
+
+Le même essai a montré que le broyat abaisse le minéral du bloc de 0,44 g/m²
+**sans se décomposer**, quatre fois le paillis vu dans #309. Ce n'est pas tracé.
+Une piste : la vitesse de la litière est une moyenne pondérée par l'azote, et
+une vitesse nulle freine aussi l'azote des racines versé sous les souches.
+
+### Une correction évidente peut déplacer le flux aléatoire
+
+`plantAt` pose un arbre sans azote dans son bois (#328, point 3). La correction
+tient en une ligne, et elle a été retirée. Elle ne touche pas le jeu, qui plante
+à trente centimètres, mais tout essai qui pose de grands arbres et les voit
+mourir : l'essai « un incendie qui emporte des chandelles » ne voyait plus de
+feu. Ce n'était pas le combustible — la litière des 120 charmes morts portait
+plus de carbone, et ~950 kg N/ha de bois —, c'était le tirage. Un départ de feu
+ne consomme son tirage que les semaines où le risque est positif, et l'eau du
+sol bouge avec l'azote : le flux s'écartait de la référence à la semaine 24, sur
+six graines sur six. **Et sur main, une seule de ces six graines brûle en cinq
+ans : celle de l'essai.** Un essai dont la précondition tient à une graine
+chanceuse casse au premier changement d'état, même juste. La correction de
+`plantAt` est un changement de trajectoire pour des dizaines d'essais, donc
+rapportée et non tranchée ; la fragilité de l'essai du feu aussi.
+
+### Les prédictions fausses
+
+- Sur main, l'amplitude des sauts : −3 t C/ha prédit pour le fût laissé, −4,13 ;
+  −3 à −4 pour l'arbre tué par le feu, −5,28. Les sens étaient justes.
+- Le broyat épandu au plafond : 25 à 45 % par an prédit, 25 à 58 %.
+- L'azote de la litière du bloc devait monter sous le broyat : il baisse
+  (−0,42 g/m² en un mois, −0,28 sous la coupe vendue). L'humus qui se forme
+  prend son azote à la litière d'abord ; ce critère ne lit pas la faim dans ce
+  moteur.
+- Sur la variante sans décomposition, l'assertion stricte devait tomber : elle
+  passait d'un millième.
+- L'essai du feu des chandelles, avec l'azote du bois posé : « autant de feux à
+  un près par graine ». Vrai à la lettre (1 contre 0 sur la graine 5, 0 contre 0
+  ailleurs), faux sur le fond : la référence n'en avait qu'un.
+- Les trois autres échecs de la première suite rapide étaient des délais
+  dépassés sur une machine chargée (prédit) ; chacun passe seul. Le
+  `beforeAll` de `prevoir.test.ts` prend 117 s sur main et 120 s sur la
+  branche, contre un délai de 120 s, sous la même charge.
+
+### Ce qui reste ouvert
+
+Essais touchés : `carbon-conservation.test.ts` (le total de l'écran, trois
+devenirs et le tas exercés, un bloc de cinq cas de transfert, le bilan affiché
+lu chaque semaine) et `sol-vivant.test.ts` (l'essai de la faim du BRF, réécrit).
+Aucun autre ne change de trajectoire : le total n'est qu'une lecture, et le tas
+n'est relu par rien d'autre que l'épandage.
+
+- **L'azote sans carbone** (#328, point 2) : l'azote des racines d'un arbre
+  coupé, celui de l'aérien d'un fût laissé et celui d'un arbre qui meurt vont à
+  la litière sans leur carbone, resté au bois mort ou au bois couché. Les pools
+  de bois mort ne portent pas d'azote ; leur humification le prend au minéral.
+  Le corriger demande un choix (un azote du bois mort, ou verser racines et
+  carbone ensemble à la litière) : non tranché.
+- **La vitesse du broyat** (#328, point 4) : `BRF_CN_RATIO` est marqué *à
+  calibrer*. La lire sur le C/N réel du broyat change la faim du BRF : non fait.
+- **L'azote du tas** reste dans le tas : le choix qui n'ajoute rien. Un tas réel
+  en perd une part, lessivée à son pied ou volatilisée ; le moteur ne sait pas
+  où est le tas.
+- **Les parties sauvegardées** gardent leur point zéro d'avant, faux du bois
+  couché et des tués récupérables qu'elles portaient à l'arrivée (rien sans
+  maturation). La forme de la sauvegarde n'a pas changé, et le format n'est pas
+  monté ; le monter forcerait le rejeu du journal, qui refige le point zéro.
+- **« t C/ha parties en fumée »** sous-estime toujours l'émission d'un feu : un
+  arbre tué qui ne rejette pas n'émet rien au feu (il reste récupérable, puis
+  rejoint le bois mort), et l'herbe brûlée n'est pas au bilan carbone.
+- **L'azote du bois d'un arbre posé** (#328, point 3) : ci-dessus. Le plant de
+  trente centimètres du geste `planter` n'en a pas non plus (négligeable), et
+  la réserve d'un arbre posé reste vide.
+- **L'essai du feu des chandelles** tient à sa graine : une sur six brûle en
+  cinq ans.
+- Le bois mort que lisent les auxiliaires (`tick.ts`, `boisMortTHa`) ne compte
+  que le pool debout, pas le bois couché.
+
+## Ce qu'un lot précédent a appris (la soif des petits arbres, #312)
 
 Le premier essai de #312 (#321) avait remplacé les seuils de sécheresse du
 hêtre par des seuils sourcés, sans que la cible bouge. Le diagnostic qui a
