@@ -821,6 +821,23 @@ chose qu'on ne trouve qu'en regardant une capture.
 | Ravines | traces d'érosion là où `erosionArrachee` s'accumule | `M` |
 | Bordures hors parcelle | les 4 côtés : forêt, prairie, grande culture, route, lotissement, lande (`paysage.ts`) — une bande de 10 m au-delà du bord, floue, qui cadre la parcelle | `M` |
 
+**La grille ne doit pas se lire, et l'herbe doit se lire** (#362, #360 — premier
+test humain de la v0.4). Deux défauts relevés ensemble :
+
+- **Des pointillés clairs en diagonale, et un damier de seize mètres.** Deux quads
+  voisins laissaient, à chaque sommet partagé, un demi-pixel d'antialiasing par où
+  passait le fond de page ; le trait de même couleur qui devait le fermer en
+  ajoutait, dans l'ordre du peintre. Un **fond d'un seul tenant** est maintenant
+  tracé sous les quads de chaque morceau — un seul chemin, comme l'eau libre —, et
+  son trait déborde d'un demi-pixel sur le morceau voisin.
+- **28 % et 79 % de couverture donnaient le même aplat.** La part d'herbe était
+  gonflée (un quart d'office, puis ×1,15) : un tiers de couverture sortait aux
+  deux tiers vert, et tout saturait dès 66 %. Elle est maintenant celle du moteur.
+  Et les marques du tapis prennent la couleur de **leur** matière : une touffe est
+  verte même sur la terre, une plaque de terre brune même dans l'herbe
+  (`matieresDuSol`). Elles prenaient toutes celle du fond, à quelques pour cent
+  près.
+
 ### 5.2 L'eau
 
 | Élément | Charge |

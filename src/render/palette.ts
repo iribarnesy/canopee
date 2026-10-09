@@ -580,14 +580,38 @@ export function ombreDuCouvert(lumiere: number): number {
  * continue ici rendrait le cache inutile sans qu'on s'en aperçoive.
  */
 export function couleurSol(q: CelluleQuantifiee, semaineAnnee: number): Teinte {
-  const humidite = valeurDuPalier(q.humidite);
-  const nu = melange(SOL_SEC, SOL_MOUILLE, humidite);
+  const m = matieresDuSol(q, semaineAnnee);
+  // **La couverture se lit telle quelle** (#360). Elle était gonflée — un quart
+  // de vert d'office, puis 1,15 fois la couverture — « pour que l'herbe domine
+  // la lecture » : une cellule couverte au tiers sortait déjà aux deux tiers
+  // verte, et tout passait au vert plein dès 66 %. Au premier test humain, un
+  // sol à 28 % en mars et à 79 % en mai donnaient le même aplat. La part
+  // d'herbe est maintenant celle du moteur ; ce qui fait lire une touffe sur la
+  // terre, ce sont les marques du tapis, qui prennent chacune la couleur de leur
+  // matière (`matieresDuSol`).
+  const avecHerbe = melange(m.nu, m.herbe, valeurDuPalier(q.herbe));
+  // La litière passe par-dessus tout : elle tombe **sur** l'herbe. Jamais
+  // complètement opaque, même à saturation — un tapis de feuilles laisse
+  // toujours passer des touffes, et un brun plein tue la lecture du sol.
+  return melange(avecHerbe, m.litiere, 0.45 * valeurDuPalier(q.litiere));
+}
 
-  const couverture = valeurDuPalier(q.herbe);
-  // La soif se lit sur la réserve utile, et elle ne commence pas à sec : une
-  // herbe tient tant que le sol garde de quoi transpirer, puis grille vite. Le
-  // seuil est le même ordre de grandeur que les `seuilStressSecheresse` des
-  // fiches d'espèces *(à calibrer)*.
+/**
+ * **Les trois matières du sol d'une cellule**, chacune dans sa couleur et sous
+ * la lumière du couvert : la terre nue, l'herbe, la litière.
+ *
+ * Séparées parce que deux usages les demandent : `couleurSol` les mélange selon
+ * la couverture pour le fond, et le tapis en peint chaque **marque** dans la
+ * sienne (#360) — une touffe d'herbe sur la terre est verte, une plaque de terre
+ * au milieu de l'herbe est brune. Quand elles prenaient toutes la couleur du
+ * fond, éclaircie ou foncée de quelques pour cent, on ne lisait pas trois
+ * matières mais un seul aplat.
+ */
+export function matieresDuSol(
+  q: CelluleQuantifiee,
+  semaineAnnee: number,
+): { nu: Teinte; herbe: Teinte; litiere: Teinte } {
+  const nu = melange(SOL_SEC, SOL_MOUILLE, valeurDuPalier(q.humidite));
   const herbe = couleurHerbe(
     semaineAnnee,
     valeurDuPalier(q.herbeBiomasse),
@@ -597,29 +621,19 @@ export function couleurSol(q: CelluleQuantifiee, semaineAnnee: number): Teinte {
     // une couleur à interpoler. Avec le milieu de tranche, une espèce absente
     // ressortait à une demi-tranche — sur une lande tenue à 100 % par la
     // molinie, les deux autres pesaient encore douze pour cent du mélange et
-    // délavaient sa teinte. C'est exactement le défaut que le commentaire de
-    // `partDuPalier` raconte pour les marques, et je l'ai refait pour les
-    // espèces.
+    // délavaient sa teinte.
     q.tapis ? { ids: q.tapis.ids, parts: q.tapis.parts.map((p) => partDuPalier(p)) } : undefined,
   );
-  // La couverture n'est pas une opacité linéaire : une cellule à moitié
-  // couverte lit déjà comme de l'herbe, parce que les touffes se voient de
-  // loin et que la terre entre elles est à l'ombre. Le facteur est généreux
-  // pour que l'herbe **domine** la lecture — c'est elle qui donne à une friche sa
-  // couleur, et une palette où trois familles de tons pèsent pareil ne lit pas.
-  const avecHerbe = melange(nu, herbe, Math.min(1, 0.25 + couverture * 1.15));
-
-  // La litière passe par-dessus tout : elle tombe **sur** l'herbe. Jamais
-  // complètement opaque, même à saturation — un tapis de feuilles laisse
-  // toujours passer des touffes, et un brun plein tue la lecture du sol.
-  const tapis = valeurDuPalier(q.litiere);
-  const matiere = melange(avecHerbe, LITIERE, 0.45 * tapis);
-
   // Puis l'**ombre du couvert**, qui n'est pas une matière mais une lumière : elle
   // ne mélange pas une couleur, elle assombrit celle qui est là. C'est ce qui
   // fait qu'un sous-bois fermé est sombre et qu'une trouée est claire, et c'est
   // le premier signal qui dit « forêt » plutôt que « objets posés sur un pré ».
-  return eclairer(matiere, ombreDuCouvert(valeurDuPalier(q.lumiere)));
+  const ombre = ombreDuCouvert(valeurDuPalier(q.lumiere));
+  return {
+    nu: eclairer(nu, ombre),
+    herbe: eclairer(herbe, ombre),
+    litiere: eclairer(LITIERE, ombre),
+  };
 }
 
 // ── L'eau libre ─────────────────────────────────────────────────────────────

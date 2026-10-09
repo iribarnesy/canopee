@@ -1195,8 +1195,11 @@ function Demo(): React.ReactElement {
             : t,
         )
       : debout;
+  // `?sans-arbres=1` : le sol seul, pour juger l'herbe et ses transitions
+  // (#360, #362) — sur les scènes du banc, les houppiers le cachent tout entier.
+  const sansArbres = new URLSearchParams(location.search).get("sans-arbres") === "1";
   const arbres: ArbreAPoser[] = arbresAPoser(
-    [...vieillis, ...tigesAbattues(ellipse.gestes), ...ellipse.chandelles],
+    sansArbres ? [] : [...vieillis, ...tigesAbattues(ellipse.gestes), ...ellipse.chandelles],
     {
       coteM: scene.coteM,
       week: scene.week,
