@@ -29,10 +29,16 @@ const NOYER = getEspece("juglans_regia");
 const PORTEE = NOYER.allelopathie?.porteeM ?? 0;
 
 describe("la juglone porte loin, puis s'arrête net", () => {
-  it("le noyer est le seul émetteur de l'atlas", () => {
+  it("les noyers sont les seuls émetteurs de l'atlas", () => {
     expect(NOYER.allelopathie).toBeDefined();
     expect(PORTEE).toBeGreaterThanOrEqual(15);
     expect(PORTEE).toBeLessThanOrEqual(20);
+    // La juglone est un trait du **genre** : l'hybride la porte, et sa propre
+    // fiche wallonne le dit (#213). Sa portée n'a pas de mesure qui lui soit
+    // propre ; elle doit au moins rester dans la fourchette du genre.
+    const hybride = getEspece("juglans_x_intermedia").allelopathie?.porteeM ?? 0;
+    expect(hybride).toBeGreaterThanOrEqual(15);
+    expect(hybride).toBeLessThanOrEqual(20);
     expect(getEspece("quercus_pubescens").allelopathie).toBeUndefined();
   });
 

@@ -3,7 +3,7 @@
  *
  * L'essai passe le **catalogue entier**, et c'est le point : la règle est une
  * poignée de motifs, elle ne prétend pas savoir le français. Ce qu'on garantit,
- * c'est qu'elle couvre les vingt-six noms du moteur — et que le jour où une
+ * c'est qu'elle couvre les vingt-sept noms du moteur — et que le jour où une
  * essence s'ajoute avec une forme qu'elle ne sait pas, l'essai le dit avant le
  * joueur.
  */
@@ -48,6 +48,7 @@ const ATTENDU: Record<string, string> = {
   Hêtre: "Hêtres",
   Noisetier: "Noisetiers",
   "Noyer commun": "Noyers communs",
+  "Noyer hybride": "Noyers hybrides",
   "Pin sylvestre": "Pins sylvestres",
   Pommier: "Pommiers",
   Prunellier: "Prunelliers",
@@ -89,7 +90,7 @@ describe("causeDite", () => {
 });
 
 describe("pluriel", () => {
-  it("accorde les vingt-six noms du catalogue", () => {
+  it("accorde les vingt-sept noms du catalogue", () => {
     for (const espece of ESPECES_V0) {
       const attendu = ATTENDU[espece.nom];
       expect(attendu, `pluriel non écrit pour « ${espece.nom} »`).toBeDefined();

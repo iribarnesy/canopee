@@ -185,7 +185,8 @@ export interface VueParcelleProps {
    * Non appelé quand le pointeur a **glissé** : faire tourner la parcelle ne doit
    * pas planter un arbre au passage.
    *
-   * `idArbre` est l'arbre qu'on **voit** sous le curseur, s'il y en a un : la vue
+   * `idsArbres` est ce qu'on **voit** sous le curseur, s'il y a quelque chose :
+   * un arbre, ou toutes les tiges d'une masse de fourré (#356). La vue
    * vise le sprite et non le sol, parce qu'un houppier penché déborde de sa
    * cellule et qu'un tronc derrière une butte n'a pas la sienne sous le
    * curseur. La vue rend les deux réponses et ne choisit pas : un geste porte
@@ -195,7 +196,7 @@ export interface VueParcelleProps {
   surClic?: (
     cellule: { x: number; y: number },
     multiple: boolean,
-    idArbre: number | undefined,
+    idsArbres: readonly number[] | undefined,
   ) => void;
   /** Les arbres à éclairer, parce qu'ils sont choisis. */
   surbrillance?: ReadonlySet<number>;
@@ -700,10 +701,10 @@ export function VueParcelle(props: VueParcelleProps): React.ReactElement {
       v,
       (x, y) => p.sol.altitudesM[y * p.sol.coteM + x] ?? 0,
     );
-    const idArbre = scene.current?.arbreSousLeCurseur(e.clientX - r.left, e.clientY - r.top);
+    const ids = scene.current?.tigesSousLeCurseur(e.clientX - r.left, e.clientY - r.top);
     // Hors parcelle : rien. Un clic dans le décor n'est pas un geste manqué,
     // c'est un clic sur ce qui n'appartient pas au joueur.
-    if (cellule) p.surClic(cellule, e.shiftKey || e.metaKey || e.ctrlKey, idArbre);
+    if (cellule) p.surClic(cellule, e.shiftKey || e.metaKey || e.ctrlKey, ids);
   }, []);
 
   const surTouche = useCallback((e: React.KeyboardEvent<HTMLDivElement>) => {

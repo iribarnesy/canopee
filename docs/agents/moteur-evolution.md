@@ -160,6 +160,209 @@ témoin sans gibier, ajouté avant de conclure, l'a montré.
   sortie, que `giteConvient` tient en un seul tri ; les laisser un temps
   demanderait une durée de vie des branches mortes. Non tranché.
 
+## Ce qu'un lot précédent a appris (le noyer hybride, #213)
+
+Une essence de plus à l'atlas, *Juglans × intermedia*, celle qu'on plante
+réellement en agroforesterie. Le lot a surtout trouvé ce qui bridait déjà
+l'ancienne.
+
+### Une fiche nouvelle se juge contre des essais datés
+
+Pas de table de production, et il n'y en aura pas : le fichier écologique
+wallon porte « sans objet, sylviculture d'arbre » pour l'hybride comme pour le
+commun. Ce qui existe : la même grille wallonne pour les deux noyers (des
+comparaisons à source égale), le réseau de 55 placettes de Bade-Wurtemberg
+(Ehring 2011), vingt ans de mesures à Restinclières (Heim 2023), un essai
+catalan des deux noyers côte à côte (Aletà 2003). La pousse (0,8 m/an) est lue
+dans le réseau allemand, pas réglée sur le moteur ; c'est une moyenne de
+stations, donc un plancher, et la fiche le dit. Là où les sources disent
+l'hybride « semblable » au commun, les valeurs du commun sont reprises **en le
+disant** ; les ordres sans nombre (un peu moins sensible à l'engorgement, à
+l'ombre, aux maladies) ne sont pas traduits. Copier une fiche n'est pas le
+défaut ; copier sans dire ce qu'on copie, si.
+
+### Le noyer subissait sa propre juglone
+
+Aucun noyer ne déclare de sensibilité à l'allélopathie : la médiane (0,5)
+s'applique, **aux noyers eux-mêmes**. Un noyer planté à cinq mètres d'un autre
+reçoit une intensité plafonnée à 1, et sa croissance est plafonnée à la
+moitié — dans un rang d'agroforesterie comme dans une plantation à 6 × 6. Sur
+trois graines, sensibilité mise à zéro en mémoire : hybride ×1,64 en allée,
+commun ×1,58. Sans elle, l'hybride fait 13,19 m à dix-neuf ans en allée, pour
+13,2 m à Restinclières. **Non tranché** : aucune source du dépôt ne dit ce que
+vaut la juglone pour un noyer, et la trancher déplace H21 et E13. La leçon est
+générale : **une valeur par défaut n'est neutre que si l'espèce n'est jamais
+sa propre voisine** — et un noyer de plantation ne voit que des noyers.
+
+### Une citation avait changé de source en chemin
+
+Le « diamètre objectif de 60 cm atteint en 40-60 ans » que #185 prêtait à la
+fiche CNPF des noyers à bois n'est pas dans son texte. C'est le scénario
+sylvicole de Coello et al. 2013 pour l'hybride, 60 cm vers cinquante ans à
+9 × 6 m : un scénario, pas une mesure. Ouvrir la source avant de la citer, même
+quand la citation vient d'un lot du dépôt.
+
+### Les prédictions fausses
+
+- **Tous les diamètres prédits trop bas.** J'attendais de la juglone qu'elle
+  coûte au diamètre ce qu'elle coûte à la hauteur, et l'écart à Restinclières
+  plus grand en diamètre qu'en hauteur. Elle coûte autant aux deux, mais le
+  moteur fait des noyers **trapus** (H/D de 42 à 45, contre 48 en allée et 62
+  en témoin forestier à Restinclières) : à hauteur moitié, le diamètre tombe
+  au rythme moyen du réseau allemand (8,0 mm/an contre 8,5).
+- **L'allée ne se sépare pas du plein chez les noyers** : 1,05 en diamètre à
+  vingt ans pour l'hybride, 1,00 pour le commun, prédit 1,1 à 1,4. La juglone
+  plafonne les deux géométries au même niveau et efface l'effet de
+  l'espacement ; sans elle, 1,18. Le frêne s'en sépare (1,15).
+- **Le frêne plus haut en allée qu'en plein à trente ans**, prédit l'inverse :
+  à 6 × 6, il perd 18 à 24 tiges sur 48 entre dix et trente ans au lieu de
+  filer.
+
+### Ce qui reste ouvert
+
+- La sensibilité des noyers à la juglone de leurs congénères (#375, options
+  écrites, rien de tranché).
+- Le LER plante le commun là où Restinclières a des hybrides.
+- La phénologie de l'hybride : deux sources le disent tardif, la fiche
+  wallonne le fait feuiller un mois avant le commun ; aucune ne donne de
+  date. Le calendrier du commun est repris.
+- Sa moindre sensibilité aux gelées tardives n'a pas où s'écrire : le moteur
+  ne gèle que les fleurs, et l'hybride n'en a pas de suivies (#371).
+- La fiche du commun, que sa fiche wallonne contredit sur trois points : elle
+  ne rejette pas de souche, vit 150 ans au lieu de 200 à 300, et descend à
+  160 cm sans source (#377).
+- Le dessin de l'hybride : une fiche d'attente reprise du commun, le vrai
+  dessin revient au rendu (#376).
+
+## Ce qu'un lot précédent a appris (le carbone affiché et le broyat, #340, #341, #328)
+
+Trois défauts, et deux fois la même forme : une grandeur tenue à deux endroits,
+ou un stock qu'aucun flux ne vide. Banc des mesures : limon riche, 0,09 ha, un
+chêne pubescent de 18 m posé, point zéro figé à la semaine 0, coupe à la
+semaine 1, graines 1, 2 et 3. Les parties où l'on coupe sont identiques au
+centième d'une graine à l'autre ; « ne rien couper » va de +9,98 à +10,16.
+
+### Deux totaux d'une même grandeur finissent par diverger
+
+La propriété de conservation suivait le bois couché et les arbres tués encore
+récupérables ; l'inventaire affiché non. **Le moteur conservait, l'écran ne le
+savait pas** : un fût laissé au sol faisait perdre 4,13 t C/ha au bilan, la
+chandelle qui s'abat 3,24, et un arbre tué par le feu 5,28 pendant un an,
+rendues d'un coup à la cinquante-deuxième semaine. La propriété était juste et
+ne protégeait rien de ce que le joueur lit. Un seul total (`stocksCarbone`)
+sert maintenant aux deux, et la propriété lit chaque semaine le bilan net tel
+qu'il s'affiche. Sur l'inventaire d'avant, quatre de ses nouveaux cas échouent.
+
+### Un stock qu'aucun flux ne vide est une erreur de comptabilité
+
+Le tas de broyat ne se décomposait jamais. Il perd maintenant 2 % de sa matière
+sèche par mois (milieu des 0,9 à 4,5 % européens, Therasme et al. 2020) :
+
+| bilan affiché à dix ans, t C/ha | main | ce lot |
+|---|---|---|
+| ne rien couper (graine 1) | +9,98 | +9,98 |
+| broyer et garder le tas | +9,37 | +5,61 |
+| vendre | +5,25 | +5,25 |
+| broyer et épandre | +5,17 | +5,17 |
+
+Garder un tas reste devant, de 0,36 t au lieu de 4,12 : il retarde l'émission,
+il ne l'évite plus. Ce qui le garde devant est ailleurs, et c'est un équilibre
+que ce lot ne touche pas : **épandre coûte 3,9 t C/ha de production herbacée en
+dix ans** (40,66 contre 44,58 t C/ha de NPP cumulée), la faim d'azote du
+broyat sur la strate. Ce que le broyat laisse en humus et en litière, l'herbe
+qu'il affame ne le fabrique pas : à dix ans, épandre et vendre finissent à
+0,08 t l'un de l'autre.
+
+Le tas est plus lent qu'un broyat épandu sur les huit stations : un
+cinquième par an, contre 25 à 58 % au plafond selon le climat (0,6/40 par
+semaine fois le facteur de climat moyen, sans faim d'azote).
+
+### Un témoin d'arrêt doit tomber d'une marge, pas d'un arrondi
+
+L'essai de la faim du BRF (`sol-vivant`) donne à ses aulnes l'azote de leur
+bois, et compare maintenant à une coupe vendue (−0,72 g/m² un mois après, contre
+−0,39 face à des arbres debout) et à un broyat de même masse rendu riche (bois à
+C/N 20, −0,05). Sur la variante où le
+broyat ne se décompose pas, les deux écarts valaient −0,444 et −0,443 g/m² : égaux,
+comme prédit, et l'assertion stricte **passait quand même**, d'un millième.
+Elle exige maintenant un kilo d'azote par hectare d'écart. Une assertion de
+contrôle se vérifie sur la variante coupée, et une inégalité stricte entre deux
+nombres presque égaux ne prouve rien.
+
+Le même essai a montré que le broyat abaisse le minéral du bloc de 0,44 g/m²
+**sans se décomposer**, quatre fois le paillis vu dans #309. Ce n'est pas tracé.
+Une piste : la vitesse de la litière est une moyenne pondérée par l'azote, et
+une vitesse nulle freine aussi l'azote des racines versé sous les souches.
+
+### Une correction évidente peut déplacer le flux aléatoire
+
+`plantAt` pose un arbre sans azote dans son bois (#328, point 3). La correction
+tient en une ligne, et elle a été retirée. Elle ne touche pas le jeu, qui plante
+à trente centimètres, mais tout essai qui pose de grands arbres et les voit
+mourir : l'essai « un incendie qui emporte des chandelles » ne voyait plus de
+feu. Ce n'était pas le combustible — la litière des 120 charmes morts portait
+plus de carbone, et ~950 kg N/ha de bois —, c'était le tirage. Un départ de feu
+ne consomme son tirage que les semaines où le risque est positif, et l'eau du
+sol bouge avec l'azote : le flux s'écartait de la référence à la semaine 24, sur
+six graines sur six. **Et sur main, une seule de ces six graines brûle en cinq
+ans : celle de l'essai.** Un essai dont la précondition tient à une graine
+chanceuse casse au premier changement d'état, même juste. La correction de
+`plantAt` est un changement de trajectoire pour des dizaines d'essais, donc
+rapportée et non tranchée ; la fragilité de l'essai du feu aussi.
+
+### Les prédictions fausses
+
+- Sur main, l'amplitude des sauts : −3 t C/ha prédit pour le fût laissé, −4,13 ;
+  −3 à −4 pour l'arbre tué par le feu, −5,28. Les sens étaient justes.
+- Le broyat épandu au plafond : 25 à 45 % par an prédit, 25 à 58 %.
+- L'azote de la litière du bloc devait monter sous le broyat : il baisse
+  (−0,42 g/m² en un mois, −0,28 sous la coupe vendue). L'humus qui se forme
+  prend son azote à la litière d'abord ; ce critère ne lit pas la faim dans ce
+  moteur.
+- Sur la variante sans décomposition, l'assertion stricte devait tomber : elle
+  passait d'un millième.
+- L'essai du feu des chandelles, avec l'azote du bois posé : « autant de feux à
+  un près par graine ». Vrai à la lettre (1 contre 0 sur la graine 5, 0 contre 0
+  ailleurs), faux sur le fond : la référence n'en avait qu'un.
+- Les trois autres échecs de la première suite rapide étaient des délais
+  dépassés sur une machine chargée (prédit) ; chacun passe seul. Le
+  `beforeAll` de `prevoir.test.ts` prend 117 s sur main et 120 s sur la
+  branche, contre un délai de 120 s, sous la même charge.
+
+### Ce qui reste ouvert
+
+Essais touchés : `carbon-conservation.test.ts` (le total de l'écran, trois
+devenirs et le tas exercés, un bloc de cinq cas de transfert, le bilan affiché
+lu chaque semaine) et `sol-vivant.test.ts` (l'essai de la faim du BRF, réécrit).
+Aucun autre ne change de trajectoire : le total n'est qu'une lecture, et le tas
+n'est relu par rien d'autre que l'épandage.
+
+- **L'azote sans carbone** (#328, point 2) : l'azote des racines d'un arbre
+  coupé, celui de l'aérien d'un fût laissé et celui d'un arbre qui meurt vont à
+  la litière sans leur carbone, resté au bois mort ou au bois couché. Les pools
+  de bois mort ne portent pas d'azote ; leur humification le prend au minéral.
+  Le corriger demande un choix (un azote du bois mort, ou verser racines et
+  carbone ensemble à la litière) : non tranché.
+- **La vitesse du broyat** (#328, point 4) : `BRF_CN_RATIO` est marqué *à
+  calibrer*. La lire sur le C/N réel du broyat change la faim du BRF : non fait.
+- **L'azote du tas** reste dans le tas : le choix qui n'ajoute rien. Un tas réel
+  en perd une part, lessivée à son pied ou volatilisée ; le moteur ne sait pas
+  où est le tas.
+- **Les parties sauvegardées** gardent leur point zéro d'avant, faux du bois
+  couché et des tués récupérables qu'elles portaient à l'arrivée (rien sans
+  maturation). La forme de la sauvegarde n'a pas changé, et le format n'est pas
+  monté ; le monter forcerait le rejeu du journal, qui refige le point zéro.
+- **« t C/ha parties en fumée »** sous-estime toujours l'émission d'un feu : un
+  arbre tué qui ne rejette pas n'émet rien au feu (il reste récupérable, puis
+  rejoint le bois mort), et l'herbe brûlée n'est pas au bilan carbone.
+- **L'azote du bois d'un arbre posé** (#328, point 3) : ci-dessus. Le plant de
+  trente centimètres du geste `planter` n'en a pas non plus (négligeable), et
+  la réserve d'un arbre posé reste vide.
+- **L'essai du feu des chandelles** tient à sa graine : une sur six brûle en
+  cinq ans.
+- Le bois mort que lisent les auxiliaires (`tick.ts`, `boisMortTHa`) ne compte
+  que le pool debout, pas le bois couché.
+
 ## Ce qu'un lot précédent a appris (les gestes de la v0.5, #349, #350, #339)
 
 Trois défauts qu'un testeur exploite ou lit de travers, et aucun ne demandait

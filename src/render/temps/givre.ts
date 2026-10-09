@@ -45,6 +45,27 @@ export const OPACITE_DU_GIVRE = 0.75;
 /** Opacité du voile posé sous les brins, en part de celle du calque : la terre blanchit à peine. */
 export const VOILE_SOUS_LES_BRINS = 0.45;
 /**
+ * Opacité du voile quand les brins sont trop petits pour être posés : de loin,
+ * c'est lui seul qui dit que la parcelle a blanchi.
+ */
+export const VOILE_SANS_BRINS = 1;
+/**
+ * **La hauteur d'un brin givré, m** (#357) — celle des touffes du tapis
+ * (`terrain.ts`, une trentaine de centimètres).
+ *
+ * Le moteur ne publie pas la hauteur du tapis herbacé : il en donne la
+ * couverture, la biomasse et l'humidité, pas la taille. C'est donc une
+ * convention de dessin, la même pour toute la parcelle — mais en mètres, à
+ * l'échelle des arbres, et un semis de 0,7 m dépasse franchement l'herbe gelée.
+ */
+export const HAUTEUR_DU_BRIN_GIVRE_M = 0.25;
+/**
+ * Combien le décor blanchit sous une gelée, rapporté à l'opacité du givre de la
+ * parcelle (#355). Autant que la parcelle : c'est la même nuit et la même
+ * lecture de la météo. Le décor n'a pas de brins, sa teinte dit la gelée.
+ */
+export const GIVRE_SUR_LE_DECOR = 1;
+/**
  * Degrés sous zéro auxquels le givre est plein, °C. Une nuit à −0,5 °C ne fait
  * qu'une gelée légère : le blanc monte avec le froid, jusqu'à ce seuil.
  */

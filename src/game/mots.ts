@@ -84,7 +84,7 @@ export function s(n: number): string {
 /**
  * **le genre de chaque essence**.
  *
- * Trois féminins sur vingt-six, et ils suffisent à rendre faux tout ce qui
+ * Trois féminins sur vingt-sept, et ils suffisent à rendre faux tout ce qui
  * s'accorde avec eux : l'écran de fin d'un niveau écrivait « 90 ronces morts
  * étouffés par l'ombre ».
  *
@@ -124,6 +124,7 @@ export const GENRE: Record<string, "m" | "f"> = {
   quercus_suber: "m",
   fraxinus_excelsior: "m",
   arbutus_unedo: "m",
+  juglans_x_intermedia: "m",
 };
 
 /** Une essence dont le nom est féminin ? Inconnue = masculin, le défaut. */
