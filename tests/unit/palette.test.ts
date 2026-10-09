@@ -16,6 +16,7 @@ import {
   couleurSol,
   eclairer,
   LITIERE_PLEINE_CG,
+  matieresDuSol,
   melange,
   NIVEAUX,
   ombreDuCouvert,
@@ -107,6 +108,30 @@ describe("le sol dit ce que le moteur calcule", () => {
     const couvert = couleurSol(quantifier({ ...sec, herbe: 0.9, herbeBiomasse: 0.3 }), 20);
     // « Plus vert » se lit sur l'écart vert-rouge, pas sur la clarté.
     expect(couvert.g - couvert.r).toBeGreaterThan(nu.g - nu.r);
+  });
+
+  it("28 % et 79 % de couverture ne font pas le même sol (#360)", () => {
+    // Le premier test humain : un sol à 28 % en mars et à 79 % en mai donnaient
+    // le même aplat. La couverture gonflée (un quart d'office, puis ×1,15)
+    // mettait le premier aux deux tiers verts et saturait le second.
+    const vert = (herbe: number) => {
+      const c = couleurSol(quantifier({ ...sec, humidite: 0.5, herbe, herbeBiomasse: 0.4 }), 20);
+      return c.g - c.r;
+    };
+    const nu = vert(0);
+    const plein = vert(1);
+    // Au quart, on est plus près du sol nu que de l'herbe ; aux trois quarts,
+    // l'inverse.
+    expect(vert(0.28) - nu).toBeLessThan((plein - nu) / 2);
+    expect(vert(0.79) - nu).toBeGreaterThan((plein - nu) / 2);
+  });
+
+  it("une touffe est verte et une plaque de terre brune, quel que soit le fond (#360)", () => {
+    const m = matieresDuSol(
+      quantifier({ ...sec, humidite: 0.5, herbe: 0.3, herbeBiomasse: 0.4 }),
+      20,
+    );
+    expect(m.herbe.g - m.herbe.r).toBeGreaterThan(m.nu.g - m.nu.r + 10);
   });
 
   it("la litière passe PAR-DESSUS l'herbe et la masque", () => {

@@ -12,14 +12,16 @@ import { describe, expect, it } from "vitest";
 import { serieMeteoPour } from "../../src/data/meteo";
 import type { GameAction } from "../../src/engine/actions";
 import { applyAction, LABOUR_PERTE_HUMUS } from "../../src/engine/actions";
-import { CN_HUMUS, T_HA_TO_G_M2 } from "../../src/engine/carbon";
+import { CN_HUMUS, T_HA_TO_G_M2, treeTotalCarbonKg } from "../../src/engine/carbon";
+import { getEspece } from "../../src/engine/especes";
 import { advanceWeek } from "../../src/engine/game";
 import { serieToWeeks } from "../../src/engine/meteo";
 import { azoteNetDecomposition } from "../../src/engine/nitrogen";
 import { rngStateFromSeed } from "../../src/engine/rng";
 import { ruHorizonMm } from "../../src/engine/soil";
-import { createGameState, plantAt, type Station } from "../../src/engine/state";
+import { createGameState, type GameState, plantAt, type Station } from "../../src/engine/state";
 import { LIMON_RICHE } from "../../src/engine/stations";
+import { cnBois } from "../../src/engine/trees";
 
 const SERIE = serieMeteoPour("limon-riche");
 if (!SERIE) throw new Error("série manquante");
@@ -182,8 +184,28 @@ describe("la faim d'azote (C9)", () => {
   });
 
   it("épandre du BRF ponctionne l'azote du sol avant de le rendre", () => {
-    // Deux parcelles identiques ; sur l'une, on broie vingt aulnes sur place.
-    const construire = () => {
+    // Vingt aulnes de six mètres, broyés sur place en février, contre les mêmes
+    // aulnes coupés et vendus.
+    //
+    // **L'essai a été réécrit sur son critère** (#328). Il comparait le broyage à
+    // des aulnes restés debout, et il passait pour une autre raison que la faim :
+    // `plantAt` pose un arbre sans azote dans son bois (le moteur n'en met que
+    // dans le bois neuf), et ce bois au C/N infini prenait tout son azote au sol
+    // (−0,98 g/m² un mois après). L'essai donne donc à ses aulnes l'azote que
+    // le moteur assigne à leur bois (`cnBois`) ; l'écart tombe alors à −0,39
+    // contre des arbres debout, parce que couper vingt arbres arrête leur
+    // prélèvement et verse l'azote de leurs racines à la litière. Le témoin juste
+    // fait le même geste moins ce qu'on mesure : une coupe **vendue**, mêmes
+    // arbres abattus, mêmes racines laissées, seul le broyat diffère (−0,72).
+    //
+    // Et le broyat abaisse le minéral du bloc même quand il ne se décompose pas :
+    // un essai de #309 passait ainsi, sans faim, et la variante où sa vitesse est
+    // nulle garde ici −0,44 g/m² contre la coupe vendue (cause non tracée). D'où
+    // le second bras : le même broyat, de même masse, rendu riche à la main (bois
+    // à C/N 20, sous la bascule de 27). Même tapis, même geste ; seul le C/N
+    // diffère.
+    const COUPE = 5;
+    const construire = (cnBoisImpose?: number) => {
       let state = createGameState(STATION, rngStateFromSeed(2));
       const ids: number[] = [];
       for (let i = 0; i < 20; i++) {
@@ -191,39 +213,45 @@ describe("la faim d'azote (C9)", () => {
         const dernier = state.trees[state.trees.length - 1];
         if (dernier) ids.push(dernier.id);
       }
-      return { state, ids };
+      // Le bois porte l'azote qu'il aurait mis en poussant, au C/N de son
+      // espèce, ou celui qu'on lui impose.
+      const trees = state.trees.map((t) => {
+        const espece = getEspece(t.especeId);
+        const cn = cnBoisImpose ?? cnBois(espece);
+        return {
+          ...t,
+          azoteBoisG: (treeTotalCarbonKg(espece, t.diametreCm, t.heightM) * 1000) / cn,
+        };
+      });
+      const avecBois: GameState = { ...state, trees };
+      return { state: avecBois, ids };
     };
-    const base = construire();
-    const cellules = () => {
-      const idx: number[] = [];
-      for (let y = 8; y < 23; y++) for (let x = 8; x < 23; x++) idx.push(y * 30 + x);
-      return idx;
-    };
-    const azoteMineral = (s: typeof base.state) => {
-      const idx = cellules();
-      return idx.reduce((a, i) => a + (s.soil.mineralNG[i] ?? 0), 0) / idx.length;
-    };
-    const suivre = (epandre: boolean) => {
-      let state = construire().state;
-      const actions: GameAction[] = epandre
-        ? [{ type: "couper", week: 5, treeIds: base.ids, devenir: "epandre" }]
-        : [];
-      const serie: number[] = [];
-      for (let i = 0; i < 60; i++) {
+    const cellules: number[] = [];
+    for (let y = 8; y < 23; y++) for (let x = 8; x < 23; x++) cellules.push(y * 30 + x);
+    const azoteMineral = (s: GameState) =>
+      cellules.reduce((a, i) => a + (s.soil.mineralNG[i] ?? 0), 0) / cellules.length;
+    const apresUnMois = (devenir: "epandre" | "vendre", cnBoisImpose?: number) => {
+      let { state, ids } = construire(cnBoisImpose);
+      const actions: GameAction[] = [{ type: "couper", week: COUPE, treeIds: ids, devenir }];
+      for (let i = 0; i <= COUPE + 4; i++) {
         const w = WEATHER[i % WEATHER.length];
         if (!w) throw new Error("météo manquante");
         state = advanceWeek(state, w, actions).state;
-        serie.push(azoteMineral(state));
       }
-      return serie;
+      return azoteMineral(state);
     };
-    const avecBrf = suivre(true);
-    const sans = suivre(false);
-    // Un mois après le broyage, le sol **en a moins** que s'il n'avait rien reçu :
+    const faim = apresUnMois("epandre") - apresUnMois("vendre");
+    const faimRiche = apresUnMois("epandre", 20) - apresUnMois("vendre", 20);
+    // Un mois après le broyage, le sol **en a moins** que si le bois était parti :
     // les décomposeurs se servent avant les plantes. C'est la raison pour
     // laquelle on n'enfouit pas du BRF juste avant de planter.
-    const apresUnMois = 5 + 4;
-    expect(avecBrf[apresUnMois] ?? 0).toBeLessThan(sans[apresUnMois] ?? 0);
+    expect(faim).toBeLessThan(0);
+    // Et c'est la faim, pas le tapis : le broyat ligneux prend au sol plus que le
+    // même broyat rendu riche, d'au moins 0,1 g/m² (1 kg N/ha). Mesuré : −0,72
+    // contre −0,05. Sur la variante où le broyat ne se décompose pas, les deux
+    // écarts ne diffèrent que d'un millième (−0,444 et −0,443), et cette ligne
+    // tombe.
+    expect(faim).toBeLessThan(faimRiche - 0.1);
     // Rien n'est perdu pour autant : le total (minéral + litière) reste
     // supérieur, c'est ce que vérifie epandre-vs-vendre.test.ts.
   });

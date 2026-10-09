@@ -361,7 +361,12 @@ src/render/
 - **LOD.** Dézoomé, un semis n'est qu'un point ; sous ~3 px, un arbre devient
   une tache de couleur ; les fourrés (ronce, ajonc, genêt, callune) sont
   dessinés **par cellule agrégée**, pas par individu — c'est aussi ainsi qu'on
-  lit un fourré sur le terrain. Avec D4, le LOD devient **plus** important, pas
+  lit un fourré sur le terrain. **La cellule fait un mètre et la masse se pose
+  au barycentre de ses tiges** (#361) : à quatre mètres, posée au centre du
+  carreau, une friche qui se ferme se lisait en damier. La masse garde les
+  identifiants de ses tiges, et un clic dessus les sélectionne (#356). Le prix,
+  mesuré sur la friche à trente ans : 2 432 sprites → 4 128 à la parcelle
+  entière, la pose passant de 12 à 28 ms sous SwiftShader. Avec D4, le LOD devient **plus** important, pas
   moins : le détail d'illustration ne se justifie qu'au zoom, et il faut
   basculer proprement entre l'arbre dessiné et la tache.
 - **Le pire cas, mesuré (L0, rejoué)** : une friche en pleine succession
@@ -816,6 +821,23 @@ chose qu'on ne trouve qu'en regardant une capture.
 | Ravines | traces d'érosion là où `erosionArrachee` s'accumule | `M` |
 | Bordures hors parcelle | les 4 côtés : forêt, prairie, grande culture, route, lotissement, lande (`paysage.ts`) — une bande de 10 m au-delà du bord, floue, qui cadre la parcelle | `M` |
 
+**La grille ne doit pas se lire, et l'herbe doit se lire** (#362, #360 — premier
+test humain de la v0.4). Deux défauts relevés ensemble :
+
+- **Des pointillés clairs en diagonale, et un damier de seize mètres.** Deux quads
+  voisins laissaient, à chaque sommet partagé, un demi-pixel d'antialiasing par où
+  passait le fond de page ; le trait de même couleur qui devait le fermer en
+  ajoutait, dans l'ordre du peintre. Un **fond d'un seul tenant** est maintenant
+  tracé sous les quads de chaque morceau — un seul chemin, comme l'eau libre —, et
+  son trait déborde d'un demi-pixel sur le morceau voisin.
+- **28 % et 79 % de couverture donnaient le même aplat.** La part d'herbe était
+  gonflée (un quart d'office, puis ×1,15) : un tiers de couverture sortait aux
+  deux tiers vert, et tout saturait dès 66 %. Elle est maintenant celle du moteur.
+  Et les marques du tapis prennent la couleur de **leur** matière : une touffe est
+  verte même sur la terre, une plaque de terre brune même dans l'herbe
+  (`matieresDuSol`). Elles prenaient toutes celle du fond, à quelques pour cent
+  près.
+
 ### 5.2 L'eau
 
 | Élément | Charge |
@@ -1016,6 +1038,21 @@ demandé deux champs, que le moteur porte depuis #303.
   l'herbe pousse (`soilHerbe` ≥ 0,2). La terre nue ne reçoit qu'un voile léger
   sous les brins. Le calque passe au-dessus des ombres : sous elles, le blanc
   virait au gris.
+
+  Le premier test humain de la v0.4 en a relevé trois défauts (#355, #357).
+  **Les brins mesuraient plus d'un mètre** — taillés sur la cellule puis
+  agrandis à l'éclaircie, ils dépassaient un bouleau de 0,7 m. Ils font
+  maintenant 25 cm, la hauteur des touffes du tapis : le moteur ne publie pas
+  de hauteur d'herbe, c'est donc une convention, mais en mètres. De loin, un
+  brin fait moins de quatre pixels ; on n'en pose pas, et un voile franc semé
+  d'un grain de cristaux (une vignette répétée, attachée au sol, à taille fixe)
+  porte le blanc. Entre quatre et douze pixels, le voile cède à mesure que les
+  brins se lisent. **La parcelle blanchissait seule** au milieu d'un pays vert :
+  le décor blanchit maintenant d'autant, par le filtre de couleur qui sert
+  déjà à la neige. **Et rien ne disait ce que c'était** : un avis « Gel » s'ouvre
+  au début de chaque épisode (`useAvisDuGel.ts`) et dit ce que le moteur en
+  fait — il ne détruit que les fleurs ouvertes, et le couvert tamponne la
+  nuit. Il ne parle pas des jeunes pousses : le moteur ne les gèle pas.
 - **La brume** (`render/temps/brume.ts`). Elle se pose sur les cellules où la
   nappe **affleure** (`soilNappeCm` = 0, c'est le moteur qui le dit, pas un seuil
   d'ici), et le vent reçu la chasse : par six mètres par seconde, il n'y en a

@@ -2,6 +2,20 @@
  * Le fourré bas : ronce, ajonc, genêt, callune — **dessinés par cellule
  * agrégée, pas par tige** (docs/interface-visuelle.md §5.4).
  *
+ * **Le carreau est d'un mètre, et la masse se pose où sont ses tiges** (#361,
+ * #356). Il faisait quatre mètres et la masse se posait en son **centre** : sur
+ * une friche qui se ferme, un roncier par carreau, chacun au milieu du sien —
+ * un quadrillage régulier, relevé au premier test humain, qui n'existait pas
+ * dans le moteur (les tiges y naissent à des positions continues ; mesuré sur la
+ * friche à trente ans, 2 599 tiges dont les parties décimales ne se répètent
+ * pas). La masse se pose maintenant au **barycentre** de ses tiges, et le
+ * carreau d'un mètre ne réunit que celles qui se touchent.
+ *
+ * Et elle **garde qui elle est** : les identifiants de ses tiges voyagent avec
+ * elle. Une masse n'était l'arbre de personne, donc on ne pouvait ni cliquer
+ * une ronce, ni savoir où elle était ; on clique maintenant un roncier, et ce
+ * sont ses tiges qui sont sélectionnées.
+ *
  * **C'est la huitième famille de port, et la seule qui ne passe pas par le
  * générateur d'arbres.** Le §5.4 le pose sans détour : ces espèces sont
  * « dessinées par cellule agrégée ». Trois raisons, et la première suffirait :
@@ -30,6 +44,8 @@
 
 /** Une tige de fourré, telle que la couche la reçoit. */
 export interface TigeFourre {
+  /** l'identifiant de la tige dans le moteur */
+  id: number;
   especeId: string;
   x: number;
   y: number;
@@ -39,7 +55,7 @@ export interface TigeFourre {
 
 /** Une masse de fourré : ce qu'on dessine réellement. */
 export interface MasseFourre {
-  /** centre du carreau, en mètres */
+  /** barycentre des tiges du carreau, en mètres */
   x: number;
   y: number;
   z: number;
@@ -56,24 +72,26 @@ export interface MasseFourre {
   densite: number;
   /** nombre de tiges agrégées, pour qui veut la grandeur brute */
   tiges: number;
+  /** les identifiants des tiges, du plus petit au plus grand */
+  ids: number[];
 }
 
 /**
  * Côté d'un carreau d'agrégation, en mètres.
  *
- * Quatre : la taille d'un roncier ordinaire, et l'échelle à laquelle un joueur
- * décide de débroussailler. Plus fin, on redessine des individus ; plus large,
- * une trouée dans un fourré disparaît.
+ * Un : on ne réunit que des tiges qui se touchent. À quatre mètres — « la
+ * taille d'un roncier ordinaire » —, la masse d'un carreau à quatre tiges
+ * éparses était un buisson posé au centre, et la friche se lisait en damier.
  */
-export const COTE_MASSE_M = 4;
+export const COTE_MASSE_M = 1;
 
 /**
  * Nombre de tiges par carreau au-delà duquel la densité sature.
  *
- * Douze tiges sur seize mètres carrés : à ce compte-là, le sol ne se voit plus,
- * et une treizième ne change rien à l'image.
+ * Deux tiges sur un mètre carré : le sol ne se voit plus au travers, et une
+ * troisième ne change rien à l'image. Une tige seule se dessine à demi pleine.
  */
-export const TIGES_PLEINES = 12;
+export const TIGES_PLEINES = 2;
 
 /**
  * Regroupe les tiges d'un fourré en masses, une par carreau et par espèce.
@@ -84,7 +102,10 @@ export const TIGES_PLEINES = 12;
  * toujours par se contredire.
  */
 export function agreger(tiges: readonly TigeFourre[]): MasseFourre[] {
-  const paniers = new Map<string, { somme: number; sommeZ: number; n: number }>();
+  const paniers = new Map<
+    string,
+    { especeId: string; somme: number; sx: number; sy: number; sz: number; ids: number[] }
+  >();
   for (const t of tiges) {
     if (t.heightM <= 0) continue;
     const ix = Math.floor(t.x / COTE_MASSE_M);
@@ -93,29 +114,36 @@ export function agreger(tiges: readonly TigeFourre[]): MasseFourre[] {
     const panier = paniers.get(cle);
     if (panier) {
       panier.somme += t.heightM;
-      panier.sommeZ += t.z;
-      panier.n++;
+      panier.sx += t.x;
+      panier.sy += t.y;
+      panier.sz += t.z;
+      panier.ids.push(t.id);
     } else {
-      paniers.set(cle, { somme: t.heightM, sommeZ: t.z, n: 1 });
+      paniers.set(cle, {
+        especeId: t.especeId,
+        somme: t.heightM,
+        sx: t.x,
+        sy: t.y,
+        sz: t.z,
+        ids: [t.id],
+      });
     }
   }
 
   const sortie: MasseFourre[] = [];
-  for (const [cle, panier] of paniers) {
-    const [sx, sy, especeId] = cle.split("|");
-    const ix = Number(sx);
-    const iy = Number(sy);
-    if (!Number.isFinite(ix) || !Number.isFinite(iy) || !especeId) continue;
+  for (const panier of paniers.values()) {
+    const n = panier.ids.length;
     sortie.push({
-      x: ix * COTE_MASSE_M + COTE_MASSE_M / 2,
-      y: iy * COTE_MASSE_M + COTE_MASSE_M / 2,
-      z: panier.sommeZ / panier.n,
-      especeId,
-      hauteurM: panier.somme / panier.n,
-      densite: Math.min(1, panier.n / TIGES_PLEINES),
-      tiges: panier.n,
+      x: panier.sx / n,
+      y: panier.sy / n,
+      z: panier.sz / n,
+      especeId: panier.especeId,
+      hauteurM: panier.somme / n,
+      densite: Math.min(1, n / TIGES_PLEINES),
+      tiges: n,
+      ids: panier.ids.sort((a, b) => a - b),
     });
   }
-  sortie.sort((a, b) => a.x + a.y - (b.x + b.y));
+  sortie.sort((a, b) => a.x + a.y - (b.x + b.y) || (a.ids[0] ?? 0) - (b.ids[0] ?? 0));
   return sortie;
 }
