@@ -23,7 +23,7 @@ import {
 import type { EspeceV0 } from "./especes";
 import { getEspece } from "./especes";
 import { EFFET_CHASSE, HAUTEUR_BROUTAGE_M } from "./gibier";
-import { cellIndexAt } from "./grid";
+import { cellIndexAt, type Grille, type GrilleLongue } from "./grid";
 import { HERBACEES, INDEX_CULTURES, N_HERBACEES, rabattreParEspece } from "./herbacees";
 import { crownRadiusM } from "./light";
 import { decoteEngorgement, indiceDuMarche } from "./marche";
@@ -323,17 +323,39 @@ export const FAUCHE_HAUTEUR_TIGE_FAUCHABLE_M = 1;
  */
 export const LIME_PH_STEP = 0.5;
 /**
- * C/N du bois raméal fragmenté épandu : du **bois**, pas des feuilles — libération
- * lente sur plusieurs années, c'est toute la valeur du BRF (ch2-B).
+ * La vitesse de décomposition d'un broyat, lue sur **son** C/N (#328) : la règle
+ * de toute litière (`litterDecayRate`, C4), appliquée au carbone et à l'azote
+ * qu'il porte vraiment. Un broyat d'aulne (C/N 47) part plus vite qu'un broyat
+ * de hêtre, et un tas qui a perdu du carbone en attendant (C/N plus bas) plus
+ * vite qu'au jour du broyage. Il partait à la vitesse d'un C/N de 40, quel que
+ * soit l'arbre, sur une constante sans source.
  *
- * Il ne sert qu'à la **vitesse** de décomposition du broyat épandu (0,6 / 40 par
- * semaine), pas à son azote : celui-là est l'azote que l'arbre portait. Tout
- * broyat se décompose donc à la vitesse d'un C/N de 40, quel que soit son C/N
- * réel (47 pour vingt aulnes de huit ans, bien plus pour un hêtre), et quel
- * que soit ce que le tas a perdu de carbone en attendant *(à calibrer, sans
- * source ; lire la vitesse sur le C/N réel du broyat est ouvert, #328)*.
+ * Un broyat sans azote ne se décompose pas par cette voie : son poids dans la
+ * vitesse de la cellule, pondérée par l'azote, est nul de toute façon.
  */
-export const BRF_CN_RATIO = 40;
+function vitesseDuBroyat(carboneG: number, azoteG: number): number {
+  return azoteG > 0 ? litterDecayRate(carboneG / azoteG) : 0;
+}
+
+/**
+ * Verser un broyat à la litière d'une cellule : son azote et son carbone
+ * s'ajoutent, et la vitesse de la cellule devient la moyenne des deux,
+ * pondérée par l'azote (C4).
+ */
+function verserBroyat(
+  litterNG: GrilleLongue,
+  litterCG: GrilleLongue,
+  litterK: Grille,
+  i: number,
+  azoteG: number,
+  carboneG: number,
+  k: number,
+): void {
+  const oldN = litterNG[i] ?? 0;
+  if (oldN + azoteG > 0) litterK[i] = (oldN * (litterK[i] ?? 0) + azoteG * k) / (oldN + azoteG);
+  litterNG[i] = oldN + azoteG;
+  litterCG[i] = (litterCG[i] ?? 0) + carboneG;
+}
 
 /**
  * C/N d'un fumier de ferme bien décomposé (#140). Bien plus bas que celui du
@@ -1523,16 +1545,19 @@ function applyCouper(
         }
       }
       if (cells.length === 0) cells.push(0);
-      const share = depositG / cells.length;
       // Tout le carbone aérien broyé reste sur place, dans la litière.
-      const shareC =
-        (treeAboveCarbonKg(espece, tree.diametreCm, tree.heightM) * 1000) / cells.length;
-      const kSpecies = 0.6 / BRF_CN_RATIO;
+      const broyatC = treeAboveCarbonKg(espece, tree.diametreCm, tree.heightM) * 1000;
+      const k = vitesseDuBroyat(broyatC, depositG);
       for (const i of cells) {
-        const oldN = litterNG[i] ?? 0;
-        litterK[i] = (oldN * (litterK[i] ?? 0) + share * kSpecies) / (oldN + share);
-        litterNG[i] = oldN + share;
-        litterCG[i] = (litterCG[i] ?? 0) + shareC;
+        verserBroyat(
+          litterNG,
+          litterCG,
+          litterK,
+          i,
+          depositG / cells.length,
+          broyatC / cells.length,
+          k,
+        );
       }
     }
     coupes.push(id);
@@ -1611,14 +1636,11 @@ function applyEpandreBrf(
   const litterNG = state.soil.litterNG.slice();
   const litterCG = state.soil.litterCG.slice();
   const litterK = state.soil.litterK.slice();
-  const partN = azoteG / cells.length;
-  const partC = carboneG / cells.length;
-  const kBrf = 0.6 / BRF_CN_RATIO;
+  // Le tas a perdu du carbone en attendant, pas d'azote (tick.ts) : son C/N a
+  // baissé, et il part plus vite qu'au jour du broyage.
+  const k = vitesseDuBroyat(carboneG, azoteG);
   for (const i of cells) {
-    const oldN = litterNG[i] ?? 0;
-    litterK[i] = (oldN * (litterK[i] ?? 0) + partN * kBrf) / (oldN + partN);
-    litterNG[i] = oldN + partN;
-    litterCG[i] = (litterCG[i] ?? 0) + partC;
+    verserBroyat(litterNG, litterCG, litterK, i, azoteG / cells.length, carboneG / cells.length, k);
   }
 
   return {
