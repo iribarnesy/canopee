@@ -67,6 +67,7 @@ import type {
 import { tick } from "../engine/tick";
 import type { CauseMort, TreeState } from "../engine/trees";
 import { HAUTEUR_TROUVABLE_M } from "../render/temps/changements";
+import { solPresqueASec } from "./avisSecheresse";
 import { agreger, BILAN_VIDE, type Bilan } from "./bilan";
 import {
   ajouterAuCompte,
@@ -1455,13 +1456,12 @@ function stepWeeks(n: number) {
       const ou = hote ? ` le ${nomEspece(hote.especeId)}` : " la parcelle";
       event("🐾", `${capitale(laFaune(espece))} quitte${ou} : ${departDit(cause)}`);
     }
-    // Sécheresse (sol moyen presque à sec en saison de végétation)
+    // Sécheresse : le profil moyen presque à sec en saison de végétation. La
+    // moyenne se prend **par cellule**, tous horizons sommés (#343).
     const year = Math.floor(before.week / 52);
     if (weekOfYear >= 20 && weekOfYear <= 40 && droughtYearFlagged !== year && sc) {
-      const arr = state.soil.waterMm;
-      let sum = 0;
-      for (let k = 0; k < arr.length; k++) sum += arr[k] ?? 0;
-      if (sum / arr.length < 0.2 * sc.station.ruMm) {
+      const nCellules = state.station.coteM * state.station.coteM;
+      if (solPresqueASec(state.soil.waterMm, nCellules, sc.station.ruMm)) {
         droughtYearFlagged = year;
         event("🔥", "Sécheresse : la réserve du sol est presque à sec — les sensibles souffrent");
       }
