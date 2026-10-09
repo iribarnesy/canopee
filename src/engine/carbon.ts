@@ -123,6 +123,14 @@ export function treeTotalCarbonKg(espece: EspeceV0, diametreCm: number, heightM:
  * déduit les racines de la hauteur, la seule comptabilité honnête est de
  * verser la part perdue au bois mort (`racinesPerduesEnRabattant`) plutôt que
  * de la laisser disparaître.
+ *
+ * **La profondeur, elle, ne suit plus ce carbone** (#334) : un rejet garde les
+ * racines que sa souche avait explorées (`nouvelleProfondeurRacines`, trees.ts),
+ * et boit avec elles. Les deux grandeurs se contredisent donc pour une cépée :
+ * la profondeur dit que le système racinaire est resté, le carbone qu'il est
+ * mort à plus de quatre-vingts pour cent. C'est le carbone qui a tort, et le
+ * corriger demande un carbone racinaire porté par l'arbre plutôt que déduit de
+ * sa hauteur — un état de plus, non fait.
  */
 export function treeRootCarbonKg(espece: EspeceV0, diametreCm: number, heightM: number): number {
   return treeAboveCarbonKg(espece, diametreCm, heightM) * ROOT_SHOOT_RATIO;
