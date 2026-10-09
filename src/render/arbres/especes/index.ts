@@ -10,7 +10,7 @@
  * rétro-ajouter à vingt-cinq fiches si l'ordre avait été alphabétique.
  *
  * **Le catalogue est complet, et il le redevient à chaque fois que le moteur
- * grandit.** Vingt-six espèces aujourd'hui, et un test le vérifie dans les deux
+ * grandit.** Vingt-sept espèces aujourd'hui, et un test le vérifie dans les deux
  * sens — aucune fiche ne désigne une espèce absente, aucune espèce n'est laissée
  * au port générique. C'est ce test qui a signalé l'arrivée du **noyer**, que le
  * moteur a ajouté pour l'allélopathie : sans lui, le noyer serait resté un
@@ -27,9 +27,11 @@
  *
  * **Ce que « complet » ne veut pas dire.** Le critère de fin est ailleurs :
  * *une essence n'est finie que si quelqu'un d'autre la reconnaît sans
- * étiquette.* Aucune des vingt-six ne l'a passé — elles ont passé celui du
+ * étiquette.* Aucune des vingt-sept ne l'a passé — elles ont passé celui du
  * générateur, qui n'est pas le même. Ce fichier dit qu'il n'y a plus de trou,
- * pas que le travail est fini.
+ * pas que le travail est fini. Et le **noyer hybride** n'a pas même passé le
+ * premier : c'est le dessin du commun, sans fruit et la flèche plus dominante,
+ * en attendant le sien.
  */
 
 import type { FicheGraphique } from "../fiche";
@@ -52,6 +54,7 @@ import { HETRE } from "./hetre";
 import { HOUX } from "./houx";
 import { NOISETIER } from "./noisetier";
 import { NOYER } from "./noyer";
+import { NOYER_HYBRIDE } from "./noyer_hybride";
 import { PIN_SYLVESTRE } from "./pin_sylvestre";
 import { POMMIER } from "./pommier";
 import { PRUNELLIER } from "./prunellier";
@@ -67,6 +70,7 @@ export const FICHES: readonly FicheGraphique[] = [
   CHATAIGNIER,
   FRENE,
   NOYER,
+  NOYER_HYBRIDE,
   CHARME,
   BOULEAU,
   AULNE_GLUTINEUX,
@@ -120,6 +124,7 @@ export {
   HOUX,
   NOISETIER,
   NOYER,
+  NOYER_HYBRIDE,
   PIN_SYLVESTRE,
   POMMIER,
   PRUNELLIER,

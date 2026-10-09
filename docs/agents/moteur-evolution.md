@@ -115,6 +115,80 @@ La faim du BRF de `sol-vivant` (minéral du bloc un mois après, g/m²), dans le
 - Le bois mort brûlé perd son azote en fumée, comme l'aérien d'un arbre qui brûle. Aucun flux ne compte ces pertes, pas plus que celles de la litière brûlée : la propriété de conservation de l'azote ne tourne pas sur une partie qui brûle.
 - Les feuilles d'un fût laissé se couchent avec lui, faute de carbone à part dans le modèle. Un caduc coupé en hiver n'en porte pas ; un persistant si.
 
+## Ce qu'un lot précédent a appris (le noyer hybride, #213)
+
+Une essence de plus à l'atlas, *Juglans × intermedia*, celle qu'on plante
+réellement en agroforesterie. Le lot a surtout trouvé ce qui bridait déjà
+l'ancienne.
+
+### Une fiche nouvelle se juge contre des essais datés
+
+Pas de table de production, et il n'y en aura pas : le fichier écologique
+wallon porte « sans objet, sylviculture d'arbre » pour l'hybride comme pour le
+commun. Ce qui existe : la même grille wallonne pour les deux noyers (des
+comparaisons à source égale), le réseau de 55 placettes de Bade-Wurtemberg
+(Ehring 2011), vingt ans de mesures à Restinclières (Heim 2023), un essai
+catalan des deux noyers côte à côte (Aletà 2003). La pousse (0,8 m/an) est lue
+dans le réseau allemand, pas réglée sur le moteur ; c'est une moyenne de
+stations, donc un plancher, et la fiche le dit. Là où les sources disent
+l'hybride « semblable » au commun, les valeurs du commun sont reprises **en le
+disant** ; les ordres sans nombre (un peu moins sensible à l'engorgement, à
+l'ombre, aux maladies) ne sont pas traduits. Copier une fiche n'est pas le
+défaut ; copier sans dire ce qu'on copie, si.
+
+### Le noyer subissait sa propre juglone
+
+Aucun noyer ne déclare de sensibilité à l'allélopathie : la médiane (0,5)
+s'applique, **aux noyers eux-mêmes**. Un noyer planté à cinq mètres d'un autre
+reçoit une intensité plafonnée à 1, et sa croissance est plafonnée à la
+moitié — dans un rang d'agroforesterie comme dans une plantation à 6 × 6. Sur
+trois graines, sensibilité mise à zéro en mémoire : hybride ×1,64 en allée,
+commun ×1,58. Sans elle, l'hybride fait 13,19 m à dix-neuf ans en allée, pour
+13,2 m à Restinclières. **Non tranché** : aucune source du dépôt ne dit ce que
+vaut la juglone pour un noyer, et la trancher déplace H21 et E13. La leçon est
+générale : **une valeur par défaut n'est neutre que si l'espèce n'est jamais
+sa propre voisine** — et un noyer de plantation ne voit que des noyers.
+
+### Une citation avait changé de source en chemin
+
+Le « diamètre objectif de 60 cm atteint en 40-60 ans » que #185 prêtait à la
+fiche CNPF des noyers à bois n'est pas dans son texte. C'est le scénario
+sylvicole de Coello et al. 2013 pour l'hybride, 60 cm vers cinquante ans à
+9 × 6 m : un scénario, pas une mesure. Ouvrir la source avant de la citer, même
+quand la citation vient d'un lot du dépôt.
+
+### Les prédictions fausses
+
+- **Tous les diamètres prédits trop bas.** J'attendais de la juglone qu'elle
+  coûte au diamètre ce qu'elle coûte à la hauteur, et l'écart à Restinclières
+  plus grand en diamètre qu'en hauteur. Elle coûte autant aux deux, mais le
+  moteur fait des noyers **trapus** (H/D de 42 à 45, contre 48 en allée et 62
+  en témoin forestier à Restinclières) : à hauteur moitié, le diamètre tombe
+  au rythme moyen du réseau allemand (8,0 mm/an contre 8,5).
+- **L'allée ne se sépare pas du plein chez les noyers** : 1,05 en diamètre à
+  vingt ans pour l'hybride, 1,00 pour le commun, prédit 1,1 à 1,4. La juglone
+  plafonne les deux géométries au même niveau et efface l'effet de
+  l'espacement ; sans elle, 1,18. Le frêne s'en sépare (1,15).
+- **Le frêne plus haut en allée qu'en plein à trente ans**, prédit l'inverse :
+  à 6 × 6, il perd 18 à 24 tiges sur 48 entre dix et trente ans au lieu de
+  filer.
+
+### Ce qui reste ouvert
+
+- La sensibilité des noyers à la juglone de leurs congénères (#375, options
+  écrites, rien de tranché).
+- Le LER plante le commun là où Restinclières a des hybrides.
+- La phénologie de l'hybride : deux sources le disent tardif, la fiche
+  wallonne le fait feuiller un mois avant le commun ; aucune ne donne de
+  date. Le calendrier du commun est repris.
+- Sa moindre sensibilité aux gelées tardives n'a pas où s'écrire : le moteur
+  ne gèle que les fleurs, et l'hybride n'en a pas de suivies (#371).
+- La fiche du commun, que sa fiche wallonne contredit sur trois points : elle
+  ne rejette pas de souche, vit 150 ans au lieu de 200 à 300, et descend à
+  160 cm sans source (#377).
+- Le dessin de l'hybride : une fiche d'attente reprise du commun, le vrai
+  dessin revient au rendu (#376).
+
 ## Ce qu'un lot précédent a appris (le carbone affiché et le broyat, #340, #341, #328)
 
 Trois défauts, et deux fois la même forme : une grandeur tenue à deux endroits,

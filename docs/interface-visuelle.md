@@ -89,7 +89,7 @@ pas contradictoire, c'est exactement ce que fait une planche botanique.
    botaniques (§4). Conséquences : le style est paramétrable d'un seul endroit,
    chaque combinaison (essence × stade × saison × gestion) est gratuite, et le
    dépôt ne grossit pas. C'est ce qui rend tenable l'exigence de **reconnaître
-   chaque essence** sur vingt-six espèces (et quarante à terme).
+   chaque essence** sur vingt-sept espèces (et quarante à terme).
    *Une seule exception, assumée* : le **son** (§5.10) suppose des fichiers
    audio. Ils vivront dans `data/sons/` avec leur licence et leur provenance,
    au même titre que les valeurs écologiques sont sourcées.
