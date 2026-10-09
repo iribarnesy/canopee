@@ -2217,6 +2217,22 @@ export const ESPECES_V0: readonly EspeceV0[] = [
     // six ans, les deux hybrides commerciaux forment le groupe le plus rapide
     // des douze génotypes, et leur diamètre vaut environ le double de celui du
     // meilleur noyer commun (Aletà 2003).
+    //
+    // Le « diamètre objectif de 60 cm atteint en 40 à 60 ans » que #185 prêtait
+    // à la fiche CNPF des noyers à bois n'est pas dans son texte (2e édition,
+    // 2023) : c'est le scénario sylvicole de Coello 2013 pour l'hybride — 20 cm
+    // à 18 ans, 28 à 25, 41 à 35, 60 cm à la coupe finale vers 50 ans, à
+    // 9 × 6 m. Un scénario, pas une mesure.
+    //
+    // **Mesuré** (#213, trois graines, limon riche, plants de 2 m), et ce nombre
+    // n'a pas bougé pour l'obtenir : en allée à 100 tiges/ha, 5,1 m et 11,7 cm
+    // à dix ans, 8,4 m et 19,9 cm à vingt, 11,6 m et 27,7 cm à trente — devant
+    // le commun (4,0, 6,1 et 8,1 m), derrière le frêne (6,9, 11,2 et 14,6 m).
+    // Restinclières à dix-neuf ans : 13,2 m et 27,5 cm (Heim 2023) ; le moteur
+    // 8,1 m (−39 %) et 19,1 cm (−30 %). **L'écart ne vient pas de ce nombre** :
+    // chaque noyer pousse dans la juglone de ses voisins et la subit à la
+    // sensibilité médiane, faute d'en déclarer une ; sans elle, 13,2 m et
+    // 31,0 cm (`noyer-hybride.test.ts`).
     pousseMaxMAn: 0.8,
     // Le besoin en eau est « fort » pour les trois noyers (Coello 2013), la
     // résistance à la sécheresse **intermédiaire** entre celles des deux parents
@@ -2251,6 +2267,11 @@ export const ESPECES_V0: readonly EspeceV0[] = [
     // trouvé, c'est une mesure qui lui soit propre : ni teneur comparée aux
     // parents, ni portée. Les quinze à vingt mètres sont ceux du genre, repris
     // du commun *(à confirmer)*.
+    //
+    // **Et il la subit** : ni lui ni le commun ne déclarent de sensibilité, la
+    // médiane s'applique, et un noyer planté à cinq mètres d'un autre voit sa
+    // croissance plafonnée à la moitié. Aucune source du dépôt ne dit ce que
+    // vaut la juglone pour un noyer : question ouverte, pas tranchée ici.
     allelopathie: { porteeM: 17.5 },
     // « Assez exigeant en chaleur » pour l'hybride comme pour le commun (fichier
     // wallon) : la température de démarrage du commun est reprise.
