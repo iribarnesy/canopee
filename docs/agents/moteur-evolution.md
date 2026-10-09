@@ -61,7 +61,106 @@ qu'un rapport (voir la note de maintenance).
 Séparer calibration et validation : caler un paramètre sur un âge, garder
 l'autre âge pour vérifier.
 
-## Ce que le dernier lot a appris (la soif des petits arbres, #312)
+## Ce que le dernier lot a appris (les racines qui restent et l'arbre mort, #334 et #261)
+
+Deux défauts, une ligne de code chacun, aucun réglage ajouté.
+
+- **#334** : `nouvelleProfondeurRacines` bornait son résultat par le potentiel
+  de la hauteur **du moment**. Un recépé, un étêté, un rejet après le feu, une
+  casse au volis qui rejette ou un plant brouté retombaient la semaine suivante
+  aux racines de leur nouvelle taille, contre ce que disait le commentaire. Le
+  potentiel ne borne plus que la croissance. Rien ne change pour un arbre qui
+  n'a jamais été plus grand : sans gibier, les bancs témoins sont identiques à
+  main.
+- **#261** : un quatrième motif de départ, `arbreMort`, quand le même arbre,
+  vivant, conviendrait encore à l'occupant. La règle elle-même n'est pas
+  touchée : une hutte, une aire et un bois de cœur veulent un arbre vivant, un
+  creux reste un creux sur une chandelle, et le pic et la chauve-souris y
+  restaient déjà jusqu'à sa chute (désormais épinglé).
+
+### Ce que ça donne
+
+Graines 1, 2 et 3 (5 pour le feu, dont deux seulement brûlent en quarante
+ans), prédictions écrites avant chaque mesure dans les commits de la branche.
+La sonde est hors dépôt ; ses bancs sont décrits dans le premier commit.
+
+| banc | main | branche |
+|---|---|---|
+| taillis de châtaignier, limon acide, synthétique : racines une semaine après la coupe | 37,6 cm | 72,1 à 72,2 (celles d'avant) |
+| — hauteur des rejets à six ans | 3,19 / 3,12 / 2,83 m | 3,07 / 3,00 / 2,71 (−4 %) |
+| même taillis coupé le 1er janvier 2003, météo de Tours : hauteur à six ans | 3,20 / 3,15 / 2,85 | 3,26 / 3,21 / 2,89 (+2 %) |
+| trogne de frêne à 2 m, limon riche, météo réelle : racines une semaine après | 43,3 | 62,2 / 62,0 / 61,5 |
+| — hauteur à cinq ans | 3,68 / 3,66 / 3,52 | 3,83 / 3,79 / 3,68 (+4 %) |
+| lande de genêts brûlée, synthétique : racines une semaine après le feu | 34,0 | 74,9 / 68,2 |
+| — un an après | 46,1 / 41,3 | 74,9 / 67,8 |
+| — rejets morts de soif dans les deux ans | 0 / 75 sur 688 / 543 | 0 / 34 |
+| plants broutés, lande, Mont-de-Marsan 2004-2008 : racines des broutés | — | +0,1 à +0,2 cm |
+
+Aucune cépée, aucune trogne ne meurt, sur main comme sur la branche.
+
+### Des racines gardées ne sont pas toujours un avantage
+
+Prédit 0 à +15 % de repousse sur le taillis synthétique ; mesuré −4 %, sur
+les trois graines. Le relevé des facteurs de la loi du minimum, semaine par
+semaine de la saison, le dit tout de suite : eau, azote, phosphore, potassium
+et lumière valent 1,00 des deux côtés, mais le facteur limitant tombe à 0,88
+au lieu de 0,95, parce que l'engorgement ressenti monte à 0,15 au lieu de 0,05
+la quatrième année. Le châtaignier n'en tolère que 0,05. La coupe a retiré la
+transpiration de neuf arbres de dix mètres, l'horizon profond du limon acide
+s'engorge au printemps, et des racines qui y descendent le sentent. Sur la
+trogne de frêne, c'est l'inverse : l'eau manque l'été (0,62 de satisfaction
+la cinquième année sur main, 0,68 sur la branche), et la profondeur paie.
+
+La même correction déplace donc la repousse dans les deux sens selon la
+station. **`rootDepthCm` a cinq lecteurs** — l'eau, l'azote du fond, les
+bases, l'anoxie, l'ancrage — et ma prédiction n'en lisait qu'un. Avant de
+prédire le signe d'un changement d'état, lister qui lit cet état.
+
+Ce que ça révèle aussi : dans ce moteur, une racine plongée dans un horizon
+asphyxiant ne meurt pas, elle fait souffrir l'arbre indéfiniment. Le rabattage
+fautif l'en sortait par accident.
+
+### Un plant brouté perd sa pousse, pas ses racines
+
+L'issue donnait l'exemple d'un plant ramené de 0,35 à 0,20 m. Les bancs n'en
+produisent pas : le gibier mange la pousse de l'année, et un plant tenu au
+plancher (0,8 du potentiel) ne perd des racines que si cette pousse dépasse le
+quart de sa hauteur. Le premier banc, sur la lande en été synthétique, ne
+mesurait rien : hêtres et bouleaux y meurent tous de soif, broutés ou non (24 à
+25 sur 25 avec et sans gibier). **Un banc où tout meurt ne mesure rien** ; le
+témoin sans gibier, ajouté avant de conclure, l'a montré.
+
+### Les prédictions fausses
+
+- Un essai de chronométrage a tourné avant le premier commit de prédictions
+  (trogne, graine 3, sur main) : ces chiffres-là ont été vus avant d'être
+  prédits, et le commit le dit.
+- Taillis synthétique : 0 à +15 % de repousse prédit, −4 %.
+- Trogne : écart sous 3 % prédit, +4 %.
+- Taillis coupé en 2003 : +5 à +20 % à un an prédit, +1 %.
+- Lande brûlée : racines à un an sur main ≈ 60 cm prédit, 46,1 et 41,3.
+- Plants broutés : racines des broutés plus profondes de 2 à 5 cm prédit, 0
+  en synthétique, 0,1 à 0,2 cm en météo réelle.
+
+### Ce qui reste ouvert
+
+- **Le carbone racinaire contredit maintenant la profondeur.** Il se déduit de
+  la hauteur, et rabattre en verse plus de quatre-vingts pour cent au bois mort
+  (`racinesPerduesEnRabattant`) pendant que la profondeur dit que les racines
+  sont restées. Le corriger demande un carbone racinaire porté par l'arbre :
+  un état de plus et un format de sauvegarde, non fait sans accord.
+- **Le disque racinaire** suit lui aussi la hauteur (`rootRadiusM`) : un recépé
+  perd ses racines latérales comme il perdait ses racines profondes. Même
+  défaut, à l'horizontale ; le corriger demande aussi un état.
+- **La vigueur du rejet** reste celle de sa taille (`formeCroissance`) : une
+  cépée ne repart pas plus vite qu'un semis de même hauteur, sauf par l'eau.
+- **Les racines dans un horizon engorgé** ne meurent jamais (ci-dessus).
+- **Un gîte construit sur un arbre mort** : la hutte et l'aire partent la
+  semaine de la mort. Les laisser jusqu'à la chute séparerait l'entrée de la
+  sortie, que `giteConvient` tient en un seul tri ; les laisser un temps
+  demanderait une durée de vie des branches mortes. Non tranché.
+
+## Ce qu'un lot précédent a appris (la soif des petits arbres, #312)
 
 Le premier essai de #312 (#321) avait remplacé les seuils de sécheresse du
 hêtre par des seuils sourcés, sans que la cible bouge. Le diagnostic qui a
@@ -237,7 +336,7 @@ L'essai lit donc le rapport des deux profondeurs (6,58 mesuré, 6,6 prédit).
   `nouvelleProfondeurRacines` rabat ses racines au potentiel de sa nouvelle
   taille, alors que le commentaire dit qu'elles ne régressent jamais. Le défaut
   existait ; la borne par la hauteur le rend plus sensible chez un semis brouté
-  (#334).
+  (#334, réglé depuis : voir plus haut).
 - L'hiver noyé de 2000-2001 tue par engorgement la callune adulte de la lande,
   sur main comme sur la branche.
 - Toutes les stations ont un deuxième horizon de 45 à 70 cm sous la surface.
