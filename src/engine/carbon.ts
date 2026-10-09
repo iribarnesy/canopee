@@ -1,13 +1,15 @@
 /**
  * Comptabilité carbone (docs/regles.md §12). Pools suivis :
  * - biomasse vivante (dérivée des arbres, allométrie hauteur → volume → C) ;
- * - bois mort (troncs des morts et souches des coupés) ;
+ * - bois mort (troncs des morts et souches des coupés), debout ou couché ;
  * - carbone de la litière (par cellule, décomposé avec l'azote) ;
- * - humus du sol (par cellule : **le** plus gros stock en tempéré).
+ * - humus du sol (par cellule : **le** plus gros stock en tempéré) ;
+ * - le tas de broyat, en attendant d'être épandu.
  * Flux : NPP (croissance + feuillage), humification (litière/bois mort →
  * humus), émissions (décompositions → CO₂), export bois énergie (brûlé chez
  * le client = émis immédiatement, §12 : le bois énergie ne stocke rien).
- * Invariant testé : NPP = Δ(tous les pools) + émissions + exports.
+ * Invariant testé : NPP = Δ(tous les pools) + émissions + exports, sur le
+ * total que l'écran affiche (`stocksCarbone`).
  * V1 : bois d'œuvre avec durée de vie, labour qui déstocke, couplage
  * minéralisation N ↔ humus C (prairie retournée).
  */
@@ -27,6 +29,34 @@ export const LITTER_HUMIFICATION = 0.3;
 export const DEADWOOD_HUMIFICATION = 0.25;
 /** décomposition du bois mort, /an à climat optimal *(à calibrer)* */
 export const DEADWOOD_DECAY_PER_YEAR = 0.05;
+
+/**
+ * Ce qu'un tas de broyat perd de sa matière sèche chaque mois, en plein air.
+ *
+ * Un tas de plaquettes n'attend pas : les champignons et les bactéries s'y
+ * mettent dès le broyage, le tas chauffe, et sa matière part en CO₂. Les études
+ * européennes de stockage de plaquettes en tas découverts mesurent de 0,9 à
+ * 4,5 % de matière sèche perdue par mois, et jusqu'à 47 % au bout de dix-huit
+ * mois (synthèse de Therasme et al. 2020, *Front. Energy Res.* 7:165 ; Manzone
+ * et al. 2013, Barontini et al. 2014, Pari et al. 2017). On prend 2 %, le milieu
+ * géométrique de la fourchette, soit un cinquième du tas par an
+ * *(à calibrer)* : ces mesures portent sur des plaquettes de taillis à courte
+ * rotation (peuplier, saule), et un broyat qui porte ses feuilles, plus riche
+ * en azote, irait plutôt vers le haut.
+ *
+ * La perte est appliquée telle quelle, sans facteur de climat : un taux mesuré
+ * sur le terrain, saisons comprises, en porte déjà un, et le tas fait sa propre
+ * chaleur.
+ */
+export const PERTE_TAS_BROYAT_PAR_MOIS = 0.02;
+
+/**
+ * Part du tas de broyat qui se décompose chaque semaine. Décroissance de premier
+ * ordre, la même forme que les produits bois : le taux mensuel ramené à la
+ * semaine.
+ */
+export const DECOMPOSITION_TAS_BROYAT_PAR_SEMAINE =
+  1 - (1 - PERTE_TAS_BROYAT_PAR_MOIS) ** (12 / 52);
 
 /**
  * Demi-vie d'un produit en bois de **sciage**, années.
@@ -209,6 +239,7 @@ export function createCarbonState(): CarbonState {
 export interface CarbonInventory {
   /** stocks en t C/ha */
   vivantTHa: number;
+  /** tout le bois mort : debout, couché, et les tués pas encore ramassés */
   boisMortTHa: number;
   litiereTHa: number;
   /** broyat en tas, pas encore épandu, t C/ha */
@@ -235,6 +266,87 @@ export function livingCarbonKg(trees: readonly TreeState[]): number {
     if (t.alive) sum += treeTotalCarbonKg(getEspece(t.especeId), t.diametreCm, t.heightM);
   }
   return sum;
+}
+
+/** Le carbone que porte la parcelle, compartiment par compartiment, kg C. */
+export interface StocksCarbone {
+  vivantKgC: number;
+  /**
+   * Les arbres tués par le feu ou couchés par la tempête, encore récupérables :
+   * ni vivants, ni versés au bois mort. Leur carbone attend sur pied que le
+   * joueur décide (tick.ts, `CHABLIS_RECUPERABLE_SEMAINES`).
+   */
+  tuesRecuperablesKgC: number;
+  /** le pool de bois mort de la parcelle : chandelles debout, souches, racines */
+  boisMortKgC: number;
+  /** le bois couché, cellule par cellule (boisMort.ts) */
+  boisCoucheKgC: number;
+  litiereKgC: number;
+  humusKgC: number;
+  /** le tas de broyat, pas encore épandu */
+  broyatKgC: number;
+  totalKgC: number;
+}
+
+/**
+ * **Le** total du carbone de la parcelle, et il n'y en a qu'un (#340).
+ *
+ * L'inventaire affiché et la propriété de conservation en tenaient chacun le
+ * leur, et ils avaient divergé : la propriété comptait le bois couché et les
+ * arbres tués encore récupérables, l'écran non. Le moteur conservait, le bilan
+ * affiché baissait à chaque chandelle qui tombe, de tout le tronc, et un
+ * incendie lui faisait perdre les arbres tués pendant un an avant de les lui
+ * rendre d'un coup. Deux définitions d'une même grandeur finissent toujours par
+ * diverger : l'inventaire et la propriété appellent maintenant celle-ci.
+ *
+ * Un transfert d'un compartiment à l'autre — un arbre qui meurt, une chandelle
+ * qui s'abat, un fût laissé au sol, un broyat mis en tas — ne change pas ce
+ * total. Seul ce qui sort réellement de la parcelle le fait baisser : la
+ * respiration des décomposeurs, le feu, le bois vendu, la terre emportée.
+ */
+export function stocksCarbone(state: GameState): StocksCarbone {
+  let vivantKgC = 0;
+  let tuesRecuperablesKgC = 0;
+  for (const t of state.trees) {
+    // Un arbre mort sans `mortSemaine` n'a pas encore été versé au bois mort :
+    // le tick le fait la semaine qui suit sa mort, ou à la fin du délai de
+    // récupération pour un brûlé ou un chablis.
+    if (!t.alive && t.mortSemaine !== undefined) continue;
+    const kgC = treeTotalCarbonKg(getEspece(t.especeId), t.diametreCm, t.heightM);
+    if (t.alive) vivantKgC += kgC;
+    else tuesRecuperablesKgC += kgC;
+  }
+  // Les cellules font un mètre carré : leurs grammes se somment en kilos.
+  let litiereG = 0;
+  let humusG = 0;
+  let boisCoucheG = 0;
+  for (let i = 0; i < state.soil.litterCG.length; i++) {
+    litiereG += state.soil.litterCG[i] ?? 0;
+    humusG += state.soil.humusCG[i] ?? 0;
+    boisCoucheG += state.soil.boisAuSolCG[i] ?? 0;
+  }
+  const boisMortKgC = state.carbon.deadWoodKgC;
+  const broyatKgC = state.stockBrf.carboneG / 1000;
+  const litiereKgC = litiereG / 1000;
+  const humusKgC = humusG / 1000;
+  const boisCoucheKgC = boisCoucheG / 1000;
+  return {
+    vivantKgC,
+    tuesRecuperablesKgC,
+    boisMortKgC,
+    boisCoucheKgC,
+    litiereKgC,
+    humusKgC,
+    broyatKgC,
+    totalKgC:
+      vivantKgC +
+      tuesRecuperablesKgC +
+      boisMortKgC +
+      boisCoucheKgC +
+      litiereKgC +
+      humusKgC +
+      broyatKgC,
+  };
 }
 
 /**
@@ -274,22 +386,18 @@ export function carbonInventory(
   reference: number = state.carboneDeReferenceTHa,
 ): CarbonInventory {
   const areaHa = (state.station.coteM * state.station.coteM) / 10_000;
-  const nCells = state.soil.litterCG.length;
-  let litterG = 0;
-  let humusG = 0;
-  for (let i = 0; i < nCells; i++) {
-    litterG += state.soil.litterCG[i] ?? 0;
-    humusG += state.soil.humusCG[i] ?? 0;
-  }
-  const vivantTHa = livingCarbonKg(state.trees) / 1000 / areaHa;
-  const boisMortTHa = state.carbon.deadWoodKgC / 1000 / areaHa;
-  // moyenne g/m² → t/ha (1 t/ha = 100 g/m²)
-  const litiereTHa = litterG / nCells / T_HA_TO_G_M2;
+  const enTHa = (kgC: number) => kgC / 1000 / areaHa;
+  const stocks = stocksCarbone(state);
+  const vivantTHa = enTHa(stocks.vivantKgC);
+  // Tout le bois mort, où qu'il soit : debout, couché, ou tué et pas encore
+  // ramassé. L'écran n'en montre qu'une case, la somme des trois.
+  const boisMortTHa = enTHa(stocks.boisMortKgC + stocks.boisCoucheKgC + stocks.tuesRecuperablesKgC);
+  const litiereTHa = enTHa(stocks.litiereKgC);
   // Le tas de broyat est un stock comme un autre : tant qu'il n'est pas
-  // épandu, son carbone est là, il attend.
-  const brfTHa = state.stockBrf.carboneG / 1000 / 1000 / areaHa;
-  const humusTHa = humusG / nCells / T_HA_TO_G_M2;
-  const totalTHa = vivantTHa + boisMortTHa + litiereTHa + humusTHa + brfTHa;
+  // épandu, son carbone est là. Il se décompose en attendant (tick.ts).
+  const brfTHa = enTHa(stocks.broyatKgC);
+  const humusTHa = enTHa(stocks.humusKgC);
+  const totalTHa = enTHa(stocks.totalKgC);
   return {
     vivantTHa,
     boisMortTHa,

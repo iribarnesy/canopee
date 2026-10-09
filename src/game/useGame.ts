@@ -63,6 +63,18 @@ export interface GameApi {
    */
   sceneARevoir?: number;
   /**
+   * La pause a coupé une traversée « +1 mois » / « +1 an » : `continuer` la
+   * mène à son terme (#359).
+   */
+  enRoute: boolean;
+  /** Reprendre la traversée coupée, à sa vitesse et jusqu'à son arrivée. */
+  continuer: () => void;
+  /** La pause vient de la mort d'un arbre suivi — et peut se refuser (#359). */
+  pauseSurUneMort: boolean;
+  /** La mort d'un arbre suivi arrête-t-elle le temps ? */
+  arretSurLesMorts: boolean;
+  setArretSurLesMorts: (oui: boolean) => void;
+  /**
    * **la facture d'une semaine trop chargée** (#133), quand il y en a une.
    *
    * Présente = le temps est arrêté et attend une réponse. Ce n'est pas un
@@ -228,6 +240,15 @@ export function useGame(): GameApi {
    * rendre à chaque pause serait payer un rendu pour une mémoire.
    */
   const vitessePrecedente = useRef(1);
+  /** La vitesse de la dernière traversée demandée, pour l'afficher quand elle reprend. */
+  const vitesseDeLaTraversee = useRef(1);
+  /** Une pause qu'on quitte ne laisse rien derrière elle : ni avis, ni scène, ni traversée. */
+  const oublierLaPause = () => {
+    setNotice(undefined);
+    setSceneARevoir(undefined);
+    setEnRoute(false);
+    setPauseSurUneMort(false);
+  };
   const [replayProgress, setReplayProgress] = useState<{
     done: number;
     total: number;
@@ -235,6 +256,9 @@ export function useGame(): GameApi {
   }>();
   const [notice, setNotice] = useState<string>();
   const [sceneARevoir, setSceneARevoir] = useState<number>();
+  const [enRoute, setEnRoute] = useState(false);
+  const [pauseSurUneMort, setPauseSurUneMort] = useState(false);
+  const [arretSurLesMorts, setArretSurLesMortsState] = useState(true);
   const [facture, setFacture] = useState<FactureHoraire>();
   const [politiqueHoraire, setPolitique] = useState<PolitiqueHoraire>("demander");
   /** Ce que la partie a accumulé : kilos cueillis, plants, abattages (#188). */
@@ -415,6 +439,11 @@ export function useGame(): GameApi {
           setSpeedState(0);
           setNotice(msg.reason);
           setSceneARevoir(msg.scene);
+          setEnRoute(msg.enRoute === true);
+          setPauseSurUneMort(msg.motif === "mortSuivie");
+          break;
+        case "arretSurLesMorts":
+          setArretSurLesMortsState(msg.oui);
           break;
         case "politiqueHoraire":
           setPolitique(msg.politique);
@@ -489,6 +518,15 @@ export function useGame(): GameApi {
     },
     notice,
     ...(sceneARevoir === undefined ? {} : { sceneARevoir }),
+    enRoute,
+    pauseSurUneMort,
+    arretSurLesMorts,
+    setArretSurLesMorts: (oui) => send({ type: "arretSurLesMorts", oui }),
+    continuer: () => {
+      send({ type: "continuer" });
+      setSpeedState(vitesseDeLaTraversee.current);
+      oublierLaPause();
+    },
     ...(facture ? { facture } : {}),
     reglerFacture: (embaucher, pourToujours = false) => {
       setFacture(undefined);
@@ -612,21 +650,19 @@ export function useGame(): GameApi {
       if (weeksPerSecond > 0) vitessePrecedente.current = weeksPerSecond;
       send({ type: "speed", weeksPerSecond });
       setSpeedState(weeksPerSecond);
-      setNotice(undefined);
-      setSceneARevoir(undefined);
+      oublierLaPause();
     },
     basculer: () => {
       const cible = speed > 0 ? 0 : vitessePrecedente.current;
       send({ type: "speed", weeksPerSecond: cible });
       setSpeedState(cible);
-      setNotice(undefined);
-      setSceneARevoir(undefined);
+      oublierLaPause();
     },
     avancerDe: (semaines, weeksPerSecond, libelle) => {
       send({ type: "avancerDe", semaines, weeksPerSecond, libelle });
+      vitesseDeLaTraversee.current = weeksPerSecond;
       setSpeedState(weeksPerSecond);
-      setNotice(undefined);
-      setSceneARevoir(undefined);
+      oublierLaPause();
     },
     // Pas de `setSpeedState` ici, et c'est tout l'intérêt : l'état affiché ne
     // bouge pas, seul le worker suspend ses pas.

@@ -55,9 +55,15 @@ export function Angle({
         alignItems: aDroite ? "flex-end" : "flex-start",
         gap: 8,
         maxHeight: `calc(100vh - ${2 * MARGE}px)`,
+        // **L'angle ne prend que ce qu'on voit** (#363). Il est aussi large que
+        // la plus large de ses deux rangées : sous un volet plus étroit que la
+        // rangée de boutons, une bande vide de la parcelle lui appartenait, et
+        // y glisser sélectionnait le texte du volet au lieu de déplacer la vue.
+        // Le conteneur laisse passer ; le volet et les boutons, eux, captent.
+        pointerEvents: "none",
       }}
     >
-      {volet}
+      {volet && <div style={{ display: "contents", pointerEvents: "auto" }}>{volet}</div>}
       {children && (
         <div
           style={{
@@ -67,7 +73,7 @@ export function Angle({
             justifyContent: aDroite ? "flex-end" : "flex-start",
           }}
         >
-          {children}
+          <div style={{ display: "contents", pointerEvents: "auto" }}>{children}</div>
         </div>
       )}
     </div>
@@ -79,11 +85,18 @@ export function Volet({
   titre,
   largeur = 360,
   surFermer,
+  hauteurMax = "calc(100vh - 170px)",
   children,
 }: {
   titre: string;
   largeur?: number;
   surFermer: () => void;
+  /**
+   * La hauteur à ne pas dépasser. Deux volets ouverts du même côté de l'écran
+   * — l'arbre sélectionné en haut, ses suivis en bas — se partagent la hauteur :
+   * sinon celui du bas recouvrait celui du haut (#358).
+   */
+  hauteurMax?: string | undefined;
   children: React.ReactNode;
 }) {
   return (
@@ -95,7 +108,7 @@ export function Volet({
         // De quoi laisser le bandeau permanent visible au-dessus : un volet
         // haut qui le recouvrait cachait justement les deux choses que
         // l'écran s'était engagé à ne jamais cacher, l'argent et la date.
-        maxHeight: "calc(100vh - 170px)",
+        maxHeight: hauteurMax,
         overflowY: "auto",
       }}
     >

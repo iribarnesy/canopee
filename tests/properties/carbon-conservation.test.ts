@@ -1,16 +1,26 @@
 /**
  * Conservation du carbone (docs/regles.md §12, §16) : chaque semaine — actions
  * du joueur comprises — la production primaire nette égale la variation des
- * stocks (vivant + bois mort + litière + humus) plus les émissions et les
- * exports. Le carbone ne peut ni fuir ni apparaître.
+ * stocks plus les émissions et les exports. Le carbone ne peut ni fuir ni
+ * apparaître.
+ *
+ * **Les stocks sont ceux que l'écran affiche** (#340). La propriété tenait sa
+ * propre liste, l'inventaire la sienne, et elles avaient divergé : la propriété
+ * comptait le bois couché et les arbres tués encore récupérables, l'écran non.
+ * Le moteur conservait, et le bilan affiché perdait un tronc à chaque chandelle
+ * qui tombe. Les deux lisent maintenant `stocksCarbone`, et chaque semaine
+ * vérifie aussi le bilan net tel que le joueur le lit.
  */
 
 import { describe, expect, it } from "vitest";
 import type { GameAction } from "../../src/engine/actions";
 import { applyAction, RECEPAGE_HAUTEUR_M } from "../../src/engine/actions";
 import {
+  carbonInventory,
+  figerCarboneDeReference,
   livingCarbonKg,
   racinesPerduesEnRabattant,
+  stocksCarbone,
   treeAboveCarbonKg,
   treeRootCarbonKg,
   treeTotalCarbonKg,
@@ -21,34 +31,44 @@ import { syntheticYear } from "../../src/engine/meteo";
 import { rngStateFromSeed } from "../../src/engine/rng";
 import { createGameState, type GameState, plantAt, plantScattered } from "../../src/engine/state";
 import { LANDE_SECHE, LIMON_RICHE } from "../../src/engine/stations";
-import { diametreInitialCm } from "../../src/engine/trees";
+import { diametreInitialCm, dureeChandelleSemaines } from "../../src/engine/trees";
 
 const STATION = { ...LIMON_RICHE.station, coteM: 50 };
 const WEATHER = syntheticYear(LIMON_RICHE.climat);
 
-/** Stock total de carbone de la parcelle, kg C (cellules de 1 m² : g → kg). */
+/**
+ * Stock total de carbone de la parcelle, kg C : celui de l'écran. Le bois
+ * couché, les arbres tués encore récupérables et le tas de broyat y sont ; sans
+ * eux, une chandelle qui s'abat, un incendie ou un broyage ressembleraient à une
+ * destruction de carbone.
+ */
 function totalStockKgC(state: GameState): number {
-  let soilG = 0;
-  for (let i = 0; i < state.soil.litterCG.length; i++) {
-    soilG +=
-      (state.soil.litterCG[i] ?? 0) +
-      (state.soil.humusCG[i] ?? 0) +
-      // Le bois couché est un stock à part entière : sans cette ligne, une
-      // chandelle qui s'abat ferait apparaître du carbone venu de nulle part
-      // (boisMort.ts).
-      (state.soil.boisAuSolCG[i] ?? 0);
-  }
-  // Un arbre tué par le feu et encore récupérable n'est ni dans le vivant ni
-  // dans le pool de bois mort : son carbone attend sur pied, le temps que le
-  // joueur décide (tick.ts, CHABLIS_RECUPERABLE_SEMAINES). Sans ce terme, le
-  // versement au pool au bout du délai ressemblerait à une création.
-  let surPiedKgC = 0;
-  for (const t of state.trees) {
-    if (!t.alive && t.mortSemaine === undefined) {
-      surPiedKgC += treeTotalCarbonKg(getEspece(t.especeId), t.diametreCm, t.heightM);
-    }
-  }
-  return livingCarbonKg(state.trees) + surPiedKgC + state.carbon.deadWoodKgC + soilG / 1000;
+  return stocksCarbone(state).totalKgC;
+}
+
+/** Surface de la parcelle, ha. */
+function surfaceHa(state: GameState): number {
+  return (state.station.coteM * state.station.coteM) / 10_000;
+}
+
+/**
+ * Le même résidu, lu sur le **bilan net affiché**, kg C : ce qu'il a bougé moins
+ * ce qui est réellement entré ou sorti. Le bois d'œuvre en usage compte au
+ * bilan ; il n'en sort qu'en fin de vie.
+ */
+function residuAfficheKgC(before: GameState, after: GameState): number {
+  const c0 = before.carbon;
+  const c1 = after.carbon;
+  const kg = (tHa: number) => tHa * 1000 * surfaceHa(after);
+  const deltaBilan = kg(carbonInventory(after).bilanNetTHa - carbonInventory(before).bilanNetTHa);
+  const entre = c1.nppCumKgC - c0.nppCumKgC + (c1.importedPlantsCumKgC - c0.importedPlantsCumKgC);
+  const sort =
+    c1.emittedCumKgC -
+    c0.emittedCumKgC +
+    (c1.exportedEnergyCumKgC - c0.exportedEnergyCumKgC) +
+    (c1.oeuvreFinDeVieCumKgC - c0.oeuvreFinDeVieCumKgC) +
+    (c1.erosionCumKgC - c0.erosionCumKgC);
+  return deltaBilan - (entre - sort);
 }
 
 /** NPP + plants achetés − (Δstocks + émissions + exports) : doit rester nul. */
@@ -92,6 +112,12 @@ describe("conservation du carbone sur le tick complet (actions comprises)", () =
       },
       { type: "couper", week: 5 * 52 + 20, treeIds: [1, 2, 3, 4, 5], devenir: "epandre" },
       { type: "couper", week: 6 * 52 + 20, treeIds: [31, 32, 33, 34], devenir: "vendre" },
+      // Les deux devenirs qui **déplacent** le bois sans le faire sortir, et que la
+      // propriété n'exerçait pas (#340, #341) : le broyat va au tas, qui se
+      // décompose en attendant, et le fût laissé se couche au sol.
+      { type: "couper", week: 5 * 52 + 30, treeIds: [11, 12, 13], devenir: "broyer" },
+      { type: "couper", week: 5 * 52 + 40, treeIds: [14, 15], devenir: "laisser" },
+      { type: "epandreBrf", week: 6 * 52 + 40, part: 0.5, x: 25, y: 25, rayonM: 6 },
       // Rabattre un arbre **vivant** : la tige s'exporte, mais les racines qu'il
       // cesse de porter restent au sol. Sans elles au bilan, un aulne de
       // quelques mètres recépé fait disparaître son carbone racinaire.
@@ -130,11 +156,144 @@ describe("conservation du carbone sur le tick complet (actions comprises)", () =
       state = advanceWeek(state, w, actions).state;
       // Entrées : photosynthèse + plants achetés. Sorties : CO2 + bois vendu.
       expect(residuKgC(avant, state, stockAvant)).toBeCloseTo(0, 4);
+      expect(residuAfficheKgC(avant, state)).toBeCloseTo(0, 4);
     }
     // Sanity : de vrais flux ont eu lieu.
     expect(state.carbon.nppCumKgC).toBeGreaterThan(100);
     expect(state.carbon.exportedEnergyCumKgC).toBeGreaterThan(0);
     expect(state.carbon.deadWoodKgC).toBeGreaterThan(0);
+    // Le tas a été rempli, à moitié épandu, et il en reste ; le bois laissé est
+    // couché quelque part.
+    expect(state.stockBrf.carboneG).toBeGreaterThan(0);
+    expect(stocksCarbone(state).boisCoucheKgC).toBeGreaterThan(0);
+
+    // L'écran montre des cases et un total : le total est la somme des cases, et
+    // c'est celui que la propriété vient de suivre semaine après semaine.
+    const inv = carbonInventory(state, 0);
+    expect(
+      inv.vivantTHa + inv.boisMortTHa + inv.litiereTHa + inv.brfTHa + inv.humusTHa,
+    ).toBeCloseTo(inv.totalTHa, 9);
+    expect(inv.totalTHa * 1000 * surfaceHa(state)).toBeCloseTo(totalStockKgC(state), 6);
+  });
+});
+
+/**
+ * **Un transfert entre compartiments ne fait pas bouger le bilan affiché** (#340).
+ *
+ * C'est la propriété qui aurait attrapé le défaut. Le moteur conservait le
+ * carbone, et la propriété du dessus le vérifiait sur sa propre liste de
+ * stocks ; l'écran en tenait une autre, sans le bois couché ni les arbres tués
+ * encore récupérables. Mesuré sur un chêne de 18 m posé sur 0,09 ha : un fût
+ * laissé au sol faisait perdre 4,13 t C/ha au bilan affiché, la chandelle qui
+ * s'abat 3,24, et un arbre tué par le feu 5,28 pendant un an, rendues d'un coup
+ * à la cinquante-deuxième semaine.
+ *
+ * Seul ce qui sort réellement de la parcelle fait varier le bilan : la
+ * respiration, le feu, le bois vendu, la terre emportée. Chaque cas est lu sur
+ * le bilan net, tel que le joueur le voit.
+ */
+describe("un transfert entre compartiments ne fait pas varier le bilan affiché", () => {
+  const STATION_30 = { ...LIMON_RICHE.station, coteM: 30, voisinage: [], gibierParHa: 0 };
+  const CHENE = "quercus_pubescens";
+
+  function chene() {
+    let state = createGameState(STATION_30, rngStateFromSeed(1));
+    state = plantAt(state, CHENE, 15, 15, 18);
+    return { state: figerCarboneDeReference(state), id: state.nextTreeId - 1 };
+  }
+  const bilan = (state: GameState) => carbonInventory(state).bilanNetTHa;
+
+  it.each(["laisser", "broyer", "epandre"] as const)(
+    "couper et %s : le bois change de place, le bilan ne bouge pas",
+    (devenir) => {
+      const { state, id } = chene();
+      const r = applyAction(state, { type: "couper", week: 0, treeIds: [id], devenir });
+      expect(r.refusals).toEqual([]);
+      expect(r.state.trees).toEqual([]);
+      expect(bilan(r.state)).toBeCloseTo(bilan(state), 9);
+    },
+  );
+
+  it("couper et vendre : le bilan ne perd que ce qui sort", () => {
+    const { state, id } = chene();
+    const r = applyAction(state, { type: "couper", week: 0, treeIds: [id], devenir: "vendre" });
+    expect(r.refusals).toEqual([]);
+    expect(bilan(r.state)).toBeLessThan(bilan(state));
+    expect(residuAfficheKgC(state, r.state)).toBeCloseTo(0, 6);
+  });
+
+  it("une chandelle qui s'abat se couche, et reste au bilan", () => {
+    const { state: vivant } = chene();
+    const espece = getEspece(CHENE);
+    const arbre = vivant.trees[0];
+    if (!arbre) throw new Error("chêne manquant");
+    const arbreKgC = treeTotalCarbonKg(espece, arbre.diametreCm, arbre.heightM);
+    // Morte depuis le temps qu'une chandelle de chêne tient debout, et versée au
+    // bois mort à sa mort, comme le tick l'aurait fait : elle s'abat cette semaine.
+    const state: GameState = {
+      ...vivant,
+      trees: vivant.trees.map((t) => ({
+        ...t,
+        alive: false,
+        causeMort: "secheresse" as const,
+        mortSemaine: -dureeChandelleSemaines(espece),
+      })),
+      carbon: { ...vivant.carbon, deadWoodKgC: arbreKgC },
+    };
+    const w = WEATHER[0];
+    if (!w) throw new Error("météo manquante");
+    const step = advanceWeek(state, w, []);
+    expect(step.chutes).toHaveLength(1);
+    // Le tronc est au sol, et il pèse : ce n'est pas un résidu d'arrondi.
+    expect(stocksCarbone(step.state).boisCoucheKgC).toBeGreaterThan(0.1 * arbreKgC);
+    expect(residuAfficheKgC(state, step.state)).toBeCloseTo(0, 4);
+  });
+
+  it("un arbre tué par le feu reste au bilan jusqu'à ce qu'il rejoigne le bois mort", () => {
+    const { state: vivant } = chene();
+    const arbre = vivant.trees[0];
+    if (!arbre) throw new Error("chêne manquant");
+    const arbreKgC = treeTotalCarbonKg(getEspece(CHENE), arbre.diametreCm, arbre.heightM);
+    // Mourir n'est pas sortir : tué sur pied, il porte encore tout son carbone.
+    let state: GameState = {
+      ...vivant,
+      trees: vivant.trees.map((t) => ({
+        ...t,
+        alive: false,
+        causeMort: "feu" as const,
+        brulEeSemaine: 0,
+      })),
+    };
+    expect(bilan(state)).toBeCloseTo(bilan(vivant), 9);
+    let verse = false;
+    for (let i = 0; i < 60; i++) {
+      const w = WEATHER[i % 52];
+      if (!w) throw new Error("météo manquante");
+      const avant = state;
+      state = advanceWeek(state, w, []).state;
+      expect(residuAfficheKgC(avant, state)).toBeCloseTo(0, 4);
+      if (state.carbon.deadWoodKgC - avant.carbon.deadWoodKgC > 0.9 * arbreKgC) verse = true;
+    }
+    // Le versement au bois mort a bien eu lieu pendant la boucle : sans lui,
+    // l'essai ne vérifierait que des semaines où rien ne change de place.
+    expect(verse).toBe(true);
+  });
+
+  it("le tas de broyat se décompose, et son carbone sort en CO₂", () => {
+    const { state, id } = chene();
+    let s = applyAction(state, { type: "couper", week: 0, treeIds: [id], devenir: "broyer" }).state;
+    const tasAuDepart = s.stockBrf.carboneG;
+    const azoteAuDepart = s.stockBrf.azoteG;
+    for (let i = 0; i < 52; i++) {
+      const w = WEATHER[i % 52];
+      if (!w) throw new Error("météo manquante");
+      const avant = s;
+      s = advanceWeek(s, w, []).state;
+      expect(residuAfficheKgC(avant, s)).toBeCloseTo(0, 4);
+    }
+    // Un cinquième du tas part en un an, et l'azote reste dans le tas.
+    expect(s.stockBrf.carboneG / tasAuDepart).toBeCloseTo(0.98 ** 12, 3);
+    expect(s.stockBrf.azoteG).toBe(azoteAuDepart);
   });
 });
 
@@ -174,6 +333,7 @@ describe("couper une chandelle brûlée passé le délai de récupération", () 
         exporteALaCoupe = state.carbon.exportedEnergyCumKgC - avant.carbon.exportedEnergyCumKgC;
       }
       expect(residuKgC(avant, state, stockAvant)).toBeCloseTo(0, 4);
+      expect(residuAfficheKgC(avant, state)).toBeCloseTo(0, 4);
     }
 
     // Le tronc a bien été versé au pool à la semaine 52, puis emporté.
@@ -229,6 +389,7 @@ describe("un incendie qui emporte des chandelles", () => {
       const step = advanceWeek(state, w, []);
       state = step.state;
       expect(residuKgC(avant, state, stockAvant)).toBeCloseTo(0, 4);
+      expect(residuAfficheKgC(avant, state)).toBeCloseTo(0, 4);
       if (step.incendie) {
         // On **accumule** au lieu de garder le dernier feu. La parcelle en connaît
         // maintenant plusieurs — les chandelles portent le feu, et l'ombre
@@ -393,6 +554,7 @@ describe("un feu qui fait rejeter de souche", () => {
       const step = advanceWeek(state, w, []);
       state = step.state;
       expect(residuKgC(avant, state, stockAvant)).toBeCloseTo(0, 4);
+      expect(residuAfficheKgC(avant, state)).toBeCloseTo(0, 4);
       if (step.incendie) rejets += step.incendie.rejets;
     }
 
