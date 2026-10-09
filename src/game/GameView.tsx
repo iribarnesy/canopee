@@ -87,6 +87,7 @@ import {
   supprimerSauvegarde,
 } from "./sauvegardes";
 import { useSon } from "./son/useSon";
+import { useAvisDuGel } from "./useAvisDuGel";
 import { useBilan } from "./useBilan";
 import { useCeQuiAChange } from "./useCeQuiAChange";
 import { useChaleur } from "./useChaleur";
@@ -1534,6 +1535,11 @@ export function GameView({ surPartie }: { surPartie?: (enPartie: boolean) => voi
   const pollinisateurs = usePollinisateurs(snapshot, station?.coteM);
   // Le givre de la semaine et la brume du matin (#130).
   const matin = useMatin(snapshot, station);
+  const avisDuGel = useAvisDuGel(
+    snapshot?.week,
+    matin.givre !== undefined,
+    snapshot?.weather.tMinAbsC,
+  );
   // Le voile de chaleur au-dessus du sol nu, et les flaques dans les creux
   // mouillés hors crue (§5.7).
   const chaleur = useChaleur(snapshot, station?.coteM);
@@ -1951,7 +1957,9 @@ export function GameView({ surPartie }: { surPartie?: (enPartie: boolean) => voi
           position: "absolute",
           top: 12,
           left: 12,
-          right: 12,
+          // Assez à gauche pour laisser « ⚙ La partie », posé dans le coin : un
+          // avis qui passait dessous perdait sa croix (#355).
+          right: 124,
           display: "flex",
           alignItems: "flex-start",
           gap: 12,
@@ -2010,6 +2018,7 @@ export function GameView({ surPartie }: { surPartie?: (enPartie: boolean) => voi
             game={game}
             vivants={vivants}
             rejouer={ellipse.rejouable ? ellipse.rejouer : undefined}
+            gel={avisDuGel}
           />
         </div>
       </div>

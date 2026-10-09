@@ -9,6 +9,7 @@
 
 import { describe, expect, it } from "vitest";
 import { fermetureDuCouvert, tMinimumSousCouvert } from "../../src/engine/microclimat";
+import { phraseDuGel } from "../../src/game/useAvisDuGel";
 import {
   brumeEnCours,
   cellulesAffleurantes,
@@ -18,6 +19,7 @@ import {
 import {
   cellulesGelees,
   givreDeLaSemaine,
+  HAUTEUR_DU_BRIN_GIVRE_M,
   HERBE_QUI_GIVRE,
   OPACITE_DU_GIVRE,
 } from "../../src/render/temps/givre";
@@ -120,5 +122,20 @@ describe("le fond du ciel", () => {
     const distance = (a: typeof beau, b: typeof beau) =>
       Math.hypot(a.r - b.r, a.g - b.g, a.b - b.b);
     expect(distance(pluie, GRIS_DE_PLUIE)).toBeLessThan(distance(beau, GRIS_DE_PLUIE));
+  });
+});
+
+describe("le givre à l'échelle des arbres (#357) et dit en clair (#355)", () => {
+  it("ses brins sont plus bas qu'un semis de 0,7 m", () => {
+    expect(HAUTEUR_DU_BRIN_GIVRE_M).toBeLessThan(0.7 / 2);
+  });
+
+  it("l'avis dit la température avec un vrai signe moins, et seulement ce que le gel fait", () => {
+    const phrase = phraseDuGel(-5.6);
+    expect(phrase).toContain("−6 °C");
+    expect(phrase).not.toContain("-6");
+    // Le moteur ne gèle que les fleurs ouvertes : l'avis ne promet rien d'autre.
+    expect(phrase).toContain("fleurs ouvertes");
+    expect(phrase).not.toMatch(/pousse/);
   });
 });

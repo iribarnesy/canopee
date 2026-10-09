@@ -48,6 +48,7 @@ import {
   RenderTexture,
   Sprite,
   Texture,
+  TilingSprite,
 } from "pixi.js";
 import type { Zone } from "../../engine/zone";
 import { ficheDe } from "../arbres/especes";
@@ -83,11 +84,16 @@ import {
   ETALEMENT_DE_LA_BRULURE,
 } from "../couches/feu";
 import {
+  BRIN_LISIBLE_PX,
+  BRIN_PLEIN_PX,
+  cuireGrainDeGivre,
   cuireTouffeGivree,
+  GRAIN_SOUS_LES_BRINS,
+  HAUT_MAX_DU_BRIN_PX,
   HAUTEUR_TOUFFE_PX,
-  LARGEUR_TOUFFE_PX,
   PIED_TOUFFE_Y_PX,
   TOUFFES_MAX,
+  TOUFFES_PAR_CELLULE_MAX,
 } from "../couches/givre";
 import { cuireLesInsectes } from "../couches/insectes";
 import {
@@ -136,7 +142,14 @@ import type { OndeDeChaleur } from "../temps/chaleur";
 import type { Marqueur } from "../temps/changements";
 import { DEBOUT, type Deformation } from "../temps/chute";
 import { CIEL, CIEL_LE_PLUS_CHARGE, type Particule } from "../temps/feu";
-import { type GivreDeLaSemaine, TEINTE_DU_GIVRE, VOILE_SOUS_LES_BRINS } from "../temps/givre";
+import {
+  GIVRE_SUR_LE_DECOR,
+  type GivreDeLaSemaine,
+  HAUTEUR_DU_BRIN_GIVRE_M,
+  TEINTE_DU_GIVRE,
+  VOILE_SANS_BRINS,
+  VOILE_SOUS_LES_BRINS,
+} from "../temps/givre";
 import type { GiteOccupe } from "../temps/habitants";
 import { BLANC_DE_NEIGE, BLANC_DE_NEIGE_MAX, type Flocon, OMBRE_SUR_NEIGE } from "../temps/neige";
 import {
@@ -440,6 +453,11 @@ export class SceneParcelle {
   private touffesDuGivre?: Container;
   private texturesTouffes?: Texture[];
   private filtreDuGivre?: AlphaFilter;
+  /** l'opacité du voile sous les brins : franc de loin, léger de près */
+  private filtreDuVoile?: AlphaFilter;
+  /** le grain de rime, répété, et la forme des cellules gelées qui le découpe */
+  private grainDuGivre?: TilingSprite;
+  private formeDuGivre?: Graphics;
   private signatureDuGivre = "";
   private givreDessine?: GivreDeLaSemaine;
   /** Les ondes du voile de chaleur à cette image (§5.7). Vide = pas de chaleur. */
@@ -1178,7 +1196,7 @@ export class SceneParcelle {
     const sol = versEntier(eclairer({ r: 255, g: 255, b: 255 }, 1 - SOL_MOUILLE_MAX * mouille));
     this.couches.sol.tint = sol;
     this.couches.decor.tint = sol;
-    this.poserLeManteau(blanc);
+    this.poserLeManteau(blanc, this.givre?.opacite ?? 0);
     let poses = 0;
     if (couvert > 0) {
       if (!this.spriteCouvert) {
@@ -1263,8 +1281,15 @@ export class SceneParcelle {
    * vers le blanc de la neige, à proportion du manteau. Les arbres ne sont
    * **pas** blanchis : le moteur ne sait pas ce que les houppiers retiennent.
    */
-  private poserLeManteau(blanc: number): void {
-    if (blanc <= 0) {
+  private poserLeManteau(blanc: number, givre: number): void {
+    // **Le pays givre avec la parcelle** (#355). La parcelle blanchissait seule
+    // au milieu d'un paysage vert, et on n'y lisait pas une gelée mais une
+    // parcelle bizarre. Le décor lit la même nuit que la parcelle — la plus
+    // froide de la semaine, à découvert — et blanchit d'autant, sans brins : à
+    // cette distance on ne voit plus que la teinte.
+    const kNeige = BLANC_DE_NEIGE_MAX * blanc;
+    const kGivre = GIVRE_SUR_LE_DECOR * givre;
+    if (kNeige <= 0 && kGivre <= 0) {
       if (this.couches.sol.filters) this.couches.sol.filters = null;
       if (this.couches.decor.filters) this.couches.decor.filters = null;
       this.couches.ombres.alpha = 1;
@@ -1273,25 +1298,34 @@ export class SceneParcelle {
     // Un filtre par couche : un même filtre posé sur deux conteneurs partage
     // son état de rendu entre eux.
     this.filtresNeige ??= { sol: new ColorMatrixFilter(), decor: new ColorMatrixFilter() };
-    const k = BLANC_DE_NEIGE_MAX * blanc;
-    const { r, g, b } = BLANC_DE_NEIGE;
-    // Chaque canal garde (1 − k) de lui-même et reçoit k du blanc de neige.
+    // Chaque canal garde (1 − k) de lui-même et reçoit k du blanc visé.
     // Les décalages sont en fraction de 1, comme les couleurs du filtre.
-    // biome-ignore format: une matrice 4 × 5 se lit ligne à ligne
-    const matrice: [
-      number, number, number, number, number,
-      number, number, number, number, number,
-      number, number, number, number, number,
-      number, number, number, number, number,
-    ] = [
-      1 - k, 0, 0, 0, (k * r) / 255,
-      0, 1 - k, 0, 0, (k * g) / 255,
-      0, 0, 1 - k, 0, (k * b) / 255,
-      0, 0, 0, 1, 0,
-    ];
-    this.filtresNeige.sol.matrix = matrice;
-    this.filtresNeige.decor.matrix = matrice;
-    if (!this.couches.sol.filters) this.couches.sol.filters = [this.filtresNeige.sol];
+    const matrice = (k: number, { r, g, b }: { r: number; g: number; b: number }) => {
+      // biome-ignore format: une matrice 4 × 5 se lit ligne à ligne
+      const m: [
+        number, number, number, number, number,
+        number, number, number, number, number,
+        number, number, number, number, number,
+        number, number, number, number, number,
+      ] = [
+        1 - k, 0, 0, 0, (k * r) / 255,
+        0, 1 - k, 0, 0, (k * g) / 255,
+        0, 0, 1 - k, 0, (k * b) / 255,
+        0, 0, 0, 1, 0,
+      ];
+      return m;
+    };
+    const k = kNeige;
+    // Le sol de la parcelle a son propre givre (le calque des brins) : seule
+    // la neige le blanchit par filtre. Le décor prend le plus blanc des deux.
+    if (kNeige > 0) {
+      this.filtresNeige.sol.matrix = matrice(kNeige, BLANC_DE_NEIGE);
+      if (!this.couches.sol.filters) this.couches.sol.filters = [this.filtresNeige.sol];
+    } else if (this.couches.sol.filters) {
+      this.couches.sol.filters = null;
+    }
+    this.filtresNeige.decor.matrix =
+      kNeige >= kGivre ? matrice(kNeige, BLANC_DE_NEIGE) : matrice(kGivre, TEINTE_DU_GIVRE);
     if (!this.couches.decor.filters) this.couches.decor.filters = [this.filtresNeige.decor];
     // **L'ombre s'éclaircit aussi.** La couche d'ombre multiplie ce qui est
     // dessous, après le sol : sur une neige blanchie, l'ombre d'une friche
@@ -1308,6 +1342,13 @@ export class SceneParcelle {
    * opacité posée sur le calque entier par un filtre : deux losanges voisins qui
    * débordent l'un sur l'autre ne s'additionnent plus, et le quadrillage
    * gris-bleu que faisaient les carreaux semi-transparents disparaît.
+   *
+   * **Les brins ont la taille d'un brin** (#357). Ils étaient taillés sur la
+   * cellule, puis grandis quand on éclaircissait : plus d'un mètre de haut, et
+   * un bouleau de 0,7 m disparaissait dedans. Ils sont maintenant en mètres,
+   * à la hauteur des touffes du tapis ; de près on en pose plusieurs par
+   * cellule, de loin aucun — sous trois pixels un brin n'est plus un brin, et
+   * c'est le voile, plus franc, qui porte le blanc.
    */
   private poserLeGivre(etat: EtatScene, vue: Vue): number {
     const g = this.givre;
@@ -1324,8 +1365,17 @@ export class SceneParcelle {
       // leurs bords — sinon un fin quadrillage revenait.
       const voile = new Container();
       voile.addChild(this.traitsDuGivre);
-      voile.filters = [new AlphaFilter({ alpha: VOILE_SOUS_LES_BRINS })];
-      this.couches.givre.addChild(voile, this.touffesDuGivre);
+      this.filtreDuVoile = new AlphaFilter({ alpha: VOILE_SOUS_LES_BRINS });
+      voile.filters = [this.filtreDuVoile];
+      // Le grain par-dessus le voile, découpé à la même forme.
+      this.formeDuGivre = new Graphics();
+      this.grainDuGivre = new TilingSprite({
+        texture: Texture.from(cuireGrainDeGivre(this.fabriquer)),
+        width: 1,
+        height: 1,
+      });
+      this.grainDuGivre.mask = this.formeDuGivre;
+      this.couches.givre.addChild(voile, this.formeDuGivre, this.grainDuGivre, this.touffesDuGivre);
       this.filtreDuGivre = new AlphaFilter({ alpha: g.opacite });
       this.couches.givre.filters = [this.filtreDuGivre];
       this.texturesTouffes = [0, 1, 2].map((v) => {
@@ -1346,67 +1396,117 @@ export class SceneParcelle {
     const cote = etat.sol.coteM;
     const demiL = (TUILE_LARGEUR_PX * vue.cam.zoom) / 2 + 0.5;
     const demiH = (TUILE_HAUTEUR_PX * vue.cam.zoom) / 2 + 0.25;
-    const ecran = (c: number) =>
-      versEcranVue(
-        { x: (c % cote) + 0.5, y: Math.floor(c / cote) + 0.5, z: etat.sol.altitudesM[c] ?? 0 },
-        vue,
-      );
     const dehors = (p: { sx: number; sy: number }) =>
       p.sx < -demiL ||
       p.sx > vue.largeurPx + demiL ||
       p.sy < -demiH * 4 ||
       p.sy > vue.hauteurPx + demiH;
-    // Le voile : la terre blanchit à peine, l'herbe porte le givre.
+    // La taille d'un brin à l'écran, et ce qu'elle décide : de loin, pas de
+    // brins et un voile franc ; de près, des brins sur un voile léger.
+    const brinPx = HAUTEUR_DU_BRIN_GIVRE_M * METRE_VERTICAL_PX * vue.cam.zoom;
+    // **Un fondu, pas une bascule** : au zoom d'ouverture d'une partie, un brin
+    // fait trois ou quatre pixels — assez pour basculer en « brins », trop peu
+    // pour qu'on les voie, et le voile, allégé pour eux, laissait une parcelle
+    // gris foncé au milieu d'un pays blanchi. Entre les deux tailles, le voile
+    // cède à mesure que les brins se lisent.
+    const fondu = Math.min(
+      1,
+      Math.max(0, (brinPx - BRIN_LISIBLE_PX) / (BRIN_PLEIN_PX - BRIN_LISIBLE_PX)),
+    );
+    const avecBrins = fondu > 0;
+    if (this.filtreDuVoile) {
+      this.filtreDuVoile.alpha =
+        VOILE_SANS_BRINS + (VOILE_SOUS_LES_BRINS - VOILE_SANS_BRINS) * fondu;
+    }
     const t = this.traitsDuGivre;
+    const forme = this.formeDuGivre;
     t.clear();
+    forme?.clear();
     for (const c of g.cellules) {
-      const p = ecran(c);
+      const p = versEcranVue(
+        { x: (c % cote) + 0.5, y: Math.floor(c / cote) + 0.5, z: etat.sol.altitudesM[c] ?? 0 },
+        vue,
+      );
       if (dehors(p)) continue;
-      t.poly([p.sx, p.sy - demiH, p.sx + demiL, p.sy, p.sx, p.sy + demiH, p.sx - demiL, p.sy]);
+      const losange = [
+        p.sx,
+        p.sy - demiH,
+        p.sx + demiL,
+        p.sy,
+        p.sx,
+        p.sy + demiH,
+        p.sx - demiL,
+        p.sy,
+      ];
+      t.poly(losange);
+      forme?.poly(losange);
     }
     t.fill(versEntier(TEINTE_DU_GIVRE));
-    // Les brins : une touffe par cellule herbue, dans l'ordre du peintre pour
-    // que la touffe de devant passe devant celle de derrière.
+    forme?.fill(0xffffff);
+    // **Le grain est attaché au sol** — son origine suit celle de la parcelle,
+    // sinon les cristaux glisseraient sous la caméra —, mais **pas sa taille** :
+    // un cristal de rime est sous le pixel à tous les zooms, et un grain qui
+    // grandissait avec la vue faisait de grosses taches de granit. De près, les
+    // brins prennent le relais et il s'efface à moitié.
+    const grain = this.grainDuGivre;
+    if (grain) {
+      grain.width = vue.largeurPx;
+      grain.height = vue.hauteurPx;
+      grain.alpha = 1 + (GRAIN_SOUS_LES_BRINS - 1) * fondu;
+      const origine = versEcranVue({ x: 0, y: 0, z: 0 }, vue);
+      grain.tilePosition.set(origine.sx, origine.sy);
+    }
     const couche = this.touffesDuGivre;
     const textures = this.texturesTouffes;
     let n = 0;
-    if (couche && textures) {
-      // Chaque touffe est **décalée dans sa cellule**, plus ou moins grande et
-      // parfois retournée : posées au centre des cellules, toutes pareilles,
-      // elles dessinaient sur un champ uni des rangées de moquette.
+    if (couche && textures && avecBrins) {
       const h = (c: number, k: number) => hacher(c, k, 0x61f7);
-      const visibles = g.brins
-        .map((c) => {
+      const visibles = g.brins.filter((c) => {
+        const p = versEcranVue(
+          { x: (c % cote) + 0.5, y: Math.floor(c / cote) + 0.5, z: etat.sol.altitudesM[c] ?? 0 },
+          vue,
+        );
+        return !dehors(p);
+      });
+      // **Combien par cellule** : autant que le budget le permet, jusqu'à
+      // quatre — de près une cellule d'herbe gelée est un tapis de brins, pas
+      // une touffe isolée. Au-delà du budget, on éclaircit sans agrandir.
+      const parCellule = Math.max(
+        1,
+        Math.min(TOUFFES_PAR_CELLULE_MAX, Math.floor(TOUFFES_MAX / Math.max(1, visibles.length))),
+      );
+      const part = Math.min(1, TOUFFES_MAX / Math.max(1, visibles.length * parCellule));
+      const echelle = brinPx / HAUT_MAX_DU_BRIN_PX;
+      const touffes: { c: number; k: number; sx: number; sy: number }[] = [];
+      for (const c of visibles) {
+        for (let k = 0; k < parCellule; k++) {
+          const graine = c * TOUFFES_PAR_CELLULE_MAX + k;
+          if (part < 1 && h(graine, 7) >= part) continue;
           const p = versEcranVue(
             {
-              x: (c % cote) + 0.5 + (h(c, 1) - 0.5) * 0.9,
-              y: Math.floor(c / cote) + 0.5 + (h(c, 2) - 0.5) * 0.9,
+              x: (c % cote) + 0.5 + (h(graine, 1) - 0.5) * 0.95,
+              y: Math.floor(c / cote) + 0.5 + (h(graine, 2) - 0.5) * 0.95,
               z: etat.sol.altitudesM[c] ?? 0,
             },
             vue,
           );
-          return { c, p };
-        })
-        .filter((r) => !dehors(r.p));
-      // **Au plus `TOUFFES_MAX` touffes à l'écran**, un peu plus grandes quand
-      // on éclaircit : une parcelle d'un hectare gelée d'un bout à l'autre en
-      // demandait dix mille, et la pose montait à cinquante millisecondes. On
-      // compte celles qu'on voit : au zoom rapproché, l'herbe garde tous ses brins.
-      const part = Math.min(1, TOUFFES_MAX / Math.max(1, visibles.length));
-      const echelle = (2 * demiL) / LARGEUR_TOUFFE_PX / part ** 0.25;
-      const rangees = visibles
-        .filter((r) => part >= 1 || h(r.c, 7) < part)
-        .sort((a, b) => a.p.sy - b.p.sy);
-      for (const { c, p } of rangees) {
+          touffes.push({ c: graine, k, sx: p.sx, sy: p.sy });
+        }
+      }
+      touffes.sort((a, b) => a.sy - b.sy);
+      for (const { c, sx, sy } of touffes) {
         const tex = textures[Math.floor(h(c, 5) * textures.length)] ?? textures[0];
         if (!tex) continue;
         const sprite = SceneParcelle.sprite(couche, n++, tex);
         sprite.anchor.set(0.5, PIED_TOUFFE_Y_PX / HAUTEUR_TOUFFE_PX);
-        sprite.x = p.sx;
-        sprite.y = p.sy;
-        const taille = echelle * (0.7 + 0.6 * h(c, 3));
+        sprite.x = sx;
+        sprite.y = sy;
+        const taille = echelle * (0.75 + 0.4 * h(c, 3));
         sprite.scale.set(h(c, 4) < 0.5 ? -taille : taille, taille);
       }
+    }
+    if (couche) {
+      couche.alpha = fondu;
       SceneParcelle.tailler(couche, n);
     }
     return n;

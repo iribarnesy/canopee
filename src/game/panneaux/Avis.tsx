@@ -8,6 +8,7 @@
 import { useMemo, useState } from "react";
 import type { GameAction } from "../../engine/actions";
 import type { SnapshotTree } from "../protocol";
+import type { AvisDuGel } from "../useAvisDuGel";
 import type { GameApi } from "../useGame";
 import { btn, panel } from "./styles";
 
@@ -40,6 +41,7 @@ export function Avis({
   game,
   vivants,
   rejouer,
+  gel,
 }: {
   game: GameApi;
   vivants: readonly SnapshotTree[];
@@ -50,6 +52,8 @@ export function Avis({
    * rejoue rien est pire qu'un bouton absent.
    */
   rejouer?: (() => void) | undefined;
+  /** La gelée qui commence, et ce qu'elle fait (#355). */
+  gel?: AvisDuGel | undefined;
 }) {
   const fruitsPrets = useMemo(() => vivants.filter((t) => t.fruitsKg > 0.5), [vivants]);
   /** La case reste cochée d'une facture à l'autre : c'est une intention, pas un clic. */
@@ -197,6 +201,30 @@ export function Avis({
               ne plus m'interrompre quand un arbre suivi meurt
             </label>
           )}
+        </div>
+      )}
+      {/*
+        **La gelée se dit** (#355) : une ligne, la semaine où elle commence, sans
+        arrêter le temps — elle ne demande rien au joueur, elle explique ce qu'il
+        voit blanchir.
+      */}
+      {gel && (
+        <div style={{ ...panel, background: "#eef3f8", display: "flex", gap: 8 }}>
+          <span style={{ flex: 1 }}>❄️ {gel.texte}</span>
+          <button
+            type="button"
+            style={{
+              ...btn(),
+              marginRight: 0,
+              marginBottom: 0,
+              padding: "0 6px",
+              alignSelf: "start",
+            }}
+            onClick={gel.fermer}
+            title="Fermer jusqu'à la prochaine gelée"
+          >
+            ✕
+          </button>
         </div>
       )}
       {game.refusals.length > 0 && (
