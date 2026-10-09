@@ -125,10 +125,14 @@ fautif l'en sortait par accident.
 L'issue donnait l'exemple d'un plant ramené de 0,35 à 0,20 m. Les bancs n'en
 produisent pas : le gibier mange la pousse de l'année, et un plant tenu au
 plancher (0,8 du potentiel) ne perd des racines que si cette pousse dépasse le
-quart de sa hauteur. Le premier banc, sur la lande en été synthétique, ne
-mesurait rien : hêtres et bouleaux y meurent tous de soif, broutés ou non (24 à
-25 sur 25 avec et sans gibier). **Un banc où tout meurt ne mesure rien** ; le
-témoin sans gibier, ajouté avant de conclure, l'a montré.
+quart de sa hauteur. Le piège à dents de `gibier.test.ts`, l'essai le plus
+près de sa borne, est identique à main au millimètre près sur ses six
+parcelles (noisetier nu à 1,405 m de médiane, racines comprises).
+
+Le premier banc de broutage, sur la lande en été synthétique, ne mesurait
+rien : hêtres et bouleaux y meurent tous de soif, broutés ou non (24 à 25 sur
+25 avec et sans gibier). **Un banc où tout meurt ne mesure rien** ; le témoin
+sans gibier, ajouté avant de conclure, l'a montré.
 
 ### Les prédictions fausses
 
