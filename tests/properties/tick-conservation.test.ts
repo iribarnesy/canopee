@@ -47,8 +47,11 @@ function meanNStockKgHa(state: GameState): number {
       // entrait seul, son azote implicite venant de nulle part.
       (state.soil.humusCG[i] ?? 0) / cnHumus;
   // Le tas de broyat en attente compte lui aussi : sinon, broyer un arbre
-  // ferait disparaître son azote du bilan.
-  return ((sum + state.stockBrf.azoteG) / n) * 10;
+  // ferait disparaître son azote du bilan. Et le bois mort, debout et couché,
+  // qui garde l'azote de l'arbre jusqu'à le rendre en pourrissant (#328).
+  let boisCoucheNG = 0;
+  for (let i = 0; i < n; i++) boisCoucheNG += state.soil.boisAuSolNG[i] ?? 0;
+  return ((sum + state.stockBrf.azoteG + state.carbon.deadWoodNG + boisCoucheNG) / n) * 10;
 }
 
 function checkConservation(sc: StationClimat, years: number): number {

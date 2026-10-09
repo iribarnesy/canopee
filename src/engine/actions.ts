@@ -1285,6 +1285,21 @@ function azoteBoisRestant(tree: TreeState, espece: EspeceV0, hauteurM: number): 
   return (tree.azoteBoisG ?? 0) * partBoisRestant(tree, espece, hauteurM);
 }
 
+/**
+ * L'azote des racines qu'un arbre rabattu à `hauteurM` cesse de porter, au
+ * prorata de leur carbone (#328). Elles restent en terre, au bois mort, et leur
+ * azote avec elles : il partait avec le bois exporté.
+ */
+function azoteDesRacinesPerdues(tree: TreeState, espece: EspeceV0, hauteurM: number): number {
+  const avant = treeTotalCarbonKg(espece, tree.diametreCm, tree.heightM);
+  if (avant <= 0) return 0;
+  return (
+    ((tree.azoteBoisG ?? 0) *
+      racinesPerduesEnRabattant(espece, tree.diametreCm, tree.heightM, hauteurM)) /
+    avant
+  );
+}
+
 /** Part du bois qui reste à un arbre rabattu à `hauteurM`, au prorata du carbone. */
 function partBoisRestant(tree: TreeState, espece: EspeceV0, hauteurM: number): number {
   const avant = treeTotalCarbonKg(espece, tree.diametreCm, tree.heightM);
@@ -1302,7 +1317,8 @@ function applyCouper(
   const litterNG = state.soil.litterNG.slice();
   const litterCG = state.soil.litterCG.slice();
   const litterK = state.soil.litterK.slice();
-  let { deadWoodKgC, exportedEnergyCumKgC, oeuvreCumKgC, oeuvreStockKgC } = state.carbon;
+  let { deadWoodKgC, deadWoodNG, exportedEnergyCumKgC, oeuvreCumKgC, oeuvreStockKgC } =
+    state.carbon;
   const basesEq = state.soil.basesEq.slice();
   let volumeVenduAnneeM3 = state.economy.volumeVenduAnneeM3;
   let stockBrf = state.stockBrf;
@@ -1310,6 +1326,7 @@ function applyCouper(
   const retire: ArbreRetire[] = [];
   const dims = { widthM: state.station.coteM, heightM: state.station.coteM };
   const boisAuSolCG = state.soil.boisAuSolCG.slice();
+  const boisAuSolNG = state.soil.boisAuSolNG.slice();
   const boisEnTraversPart = state.soil.boisEnTraversPart.slice();
   const altitudes = altitudeParCellule(state.station.relief, dims);
 
@@ -1386,15 +1403,10 @@ function applyCouper(
     const basesBois = dejaEnBoisMort ? 0 : (tree.basesBoisEq ?? 0);
     const basesRestantes = action.devenir === "vendre" ? (1 - partAerienne) * basesBois : basesBois;
     basesEq[souche] = (basesEq[souche] ?? 0) + basesRestantes;
-    // Les racines restent dans les quatre devenirs : leur azote va à la litière
-    // de la souche, sans carbone (le leur est déjà au bois mort).
-    if (azoteRacinesG > 0) {
-      const oldN = litterNG[souche] ?? 0;
-      const k = litterDecayRate(espece.litiere.cnRatio);
-      litterK[souche] =
-        (oldN * (litterK[souche] ?? 0) + azoteRacinesG * k) / (oldN + azoteRacinesG);
-      litterNG[souche] = oldN + azoteRacinesG;
-    }
+    // Les racines restent dans les quatre devenirs, au bois mort, et leur azote
+    // avec leur carbone (#328). Il allait à la litière de la souche sans
+    // carbone, à un C/N nul, et s'y minéralisait aussitôt.
+    deadWoodNG += azoteRacinesG;
     /**
      * Carbone qui quitte réellement la parcelle avec le fût.
      *
@@ -1411,10 +1423,18 @@ function applyCouper(
      * pourra dater ce que vaut une chandelle *(limite assumée)*.
      */
     const emporteKgC = dejaEnBoisMort ? Math.min(aerienKgC, Math.max(0, deadWoodKgC)) : aerienKgC;
+    // Et son azote : tout l'aérien d'une tige vive, feuilles comprises ; pour
+    // une chandelle, sa part de l'azote du pool, à la même part que son carbone.
+    const emporteNG = dejaEnBoisMort
+      ? deadWoodKgC > 0
+        ? deadWoodNG * (emporteKgC / deadWoodKgC)
+        : 0
+      : azoteAerienG;
     if (dejaEnBoisMort) {
       // On **retire** du bois mort ce qu'on emporte : la souche et les racines,
       // elles, y étaient déjà et y restent.
       deadWoodKgC -= emporteKgC;
+      deadWoodNG -= emporteNG;
     } else {
       // Les souches et racines restent au sol dans les trois cas (bois mort).
       deadWoodKgC += treeTotalCarbonKg(espece, tree.diametreCm, tree.heightM) - aerienKgC;
@@ -1437,32 +1457,30 @@ function applyCouper(
     const { radians: aval } = versLAval(altitudes, dims, tree.x, tree.y);
     const directionRad = aval + Math.PI / 2;
     if (action.devenir === "laisser") {
-      // Tout reste : l'azote de l'aérien rejoint celui des racines.
-      if (azoteAerienG > 0) {
-        const oldN = litterNG[souche] ?? 0;
-        const k = litterDecayRate(espece.litiere.cnRatio);
-        litterK[souche] =
-          (oldN * (litterK[souche] ?? 0) + azoteAerienG * k) / (oldN + azoteAerienG);
-        litterNG[souche] = oldN + azoteAerienG;
-      }
+      // Tout reste, et l'azote de l'aérien se couche avec le fût (#328). Les
+      // feuilles d'un arbre coupé vert le suivent aussi : le moteur ne leur
+      // compte pas de carbone à part, et un caduc coupé en hiver n'en porte pas.
       const empreinte = empreinteDeChute(tree.x, tree.y, tree.heightM, directionRad, dims);
       const longueur = empreinte.reduce((somme, c) => somme + c.longueurM, 0);
       if (longueur > 0) {
         for (const c of empreinte) {
+          const part = c.longueurM / longueur;
           poserBoisAuSol(
             boisAuSolCG,
             boisEnTraversPart,
             altitudes,
             dims,
             c.cellule,
-            emporteKgC * (c.longueurM / longueur) * 1000,
+            emporteKgC * part * 1000,
             directionRad,
             CONTACT_TRONC_EBRANCHE,
           );
+          boisAuSolNG[c.cellule] = (boisAuSolNG[c.cellule] ?? 0) + emporteNG * part;
         }
       } else {
         // Rien de la parcelle sous le tronc : son bois retourne au pool.
         deadWoodKgC += emporteKgC;
+        deadWoodNG += emporteNG;
       }
     } else if (action.devenir === "vendre") {
       const vente = valeurSurPied(espece, tree);
@@ -1587,11 +1605,21 @@ function applyCouper(
     state: {
       ...state,
       trees,
-      soil: { ...state.soil, litterNG, litterCG, litterK, basesEq, boisAuSolCG, boisEnTraversPart },
+      soil: {
+        ...state.soil,
+        litterNG,
+        litterCG,
+        litterK,
+        basesEq,
+        boisAuSolCG,
+        boisAuSolNG,
+        boisEnTraversPart,
+      },
       stockBrf,
       carbon: {
         ...state.carbon,
         deadWoodKgC,
+        deadWoodNG,
         exportedEnergyCumKgC,
         oeuvreCumKgC,
         oeuvreStockKgC,
@@ -2217,6 +2245,7 @@ function applyRamasserBoisMort(
 ): ApplyResult {
   const cote = state.station.coteM;
   const boisAuSolCG = state.soil.boisAuSolCG.slice();
+  const boisAuSolNG = state.soil.boisAuSolNG.slice();
   const boisEnTraversPart = state.soil.boisEnTraversPart.slice();
   const cibles: number[] = [];
   let carboneKgC = 0;
@@ -2240,14 +2269,16 @@ function applyRamasserBoisMort(
   const hours = volumeM3 * RAMASSAGE_HOURS_M3;
   // Le tronc parti, il ne barre plus rien : la part en travers s'en va avec
   // lui. C'est le vrai prix caché du ramassage sur un versant.
+  // Son azote part avec lui.
   for (const i of cibles) {
     boisAuSolCG[i] = 0;
+    boisAuSolNG[i] = 0;
     boisEnTraversPart[i] = 0;
   }
   return {
     state: {
       ...state,
-      soil: { ...state.soil, boisAuSolCG, boisEnTraversPart },
+      soil: { ...state.soil, boisAuSolCG, boisAuSolNG, boisEnTraversPart },
       // Il partira en fumée chez celui qui l'achète : c'est un export émetteur,
       // pas un stockage (§12).
       carbon: {
@@ -2345,7 +2376,7 @@ function applyTrogner(
   const refusals: ActionRefusal[] = [];
   let { treasuryEur, hoursUsedWeek, hoursUsedYear } = state.economy;
   const trees = [...state.trees];
-  let { exportedEnergyCumKgC, deadWoodKgC } = state.carbon;
+  let { exportedEnergyCumKgC, deadWoodKgC, deadWoodNG } = state.carbon;
   const etetes: number[] = [];
   const retire: ArbreRetire[] = [];
   const hauteurTete = Math.max(1, action.hauteurTeteM);
@@ -2399,6 +2430,7 @@ function applyTrogner(
     exportedEnergyCumKgC += Math.max(0, emporte);
     // Même chose qu'au recépage : ce que la tête perd en racines reste au sol.
     deadWoodKgC += racinesPerduesEnRabattant(espece, tree.diametreCm, tree.heightM, hauteurTete);
+    deadWoodNG += azoteDesRacinesPerdues(tree, espece, hauteurTete);
     trees[idx] = {
       ...tree,
       heightM: hauteurTete,
@@ -2419,7 +2451,7 @@ function applyTrogner(
     state: {
       ...state,
       trees,
-      carbon: { ...state.carbon, exportedEnergyCumKgC, deadWoodKgC },
+      carbon: { ...state.carbon, exportedEnergyCumKgC, deadWoodKgC, deadWoodNG },
       economy: { ...state.economy, treasuryEur, hoursUsedWeek, hoursUsedYear },
     },
     refusals,
@@ -2692,7 +2724,7 @@ function applyReceper(
   const refusals: ActionRefusal[] = [];
   let { treasuryEur, hoursUsedWeek, hoursUsedYear } = state.economy;
   const trees = [...state.trees];
-  let { exportedEnergyCumKgC, deadWoodKgC } = state.carbon;
+  let { exportedEnergyCumKgC, deadWoodKgC, deadWoodNG } = state.carbon;
   const recepes: number[] = [];
   const retire: ArbreRetire[] = [];
   const dims = { widthM: state.station.coteM, heightM: state.station.coteM };
@@ -2758,6 +2790,7 @@ function applyReceper(
       tree.heightM,
       RECEPAGE_HAUTEUR_M,
     );
+    deadWoodNG += azoteDesRacinesPerdues(tree, espece, RECEPAGE_HAUTEUR_M);
     trees[idx] = {
       ...tree,
       heightM: RECEPAGE_HAUTEUR_M,
@@ -2773,7 +2806,8 @@ function applyReceper(
       fruitsKg: 0,
       fruitProgress: 0,
       uptakeYearG: 0,
-      // La tige emporte l'azote de son bois ; la souche garde le sien (#247).
+      // La tige emporte l'azote de son bois ; la souche garde le sien (#247), et
+      // les racines perdues le leur, au bois mort (#328).
       azoteBoisG: azoteBoisRestant(tree, espece, RECEPAGE_HAUTEUR_M),
       basesBoisEq: (tree.basesBoisEq ?? 0) * partBoisRestant(tree, espece, RECEPAGE_HAUTEUR_M),
       recepages: tree.recepages + 1,
@@ -2783,7 +2817,7 @@ function applyReceper(
     state: {
       ...state,
       trees,
-      carbon: { ...state.carbon, exportedEnergyCumKgC, deadWoodKgC },
+      carbon: { ...state.carbon, exportedEnergyCumKgC, deadWoodKgC, deadWoodNG },
       economy: { ...state.economy, treasuryEur, hoursUsedWeek, hoursUsedYear },
     },
     refusals,

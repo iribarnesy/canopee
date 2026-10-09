@@ -3238,12 +3238,10 @@ export function tick(state: GameState, weather: WeekWeather): TickResult {
   let fixationSumG = 0;
   let leafNppKgC = 0; // le feuillage tombé a été produit dans l'année (NPP feuilles)
   /**
-   * Verser de l'azote à la litière sous le houppier. `feuilles` dit s'il tombe
-   * avec des feuilles, donc avec leur carbone, leur calcium, leur phosphore et
-   * leur potassium. Sinon c'est l'azote seul de la réserve ou du bois d'un
-   * arbre qui meurt : leur carbone est déjà compté au bois mort (#247).
+   * Verser à la litière, sous le houppier, des feuilles qui tombent : leur azote,
+   * avec leur carbone, leur calcium, leur phosphore et leur potassium.
    */
-  const depositLitter = (tree: TreeState, amountG: number, feuilles = true) => {
+  const depositLitter = (tree: TreeState, amountG: number) => {
     if (amountG <= 0) return;
     const espece = getEspece(tree.especeId);
     const crownR = crownRadiusM(tree.heightM, espece.lumiere.houppierRatio, tree.diametreCm);
@@ -3254,16 +3252,6 @@ export function tick(state: GameState, weather: WeekWeather): TickResult {
     const share = amountG / n;
     const shareC = share * espece.litiere.cnRatio;
     const kSpecies = litterDecayRate(espece.litiere.cnRatio);
-    if (!feuilles) {
-      forEachDiscCell(dims, tree.x, tree.y, crownR, (i) => {
-        const oldN = litterNG[i] ?? 0;
-        litterK[i] = (oldN * (litterK[i] ?? 0) + share * kSpecies) / (oldN + share);
-        litterNG[i] = oldN + share;
-      });
-      if (espece.azote.fixateur) fixationSumG += amountG;
-      else litterfallSumG += amountG;
-      return;
-    }
     // **La pompe à bases** (bases.ts, critère C15). Le calcium qui tombe ici,
     // l'arbre est allé le chercher — et il l'a cherché là où sont ses racines.
     // On débite donc le sous-sol de la part profonde de son système racinaire,
@@ -3325,13 +3313,31 @@ export function tick(state: GameState, weather: WeekWeather): TickResult {
     for (const i of cellules) basesEq[i] = (basesEq[i] ?? 0) + part;
     if (cellules.length > 0) basesRetourBoisSumEq += eq;
   };
+  // Le bois mort garde l'azote qu'il portait vivant (#328) : celui du pool de
+  // la parcelle, et celui du bois couché, cellule par cellule.
+  let deadWoodNG = state.carbon.deadWoodNG;
+  const boisAuSolNG = state.soil.boisAuSolNG.slice();
+  /**
+   * Verser au bois mort l'azote d'un bois qui y entre : au pool de la parcelle,
+   * ou au bois couché d'une cellule. Il quitte un arbre pour un stock du sol,
+   * donc il entre au bilan comme un retour de litière.
+   */
+  const verserAuBoisMort = (tree: TreeState, azoteG: number, cellule?: number) => {
+    if (azoteG <= 0) return;
+    if (cellule === undefined) deadWoodNG += azoteG;
+    else boisAuSolNG[cellule] = (boisAuSolNG[cellule] ?? 0) + azoteG;
+    if (getEspece(tree.especeId).azote.fixateur) fixationSumG += azoteG;
+    else litterfallSumG += azoteG;
+  };
   /**
    * Ce qu'un arbre qui meurt rend au sol : ses feuilles entières, sans rien
-   * résorber, plus sa réserve et l'azote de son bois (#247).
+   * résorber, à la litière (#247) ; sa réserve et l'azote de son bois au bois
+   * mort, là où va son carbone (#328). Ils allaient à la litière sans carbone,
+   * à un C/N nul, et s'y minéralisaient aussitôt.
    */
-  const rendreAuSol = (tree: TreeState) => {
+  const rendreAuSol = (tree: TreeState, celluleDuBois?: number) => {
     depositLitter(tree, tree.uptakeYearG);
-    depositLitter(tree, (tree.reserveAzoteG ?? 0) + (tree.azoteBoisG ?? 0), false);
+    verserAuBoisMort(tree, (tree.reserveAzoteG ?? 0) + (tree.azoteBoisG ?? 0), celluleDuBois);
     rendreBases(tree, tree.basesBoisEq ?? 0);
   };
 
@@ -3532,12 +3538,17 @@ export function tick(state: GameState, weather: WeekWeather): TickResult {
       treeTotalCarbonKg(getEspece(tree.especeId), tree.diametreCm, tree.heightM) *
         Math.exp(-DEADWOOD_DECAY_PER_YEAR * anneesDebout),
     );
+    // Son azote suit, à la même part du pool que son carbone.
+    const restantNG = deadWoodKgC > 0 ? deadWoodNG * (restantKgC / deadWoodKgC) : 0;
     deadWoodKgC -= restantKgC;
+    deadWoodNG -= restantNG;
     // Le bout de tronc qui dépasse la limite est déposé quand même, réparti sur
     // les cellules du dedans : on ne fait pas disparaître du carbone au prétexte
     // qu'un arbre avait poussé au bord.
     for (const c of empreinte) {
-      poserBois(c.cellule, restantKgC * (c.longueurM / longueurTotale) * 1000, radians);
+      const part = c.longueurM / longueurTotale;
+      poserBois(c.cellule, restantKgC * part * 1000, radians);
+      boisAuSolNG[c.cellule] = (boisAuSolNG[c.cellule] ?? 0) + restantNG * part;
     }
     chutes.push({
       id: tree.id,
@@ -3580,7 +3591,7 @@ export function tick(state: GameState, weather: WeekWeather): TickResult {
         debout.push(tree);
         continue;
       }
-      rendreAuSol(tree);
+      rendreAuSol(tree, cellule);
       poserBois(cellule, masse * 1000, recu.radians);
       morts.push({
         id: tree.id,
@@ -3596,19 +3607,38 @@ export function tick(state: GameState, weather: WeekWeather): TickResult {
 
   // Le bois mort se décompose : une part s'humifie, le reste part en CO2.
   const meanClimate = climateSum / nCells;
-  const deadDecayKgC = deadWoodKgC * ((DEADWOOD_DECAY_PER_YEAR / 52) * meanClimate);
+  // Il rend son azote au rythme de son carbone, en ammonium, comme toute
+  // matière organique qui se décompose ; l'humus qu'il forme prend ensuite le
+  // sien au sol, cet azote compris. Un bois pauvre en azote rend moins qu'il ne
+  // faut à son humus : c'est la faim d'azote du bois mort.
+  const rendreAzoteDuBois = (i: number, azoteG: number) => {
+    if (azoteG <= 0) return;
+    mineralNG[i] = (mineralNG[i] ?? 0) + azoteG;
+    ammoniacalNG[i] = (ammoniacalNG[i] ?? 0) + azoteG;
+  };
+  const partDecomposeeDebout = (DEADWOOD_DECAY_PER_YEAR / 52) * meanClimate;
+  const deadDecayKgC = deadWoodKgC * partDecomposeeDebout;
+  const deadDecayNG = deadWoodNG * partDecomposeeDebout;
   deadWoodKgC -= deadDecayKgC;
+  deadWoodNG -= deadDecayNG;
   const humifiedPerCellG = (deadDecayKgC * DEADWOOD_HUMIFICATION * 1000) / nCells;
   let humifieBoisG = 0;
-  for (let i = 0; i < nCells; i++) humifieBoisG += humifier(i, humifiedPerCellG, false);
+  for (let i = 0; i < nCells; i++) {
+    rendreAzoteDuBois(i, deadDecayNG / nCells);
+    humifieBoisG += humifier(i, humifiedPerCellG, false);
+  }
   emittedG += deadDecayKgC * 1000 - humifieBoisG;
   // Le bois couché se décompose plus vite que le bois debout, et il fait son
   // humus **sur place** : c'est là toute la différence avec le pool de parcelle.
+  const partDecomposeeAuSol = (DECOMPOSITION_AU_SOL_PAR_AN / 52) * meanClimate;
   for (let i = 0; i < nCells; i++) {
     const stock = boisAuSolCG[i] ?? 0;
     if (stock <= 0) continue;
-    const decompose = stock * ((DECOMPOSITION_AU_SOL_PAR_AN / 52) * meanClimate);
+    const decompose = stock * partDecomposeeAuSol;
+    const azoteRendu = (boisAuSolNG[i] ?? 0) * partDecomposeeAuSol;
     boisAuSolCG[i] = stock - decompose;
+    boisAuSolNG[i] = (boisAuSolNG[i] ?? 0) - azoteRendu;
+    rendreAzoteDuBois(i, azoteRendu);
     emittedG += decompose - humifier(i, decompose * DEADWOOD_HUMIFICATION, false);
   }
   // Le tas de broyat se décompose aussi, en tas : il chauffe, et ce qu'il perd
@@ -3697,12 +3727,22 @@ export function tick(state: GameState, weather: WeekWeather): TickResult {
             // attendait sur pied, personne ne l'avait encore versé. L'aérien
             // s'envole, les racines rejoignent le bois mort — le versement que
             // sa mort n'avait fait que différer.
+            const totalKgC = treeTotalCarbonKg(espece, tree.diametreCm, tree.heightM);
             carboneFeuKgC += aerienKgC;
-            deadWoodKgC += treeTotalCarbonKg(espece, tree.diametreCm, tree.heightM) - aerienKgC;
+            deadWoodKgC += totalKgC - aerienKgC;
+            // L'azote suit : celui des racines au bois mort, celui de l'aérien
+            // en fumée avec lui (#328). Il disparaissait tout entier.
+            verserAuBoisMort(
+              tree,
+              (1 - aerienKgC / Math.max(1e-9, totalKgC)) *
+                ((tree.reserveAzoteG ?? 0) + (tree.azoteBoisG ?? 0)),
+            );
           } else {
             // Chandelle déjà versée au pool, qui se décompose depuis : on n'en
-            // émet pas plus qu'il n'en reste (même borne qu'à la coupe).
+            // émet pas plus qu'il n'en reste (même borne qu'à la coupe). Son
+            // azote part en fumée avec son bois, à la même part du pool.
             const brulKgC = Math.min(aerienKgC, deadWoodKgC);
+            if (deadWoodKgC > 0) deadWoodNG -= deadWoodNG * (brulKgC / deadWoodKgC);
             carboneFeuKgC += brulKgC;
             deadWoodKgC -= brulKgC;
           }
@@ -3747,17 +3787,23 @@ export function tick(state: GameState, weather: WeekWeather): TickResult {
           // chandelles, dont le bois est déjà au pool depuis leur mort. Leur
           // verser des racines en plus créerait du carbone. Qu'un tronc mort
           // « rejette » est une autre affaire, et pas la mienne ici.
+          const totalAvantKgC = Math.max(
+            1e-9,
+            treeTotalCarbonKg(espece, tree.diametreCm, tree.heightM),
+          );
           if (tree.alive) {
-            deadWoodKgC += racinesPerduesEnRabattant(
+            const racinesKgC = racinesPerduesEnRabattant(
               espece,
               tree.diametreCm,
               tree.heightM,
               HAUTEUR_REJET_M,
             );
+            deadWoodKgC += racinesKgC;
+            // Ces racines emportent leur part de l'azote du bois (#328).
+            verserAuBoisMort(tree, (tree.azoteBoisG ?? 0) * (racinesKgC / totalAvantKgC));
           }
           const partRestante =
-            treeTotalCarbonKg(espece, tree.diametreCm, HAUTEUR_REJET_M) /
-            Math.max(1e-9, treeTotalCarbonKg(espece, tree.diametreCm, tree.heightM));
+            treeTotalCarbonKg(espece, tree.diametreCm, HAUTEUR_REJET_M) / totalAvantKgC;
           rendreBases(tree, (tree.basesBoisEq ?? 0) * (1 - partRestante));
           apresFeu.push({
             ...tree,
@@ -3922,10 +3968,20 @@ export function tick(state: GameState, weather: WeekWeather): TickResult {
         // place, et les racines que le modèle déduit de la hauteur avec elle
         // (carbon.ts). Sans ce versement, une tempête ferait disparaître du
         // carbone — et le test de conservation le dirait.
-        deadWoodKgC +=
+        const perduKgC =
           treeAboveCarbonKg(espece, tree.diametreCm, tree.heightM) -
           treeAboveCarbonKg(espece, tree.diametreCm, hauteurApres) +
           racinesPerduesEnRabattant(espece, tree.diametreCm, tree.heightM, hauteurApres);
+        deadWoodKgC += perduKgC;
+        // Et l'azote de ce bois avec lui, à la même part (#328).
+        const azoteBoisPerdu =
+          (tree.azoteBoisG ?? 0) *
+          Math.min(
+            1,
+            perduKgC / Math.max(1e-9, treeTotalCarbonKg(espece, tree.diametreCm, tree.heightM)),
+          );
+        verserAuBoisMort(tree, azoteBoisPerdu);
+        const azoteBoisG = (tree.azoteBoisG ?? 0) - azoteBoisPerdu;
         casses.push(tree);
         // C'est `rejetteDeSouche` qui décide du sort, et rien d'autre : un
         // châtaignier repart de sa cassure, un pin reste un moignon sec.
@@ -3933,6 +3989,7 @@ export function tick(state: GameState, weather: WeekWeather): TickResult {
           return {
             ...tree,
             heightM: hauteurApres,
+            azoteBoisG,
             alive: false,
             causeMort: "volis" as const,
             // **Pas** de `renverseSemaine` : il n'est pas par terre. Il fera une
@@ -3943,6 +4000,7 @@ export function tick(state: GameState, weather: WeekWeather): TickResult {
         return {
           ...tree,
           heightM: hauteurApres,
+          azoteBoisG,
           // La souche repart branchue, comme après un recépage (actions.ts).
           hauteurElagueeM: 0,
           baseHouppierM: 0,
@@ -4275,6 +4333,7 @@ export function tick(state: GameState, weather: WeekWeather): TickResult {
         waterMm,
         excessMm,
         boisAuSolCG,
+        boisAuSolNG,
         boisEnTraversPart,
         tassement,
         mineralNG,
@@ -4330,6 +4389,7 @@ export function tick(state: GameState, weather: WeekWeather): TickResult {
       carbon: {
         ...state.carbon,
         deadWoodKgC,
+        deadWoodNG,
         nppCumKgC: state.carbon.nppCumKgC + nppKgC + leafNppKgC + herbeNppKgC,
         importedPlantsCumKgC: state.carbon.importedPlantsCumKgC + importedPlantsKgC,
         emittedCumKgC: state.carbon.emittedCumKgC + emittedG / 1000 + carboneFeuKgC,

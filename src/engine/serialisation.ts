@@ -172,8 +172,16 @@ const MAGIE = "CANOPEE\u0000";
  * se relisaient avec un manteau nul, sont refusés avec eux : ils portent la même
  * grille d'eau. Le journal reprend la main, et le rejeu recalcule aussi les
  * racines des arbres sous la nouvelle règle (#312).
+ *
+ * **11 (issue #328, l'azote du bois mort)** : le bois mort garde l'azote qu'il
+ * portait vivant. Le sol porte une grille de plus, `boisAuSolNG`, et le bilan
+ * carbone un stock de plus, `deadWoodNG`. Un bloc de version 10 ne les porte
+ * pas, et les reconstruire à zéro serait un état qui n'a jamais existé : ce bois
+ * mort pourrirait sans rien rendre, alors que l'azote qu'il portait est parti à
+ * la litière le jour de sa mort sous l'ancienne règle, et ne reviendrait plus.
+ * On refuse, et le journal reprend la main.
  */
-export const VERSION_FORMAT = 10;
+export const VERSION_FORMAT = 11;
 
 /**
  * Les versions d'un bloc que ce moteur sait relire, et ce qu'il faut ajouter à
