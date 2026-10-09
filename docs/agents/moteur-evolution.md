@@ -61,7 +61,76 @@ qu'un rapport (voir la note de maintenance).
 Séparer calibration et validation : caler un paramètre sur un âge, garder
 l'autre âge pour vérifier.
 
-## Ce que le dernier lot a appris (la soif des petits arbres, #312)
+## Ce que le dernier lot a appris (les gestes de la v0.5, #349, #350, #339)
+
+Trois défauts qu'un testeur exploite ou lit de travers, et aucun ne demandait
+d'état nouveau.
+
+### Une recette se borne par ce qu'elle prélève
+
+`chasser` rapportait 120 € par journée, sans condition : sept chasses par
+semaine valaient 43 680 € par an sur un hectare qui porte 0,14 chevreuil. Le
+nombre de bêtes présentes était déjà dans le moteur — densité du paysage fois
+pression fois surface, celui que le broutage et les frottis lisent — et la
+journée en retirait déjà une part. Il suffisait de vendre cette part-là : 30 €
+la carcasse *(à confirmer)*, et la même année de chasse quotidienne rapporte
+10,32 € sur le limon riche, 24,14 € sur la suberaie (déterministe, prédit 8 à
+13 et 20 à 30). C'est la leçon de #283 dans l'économie : une grandeur qu'un
+geste répétable produit se borne par le stock qu'il épuise.
+
+### Une garde qui juge l'effet ne peut pas diverger
+
+Sept gestes portaient chacun leur garde de découvert, recopiée, et elles
+avaient divergé : six refusaient en « écologie seule » contre la promesse
+d'`EconomyState.active` ; protéger, faucher et licencier n'en avaient pas. La garde est maintenant une fonction
+(`decouvertDepasse`) que `applyAction` pose sur la trésorerie avant et après
+le geste : elle ne connaît aucun geste, donc elle ne peut pas en oublier un.
+L'essai qui la tient (`prevoir.test.ts`) ne fait pas non plus déclarer aux
+gestes s'ils coûtent : il le mesure sur chaque cas de travail, puis rejoue
+avec une trésorerie posée pour que la dépense franchisse le plafond. Écrit
+avant la correction, il a échoué exactement sur les onze cas prédits.
+
+Planter et protéger gardent leur arrêt au découvert élément par élément, par
+la même fonction. Licencier se refuse désormais comme toute dépense : la
+faillite tombait de toute façon à l'ouverture de la semaine suivante.
+
+### Une tournure qui porte l'accord coûte moins qu'un genre dans l'atlas
+
+« trop proche d'un aubépine vivant » : plutôt que vingt-six genres à tenir et
+une élision à deviner (« de hêtre », « d'aulne »), c'est « tige » qui porte
+l'accord et l'essence suit en apposition. Le recépage disait « il en
+mourrait » ; il ne tombait juste que parce que les cinq essences sans rejet
+ont un nom masculin.
+
+### La prédiction fausse
+
+Chasser chaque semaine prélève 1,56 fois la densité par an. J'avais prédit 5 à
+10 fois le prélèvement national par hectare boisé (0,034, OFB 2021-2022) ;
+c'est 6,2 sur le limon riche, mais 14,6 sur la suberaie et 1,8 sur le limon
+pauvre. J'avais comparé un rapport qui suit la densité de la station à une
+constante nationale : la fourchette ne pouvait tenir que pour une densité.
+
+### Ce qui reste ouvert
+
+- **L'immigration remplit le puits sans borne** : `RETOUR_IMMIGRATION` (3 %
+  du vide par semaine) n'a pas de source, et une parcelle chassée chaque
+  semaine tire de ses voisins jusqu'à quinze fois le prélèvement national par
+  hectare. La recette est négligeable ; l'effet sur le broutage ne l'est pas.
+- **Le sanglier ne se chasse pas** : c'est une densité de paysage sans
+  pression. Le chasser demanderait un état (une pression de sanglier) : non
+  fait sans accord.
+- **Ni saison, ni plan de chasse** : la recette bornée suffit à fermer
+  l'exploit, et une saison serait une règle de plus. Une parcelle entièrement
+  close rend encore du gibier à la chasse, comme elle en compte au broutage.
+- **La location du droit de chasse** n'est pas modélisée : c'est un revenu
+  de propriétaire, pas un geste.
+- Le jeu accorde encore au masculin des phrases qui nomment une essence
+  (« dans un », « quitte le », « aucun … vivant », hors du moteur) : #368.
+- `prevoir.test.ts` construit ses parcelles en plus de 120 s sur une machine
+  chargée et dépasse le délai de son `beforeAll` : mesuré ici avec un délai
+  relevé localement, non commité.
+
+## Ce qu'un lot précédent a appris (la soif des petits arbres, #312)
 
 Le premier essai de #312 (#321) avait remplacé les seuils de sécheresse du
 hêtre par des seuils sourcés, sans que la cible bouge. Le diagnostic qui a
