@@ -184,6 +184,14 @@ export function racinesPerduesEnRabattant(
 export interface CarbonState {
   /** bois mort au sol/debout (troncs des morts, souches des coupés), kg C */
   deadWoodKgC: number;
+  /**
+   * Azote de ce bois mort, g (#328). Le bois garde l'azote qu'il portait vivant,
+   * réserve comprise, et le rend au sol en se décomposant, au rythme de son
+   * carbone. Il partait à la litière le jour de la mort, sans carbone, donc à
+   * un C/N nul : il se minéralisait tout de suite, pendant que l'humus du bois
+   * reprenait plus tard de l'azote au sol.
+   */
+  deadWoodNG: number;
   /** production primaire nette cumulée (bois + feuillage), kg C */
   nppCumKgC: number;
   /** CO₂ émis cumulé par les décompositions, kg C */
@@ -225,6 +233,7 @@ export interface CarbonState {
 export function createCarbonState(): CarbonState {
   return {
     deadWoodKgC: 0,
+    deadWoodNG: 0,
     nppCumKgC: 0,
     emittedCumKgC: 0,
     exportedEnergyCumKgC: 0,

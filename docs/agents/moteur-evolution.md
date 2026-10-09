@@ -61,7 +61,61 @@ qu'un rapport (voir la note de maintenance).
 Séparer calibration et validation : caler un paramètre sur un âge, garder
 l'autre âge pour vérifier.
 
-## Ce que le dernier lot a appris (le noyer hybride, #213)
+## Ce que le dernier lot a appris (l'azote du bois mort et la vitesse du broyat, #328)
+
+Ce lot porte les deux points de #328 que le lot précédent avait laissés ouverts, sur les voies choisies par le propriétaire. Le troisième point, l'azote du bois posé par `plantAt`, est renvoyé à #379.
+
+### Une règle qui suit le carbone remplace trois dépôts et en trouve deux de plus
+
+L'azote d'un arbre qui meurt, celui des racines d'un arbre coupé et celui de l'aérien d'un fût laissé allaient tous à la litière, sans carbone. Le bois mort ne portait pas d'azote. La règle qui les remplace tient en une phrase : **l'azote du bois suit son carbone**. Il va au pool de bois mort de la parcelle (`deadWoodNG`) ou au bois couché d'une cellule (`boisAuSolNG`), et il en sort au rythme de ce carbone, en ammonium. L'humus de ce bois prend ensuite au sol ce qui lui manque, comme avant.
+
+Appliquer la règle partout où le carbone du bois bouge a fait apparaître deux chemins qu'aucune issue ne nommait :
+
+- **Rabattre un arbre** (recépage, trogne, rejet après feu, volis) versait les racines perdues au bois mort, mais leur azote partait avec la tige exportée.
+- **Un arbre tué par un feu, encore récupérable, qui rebrûle**, voyait son azote disparaître tout entier.
+
+Les deux suivent maintenant la même règle. C'est le signe qu'un découpage est bon : la règle tombe sur des cas qu'on n'avait pas cherchés.
+
+Le format de sauvegarde monte à 11. Un bloc de version 10 est refusé, et le journal reprend la main.
+
+### Ce que ça donne
+
+Gain épandre / vendre des hêtres (`epandre-vs-vendre`), moyenne des graines 5, 19 et 31, prédictions écrites avant :
+
+| an | 10 | 12 | 16 | 20 | 25 | 35 |
+|---|---|---|---|---|---|---|
+| main (63b0887) | 0,890 | 0,911 | 0,953 | 0,976 | 0,993 | 1,003 |
+| vitesse du broyat seule | 0,892 | 0,911 | 0,953 | 0,975 | 0,993 | 1,003 |
+| les deux | 0,892 | 0,911 | 0,952 | 0,975 | 0,991 | 1,001 |
+
+Le gain ne bouge pas. Un broyat d'aulne de huit ans sort à C/N 47, près des 40 de la constante retirée, et l'azote des racines coupées se retrouve dans les deux bras.
+
+La faim du BRF de `sol-vivant` (minéral du bloc un mois après, g/m²), dans le même ordre :
+
+| témoin | main | vitesse seule | les deux |
+|---|---|---|---|
+| coupe vendue | −0,720 | −0,654 | −0,462 |
+| arbres debout | −0,387 | −0,320 | −0,462 |
+| broyat riche (C/N 20) | −0,050 | +0,342 | +0,411 |
+
+**Les deux témoins donnent maintenant le même minéral** (3,321 g/m²). Des arbres coupés en février ne prélevaient de toute façon rien. L'écart entre les deux témoins venait donc tout entier de l'azote des racines coupées, versé sans carbone sous les souches : il creusait l'écart avec la coupe vendue et le comblait avec les arbres debout. La faim du broyat est maintenant la même contre l'un comme contre l'autre.
+
+### Les prédictions fausses
+
+- Avec la vitesse seule, le gain à l'an 10 devait monter de 0,005 à 0,015. Il monte de 0,002.
+- Le broyat riche devait rendre +0,05 à +0,25 avec la vitesse seule : +0,34. Avec les deux corrections, +0,1 à +0,4 était prédit : +0,41, juste au-dessus.
+- La faim contre la coupe vendue devait tomber entre −0,15 et −0,35 avec les deux corrections : −0,46. Contre les arbres debout, entre −0,2 et +0,2 : −0,46. J'attribuais à l'azote des racines toute la part de la faim que la variante sans décomposition gardait. Il n'en portait qu'une partie.
+- Sur cette variante, les deux écarts devaient rester entre −0,05 et +0,05. Ils valent −0,19, et restent égaux à deux dix-millièmes près : l'assertion à marge tombe bien. Ce qui abaisse le minéral sous un broyat qui ne se décompose pas n'est toujours pas tracé.
+
+### Ce qui reste ouvert
+
+- **L'azote du bois posé** (#379), et avant lui l'essai du feu des chandelles, dont une graine sur six seulement brûle en cinq ans.
+- L'effet d'un broyat sur le minéral **sans décomposition** (−0,19 g/m²) n'est pas tracé.
+- La vitesse d'une cellule est une moyenne **pondérée par l'azote** (C4) : un broyat pauvre en azote pèse peu dans la vitesse de la cellule où il tombe, quel que soit son carbone. La règle est antérieure à ce lot ; elle n'a pas été touchée.
+- Le bois mort brûlé perd son azote en fumée, comme l'aérien d'un arbre qui brûle. Aucun flux ne compte ces pertes, pas plus que celles de la litière brûlée : la propriété de conservation de l'azote ne tourne pas sur une partie qui brûle.
+- Les feuilles d'un fût laissé se couchent avec lui, faute de carbone à part dans le modèle. Un caduc coupé en hiver n'en porte pas ; un persistant si.
+
+## Ce qu'un lot précédent a appris (le noyer hybride, #213)
 
 Une essence de plus à l'atlas, *Juglans × intermedia*, celle qu'on plante
 réellement en agroforesterie. Le lot a surtout trouvé ce qui bridait déjà

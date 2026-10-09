@@ -353,6 +353,11 @@ export interface SoilState {
    */
   boisAuSolCG: GrilleLongue;
   /**
+   * Azote de ce bois couché, g/m² (#328). Le bois mort garde l'azote qu'il
+   * portait vivant, et le rend en se décomposant, au rythme de son carbone.
+   */
+  boisAuSolNG: GrilleLongue;
+  /**
    * Part de ce bois couché qui **barre** l'eau, ∈ [0,1] : moyenne, pondérée par
    * les masses posées, de l'efficacité barrante de chaque tronc — sa longueur
    * efficace au-delà du seuil de 30° (boisMort.ts). Ce n'est **pas** un stock de
@@ -884,6 +889,7 @@ export function createGameState(
       litiereEnfouieCG: new Float64Array(n),
       humusCG: new Float64Array(n).fill(station.initialSoilCTHa * T_HA_TO_G_M2),
       boisAuSolCG: new Float64Array(n),
+      boisAuSolNG: new Float64Array(n),
       boisEnTraversPart: new Float32Array(n),
       tassement: new Float32Array(n),
       // Les bases sont **inversées** depuis le pH déclaré par la station, et non

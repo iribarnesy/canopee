@@ -1,11 +1,13 @@
 import { describe, expect, it } from "vitest";
-import { cnHumusDuProfil } from "../../src/engine/carbon";
+import { cnHumusDuProfil, treeTotalCarbonKg } from "../../src/engine/carbon";
+import { getEspece } from "../../src/engine/especes";
 import { syntheticYear } from "../../src/engine/meteo";
 import { rngStateFromSeed } from "../../src/engine/rng";
 import { createGameState, type GameState, plantScattered } from "../../src/engine/state";
 import type { StationClimat } from "../../src/engine/stations";
 import { LANDE_SECHE, VALLEE_ENGORGEE } from "../../src/engine/stations";
 import { tick } from "../../src/engine/tick";
+import { cnBois, dureeChandelleSemaines } from "../../src/engine/trees";
 
 /**
  * Conservation au niveau du **tick** complet, grille + arbres (docs/regles.md §16) :
@@ -47,17 +49,29 @@ function meanNStockKgHa(state: GameState): number {
       // entrait seul, son azote implicite venant de nulle part.
       (state.soil.humusCG[i] ?? 0) / cnHumus;
   // Le tas de broyat en attente compte lui aussi : sinon, broyer un arbre
-  // ferait disparaître son azote du bilan.
-  return ((sum + state.stockBrf.azoteG) / n) * 10;
+  // ferait disparaître son azote du bilan. Et le bois mort, debout et couché,
+  // qui garde l'azote de l'arbre jusqu'à le rendre en pourrissant (#328).
+  let boisCoucheNG = 0;
+  for (let i = 0; i < n; i++) boisCoucheNG += state.soil.boisAuSolNG[i] ?? 0;
+  return ((sum + state.stockBrf.azoteG + state.carbon.deadWoodNG + boisCoucheNG) / n) * 10;
 }
 
-function checkConservation(sc: StationClimat, years: number): number {
+/** Le peuplement des essais : trois essences, posées petites et grandes. */
+function peuplementMixte(state: GameState): GameState {
+  let s = plantScattered(state, "fagus_sylvatica", 40);
+  s = plantScattered(s, "pinus_sylvestris", 40);
+  return plantScattered(s, "alnus_glutinosa", 40, 8);
+}
+
+function checkConservation(
+  sc: StationClimat,
+  years: number,
+  preparer: (state: GameState) => GameState = peuplementMixte,
+  suivre: (state: GameState) => void = () => {},
+): number {
   const weather = syntheticYear(sc.climat);
   let manteauMax = 0;
-  let state = createGameState(sc.station, rngStateFromSeed(7));
-  state = plantScattered(state, "fagus_sylvatica", 40);
-  state = plantScattered(state, "pinus_sylvestris", 40);
-  state = plantScattered(state, "alnus_glutinosa", 40, 8);
+  let state = preparer(createGameState(sc.station, rngStateFromSeed(7)));
 
   for (let i = 0; i < years * 52; i++) {
     const w = weather[i % 52];
@@ -114,6 +128,7 @@ function checkConservation(sc: StationClimat, years: number): number {
     expect(fluxes.uptakeArbresKgHa + fluxes.uptakeHerbeKgHa).toBeCloseTo(fluxes.uptakeKgHa, 9);
     manteauMax = Math.max(manteauMax, next.soil.manteauNeigeMm);
     state = next;
+    suivre(state);
   }
   return manteauMax;
 }
@@ -125,6 +140,51 @@ describe("conservation eau + azote sur le tick complet (grille + arbres)", () =>
 
   it("vallée engorgée, 3 ans, peuplement mixte", () => {
     checkConservation(VALLEE_ENGORGEE, 3);
+  });
+
+  it("des arbres qui meurent et des chandelles qui tombent : l'azote suit le bois", () => {
+    // Le bois mort garde l'azote de l'arbre et le rend en pourrissant (#328) :
+    // deux stocks de plus, que le bilan doit compter chaque semaine. Vingt
+    // charmes de douze mètres dont le bois porte l'azote de son espèce : la
+    // moitié meurt à la première semaine et verse son bois au pool de la
+    // parcelle, l'autre moitié sont des chandelles qui s'abattent à la première
+    // semaine et couchent le leur sur le sol.
+    const espece = getEspece("carpinus_betulus");
+    const azoteCouche: number[] = [];
+    const azoteDuPool: number[] = [];
+    checkConservation(
+      VALLEE_ENGORGEE,
+      2,
+      (depart) => {
+        const s = plantScattered(depart, "carpinus_betulus", 20, 12);
+        let poolC = 0;
+        let poolN = 0;
+        const trees = s.trees.map((t, i) => {
+          const boisKgC = treeTotalCarbonKg(espece, t.diametreCm, t.heightM);
+          const azoteBoisG = (boisKgC * 1000) / cnBois(espece);
+          const mort = { ...t, alive: false, causeMort: "secheresse" as const };
+          if (i % 2 === 0) return { ...mort, azoteBoisG };
+          // Une chandelle déjà versée au pool, morte depuis le temps qu'elle
+          // tient debout : elle s'abat cette semaine.
+          poolC += boisKgC;
+          poolN += azoteBoisG;
+          return { ...mort, azoteBoisG: 0, mortSemaine: -dureeChandelleSemaines(espece) };
+        });
+        return { ...s, trees, carbon: { ...s.carbon, deadWoodKgC: poolC, deadWoodNG: poolN } };
+      },
+      (s) => {
+        azoteCouche.push(s.soil.boisAuSolNG.reduce((a, b) => a + b, 0));
+        azoteDuPool.push(s.carbon.deadWoodNG);
+      },
+    );
+    // Les gardes : les chandelles ont couché de l'azote, les morts en ont versé
+    // au pool, et le bois en a rendu en pourrissant. Sans eux, l'essai ne
+    // vérifierait qu'un tick ordinaire.
+    const couche = azoteCouche[0] ?? 0;
+    expect(couche).toBeGreaterThan(0);
+    expect(azoteDuPool[0] ?? 0).toBeGreaterThan(0);
+    expect(azoteCouche[azoteCouche.length - 1] ?? 0).toBeLessThan(couche);
+    expect(azoteDuPool[azoteDuPool.length - 1] ?? 0).toBeLessThan(azoteDuPool[0] ?? 0);
   });
 
   it("un hiver froid : la neige tombée attend dans le manteau, puis fond, et rien ne se perd", () => {

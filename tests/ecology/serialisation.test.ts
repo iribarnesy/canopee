@@ -165,8 +165,11 @@ describe("un bloc d'avant la lande en couches est refusé (#312)", () => {
     expect(lireEtat(v8, STATION)).toBeUndefined();
   }, 300_000);
 
-  it("la version 9 et les plus anciennes sont refusées", () => {
-    for (const v of [9, 8, 7, 6]) {
+  it("la version 10 et les plus anciennes sont refusées", () => {
+    // La version 10 n'a pas l'azote du bois mort (#328) : le relire à zéro
+    // ferait pourrir sans rien rendre un bois dont l'azote est déjà parti à la
+    // litière sous l'ancienne règle.
+    for (const v of [10, 9, 8, 7, 6]) {
       const b = ecrireEtat(partie(1));
       new DataView(b.buffer).setUint16(8, v);
       expect(lireEtat(b, STATION)).toBeUndefined();
