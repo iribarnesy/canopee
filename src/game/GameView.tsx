@@ -1349,6 +1349,18 @@ export function GameView({ surPartie }: { surPartie?: (enPartie: boolean) => voi
     () => (snapshot ? snapshot.trees.filter((t) => selectedIds.has(t.id)) : []),
     [snapshot, selectedIds],
   );
+  // **Un arbre cliqué, son histoire demandée** (#358) : le volet de sélection
+  // la montre. Redemandée à chaque semaine tant qu'il reste sélectionné — le
+  // worker ne pousse d'elle-même que l'histoire des arbres **suivis**, et un
+  // seul message par instantané ne coûte rien.
+  const seulSelectionne = selectedIds.size === 1 ? [...selectedIds][0] : undefined;
+  const { demanderLHistoire } = game;
+  const semaineVue = snapshot?.week;
+  useEffect(() => {
+    if (seulSelectionne !== undefined && semaineVue !== undefined) {
+      demanderLHistoire(seulSelectionne);
+    }
+  }, [seulSelectionne, semaineVue, demanderLHistoire]);
   /**
    * L'instantané porte **tous** les arbres, chandelles comprises (snapshot.ts) :
    * elles se dessinent, mais elles ne se comptent pas comme un peuplement.
@@ -1859,6 +1871,15 @@ export function GameView({ surPartie }: { surPartie?: (enPartie: boolean) => voi
     }
   };
 
+  // **Deux volets à droite se partagent la hauteur** (#358) : l'arbre
+  // sélectionné en haut, ses suivis — ou le journal — en bas. Chacun gardait
+  // toute la hauteur, et celui du bas couvrait celui du haut.
+  const voletEnHautADroite = volets.estOuvert("hd", "partie") || selectedTrees.length > 0;
+  const voletEnBasADroite = ["arbres", "scores", "journal", "habitants", "suivis"].some((n) =>
+    volets.estOuvert("bd", n),
+  );
+  const moitieDroite = voletEnHautADroite && voletEnBasADroite ? "calc(50vh - 52px)" : undefined;
+
   return (
     <div style={SCENE}>
       {/*
@@ -2027,7 +2048,12 @@ export function GameView({ surPartie }: { surPartie?: (enPartie: boolean) => voi
         coin="hd"
         volet={
           volets.estOuvert("hd", "partie") ? (
-            <Volet titre="La partie" largeur={340} surFermer={() => volets.fermer("hd")}>
+            <Volet
+              titre="La partie"
+              largeur={340}
+              surFermer={() => volets.fermer("hd")}
+              hauteurMax={moitieDroite}
+            >
               <PanneauMenu game={game} surQuitter={quitterLaPartie} />
             </Volet>
           ) : selectedTrees.length > 0 ? (
@@ -2039,6 +2065,7 @@ export function GameView({ surPartie }: { surPartie?: (enPartie: boolean) => voi
               }
               largeur={380}
               surFermer={() => setSelectedIds(new Set())}
+              hauteurMax={moitieDroite}
             >
               <PanneauSelection
                 game={game}
@@ -2048,6 +2075,20 @@ export function GameView({ surPartie }: { surPartie?: (enPartie: boolean) => voi
                 setSelectedIds={setSelectedIds}
                 suivis={suivis.suivis}
                 basculerSuivi={suivis.basculer}
+                histoire={
+                  selectedTrees.length === 1 && selectedTrees[0]
+                    ? game.histoires.get(selectedTrees[0].id)
+                    : undefined
+                }
+                voirDansLesSuivis={
+                  selectedTrees.length === 1 &&
+                  selectedTrees[0] &&
+                  suivis.suivis.has(selectedTrees[0].id)
+                    ? () => {
+                        if (!volets.estOuvert("bd", "suivis")) volets.basculer("bd", "suivis");
+                      }
+                    : undefined
+                }
               />
             </Volet>
           ) : undefined
@@ -2128,7 +2169,12 @@ export function GameView({ surPartie }: { surPartie?: (enPartie: boolean) => voi
         coin="bd"
         volet={
           volets.estOuvert("bd", "arbres") ? (
-            <Volet titre="Les arbres" largeur={400} surFermer={() => volets.fermer("bd")}>
+            <Volet
+              titre="Les arbres"
+              largeur={400}
+              surFermer={() => volets.fermer("bd")}
+              hauteurMax={moitieDroite}
+            >
               <PanneauArbres
                 snapshot={snapshot}
                 vivants={vivants}
@@ -2146,11 +2192,21 @@ export function GameView({ surPartie }: { surPartie?: (enPartie: boolean) => voi
               />
             </Volet>
           ) : volets.estOuvert("bd", "scores") ? (
-            <Volet titre="Scores" largeur={400} surFermer={() => volets.fermer("bd")}>
+            <Volet
+              titre="Scores"
+              largeur={400}
+              surFermer={() => volets.fermer("bd")}
+              hauteurMax={moitieDroite}
+            >
               <PanneauScores snapshot={snapshot} />
             </Volet>
           ) : volets.estOuvert("bd", "journal") ? (
-            <Volet titre="Journal" largeur={420} surFermer={() => volets.fermer("bd")}>
+            <Volet
+              titre="Journal"
+              largeur={420}
+              surFermer={() => volets.fermer("bd")}
+              hauteurMax={moitieDroite}
+            >
               {/*
                 DEUX LECTURES DU MÊME TEMPS, et le §6.8 les veut toutes les
                 deux : le bilan groupe et situe, le fil date et détaille.
@@ -2208,7 +2264,12 @@ export function GameView({ surPartie }: { surPartie?: (enPartie: boolean) => voi
               <PanneauJournal evenements={game.events} />
             </Volet>
           ) : volets.estOuvert("bd", "habitants") ? (
-            <Volet titre="Les habitants" largeur={380} surFermer={() => volets.fermer("bd")}>
+            <Volet
+              titre="Les habitants"
+              largeur={380}
+              surFermer={() => volets.fermer("bd")}
+              hauteurMax={moitieDroite}
+            >
               <PanneauHabitants
                 faune={snapshot.faune ?? []}
                 fauneEteinte={snapshot.faune === undefined}
@@ -2219,7 +2280,12 @@ export function GameView({ surPartie }: { surPartie?: (enPartie: boolean) => voi
               />
             </Volet>
           ) : volets.estOuvert("bd", "suivis") ? (
-            <Volet titre="Arbres suivis" largeur={420} surFermer={() => volets.fermer("bd")}>
+            <Volet
+              titre="Arbres suivis"
+              largeur={420}
+              surFermer={() => volets.fermer("bd")}
+              hauteurMax={moitieDroite}
+            >
               <PanneauSuivis
                 suivis={suivis.suivis}
                 histoires={suivis.histoires}
@@ -2233,6 +2299,7 @@ export function GameView({ surPartie }: { surPartie?: (enPartie: boolean) => voi
                 selectionner={(id) => setSelectedIds(new Set([id]))}
                 arretSurLesMorts={game.arretSurLesMorts}
                 reglerArretSurLesMorts={game.setArretSurLesMorts}
+                enSelection={selectedIds}
               />
             </Volet>
           ) : undefined

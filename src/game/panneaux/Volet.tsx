@@ -85,11 +85,18 @@ export function Volet({
   titre,
   largeur = 360,
   surFermer,
+  hauteurMax = "calc(100vh - 170px)",
   children,
 }: {
   titre: string;
   largeur?: number;
   surFermer: () => void;
+  /**
+   * La hauteur à ne pas dépasser. Deux volets ouverts du même côté de l'écran
+   * — l'arbre sélectionné en haut, ses suivis en bas — se partagent la hauteur :
+   * sinon celui du bas recouvrait celui du haut (#358).
+   */
+  hauteurMax?: string | undefined;
   children: React.ReactNode;
 }) {
   return (
@@ -101,7 +108,7 @@ export function Volet({
         // De quoi laisser le bandeau permanent visible au-dessus : un volet
         // haut qui le recouvrait cachait justement les deux choses que
         // l'écran s'était engagé à ne jamais cacher, l'argent et la date.
-        maxHeight: "calc(100vh - 170px)",
+        maxHeight: hauteurMax,
         overflowY: "auto",
       }}
     >

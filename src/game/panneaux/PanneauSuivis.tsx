@@ -15,7 +15,7 @@
  * relire ce que le moteur a nommé.
  */
 
-import { Fragment, useCallback, useMemo, useState } from "react";
+import { Fragment, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { getEspece } from "../../engine/especes";
 import type { IndividuFaune } from "../../engine/faune";
 import type { ContextePhenologique } from "../../engine/phenologie";
@@ -309,6 +309,74 @@ function useEntiers(): {
   return { entiers, montrerTout };
 }
 
+/** Au-delà, une sélection se surligne dans la liste sans s'y déplier. */
+const OUVERTS_A_LA_SELECTION = 3;
+
+/** La ligne d'un arbre sélectionné sur la parcelle : on la retrouve d'un coup d'œil. */
+const SURLIGNE = {
+  background: "rgba(74, 110, 64, 0.12)",
+  boxShadow: "inset 3px 0 0 var(--foret)",
+  paddingLeft: 6,
+  // Amenée à vue, elle s'arrête sous l'en-tête collant du volet, pas dessous.
+  scrollMarginTop: 36,
+} as const;
+
+/**
+ * **L'histoire d'un arbre** : ce qui lui est arrivé, le plus récent en tête.
+ *
+ * Partagée par le volet des suivis et par celui de la sélection (#358) : un
+ * arbre qu'on clique au hasard a la même histoire qu'un arbre suivi, et la
+ * montrer deux fois de deux façons serait la lire deux fois de travers.
+ */
+export function HistoireDeLArbre({
+  histoire,
+  tout,
+  montrerTout,
+}: {
+  /** absente = la réponse du worker n'est pas encore arrivée */
+  histoire: readonly LigneDeSuivi[] | undefined;
+  tout: boolean;
+  montrerTout: (tout: boolean) => void;
+}) {
+  // **Déjà groupé** : le worker écrit une ligne par répétition, avec son
+  // compte et sa plage (#225). Ici on ne fait que la retourner — le plus
+  // récent en tête — et trier par semaine, parce que les gestes d'une même
+  // semaine et ceux du tick n'arrivent pas dans l'ordre de la pendule.
+  const sien = [...(histoire ?? [])].reverse().sort((a, b) => b.semaine - a.semaine);
+  return histoire === undefined ? (
+    <div style={{ color: "var(--encre-douce)" }}>On demande son histoire…</div>
+  ) : sien.length === 0 ? (
+    <div style={{ color: "var(--encre-douce)" }}>Rien ne lui est jamais arrivé.</div>
+  ) : (
+    <div className="journal">
+      {(tout ? sien : sien.slice(0, LIGNES_PAR_ARBRE)).map((e) => (
+        <div key={`${e.semaine}-${e.quoi}-${e.texte}`} className="entree">
+          <span className="quand">{quandDuGroupe(e.semaine, e.depuisSemaine)}</span> {ICONE[e.quoi]}{" "}
+          {e.texte}
+          {e.fois > 1 && ` (${e.fois} fois)`}
+        </div>
+      ))}
+      {sien.length > LIGNES_PAR_ARBRE && (
+        <button
+          type="button"
+          style={{
+            ...btn(),
+            marginLeft: 0,
+            color: "var(--encre-douce)",
+            background: "none",
+            border: "none",
+            padding: "2px 0",
+            cursor: "pointer",
+          }}
+          onClick={() => montrerTout(!tout)}
+        >
+          {tout ? "↑ n'en montrer que 6" : `… et ${sien.length - LIGNES_PAR_ARBRE} plus anciens`}
+        </button>
+      )}
+    </div>
+  );
+}
+
 export function PanneauSuivis({
   suivis,
   histoires,
@@ -322,6 +390,7 @@ export function PanneauSuivis({
   selectionner,
   arretSurLesMorts = true,
   reglerArretSurLesMorts,
+  enSelection,
 }: {
   suivis: ReadonlySet<number>;
   /**
@@ -358,6 +427,11 @@ export function PanneauSuivis({
   arretSurLesMorts?: boolean;
   /** Le régler d'ici aussi : c'est là qu'on lit ce que la règle concerne. */
   reglerArretSurLesMorts?: (oui: boolean) => void;
+  /**
+   * Les arbres sélectionnés sur la parcelle : ceux qui sont suivis s'ouvrent
+   * et se surlignent ici (#358). On clique un arbre, on retrouve sa ligne.
+   */
+  enSelection?: ReadonlySet<number>;
 }) {
   /**
    * **les plus faibles en haut**, par vigueur croissante.
@@ -381,7 +455,21 @@ export function PanneauSuivis({
     return arbre.vigueur;
   };
   const ordre = [...suivis].sort((a, b) => rang(a) - rang(b));
+  const premierSelectionne = ordre.find((id) => enSelection?.has(id));
   const { ouverts, basculer } = useOuverts();
+  // **Cliquer un arbre suivi sur la parcelle ouvre sa ligne** (#358) — et la
+  // met sous les yeux : une liste de quarante pommiers ne se parcourt pas à la
+  // recherche du bon. Seulement quand la sélection change, pour qu'on puisse
+  // replier la ligne sans qu'elle se rouvre au prochain instantané.
+  const premiereLigne = useRef<HTMLDetailsElement>(null);
+  const cleDeSelection = [...(enSelection ?? [])].filter((id) => suivis.has(id)).join(",");
+  useEffect(() => {
+    // Toute une essence sélectionnée se **surligne** sans se déplier : vingt
+    // fiches ouvertes d'un coup, c'est une liste qu'on ne lit plus.
+    if (cleDeSelection === "" || cleDeSelection.split(",").length > OUVERTS_A_LA_SELECTION) return;
+    for (const id of cleDeSelection.split(",")) basculer(Number(id), true);
+    premiereLigne.current?.scrollIntoView({ block: "nearest" });
+  }, [cleDeSelection, basculer]);
   const { entiers, montrerTout } = useEntiers();
   // **Ce qui est ouvert, et rien d'autre.** Les silhouettes ne se cuisent que
   // pour les lignes dépliées : replier par défaut ne rend pas seulement la
@@ -439,18 +527,19 @@ export function PanneauSuivis({
         // stable, donc les événements d'un même instantané — qui portent tous
         // sa semaine — gardent l'ordre où le moteur les a nommés.
         const histoire = histoires.get(id);
-        // **Déjà groupé** : le worker écrit une ligne par répétition, avec son
-        // compte et sa plage (#225). Ici on ne fait que la retourner — le plus
-        // récent en tête — et trier par semaine, parce que les gestes d'une même
-        // semaine et ceux du tick n'arrivent pas dans l'ordre de la pendule.
-        const sien = [...(histoire ?? [])].reverse().sort((a, b) => b.semaine - a.semaine);
         const tout = entiers.has(id);
         const ouvert = ouverts.has(id);
         return (
           <details
             key={id}
             open={ouvert}
-            style={{ marginBottom: 6, borderTop: "1px solid var(--trait)", paddingTop: 5 }}
+            ref={enSelection?.has(id) && id === premierSelectionne ? premiereLigne : undefined}
+            style={{
+              marginBottom: 6,
+              borderTop: "1px solid var(--trait)",
+              paddingTop: 5,
+              ...(enSelection?.has(id) ? SURLIGNE : {}),
+            }}
             onToggle={(e) => basculer(id, e.currentTarget.open)}
           >
             {/*
@@ -494,40 +583,11 @@ export function PanneauSuivis({
                 <Silhouettes silhouette={silhouettes.get(id)} />
                 <div style={{ flex: 1, minWidth: 0 }}>{arbre && <Fiche lignes={lignes} />}</div>
               </div>
-              {histoire === undefined ? (
-                <div style={{ color: "var(--encre-douce)" }}>On demande son histoire…</div>
-              ) : sien.length === 0 ? (
-                <div style={{ color: "var(--encre-douce)" }}>Rien ne lui est jamais arrivé.</div>
-              ) : (
-                <div className="journal">
-                  {(tout ? sien : sien.slice(0, LIGNES_PAR_ARBRE)).map((e) => (
-                    <div key={`${e.semaine}-${e.quoi}-${e.texte}`} className="entree">
-                      <span className="quand">{quandDuGroupe(e.semaine, e.depuisSemaine)}</span>{" "}
-                      {ICONE[e.quoi]} {e.texte}
-                      {e.fois > 1 && ` (${e.fois} fois)`}
-                    </div>
-                  ))}
-                  {sien.length > LIGNES_PAR_ARBRE && (
-                    <button
-                      type="button"
-                      style={{
-                        ...btn(),
-                        marginLeft: 0,
-                        color: "var(--encre-douce)",
-                        background: "none",
-                        border: "none",
-                        padding: "2px 0",
-                        cursor: "pointer",
-                      }}
-                      onClick={() => montrerTout(id, !tout)}
-                    >
-                      {tout
-                        ? "↑ n'en montrer que 6"
-                        : `… et ${sien.length - LIGNES_PAR_ARBRE} plus anciens`}
-                    </button>
-                  )}
-                </div>
-              )}
+              <HistoireDeLArbre
+                histoire={histoire}
+                tout={tout}
+                montrerTout={(t) => montrerTout(id, t)}
+              />
             </div>
           </details>
         );

@@ -6,9 +6,12 @@
  * sélection, et le referme quand il n'y en a plus.
  */
 
+import { useState } from "react";
 import { getEspece } from "../../engine/especes";
 import type { SnapshotTree } from "../protocol";
+import type { LigneDeSuivi } from "../suivis";
 import type { GameApi } from "../useGame";
+import { HistoireDeLArbre } from "./PanneauSuivis";
 import { btn } from "./styles";
 
 /** Combien d'essences de la sélection reçoivent leurs boutons. */
@@ -38,6 +41,8 @@ export function PanneauSelection({
   setSelectedIds,
   suivis,
   basculerSuivi,
+  histoire,
+  voirDansLesSuivis,
 }: {
   game: GameApi;
   vivants: readonly SnapshotTree[];
@@ -56,7 +61,15 @@ export function PanneauSelection({
   suivis: ReadonlySet<number>;
   /** suivre toute la sélection, ou la lâcher si elle l'est déjà */
   basculerSuivi: (ids: Iterable<number>) => void;
+  /**
+   * L'histoire de l'arbre, quand un seul est sélectionné (#358). Absente = pas
+   * encore arrivée du worker.
+   */
+  histoire?: readonly LigneDeSuivi[] | undefined;
+  /** Ouvrir le volet des suivis sur cet arbre — présent s'il est suivi. */
+  voirDansLesSuivis?: (() => void) | undefined;
 }) {
+  const [histoireEntiere, setHistoireEntiere] = useState(false);
   /**
    * Les essences de la sélection, les plus nombreuses d'abord.
    *
@@ -333,6 +346,34 @@ export function PanneauSelection({
         <div style={{ color: "var(--encre-douce)", fontSize: 13, marginTop: 4 }}>
           {selBoisMort.length} chandelle{selBoisMort.length > 1 ? "s" : ""} dans la sélection : le
           BRF les refusera (il faut du bois frais), le reste passera.
+        </div>
+      )}
+      {/*
+        **Ce qui lui est arrivé** (#358). Le volet donnait l'espèce, la taille,
+        l'âge et les gestes, et rien de sa vie : il fallait le suivre pour la
+        lire. Le worker la tient pour tous les arbres depuis #225 ; un clic au
+        hasard la montre.
+      */}
+      {selectedTrees.length === 1 && (
+        <div style={{ fontSize: 13, marginTop: 8, borderTop: "1px solid var(--trait)" }}>
+          <div style={{ display: "flex", alignItems: "baseline", gap: 8, margin: "6px 0 2px" }}>
+            <strong style={{ flex: 1 }}>Son histoire</strong>
+            {voirDansLesSuivis && (
+              <button
+                type="button"
+                style={{ ...btn(), marginRight: 0, marginBottom: 0, fontSize: 12 }}
+                onClick={voirDansLesSuivis}
+                title="Il est suivi : ouvrir sa ligne dans le volet des suivis"
+              >
+                👁 dans les suivis
+              </button>
+            )}
+          </div>
+          <HistoireDeLArbre
+            histoire={histoire}
+            tout={histoireEntiere}
+            montrerTout={setHistoireEntiere}
+          />
         </div>
       )}
     </>
