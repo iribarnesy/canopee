@@ -1143,6 +1143,13 @@ function applyPlanter(
     // un potet, un chêne oui, et entre les deux ça se dose (#154). Le message
     // nomme donc l'essence qui bloque — `prevoirAction` (#139) le porte jusque
     // sous le curseur, où « un arbre vivant » n'aidait personne.
+    //
+    // **L'essence va entre parenthèses, et c'est de la grammaire** (#339).
+    // « trop proche d'un aubépine vivant » : le moteur ne connaît pas le genre
+    // des essences, et n'a pas à le connaître. C'est « tige » qui porte
+    // l'accord, au féminin quelle que soit l'espèce, et l'essence suit en
+    // apposition — la tournure que le jeu a déjà prise pour les arbres suivis
+    // (`raisonDesMorts`), et qui n'a pas non plus d'élision à deviner.
     const gene = trees.find((t) => {
       if (!t.alive) return false;
       const dx = t.x - pos.x;
@@ -1155,7 +1162,7 @@ function applyPlanter(
         refuse(
           action.week,
           "planter",
-          `trop proche d'un ${getEspece(gene.especeId).nom.toLowerCase()} vivant (< ${rayonEncombrement(gene.especeId).toFixed(1)} m)`,
+          `trop proche d'une tige vivante (${getEspece(gene.especeId).nom.toLowerCase()}, < ${rayonEncombrement(gene.especeId).toFixed(1)} m)`,
         ),
       );
       continue;
@@ -2671,7 +2678,12 @@ function applyReceper(
     const espece = getEspece(tree.especeId);
     if (!espece.bois.rejetteDeSouche) {
       refusals.push(
-        refuse(action.week, "receper", `${espece.nom} ne rejette pas de souche : il en mourrait`),
+        // « il en mourrait » ne valait que pour un nom masculin (#339).
+        refuse(
+          action.week,
+          "receper",
+          `${espece.nom} ne rejette pas de souche : la tige en mourrait`,
+        ),
       );
       continue;
     }

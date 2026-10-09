@@ -182,6 +182,20 @@ describe("plafonds économiques (déterministes)", () => {
     expect(refusals[0]?.reason).toContain("trop proche");
   });
 
+  it("le refus nomme l'essence sans avoir à connaître son genre (#339)", () => {
+    // Relevé en recette v0.4 : « trop proche d'un aubépine vivant ». L'accord
+    // est porté par « tige », et l'essence suit en apposition.
+    let state = createGameState(STATION, rngStateFromSeed(1));
+    state = plantAt(state, "crataegus_monogyna", 10, 10, 3);
+    const { refusals } = applyAction(state, {
+      type: "planter",
+      week: 0,
+      especeId: "betula_pendula",
+      positions: [{ x: 10.3, y: 10.3 }],
+    });
+    expect(refusals[0]?.reason).toMatch(/^trop proche d'une tige vivante \(aubépine, < /);
+  });
+
   it("la vente rapporte volume × prix × indice du marché", () => {
     let state = createGameState(STATION, rngStateFromSeed(1));
     state = plantAt(state, "pinus_sylvestris", 10, 10, 20);
