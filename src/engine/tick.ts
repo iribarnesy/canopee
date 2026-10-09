@@ -50,6 +50,7 @@ import {
   cnHumusDuProfil,
   DEADWOOD_DECAY_PER_YEAR,
   DEADWOOD_HUMIFICATION,
+  DECOMPOSITION_TAS_BROYAT_PAR_SEMAINE,
   HUMUS_DECAY_PER_YEAR,
   LITTER_HUMIFICATION,
   racinesPerduesEnRabattant,
@@ -3610,6 +3611,13 @@ export function tick(state: GameState, weather: WeekWeather): TickResult {
     boisAuSolCG[i] = stock - decompose;
     emittedG += decompose - humifier(i, decompose * DEADWOOD_HUMIFICATION, false);
   }
+  // Le tas de broyat se décompose aussi, en tas : il chauffe, et ce qu'il perd
+  // part en CO₂ (carbon.ts). Il ne fait pas d'humus, puisqu'il n'est sur aucune
+  // cellule du sol. Son azote, lui, reste dans le tas : rien ne l'en sort tant
+  // qu'on ne l'épand pas. Sans cette perte, broyer sans jamais épandre gardait
+  // le bois intact indéfiniment, et devenait le meilleur geste pour le climat.
+  const tasPerduG = state.stockBrf.carboneG * DECOMPOSITION_TAS_BROYAT_PAR_SEMAINE;
+  emittedG += tasPerduG;
 
   // ── 6 bis. Le feu (§7.4, ch5) ─────────────────────────────────────────────
   // Il ne part que si la saison, la sécheresse et le combustible s'alignent,
@@ -4312,6 +4320,7 @@ export function tick(state: GameState, weather: WeekWeather): TickResult {
         mycorhizes,
       },
       trees: nextTrees,
+      stockBrf: { ...state.stockBrf, carboneG: state.stockBrf.carboneG - tasPerduG },
       ddYearBase5,
       semainesDeFroid,
       banqueGraines,
