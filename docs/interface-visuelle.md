@@ -361,7 +361,12 @@ src/render/
 - **LOD.** Dézoomé, un semis n'est qu'un point ; sous ~3 px, un arbre devient
   une tache de couleur ; les fourrés (ronce, ajonc, genêt, callune) sont
   dessinés **par cellule agrégée**, pas par individu — c'est aussi ainsi qu'on
-  lit un fourré sur le terrain. Avec D4, le LOD devient **plus** important, pas
+  lit un fourré sur le terrain. **La cellule fait un mètre et la masse se pose
+  au barycentre de ses tiges** (#361) : à quatre mètres, posée au centre du
+  carreau, une friche qui se ferme se lisait en damier. La masse garde les
+  identifiants de ses tiges, et un clic dessus les sélectionne (#356). Le prix,
+  mesuré sur la friche à trente ans : 2 432 sprites → 4 128 à la parcelle
+  entière, la pose passant de 12 à 28 ms sous SwiftShader. Avec D4, le LOD devient **plus** important, pas
   moins : le détail d'illustration ne se justifie qu'au zoom, et il faut
   basculer proprement entre l'arbre dessiné et la tache.
 - **Le pire cas, mesuré (L0, rejoué)** : une friche en pleine succession

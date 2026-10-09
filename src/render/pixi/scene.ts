@@ -228,6 +228,8 @@ export interface Compte {
  */
 interface ArbrePose {
   id: number;
+  /** les tiges d'une masse de fourré : un clic les désigne toutes (#356) */
+  tiges?: readonly number[];
   /**
    * Le rang du sprite dans la couche des arbres.
    *
@@ -295,6 +297,12 @@ interface MasqueAlpha {
  * ce qui redonnerait des arbres qui se volent les clics, le défaut qu'on
  * corrige ici.
  */
+/**
+ * Opacité de **pose** sous laquelle un arbre ne capte pas le clic : une
+ * plantation qui monte n'est pas encore là. Sous l'estompe de « ce qui a
+ * changé » (0,4), sans quoi l'œil allumé rendait la parcelle incliquable.
+ */
+const OPACITE_POUR_CLIQUER = 0.3;
 const OPACITE_CLIQUABLE = 24;
 
 /** En deçà, l'anneau de sélection ne se verrait plus. */
@@ -1887,11 +1895,17 @@ export class SceneParcelle {
         sprite.y = pose.sy;
       }
       // Un arbre transparent n'est pas encore là (une plantation qui monte) :
-      // il ne doit pas capter le clic avant d'être visible. Le fourré agrégé
-      // porte un identifiant négatif et n'est l'arbre de personne.
-      if (pose.arbre.id >= 0 && d.opacite > 0.5) {
+      // il ne doit pas capter le clic avant d'être visible. Un fût couché porte
+      // un identifiant négatif et n'est l'arbre de personne ; une masse de
+      // fourré, elle, porte celui d'une de ses tiges, et les autres avec (#356).
+      //
+      // **Le seuil passe sous l'estompe**, et ce n'est pas un détail : « ce qui
+      // a changé » pose à 0,4 ce qui n'a pas changé, et le seuil était 0,5 —
+      // allumé après « +1 an », l'œil rendait tout le reste incliquable.
+      if (pose.arbre.id >= 0 && d.opacite > OPACITE_POUR_CLIQUER) {
         this.arbresPoses.push({
           id: pose.arbre.id,
+          ...(pose.arbre.tiges ? { tiges: pose.arbre.tiges } : {}),
           rang: n - 1,
           image: vignette.image,
           sx: pose.sx,
@@ -1926,7 +1940,11 @@ export class SceneParcelle {
     for (const pose of this.arbresPoses) {
       const source = this.couches.arbres.children[pose.rang] as Sprite | undefined;
       if (!source) continue;
-      const choisi = this.surligne.choisis.has(pose.id);
+      // Une masse de fourré s'éclaire dès qu'une de ses tiges est choisie :
+      // « + toutes les ronces » doit allumer tous les ronciers.
+      const choisi = pose.tiges
+        ? pose.tiges.some((id) => this.surligne.choisis.has(id))
+        : this.surligne.choisis.has(pose.id);
       const survole = this.surligne.survole === pose.id;
       if (!choisi && !survole) continue;
       const halo = SceneParcelle.sprite(this.couches.surbrillance, n++, source.texture);
@@ -2112,6 +2130,21 @@ export class SceneParcelle {
    * lecture de l'opacité du pixel visé dans la vignette.
    */
   arbreSousLeCurseur(sx: number, sy: number): number | undefined {
+    return this.poseSousLeCurseur(sx, sy)?.id;
+  }
+
+  /**
+   * Ce qu'un clic désigne sous le curseur : un arbre, ou **toutes** les tiges
+   * d'une masse de fourré (#356). Une ronce n'a pas de vignette à elle — elle
+   * est dans le roncier —, donc cliquer le roncier, c'est la prendre avec ses
+   * voisines.
+   */
+  tigesSousLeCurseur(sx: number, sy: number): readonly number[] | undefined {
+    const pose = this.poseSousLeCurseur(sx, sy);
+    return pose ? (pose.tiges ?? [pose.id]) : undefined;
+  }
+
+  private poseSousLeCurseur(sx: number, sy: number): ArbrePose | undefined {
     for (let i = this.arbresPoses.length - 1; i >= 0; i--) {
       const pose = this.arbresPoses[i];
       if (!pose) continue;
@@ -2132,7 +2165,7 @@ export class SceneParcelle {
       if (!masque) continue;
       const mx = Math.min(masque.largeur - 1, Math.floor((lx / pose.largeur) * masque.largeur));
       const my = Math.min(masque.hauteur - 1, Math.floor((ly / pose.hauteur) * masque.hauteur));
-      if ((masque.alpha[my * masque.largeur + mx] ?? 0) >= OPACITE_CLIQUABLE) return pose.id;
+      if ((masque.alpha[my * masque.largeur + mx] ?? 0) >= OPACITE_CLIQUABLE) return pose;
     }
     return undefined;
   }

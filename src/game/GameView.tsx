@@ -1793,7 +1793,7 @@ export function GameView({ surPartie }: { surPartie?: (enPartie: boolean) => voi
   const surClicParcelle = (
     cellule: { x: number; y: number },
     multiple: boolean,
-    idArbre: number | undefined,
+    idsArbres: readonly number[] | undefined,
   ) => {
     const mx = cellule.x + 0.5;
     const my = cellule.y + 0.5;
@@ -1859,15 +1859,19 @@ export function GameView({ surPartie }: { surPartie?: (enPartie: boolean) => voi
       });
     } else if (multiple) {
       // Maj/ctrl : on ajoute ou on retire, et un clic dans le vide ne défait
-      // pas la sélection qu'on est en train de construire.
-      if (idArbre !== undefined) {
+      // pas la sélection qu'on est en train de construire. Un roncier compte
+      // pour un : on le retire s'il y est déjà tout entier, sinon on l'ajoute.
+      if (idsArbres !== undefined) {
         const suite = new Set(selectedIds);
-        if (suite.has(idArbre)) suite.delete(idArbre);
-        else suite.add(idArbre);
+        const dejaLa = idsArbres.every((id) => suite.has(id));
+        for (const id of idsArbres) {
+          if (dejaLa) suite.delete(id);
+          else suite.add(id);
+        }
         setSelectedIds(suite);
       }
     } else {
-      setSelectedIds(idArbre === undefined ? new Set() : new Set([idArbre]));
+      setSelectedIds(new Set(idsArbres ?? []));
     }
   };
 

@@ -149,11 +149,14 @@ export function PanneauSelection({
               onClick={() => setSelectedIds(new Set(vivantsDeLEssence.map((t) => t.id)))}
               title={
                 vivantsDeLEssence.length === 0
-                  ? `aucun ${nom} vivant sur la parcelle`
-                  : `les ${vivantsDeLEssence.length} ${nom} encore vivants`
+                  ? `aucun pied de ${nom} vivant sur la parcelle`
+                  : `les ${vivantsDeLEssence.length} pieds de ${nom} encore vivants`
               }
             >
-              + tous les {nom}s ({vivantsDeLEssence.length})
+              {/* « Pieds de » porte l'accord : « tous les ronces » et « tous les
+                  frêne communs » étaient faux, et rien ne donne le genre
+                  d'une essence (la même raison que les avis du worker). */}
+              + tous les pieds de {nom} ({vivantsDeLEssence.length})
             </button>
             {chandellesDeLEssence.length > 0 && (
               <button
