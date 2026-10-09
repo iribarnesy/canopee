@@ -125,7 +125,7 @@ constante nationale : la fourchette ne pouvait tenir que pour une densité.
 - **La location du droit de chasse** n'est pas modélisée : c'est un revenu
   de propriétaire, pas un geste.
 - Le jeu accorde encore au masculin des phrases qui nomment une essence
-  (« dans un », « quitte le », « aucun … vivant », hors du moteur).
+  (« dans un », « quitte le », « aucun … vivant », hors du moteur) : #368.
 - `prevoir.test.ts` construit ses parcelles en plus de 120 s sur une machine
   chargée et dépasse le délai de son `beforeAll` : mesuré ici avec un délai
   relevé localement, non commité.
