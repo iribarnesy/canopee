@@ -21,6 +21,7 @@ import { rngStateFromSeed } from "../../src/engine/rng";
 import { ruHorizonMm } from "../../src/engine/soil";
 import { createGameState, type GameState, plantAt, type Station } from "../../src/engine/state";
 import { LIMON_RICHE } from "../../src/engine/stations";
+import { cnBois } from "../../src/engine/trees";
 
 const SERIE = serieMeteoPour("limon-riche");
 if (!SERIE) throw new Error("série manquante");
@@ -188,13 +189,14 @@ describe("la faim d'azote (C9)", () => {
     //
     // **L'essai a été réécrit sur son critère** (#328). Il comparait le broyage à
     // des aulnes restés debout, et il passait pour une autre raison que la faim :
-    // `plantAt` posait un arbre sans azote dans son bois, et ce bois au C/N
-    // infini prenait tout son azote au sol (−0,98 g/m² un mois après). Rendu au
-    // bois l'azote que le moteur lui assigne, l'écart tombe à −0,39 contre des
-    // arbres debout, parce que couper vingt arbres arrête leur prélèvement et
-    // verse l'azote de leurs racines à la litière. Le témoin juste fait le même
-    // geste moins ce qu'on mesure : une coupe **vendue**, mêmes arbres abattus,
-    // mêmes racines laissées, seul le broyat diffère (−0,72).
+    // `plantAt` pose un arbre sans azote dans son bois (le moteur n'en met que
+    // dans le bois neuf), et ce bois au C/N infini prenait tout son azote au sol
+    // (−0,98 g/m² un mois après). L'essai donne donc à ses aulnes l'azote que
+    // le moteur assigne à leur bois (`cnBois`) ; l'écart tombe alors à −0,39
+    // contre des arbres debout, parce que couper vingt arbres arrête leur
+    // prélèvement et verse l'azote de leurs racines à la litière. Le témoin juste
+    // fait le même geste moins ce qu'on mesure : une coupe **vendue**, mêmes
+    // arbres abattus, mêmes racines laissées, seul le broyat diffère (−0,72).
     //
     // Et le broyat abaisse le minéral du bloc même quand il ne se décompose pas :
     // un essai de #309 passait ainsi, sans faim, et la variante où sa vitesse est
@@ -211,13 +213,18 @@ describe("la faim d'azote (C9)", () => {
         const dernier = state.trees[state.trees.length - 1];
         if (dernier) ids.push(dernier.id);
       }
-      if (cnBoisImpose === undefined) return { state, ids };
-      const trees = state.trees.map((t) => ({
-        ...t,
-        azoteBoisG:
-          (treeTotalCarbonKg(getEspece(t.especeId), t.diametreCm, t.heightM) * 1000) / cnBoisImpose,
-      }));
-      return { state: { ...state, trees }, ids };
+      // Le bois porte l'azote qu'il aurait mis en poussant, au C/N de son
+      // espèce, ou celui qu'on lui impose.
+      const trees = state.trees.map((t) => {
+        const espece = getEspece(t.especeId);
+        const cn = cnBoisImpose ?? cnBois(espece);
+        return {
+          ...t,
+          azoteBoisG: (treeTotalCarbonKg(espece, t.diametreCm, t.heightM) * 1000) / cn,
+        };
+      });
+      const avecBois: GameState = { ...state, trees };
+      return { state: avecBois, ids };
     };
     const cellules: number[] = [];
     for (let y = 8; y < 23; y++) for (let x = 8; x < 23; x++) cellules.push(y * 30 + x);
