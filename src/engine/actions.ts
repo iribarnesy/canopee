@@ -395,7 +395,8 @@ export interface EconomyState {
    * payer ses plants. Y répondre en devant d'abord tenir une trésorerie n'ajoute
    * pas de réalisme, ça ajoute une contrainte hors sujet.
    *
-   * Économie désactivée : plus de découvert refusé, plus de faillite. Le compte
+   * Économie désactivée : plus de découvert refusé (`decouvertDepasse` lit ce
+   * champ, et c'est la seule garde), plus de faillite. Le compte
    * continue de tourner et reste **affiché** — savoir ce qu'aurait coûté une
    * conduite est instructif même quand on ne la paie pas — mais il ne bloque
    * plus rien.
@@ -1063,6 +1064,36 @@ function refuse(week: number, action: GameAction["type"], reason: string): Actio
 }
 
 /**
+ * **La garde de découvert, la seule** (#350).
+ *
+ * Une banque ne refuse pas un geste, elle refuse de le **payer**. La règle tient
+ * donc en une ligne et ne connaît aucun geste : économie active, ce qui ferait
+ * baisser la trésorerie ne peut pas la laisser sous le découvert autorisé.
+ * Une recette n'est jamais refusée, même à découvert ; l'économie coupée ne
+ * refuse rien (`EconomyState.active`).
+ *
+ * Chaque geste portait la sienne, et elles avaient divergé : six refusaient
+ * encore en « écologie seule », trois ne vérifiaient rien — une protection
+ * posée à −19 999 € menait à la faillite la semaine suivante. `applyAction` la
+ * pose désormais sur **tous** les gestes, d'après ce qu'ils ont réellement
+ * dépensé : un geste neuf n'a rien à écrire pour en être. Les deux gestes qui
+ * achètent élément par élément (planter, protéger) la consultent aussi dans
+ * leur boucle, pour s'arrêter au découvert au lieu de tout refuser.
+ */
+export function decouvertDepasse(
+  economie: Pick<EconomyState, "active" | "treasuryEur">,
+  tresorerieApresEur: number,
+): boolean {
+  return (
+    economie.active &&
+    tresorerieApresEur < economie.treasuryEur &&
+    tresorerieApresEur < OVERDRAFT_LIMIT_EUR
+  );
+}
+
+const DECOUVERT_PLAFONNE = "découvert plafonné";
+
+/**
  * Pourquoi un geste qui veut un arbre **vivant** ne trouve pas celui qu'on lui
  * désigne.
  *
@@ -1098,8 +1129,10 @@ function applyPlanter(
   const heuresParPlant = PLANT_HOURS + (action.avecManchon ? PROTECTION_HEURES : 0);
   const euroParPlant = espece.economie.prixPlantEur + (action.avecManchon ? PROTECTION_EUR : 0);
   for (const pos of action.positions) {
-    if (state.economy.active && treasuryEur - euroParPlant < OVERDRAFT_LIMIT_EUR) {
-      refusals.push(refuse(action.week, "planter", `découvert plafonné (${planted} plantés)`));
+    if (decouvertDepasse({ ...state.economy, treasuryEur }, treasuryEur - euroParPlant)) {
+      refusals.push(
+        refuse(action.week, "planter", `${DECOUVERT_PLAFONNE} (plants posés : ${planted})`),
+      );
       break;
     }
     if (pos.x < 0 || pos.x >= state.station.coteM || pos.y < 0 || pos.y >= state.station.coteM) {
@@ -1646,9 +1679,6 @@ function applyChauler(
   const part = partMecanisable(state.trees, action);
   const cost = areaM2 * (LIME_EUR_M2 + part * COUT_ENGIN_EUR_M2);
   const hours = areaM2 * (part * LIME_HOURS_M2_ENGIN + (1 - part) * LIME_HOURS_M2_MAIN);
-  if (state.economy.treasuryEur - cost < OVERDRAFT_LIMIT_EUR) {
-    return { state, refusals: [refuse(action.week, "chauler", "découvert plafonné")] };
-  }
   // Le chaulage n'écrit plus le pH : il apporte des **bases**, et le pH suit au
   // tick suivant (bases.ts). Ce n'est pas un détour — c'est ce qui fait qu'un
   // podzol sableux, dont le complexe est petit, monte beaucoup pour la même
@@ -1743,9 +1773,6 @@ function applyFertiliser(
   // les facture en fin de semaine. Ces trois gestes de culture — semer,
   // fertiliser, moissonner — ont été écrits pendant que la règle changeait sur
   // `main` ; ils suivent la nouvelle, comme les quinze autres.
-  if (state.economy.treasuryEur - cost < OVERDRAFT_LIMIT_EUR) {
-    return { state, refusals: [refuse(action.week, "fertiliser", "découvert plafonné")] };
-  }
 
   const soil = { ...state.soil };
   if (mineral) {
@@ -1824,9 +1851,6 @@ function applySemer(state: GameState, action: Extract<GameAction, { type: "semer
   const part = partMecanisable(state.trees, action);
   const hours = areaHa * culture.heuresSemisHa * (part + (1 - part) * 20);
   const cost = areaHa * culture.semenceEurHa + areaM2 * part * COUT_ENGIN_EUR_M2;
-  if (state.economy.treasuryEur - cost < OVERDRAFT_LIMIT_EUR) {
-    return { state, refusals: [refuse(action.week, "semer", "découvert plafonné")] };
-  }
   const herbeEmprise = state.soil.herbeEmprise.slice();
   const cellules = cellulesDeLaZone(state.station.coteM, action);
   // **ce que le semis pose, c'est la place libre.** Un blé semé dans une
@@ -2415,9 +2439,6 @@ function applyCloturer(
   const perimetreM = perimetreMDeLaZone(action);
   const cost = perimetreM * CLOTURE_EUR_M;
   const hours = perimetreM * CLOTURE_HEURES_M;
-  if (state.economy.treasuryEur - cost < OVERDRAFT_LIMIT_EUR) {
-    return { state, refusals: [refuse(action.week, "cloturer", "découvert plafonné")] };
-  }
   const cloture = state.soil.cloture.slice();
   const dims = { widthM: state.station.coteM, heightM: state.station.coteM };
   const closes: number[] = [];
@@ -2457,9 +2478,6 @@ function applyLabourer(
   const areaM2 = aireM2DeLaZone(action) * part;
   const hours = areaM2 * LABOUR_HOURS_M2;
   const cost = areaM2 * LABOUR_EUR_M2;
-  if (state.economy.treasuryEur - cost < OVERDRAFT_LIMIT_EUR) {
-    return { state, refusals: [refuse(action.week, "labourer", "découvert plafonné")] };
-  }
 
   const humusCG = state.soil.humusCG.slice();
   const mineralNG = state.soil.mineralNG.slice();
@@ -2590,7 +2608,14 @@ function applyProteger(
   const refusals: ActionRefusal[] = [];
   let { treasuryEur, hoursUsedWeek, hoursUsedYear } = state.economy;
   const trees = [...state.trees];
+  let proteges = 0;
   for (const id of action.treeIds) {
+    if (decouvertDepasse({ ...state.economy, treasuryEur }, treasuryEur - PROTECTION_EUR)) {
+      refusals.push(
+        refuse(action.week, "proteger", `${DECOUVERT_PLAFONNE} (plants protégés : ${proteges})`),
+      );
+      break;
+    }
     const idx = trees.findIndex((t) => t.id === id && t.alive);
     const tree = idx >= 0 ? trees[idx] : undefined;
     if (!tree) {
@@ -2612,6 +2637,7 @@ function applyProteger(
     hoursUsedYear += PROTECTION_HEURES;
     treasuryEur -= PROTECTION_EUR;
     trees[idx] = { ...tree, protege: true };
+    proteges++;
   }
   return {
     state: {
@@ -2836,6 +2862,16 @@ export function applyAction(state: GameState, action: GameAction): ApplyResult {
   if (state.economy.active && state.economy.bankrupt) {
     return { state, refusals: [refuse(action.week, action.type, "faillite")] };
   }
+  // Le geste se joue, puis on regarde ce qu'il a coûté : la garde de découvert
+  // ne connaît que la trésorerie avant et après, pas le geste (`decouvertDepasse`).
+  const joue = appliquerLeGeste(state, action);
+  if (decouvertDepasse(state.economy, joue.state.economy.treasuryEur)) {
+    return { state, refusals: [refuse(action.week, action.type, DECOUVERT_PLAFONNE)] };
+  }
+  return joue;
+}
+
+function appliquerLeGeste(state: GameState, action: GameAction): ApplyResult {
   switch (action.type) {
     case "planter":
       return applyPlanter(state, action);
@@ -2848,9 +2884,6 @@ export function applyAction(state: GameState, action: GameAction): ApplyResult {
       if (contrat === "saisonnier") {
         const semaines = Math.max(1, Math.round(action.semaines ?? 4));
         const cost = semaines * SEASONAL_EUR_WEEK;
-        if (state.economy.treasuryEur - cost < OVERDRAFT_LIMIT_EUR) {
-          return { state, refusals: [refuse(action.week, "embaucher", "découvert plafonné")] };
-        }
         return {
           state: {
             ...state,
@@ -2868,9 +2901,6 @@ export function applyAction(state: GameState, action: GameAction): ApplyResult {
         };
       }
       // CDI : la première semaine se paie à l'embauche, le reste chaque semaine.
-      if (state.economy.treasuryEur - SALARY_EUR_WEEK < OVERDRAFT_LIMIT_EUR) {
-        return { state, refusals: [refuse(action.week, "embaucher", "découvert plafonné")] };
-      }
       return {
         state: {
           ...state,
@@ -2897,7 +2927,9 @@ export function applyAction(state: GameState, action: GameAction): ApplyResult {
           ],
         };
       }
-      // Indemnités dues même en difficulté : licencier n'est jamais refusé.
+      // Les indemnités sont une dépense comme une autre, et la garde de
+      // découvert les traite comme telles (#350) : à deux pas du plafond, on
+      // vend d'abord, on licencie ensuite.
       return {
         state: {
           ...state,
