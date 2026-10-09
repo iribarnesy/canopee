@@ -558,6 +558,29 @@ const ASENSIO_2008 =
 const PEPINIERES_DE =
   "catalogues de pépiniéristes et bases horticoles allemands (Garten von Ehren, Baumschule Horstmann, NaturaDB) — ordre de grandeur commercial, pas une mesure";
 /**
+ * **sources du noyer hybride** (#213). Aucune table de production, et pour la
+ * même raison que le commun : le fichier écologique wallon porte, à la ligne
+ * productivité de l'hybride aussi, « sans objet, sylviculture d'arbre ». Ce qui
+ * existe à la place, ce sont des **essais datés** — un réseau de placettes
+ * allemandes jeunes, une plateforme agroforestière française suivie vingt ans —
+ * et des fiches de conseil qui comparent l'hybride à ses deux parents. Les deux
+ * premières donnent des nombres, les autres des ordres.
+ */
+const FEE_HYBRIDE =
+  "Fichier écologique des essences (Wallonie), fiches Noyer hybride et Noyer commun, exemplaires de l'ILVO — même grille pour les deux noyers, d'où des comparaisons à source égale";
+const EHRING_2011 =
+  "Ehring, Arnold, Frank & Hein 2011, Anbauversuch mit französischen Hybridnussbäumen, FVA-einblick 1/2011 : 18-22 (Bade-Wurtemberg, 55 placettes, 4 372 hybrides livrés de 2001 à 2005)";
+const HEIM_2023 =
+  "Heim, Candelier, Badel, Denaud, Dufour & Marchal 2023, Comparison of hybrid walnut trees growth in an agroforestry system and under forestry condition, prépublication Research Square doi:10.21203/rs.3.rs-2595200/v1 (Restinclières, Hérault : NG23 planté en 1995, mesuré jusqu'en 2014)";
+const ALETA_2003 =
+  "Aletà, Ninot & Voltas 2003, Characterisation of the agroforestry performance of 12 walnut genotypes grown in two locations of Catalonia, Investigación Agraria : Sistemas y Recursos Forestales 12(1) (Massanes et Prades, 1995-2000) — résumé seul";
+const CARDINAEL_2015 =
+  "Cardinael et al. 2015, Competition with winter crops induces deeper rooting of walnut trees in a Mediterranean alley cropping agroforestry system, Plant and Soil 391 : 219-235 (Restinclières) — résumé seul";
+const MAA_2024 =
+  "Becquey & Girard (IDF), Conseils d'utilisation des matériels forestiers de reproduction : Noyers hybrides (Juglans × intermedia), 2e édition, ministère de l'Agriculture et INRAE, 18 mars 2024";
+const COELLO_2013 =
+  "Coello, Becquey, Gonin, Ortisset, Baiges & Piqué 2013, Le noyer hybride et le noyer commun à bois, dans Les feuillus précieux pour la production de bois de qualité, Centre de la Propietat Forestal (Catalogne) et CRPF Midi-Pyrénées — scénarios sylvicoles, pas des mesures";
+/**
  * **sources des saisons de baies** (`baies`, #296). Snow & Snow ont guetté six
  * ans les buissons en fruits de la vallée d'Aylesbury et disent quand chaque
  * fruit est **mangé**, ce qui est la grandeur que lit un oiseau. Le livre n'a pas
@@ -2149,6 +2172,159 @@ export const ESPECES_V0: readonly EspeceV0[] = [
     // refleurit. Hors de l'aire de Snow & Snow : la fenêtre est *(à confirmer)*.
     baies: { debutSemaine: 40, finSemaine: 51 },
     sources: [ATLAS, ASENSIO_2008, GWDD_2009],
+  },
+  /**
+   * **Le noyer hybride** (#213) : c'est lui, et non le commun, qu'on plante dans
+   * les parcelles agroforestières françaises — Restinclières en est couvert.
+   * Un noyer noir (*J. nigra* pour les NG23 et NG38, *J. major* pour le MJ209)
+   * pollinisé par un noyer commun, dans des vergers à graines.
+   *
+   * **Ce n'est pas un commun plus rapide**, et la fiche ne le traite pas comme
+   * tel. Ce qui le sépare du commun a ses sources : la vigueur (hauteur et
+   * pousse), le pH, l'enracinement, le rejet de souche, l'absence de récolte. Ce
+   * qui ne l'en sépare pas est **dit** semblable par les sources — « les
+   * exigences écologiques des noyers hybrides sont semblables à celles des
+   * noyers commun et noir » (MAA 2024) — et les valeurs du commun y sont
+   * reprises en le disant. Les nuances que les sources donnent sans nombre (un
+   * peu moins sensible à l'engorgement, à l'ombre et aux maladies que le
+   * commun) ne sont **pas** traduites : un ordre sans nombre ne fait pas un
+   * paramètre.
+   *
+   * Placé en fin d'atlas, et ce n'est pas un rangement : les semis de
+   * substitution d'un paysage (`entourageDeLaStation`) prennent les trois
+   * premières essences tenables de cette liste. Inséré à côté du commun, il
+   * aurait pu en déloger une sur la lande, où son pH le dit tenable.
+   */
+  {
+    id: "juglans_x_intermedia",
+    nom: "Noyer hybride",
+    nomLatin: "Juglans × intermedia",
+    // Fichier écologique wallon : **35 à 40 m** à maturité, contre 25 à 30 pour le
+    // commun sur la même grille. La borne basse, comme le commun porte la
+    // sienne. Un sujet de quatre-vingt-dix ans mesuré à Bensheim : 34 m pour
+    // 101 cm de diamètre (Ehring 2011).
+    hauteurMaxM: 35,
+    // **78 cm par an** en moyenne entre six et dix ans, toutes variétés, sur les
+    // 55 placettes du réseau de Bade-Wurtemberg (Ehring 2011) ; NG23 en tête,
+    // MJ209 et NG38 presque à égalité derrière. C'est une **moyenne de stations**,
+    // pauvres comprises, et non un maximum en conditions optimales : c'est donc
+    // un plancher pour ce champ *(à confirmer)*. Le même réseau donne 8,5 mm de
+    // diamètre par an en moyenne, 14 mm sur les bonnes stations et plus de 17
+    // sur les meilleures — le moteur n'a pas de paramètre de diamètre, ces
+    // nombres servent à le juger, pas à le régler.
+    //
+    // L'ordre avec le commun est sourcé, lui : en Catalogne, sur deux sites et
+    // six ans, les deux hybrides commerciaux forment le groupe le plus rapide
+    // des douze génotypes, et leur diamètre vaut environ le double de celui du
+    // meilleur noyer commun (Aletà 2003).
+    pousseMaxMAn: 0.8,
+    // Le besoin en eau est « fort » pour les trois noyers (Coello 2013), la
+    // résistance à la sécheresse **intermédiaire** entre celles des deux parents
+    // (MAA 2024, fichier wallon). L'engorgement le gêne un peu moins que le
+    // commun (Coello 2013 : sensibilité moyenne contre forte) sans qu'aucune
+    // source le chiffre : valeurs du commun reprises *(à confirmer)*.
+    eau: { seuilConfortSecheresse: 0.6, seuilStressSecheresse: 0.25, toleranceEngorgement: 0.1 },
+    // Le réseau allemand le dit sans détour : sous pH 4, de très fortes pertes ;
+    // de 4 à 5, une croissance nettement plus faible ; de 5 à 8, une bonne
+    // croissance (Ehring 2011). C'est la grande différence avec le commun
+    // (5-8,3) : le fichier wallon dit qu'il « supplante nettement les noyers
+    // commun et noir sur les stations méso-oligotrophes ». La borne haute est
+    // celle de l'essai, pas une limite observée *(à confirmer)* : Coello 2013 le
+    // dit tolérant au calcaire actif, le fichier wallon sensible aux sols
+    // carbonatés.
+    ph: [4, 8],
+    // Héliophile (fichier wallon : intolérant à l'ombre jeune, il « exige la
+    // pleine lumière » adulte), un peu moins que le commun (MAA 2024 : le
+    // phototropisme et la sensibilité à l'ombrage « semblent moins prononcés »).
+    // L'écart n'est chiffré nulle part : la lumière du commun est reprise.
+    lumiere: { compensation: 0.2, saturation: 0.75, lai: 2.6, houppierRatio: 0.5, caduc: true },
+    // Des racines de noyer relevées jusqu'à **4 m**, la profondeur du relevé, sous
+    // les allées cultivées de Restinclières à dix-sept ans — plus profond qu'en
+    // plantation pure, parce que le blé occupe la surface (Cardinael 2015). Le
+    // fichier wallon : « enracinement très pivotant », « profond et puissant ».
+    // C'est un enracinement **si le sol le permet** : sur le limon riche, le profil
+    // s'arrête à un mètre.
+    racines: { profondeurMaxCm: 400 },
+    // **La juglone est un trait du genre, et l'hybride la porte** : sa propre fiche
+    // wallonne le dit (« malgré son couvert peu dense, le noyer sécrète de la
+    // juglone, une substance fortement allélopathique »). Ce qui n'a pas été
+    // trouvé, c'est une mesure qui lui soit propre : ni teneur comparée aux
+    // parents, ni portée. Les quinze à vingt mètres sont ceux du genre, repris
+    // du commun *(à confirmer)*.
+    allelopathie: { porteeM: 17.5 },
+    // « Assez exigeant en chaleur » pour l'hybride comme pour le commun (fichier
+    // wallon) : la température de démarrage du commun est reprise.
+    tBaseCroissanceC: 8,
+    // « Exigeant tant d'un point de vue hydrique que trophique, bien que plus
+    // plastique que ses deux espèces parents » (fichier wallon) ; même besoin
+    // en azote et phosphore pour les trois noyers (Coello 2013). Repris.
+    azote: { demandeRelative: 0.9, fixateur: false },
+    // Fichier wallon : maturité sexuelle à 15-20 ans (la borne basse) ;
+    // longévité 200-300 ans (la borne basse) — la même que celle du commun, que
+    // le commun du moteur ne porte pas (150). Fertile : ses noix tombent et
+    // lèvent, mais ce sont des hybrides de seconde génération, hétérogènes,
+    // dont la fiche wallonne déconseille l'usage — la même dissémination et le
+    // même taux de semis que le commun, repris *(à confirmer)*.
+    regeneration: { maturiteAns: 15, longeviteAns: 200, dissemination: "geai", semisParAn: 0.5 },
+    // « Décomposition rapide » de la fane (fichier wallon) : rien qui le distingue
+    // du commun, dont la litière est reprise.
+    litiere: { cnRatio: 35, calciumMgG: 14 },
+    // **Tardif**, et c'est ce que l'agroforesterie lui demande : les trois variétés
+    // « débourrent suffisamment tard pour échapper à la plupart des gelées
+    // tardives du printemps » (MAA 2024), et Restinclières le choisit pour son
+    // débourrement tardif (Heim 2023). Aucune date mesurée, et une source
+    // discorde : le fichier wallon donne sa foliation de mi-avril à fin octobre,
+    // celle du commun de mi-mai à mi-octobre. Le calendrier du commun est repris,
+    // et le désaccord reste ouvert *(à confirmer)*.
+    phenologie: { debourrementDJ: 290, seuilJourH: 13.5, besoinFroidSemaines: 14 },
+    // Prix du commun repris *(à calibrer)*.
+    economie: { prixPlantEur: 15 },
+    // Infradensité : **aucune mesure de l'hybride**, ni de *J. major*, au GWDD ;
+    // le commun y vaut 0,56 (trois mesures), le noir 0,51 (une seule). Le
+    // fichier wallon dit son bois « très similaire » à celui des parents,
+    // « mi-lourd, mi-dur » : la valeur du commun est reprise. Prix du commun
+    // repris *(à calibrer)*. **Il rejette de souche**, et vigoureusement jeune —
+    // « possibilité de rattraper une plantation par recépage » (fichier wallon ;
+    // la fiche CNPF des noyers à bois donne le même geste).
+    bois: { densite: 0.56, prixOeuvreEurM3: 600, rejetteDeSouche: true },
+    // **Ni `fruits` ni `floraison`** : il est planté pour le bois, et rien ne se
+    // récolte sur lui. Anémophile comme le commun, il n'offre rien aux
+    // pollinisateurs ; sans récolte, le moteur ne suit pas sa fleur (la règle
+    // du hêtre et du frêne).
+    //
+    // Un forestier, pas un fruitier : l'exigence minérale est la référence
+    // forestière, celle du frêne. Le commun porte celle d'un fruitier dont on
+    // exporte la récolte, qui n'est pas le cas ici.
+    exigenceMinerale: 1,
+    mycorhize: "arbusculaire",
+    // Les mêmes maladies que le commun, « mais beaucoup moins fréquentes »
+    // (Coello 2013 ; l'anthracnose « peu observée », MAA 2024). Moins sensible,
+    // donc, mais d'aucun nombre : valeur du commun reprise *(à confirmer)*.
+    ravageurs: { sensibilite: 0.4 },
+    // Même grille wallonne pour les deux noyers : abroutissement moyen,
+    // écorcement moyen, frottis fort. Repris du commun.
+    gibier: { appetence: 0.4 },
+    // Aucune source sur le feu : valeurs du commun reprises *(à confirmer)*.
+    feu: { inflammabilite: 0.35, resistanceEcorce: 0.2, rejetteApresFeu: false },
+    /**
+     * Ses noix tombent et se mangent — « les noix sont une source d'alimentation
+     * pour la faune » — mais moins régulièrement que celles du commun : une
+     * fructification tous les **deux à trois ans** contre un à deux (fichier
+     * wallon). La borne haute, comme le commun porte la sienne. La quantité,
+     * elle, n'est publiée nulle part : celle du commun est reprise
+     * *(à confirmer)*.
+     */
+    semences: { kgParM2HouppierAn: 0.06, periodeAns: 3, facteurAnneePleine: 1.4 },
+    sources: [
+      FEE_HYBRIDE,
+      EHRING_2011,
+      ALETA_2003,
+      HEIM_2023,
+      CARDINAEL_2015,
+      MAA_2024,
+      COELLO_2013,
+      GWDD_2009,
+    ],
   },
 ];
 
