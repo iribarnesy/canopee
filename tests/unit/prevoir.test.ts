@@ -3,6 +3,7 @@ import {
   applyAction,
   ecorceRecoltable,
   type GameAction,
+  OVERDRAFT_LIMIT_EUR,
   prevoirAction,
 } from "../../src/engine/actions";
 import { syntheticYear, type WeekWeather } from "../../src/engine/meteo";
@@ -589,5 +590,55 @@ describe("prevoirAction : répondre sans rien changer", () => {
       }
     }
     expect(ecarts).toEqual([]);
+  });
+});
+
+/**
+ * **La garde de découvert ne connaît pas le geste** (#350).
+ *
+ * Six gestes refusaient pour découvert en « écologie seule », alors que
+ * `EconomyState.active` promet le contraire ; trois ne le vérifiaient jamais,
+ * et une protection posée à −19 999 € menait à la faillite. Chaque geste avait
+ * sa garde, et elles avaient divergé.
+ *
+ * L'essai vit ici parce que cette table est la seule qui fasse **travailler**
+ * chaque type d'action, et il ne demande à aucun geste de déclarer s'il coûte :
+ * il le mesure. Chaque cas est joué une fois librement, ce qu'il a dépensé est
+ * lu, puis il est rejoué avec une trésorerie posée pour que cette dépense
+ * franchisse le découvert de moitié. Économie active, tout geste qui dépense
+ * doit le dire et ne pas laisser moins de −20 000 € ; économie coupée, aucun
+ * ne doit le dire. Un geste qui rapporte n'est jamais refusé pour l'argent.
+ */
+describe("la garde de découvert est la même pour tous les gestes (#350)", () => {
+  it("économie active, elle refuse toute dépense qui franchirait le découvert ; coupée, aucune", () => {
+    const fautes: string[] = [];
+    for (const [type, cas] of Object.entries(CAS)) {
+      for (const k of cas) {
+        if (k.attendu !== "travail") continue;
+        const libre = applyAction(k.state, k.action);
+        const depense = k.state.economy.treasuryEur - libre.state.economy.treasuryEur;
+        const tresorerie = OVERDRAFT_LIMIT_EUR + Math.max(0, depense) / 2;
+        for (const active of [true, false]) {
+          const s = {
+            ...k.state,
+            economy: { ...k.state.economy, treasuryEur: tresorerie, active },
+          };
+          const r = applyAction(s, k.action);
+          const refuse = r.refusals.some((x) => x.reason.startsWith("découvert plafonné"));
+          const mode = active ? "active" : "coupée";
+          if (refuse !== (active && depense > 0)) {
+            fautes.push(
+              `${type} — « ${k.nom} », économie ${mode}, dépense ${depense.toFixed(2)} € : ${refuse ? "refusé" : "accepté"}`,
+            );
+          }
+          if (active && r.state.economy.treasuryEur < OVERDRAFT_LIMIT_EUR) {
+            fautes.push(
+              `${type} — « ${k.nom} » : ${r.state.economy.treasuryEur.toFixed(2)} € laissés`,
+            );
+          }
+        }
+      }
+    }
+    expect(fautes).toEqual([]);
   });
 });
