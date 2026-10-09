@@ -10,7 +10,12 @@
 import { describe, expect, it } from "vitest";
 import { serieMeteoPour } from "../../src/data/meteo";
 import type { GameAction } from "../../src/engine/actions";
-import { applyAction, estGesteSurArbres, PROTECTION_EUR } from "../../src/engine/actions";
+import {
+  applyAction,
+  estGesteSurArbres,
+  PROTECTION_EUR,
+  VENAISON_EUR_PAR_TETE,
+} from "../../src/engine/actions";
 import { advanceWeek } from "../../src/engine/game";
 import {
   aPorteeDeDent,
@@ -304,6 +309,31 @@ describe("les trois façons de se protéger du gibier, et ce qu'elles coûtent",
     expect(state.pressionGibier).toBeLessThan(0.6);
     // Dix-sept journées de chasse dans l'année : ce n'est pas gratuit.
     expect(state.economy.hoursUsedYear).toBeGreaterThan(100);
+  });
+
+  it("la chasse ne rapporte que les têtes qu'elle prend (#349)", () => {
+    // Une journée forfaitaire valait 120 € : sept par semaine rapportaient
+    // 43 680 € par an sur un hectare qui ne porte pas un chevreuil entier.
+    const station: Station = { ...FRICHE_LIMON.station, coteM: 100, gibierParHa: 0.3 };
+    let state = createGameState(station, rngStateFromSeed(3));
+    const depart = state.economy.treasuryEur;
+    const recettes: number[] = [];
+    for (let i = 0; i < 7; i++) {
+      const avant = state.economy.treasuryEur;
+      state = applyAction(state, { type: "chasser", week: 1 }).state;
+      recettes.push(state.economy.treasuryEur - avant);
+    }
+    // Quatre journées vident la parcelle ; les trois suivantes ne trouvent rien.
+    expect(state.pressionGibier).toBe(0);
+    expect(recettes.slice(4)).toEqual([0, 0, 0]);
+    // Et le tout ne vaut que ce que l'hectare portait : 0,3 tête.
+    expect(state.economy.treasuryEur - depart).toBeCloseTo(0.3 * VENAISON_EUR_PAR_TETE, 6);
+
+    // Sans gibier dans le paysage, la même journée coûte son temps et ne rend rien.
+    const desert = createGameState({ ...station, gibierParHa: 0 }, rngStateFromSeed(3));
+    const vide = applyAction(desert, { type: "chasser", week: 1 }).state;
+    expect(vide.economy.treasuryEur).toBe(desert.economy.treasuryEur);
+    expect(vide.economy.hoursUsedWeek).toBeGreaterThan(desert.economy.hoursUsedWeek);
   });
 
   it("la clôture, elle, est totale : derrière, plus une dent", () => {

@@ -272,8 +272,21 @@ export const TROGNE_HAUTEUR_M = 2;
 export const TROGNE_HEURES = 1.2;
 /** Une journée de chasse : le temps d'un affût et d'une battue *(à calibrer)*. */
 export const CHASSE_HEURES = 8;
-/** Ce que rapporte la venaison d'une journée, € *(à calibrer)*. */
-export const CHASSE_RECETTE_EUR = 120;
+/**
+ * Ce que vaut un cervidé abattu, € par tête (« équivalent chevreuil », l'unité
+ * de `gibierParHa`). La venaison de chasse se cède en carcasse entière, sous
+ * la peau, à un prix de dédommagement : 1 à 2 € le kilo pour le sanglier (FDC
+ * du Cher, *Pleinchamp*, 28 novembre 2025), autour de 2 € pour le chevreuil
+ * (plateforme « Gibier pour tous », *à confirmer*, relevé dans une reprise de
+ * presse non datée). Un chevreuil pèse 17 à 34 kg vif (fiche espèce de l'OFB) ;
+ * vidé, environ les trois quarts, le rapport que donne le même article pour
+ * le sanglier (55 kg plein, 40 kg vidé). Un chevreuil de 20 kg vif fait donc
+ * 15 kg de carcasse, à 2 € le kilo : 30 € *(à confirmer)*.
+ *
+ * C'est le prix d'une carcasse, pas celui d'un droit de chasse : le geste est
+ * celui du joueur qui chasse lui-même, pas d'un propriétaire qui loue.
+ */
+export const VENAISON_EUR_PAR_TETE = 30;
 /** Grillage à gibier de 2 m posé, € par mètre de périmètre *(à calibrer)*. */
 export const CLOTURE_EUR_M = 14;
 /** Pose : creuser, tendre, ancrer — h par mètre de périmètre. */
@@ -389,7 +402,8 @@ export interface EconomyState {
    * payer ses plants. Y répondre en devant d'abord tenir une trésorerie n'ajoute
    * pas de réalisme, ça ajoute une contrainte hors sujet.
    *
-   * Économie désactivée : plus de découvert refusé, plus de faillite. Le compte
+   * Économie désactivée : plus de découvert refusé (`decouvertDepasse` lit ce
+   * champ, et c'est la seule garde), plus de faillite. Le compte
    * continue de tourner et reste **affiché** — savoir ce qu'aurait coûté une
    * conduite est instructif même quand on ne la paie pas — mais il ne bloque
    * plus rien.
@@ -1057,6 +1071,36 @@ function refuse(week: number, action: GameAction["type"], reason: string): Actio
 }
 
 /**
+ * **La garde de découvert, la seule** (#350).
+ *
+ * Une banque ne refuse pas un geste, elle refuse de le **payer**. La règle tient
+ * donc en une ligne et ne connaît aucun geste : économie active, ce qui ferait
+ * baisser la trésorerie ne peut pas la laisser sous le découvert autorisé.
+ * Une recette n'est jamais refusée, même à découvert ; l'économie coupée ne
+ * refuse rien (`EconomyState.active`).
+ *
+ * Chaque geste portait la sienne, et elles avaient divergé : six refusaient
+ * encore en « écologie seule », trois ne vérifiaient rien — une protection
+ * posée à −19 999 € menait à la faillite la semaine suivante. `applyAction` la
+ * pose désormais sur **tous** les gestes, d'après ce qu'ils ont réellement
+ * dépensé : un geste neuf n'a rien à écrire pour en être. Les deux gestes qui
+ * achètent élément par élément (planter, protéger) la consultent aussi dans
+ * leur boucle, pour s'arrêter au découvert au lieu de tout refuser.
+ */
+export function decouvertDepasse(
+  economie: Pick<EconomyState, "active" | "treasuryEur">,
+  tresorerieApresEur: number,
+): boolean {
+  return (
+    economie.active &&
+    tresorerieApresEur < economie.treasuryEur &&
+    tresorerieApresEur < OVERDRAFT_LIMIT_EUR
+  );
+}
+
+const DECOUVERT_PLAFONNE = "découvert plafonné";
+
+/**
  * Pourquoi un geste qui veut un arbre **vivant** ne trouve pas celui qu'on lui
  * désigne.
  *
@@ -1092,8 +1136,10 @@ function applyPlanter(
   const heuresParPlant = PLANT_HOURS + (action.avecManchon ? PROTECTION_HEURES : 0);
   const euroParPlant = espece.economie.prixPlantEur + (action.avecManchon ? PROTECTION_EUR : 0);
   for (const pos of action.positions) {
-    if (state.economy.active && treasuryEur - euroParPlant < OVERDRAFT_LIMIT_EUR) {
-      refusals.push(refuse(action.week, "planter", `découvert plafonné (${planted} plantés)`));
+    if (decouvertDepasse({ ...state.economy, treasuryEur }, treasuryEur - euroParPlant)) {
+      refusals.push(
+        refuse(action.week, "planter", `${DECOUVERT_PLAFONNE} (plants posés : ${planted})`),
+      );
       break;
     }
     if (pos.x < 0 || pos.x >= state.station.coteM || pos.y < 0 || pos.y >= state.station.coteM) {
@@ -1104,6 +1150,13 @@ function applyPlanter(
     // un potet, un chêne oui, et entre les deux ça se dose (#154). Le message
     // nomme donc l'essence qui bloque — `prevoirAction` (#139) le porte jusque
     // sous le curseur, où « un arbre vivant » n'aidait personne.
+    //
+    // **L'essence va entre parenthèses, et c'est de la grammaire** (#339).
+    // « trop proche d'un aubépine vivant » : le moteur ne connaît pas le genre
+    // des essences, et n'a pas à le connaître. C'est « tige » qui porte
+    // l'accord, au féminin quelle que soit l'espèce, et l'essence suit en
+    // apposition — la tournure que le jeu a déjà prise pour les arbres suivis
+    // (`raisonDesMorts`), et qui n'a pas non plus d'élision à deviner.
     const gene = trees.find((t) => {
       if (!t.alive) return false;
       const dx = t.x - pos.x;
@@ -1116,7 +1169,7 @@ function applyPlanter(
         refuse(
           action.week,
           "planter",
-          `trop proche d'un ${getEspece(gene.especeId).nom.toLowerCase()} vivant (< ${rayonEncombrement(gene.especeId).toFixed(1)} m)`,
+          `trop proche d'une tige vivante (${getEspece(gene.especeId).nom.toLowerCase()}, < ${rayonEncombrement(gene.especeId).toFixed(1)} m)`,
         ),
       );
       continue;
@@ -1640,9 +1693,6 @@ function applyChauler(
   const part = partMecanisable(state.trees, action);
   const cost = areaM2 * (LIME_EUR_M2 + part * COUT_ENGIN_EUR_M2);
   const hours = areaM2 * (part * LIME_HOURS_M2_ENGIN + (1 - part) * LIME_HOURS_M2_MAIN);
-  if (state.economy.treasuryEur - cost < OVERDRAFT_LIMIT_EUR) {
-    return { state, refusals: [refuse(action.week, "chauler", "découvert plafonné")] };
-  }
   // Le chaulage n'écrit plus le pH : il apporte des **bases**, et le pH suit au
   // tick suivant (bases.ts). Ce n'est pas un détour — c'est ce qui fait qu'un
   // podzol sableux, dont le complexe est petit, monte beaucoup pour la même
@@ -1737,9 +1787,6 @@ function applyFertiliser(
   // les facture en fin de semaine. Ces trois gestes de culture — semer,
   // fertiliser, moissonner — ont été écrits pendant que la règle changeait sur
   // `main` ; ils suivent la nouvelle, comme les quinze autres.
-  if (state.economy.treasuryEur - cost < OVERDRAFT_LIMIT_EUR) {
-    return { state, refusals: [refuse(action.week, "fertiliser", "découvert plafonné")] };
-  }
 
   const soil = { ...state.soil };
   if (mineral) {
@@ -1818,9 +1865,6 @@ function applySemer(state: GameState, action: Extract<GameAction, { type: "semer
   const part = partMecanisable(state.trees, action);
   const hours = areaHa * culture.heuresSemisHa * (part + (1 - part) * 20);
   const cost = areaHa * culture.semenceEurHa + areaM2 * part * COUT_ENGIN_EUR_M2;
-  if (state.economy.treasuryEur - cost < OVERDRAFT_LIMIT_EUR) {
-    return { state, refusals: [refuse(action.week, "semer", "découvert plafonné")] };
-  }
   const herbeEmprise = state.soil.herbeEmprise.slice();
   const cellules = cellulesDeLaZone(state.station.coteM, action);
   // **ce que le semis pose, c'est la place libre.** Un blé semé dans une
@@ -2267,12 +2311,6 @@ function applyElaguer(
 }
 
 /**
- * Chasser. Le prélèvement fait reculer la pression… quelques mois. Sur un
- * hectare pris dans un paysage qui en porte cinquante, le vide se comble par
- * immigration : c'est pour cette raison que la régulation du gibier se décide
- * à l'échelle d'un massif et pas d'une parcelle.
- */
-/**
  * Étêter. Ce n'est ni un recépage (on garde le tronc) ni un élagage (on coupe
  * la charpente) : c'est une troisième chose, qui produit du bois et du
  * fourrage tous les dix ans sans jamais tuer l'arbre, et qui le fait vivre
@@ -2367,16 +2405,34 @@ function applyTrogner(
   };
 }
 
+/**
+ * Chasser. Le prélèvement fait reculer la pression… quelques mois. Sur un
+ * hectare pris dans un paysage qui en porte cinquante, le vide se comble par
+ * immigration : c'est pour cette raison que la régulation du gibier se décide
+ * à l'échelle d'un massif et pas d'une parcelle.
+ *
+ * **On ne vend que ce qu'on a pris.** Les cervidés présents sont la densité du
+ * paysage, la part que la pression en laisse sur la parcelle, et la surface :
+ * c'est le nombre que le broutage et les frottis utilisent déjà. La journée
+ * en retire `EFFET_CHASSE` de la pression, et rapporte la venaison de ces
+ * têtes-là. Une chasse forfaitaire rapportait 120 € sans condition : sept par
+ * semaine valaient 43 680 € par an sur un hectare qui porte 0,14 chevreuil
+ * (#349). Une parcelle sans gibier, ou déjà vidée la veille, ne rapporte rien.
+ */
 // Plus rien à lire dans l'action : la chasse ne porte ni cible ni quantité, et
 // depuis #133 la semaine ne la refuse plus. Le paramètre a donc disparu.
 function applyChasser(state: GameState): ApplyResult {
+  const pressionGibier = Math.max(0, state.pressionGibier - EFFET_CHASSE);
+  const surfaceHa = (state.station.coteM * state.station.coteM) / 10_000;
+  const tetesPrises =
+    (state.pressionGibier - pressionGibier) * state.station.gibierParHa * surfaceHa;
   return {
     state: {
       ...state,
-      pressionGibier: Math.max(0, state.pressionGibier - EFFET_CHASSE),
+      pressionGibier,
       economy: {
         ...state.economy,
-        treasuryEur: state.economy.treasuryEur + CHASSE_RECETTE_EUR,
+        treasuryEur: state.economy.treasuryEur + tetesPrises * VENAISON_EUR_PAR_TETE,
         hoursUsedWeek: state.economy.hoursUsedWeek + CHASSE_HEURES,
         hoursUsedYear: state.economy.hoursUsedYear + CHASSE_HEURES,
       },
@@ -2397,9 +2453,6 @@ function applyCloturer(
   const perimetreM = perimetreMDeLaZone(action);
   const cost = perimetreM * CLOTURE_EUR_M;
   const hours = perimetreM * CLOTURE_HEURES_M;
-  if (state.economy.treasuryEur - cost < OVERDRAFT_LIMIT_EUR) {
-    return { state, refusals: [refuse(action.week, "cloturer", "découvert plafonné")] };
-  }
   const cloture = state.soil.cloture.slice();
   const dims = { widthM: state.station.coteM, heightM: state.station.coteM };
   const closes: number[] = [];
@@ -2439,9 +2492,6 @@ function applyLabourer(
   const areaM2 = aireM2DeLaZone(action) * part;
   const hours = areaM2 * LABOUR_HOURS_M2;
   const cost = areaM2 * LABOUR_EUR_M2;
-  if (state.economy.treasuryEur - cost < OVERDRAFT_LIMIT_EUR) {
-    return { state, refusals: [refuse(action.week, "labourer", "découvert plafonné")] };
-  }
 
   const humusCG = state.soil.humusCG.slice();
   const mineralNG = state.soil.mineralNG.slice();
@@ -2572,7 +2622,14 @@ function applyProteger(
   const refusals: ActionRefusal[] = [];
   let { treasuryEur, hoursUsedWeek, hoursUsedYear } = state.economy;
   const trees = [...state.trees];
+  let proteges = 0;
   for (const id of action.treeIds) {
+    if (decouvertDepasse({ ...state.economy, treasuryEur }, treasuryEur - PROTECTION_EUR)) {
+      refusals.push(
+        refuse(action.week, "proteger", `${DECOUVERT_PLAFONNE} (plants protégés : ${proteges})`),
+      );
+      break;
+    }
     const idx = trees.findIndex((t) => t.id === id && t.alive);
     const tree = idx >= 0 ? trees[idx] : undefined;
     if (!tree) {
@@ -2594,6 +2651,7 @@ function applyProteger(
     hoursUsedYear += PROTECTION_HEURES;
     treasuryEur -= PROTECTION_EUR;
     trees[idx] = { ...tree, protege: true };
+    proteges++;
   }
   return {
     state: {
@@ -2627,7 +2685,12 @@ function applyReceper(
     const espece = getEspece(tree.especeId);
     if (!espece.bois.rejetteDeSouche) {
       refusals.push(
-        refuse(action.week, "receper", `${espece.nom} ne rejette pas de souche : il en mourrait`),
+        // « il en mourrait » ne valait que pour un nom masculin (#339).
+        refuse(
+          action.week,
+          "receper",
+          `${espece.nom} ne rejette pas de souche : la tige en mourrait`,
+        ),
       );
       continue;
     }
@@ -2818,6 +2881,16 @@ export function applyAction(state: GameState, action: GameAction): ApplyResult {
   if (state.economy.active && state.economy.bankrupt) {
     return { state, refusals: [refuse(action.week, action.type, "faillite")] };
   }
+  // Le geste se joue, puis on regarde ce qu'il a coûté : la garde de découvert
+  // ne connaît que la trésorerie avant et après, pas le geste (`decouvertDepasse`).
+  const joue = appliquerLeGeste(state, action);
+  if (decouvertDepasse(state.economy, joue.state.economy.treasuryEur)) {
+    return { state, refusals: [refuse(action.week, action.type, DECOUVERT_PLAFONNE)] };
+  }
+  return joue;
+}
+
+function appliquerLeGeste(state: GameState, action: GameAction): ApplyResult {
   switch (action.type) {
     case "planter":
       return applyPlanter(state, action);
@@ -2830,9 +2903,6 @@ export function applyAction(state: GameState, action: GameAction): ApplyResult {
       if (contrat === "saisonnier") {
         const semaines = Math.max(1, Math.round(action.semaines ?? 4));
         const cost = semaines * SEASONAL_EUR_WEEK;
-        if (state.economy.treasuryEur - cost < OVERDRAFT_LIMIT_EUR) {
-          return { state, refusals: [refuse(action.week, "embaucher", "découvert plafonné")] };
-        }
         return {
           state: {
             ...state,
@@ -2850,9 +2920,6 @@ export function applyAction(state: GameState, action: GameAction): ApplyResult {
         };
       }
       // CDI : la première semaine se paie à l'embauche, le reste chaque semaine.
-      if (state.economy.treasuryEur - SALARY_EUR_WEEK < OVERDRAFT_LIMIT_EUR) {
-        return { state, refusals: [refuse(action.week, "embaucher", "découvert plafonné")] };
-      }
       return {
         state: {
           ...state,
@@ -2879,7 +2946,9 @@ export function applyAction(state: GameState, action: GameAction): ApplyResult {
           ],
         };
       }
-      // Indemnités dues même en difficulté : licencier n'est jamais refusé.
+      // Les indemnités sont une dépense comme une autre, et la garde de
+      // découvert les traite comme telles (#350) : à deux pas du plafond, on
+      // vend d'abord, on licencie ensuite.
       return {
         state: {
           ...state,
