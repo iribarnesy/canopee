@@ -272,8 +272,21 @@ export const TROGNE_HAUTEUR_M = 2;
 export const TROGNE_HEURES = 1.2;
 /** Une journée de chasse : le temps d'un affût et d'une battue *(à calibrer)*. */
 export const CHASSE_HEURES = 8;
-/** Ce que rapporte la venaison d'une journée, € *(à calibrer)*. */
-export const CHASSE_RECETTE_EUR = 120;
+/**
+ * Ce que vaut un cervidé abattu, € par tête (« équivalent chevreuil », l'unité
+ * de `gibierParHa`). La venaison de chasse se cède en carcasse entière, sous
+ * la peau, à un prix de dédommagement : 1 à 2 € le kilo pour le sanglier (FDC
+ * du Cher, *Pleinchamp*, 28 novembre 2025), autour de 2 € pour le chevreuil
+ * (plateforme « Gibier pour tous », *à confirmer*, relevé dans une reprise de
+ * presse non datée). Un chevreuil pèse 17 à 34 kg vif (fiche espèce de l'OFB) ;
+ * vidé, environ les trois quarts, le rapport que donne le même article pour
+ * le sanglier (55 kg plein, 40 kg vidé). Un chevreuil de 20 kg vif fait donc
+ * 15 kg de carcasse, à 2 € le kilo : 30 € *(à confirmer)*.
+ *
+ * C'est le prix d'une carcasse, pas celui d'un droit de chasse : le geste est
+ * celui du joueur qui chasse lui-même, pas d'un propriétaire qui loue.
+ */
+export const VENAISON_EUR_PAR_TETE = 30;
 /** Grillage à gibier de 2 m posé, € par mètre de périmètre *(à calibrer)*. */
 export const CLOTURE_EUR_M = 14;
 /** Pose : creuser, tendre, ancrer — h par mètre de périmètre. */
@@ -2260,12 +2273,6 @@ function applyElaguer(
 }
 
 /**
- * Chasser. Le prélèvement fait reculer la pression… quelques mois. Sur un
- * hectare pris dans un paysage qui en porte cinquante, le vide se comble par
- * immigration : c'est pour cette raison que la régulation du gibier se décide
- * à l'échelle d'un massif et pas d'une parcelle.
- */
-/**
  * Étêter. Ce n'est ni un recépage (on garde le tronc) ni un élagage (on coupe
  * la charpente) : c'est une troisième chose, qui produit du bois et du
  * fourrage tous les dix ans sans jamais tuer l'arbre, et qui le fait vivre
@@ -2360,16 +2367,34 @@ function applyTrogner(
   };
 }
 
+/**
+ * Chasser. Le prélèvement fait reculer la pression… quelques mois. Sur un
+ * hectare pris dans un paysage qui en porte cinquante, le vide se comble par
+ * immigration : c'est pour cette raison que la régulation du gibier se décide
+ * à l'échelle d'un massif et pas d'une parcelle.
+ *
+ * **On ne vend que ce qu'on a pris.** Les cervidés présents sont la densité du
+ * paysage, la part que la pression en laisse sur la parcelle, et la surface :
+ * c'est le nombre que le broutage et les frottis utilisent déjà. La journée
+ * en retire `EFFET_CHASSE` de la pression, et rapporte la venaison de ces
+ * têtes-là. Une chasse forfaitaire rapportait 120 € sans condition : sept par
+ * semaine valaient 43 680 € par an sur un hectare qui porte 0,14 chevreuil
+ * (#349). Une parcelle sans gibier, ou déjà vidée la veille, ne rapporte rien.
+ */
 // Plus rien à lire dans l'action : la chasse ne porte ni cible ni quantité, et
 // depuis #133 la semaine ne la refuse plus. Le paramètre a donc disparu.
 function applyChasser(state: GameState): ApplyResult {
+  const pressionGibier = Math.max(0, state.pressionGibier - EFFET_CHASSE);
+  const surfaceHa = (state.station.coteM * state.station.coteM) / 10_000;
+  const tetesPrises =
+    (state.pressionGibier - pressionGibier) * state.station.gibierParHa * surfaceHa;
   return {
     state: {
       ...state,
-      pressionGibier: Math.max(0, state.pressionGibier - EFFET_CHASSE),
+      pressionGibier,
       economy: {
         ...state.economy,
-        treasuryEur: state.economy.treasuryEur + CHASSE_RECETTE_EUR,
+        treasuryEur: state.economy.treasuryEur + tetesPrises * VENAISON_EUR_PAR_TETE,
         hoursUsedWeek: state.economy.hoursUsedWeek + CHASSE_HEURES,
         hoursUsedYear: state.economy.hoursUsedYear + CHASSE_HEURES,
       },
