@@ -611,6 +611,22 @@ const CROXTON_2004 =
  */
 const IGN_DUPOUEY_2002 =
   "IGN d'après Dupouey 2002 (note non publiée), infradensités des essences françaises de taillis, tMS/m³ — table reproduite en annexe 3 de CNPF 2020, Méthode conversion de taillis en futaie sur souches v2 (label bas-carbone), et utilisée par l'inventaire national des GES";
+/**
+ * **sources de la tolérance des noyers à leur propre juglone** (#375). Aucune ne la
+ * **chiffre** : il n'existe pas de bioessai qui expose un semis de noyer à la
+ * juglone, ceux qui existent testent les essences qu'on voudrait planter **avec**
+ * le noyer (Rietveld 1983 : seize espèces, aucune n'est un *Juglans*). Toutes la
+ * **qualifient**, et dans le même sens : chez le noyer, la molécule est tenue sous
+ * une forme non toxique, et celle qui revient dans ses racines y est détoxiquée.
+ */
+const RIETVELD_1983 =
+  "Rietveld 1983, Allelopathic effects of juglone on germination and growth of several herbaceous and woody species, Journal of Chemical Ecology 9 : 295-308 (USDA Forest Service, Rhinelander)";
+const CODER_2017 =
+  "Coder 2017, Black Walnut Allelopathy: Tree Chemical Warfare, Warnell School of Forestry & Natural Resources, University of Georgia, publication WSFNR-17-06 — synthèse de vulgarisation";
+const MEYER_NIFA =
+  "Meyer (Purdue University), Investigation of metabolic mechanisms underlying juglone resistance, projet USDA NIFA 2022-2024 — énoncé du projet, pas un résultat";
+const JARVIS_SHEAN_2017 =
+  "Jarvis-Shean 2017, Considerations for Replanting Walnut Orchards, Sacramento Valley Orchard Source (UC Cooperative Extension, Californie)";
 const GWDD_2009 =
   "Zanne, Lopez-Gonzalez, Coomes, Ilic, Jansen, Lewis, Miller, Swenson, Wiemann & Chave 2009, Global Wood Density Database, Dryad doi:10.5061/dryad.234 (exemplaire consulté : miroir Zenodo 13322441) — « oven dry mass/fresh volume », moyenne des mesures de l'espèce";
 
@@ -978,6 +994,28 @@ export const ESPECES_V0: readonly EspeceV0[] = [
      * chose qu'on apprend en plantant un verger à côté.
      */
     allelopathie: { porteeM: 17.5 },
+    /**
+     * **Et il ne la subit pas** (#375). Faute de ce champ, la sensibilité médiane
+     * s'appliquait aux noyers eux-mêmes : un noyer à cinq mètres d'un autre — un
+     * rang d'agroforesterie, une plantation à 6 × 6 — avait sa croissance
+     * plafonnée à la moitié par la juglone de ses voisins.
+     *
+     * Dans les tissus vivants du noyer, la juglone est tenue sous sa forme
+     * réduite, l'hydrojuglone, incolore et non toxique ; elle ne s'oxyde qu'à
+     * l'air ou au contact des racines d'**autres** plantes (Rietveld 1983). Celle
+     * qui revient dans une racine de noyer « est aussitôt rendue non toxique et
+     * stockée » (Coder 2017), et c'est l'hypothèse de départ d'un programme de
+     * l'USDA qui cherche les gènes du noyer noir « empêchant l'autotoxicité »
+     * (Meyer, Purdue, 2022-2024). Aucune source ne **chiffre** cette tolérance :
+     * elles la qualifient, et zéro est la traduction d'« indifférent ».
+     *
+     * L'autotoxicité partielle qu'on pourrait opposer — un jeune noyer replanté
+     * dans un sol de noyeraie pousse mal — existe, mais les vergers californiens
+     * l'attribuent aux organismes du sol accumulés sous les vieux arbres, et à
+     * aucun pathogène en particulier ; la juglone n'y figure pas (Jarvis-Shean
+     * 2017).
+     */
+    sensibiliteAllelopathie: 0,
     exigenceMinerale: 2.5,
     mycorhize: "arbusculaire",
     ravageurs: { sensibilite: 0.4 },
@@ -988,7 +1026,7 @@ export const ESPECES_V0: readonly EspeceV0[] = [
      * de verger avant d'être un fait de forêt *(à confirmer)*.
      */
     semences: { kgParM2HouppierAn: 0.06, periodeAns: 2, facteurAnneePleine: 1.4 },
-    sources: [ATLAS, GWDD_2009],
+    sources: [ATLAS, GWDD_2009, RIETVELD_1983, CODER_2017, MEYER_NIFA, JARVIS_SHEAN_2017],
   },
   {
     id: "malus_domestica",
@@ -2268,11 +2306,12 @@ export const ESPECES_V0: readonly EspeceV0[] = [
     // parents, ni portée. Les quinze à vingt mètres sont ceux du genre, repris
     // du commun *(à confirmer)*.
     //
-    // **Et il la subit** : ni lui ni le commun ne déclarent de sensibilité, la
-    // médiane s'applique, et un noyer planté à cinq mètres d'un autre voit sa
-    // croissance plafonnée à la moitié. Aucune source du dépôt ne dit ce que
-    // vaut la juglone pour un noyer : question ouverte, pas tranchée ici (#375).
     allelopathie: { porteeM: 17.5 },
+    // **Et il ne la subit pas**, comme le commun (#375) : la juglone est tenue sous
+    // forme non toxique dans les tissus du noyer et détoxiquée quand elle y
+    // revient (Rietveld 1983, Coder 2017). Les sources parlent du noyer noir et
+    // du genre, pas de l'hybride en propre ; il descend des deux *(à confirmer)*.
+    sensibiliteAllelopathie: 0,
     // « Assez exigeant en chaleur » pour l'hybride comme pour le commun (fichier
     // wallon) : la température de démarrage du commun est reprise.
     tBaseCroissanceC: 8,
@@ -2349,6 +2388,8 @@ export const ESPECES_V0: readonly EspeceV0[] = [
       MAA_2024,
       COELLO_2013,
       GWDD_2009,
+      RIETVELD_1983,
+      CODER_2017,
     ],
   },
 ];
