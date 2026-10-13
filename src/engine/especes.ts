@@ -625,6 +625,11 @@ const CODER_2017 =
   "Coder 2017, Black Walnut Allelopathy: Tree Chemical Warfare, Warnell School of Forestry & Natural Resources, University of Georgia, publication WSFNR-17-06 — synthèse de vulgarisation";
 const MEYER_NIFA =
   "Meyer (Purdue University), Investigation of metabolic mechanisms underlying juglone resistance, projet USDA NIFA 2022-2024 — énoncé du projet, pas un résultat";
+/** **sources des trois traits du commun que sa fiche wallonne contredisait** (#377). */
+const CNPF_NOYERS_2023 =
+  "Le Mesle & Trembleau 2023, Les noyers à bois, fiche essence 4 (2e édition), CNPF Centre-Val de Loire et Île-de-France";
+const ZENELI_2006 =
+  "Zeneli & Kola 2006, Soil physical and chemical characteristics and root system development in a walnut plantation in Northern Albania, Ekológia (Bratislava) 25(4) : 442-449 (Dibra) — résumé seul";
 const JARVIS_SHEAN_2017 =
   "Jarvis-Shean 2017, Considerations for Replanting Walnut Orchards, Sacramento Valley Orchard Source (UC Cooperative Extension, Californie)";
 const GWDD_2009 =
@@ -958,12 +963,24 @@ export const ESPECES_V0: readonly EspeceV0[] = [
     // pH, littérature : PFAF et World Agroforestry : tolère 5,1-8,3, préfère 6,6-7,5 ; la chaux libre ne le limite pas.
     ph: [5, 8.3],
     lumiere: { compensation: 0.2, saturation: 0.75, lai: 2.6, houppierRatio: 0.5, caduc: true },
-    racines: { profondeurMaxCm: 160 }, // pivot profond
+    // **Un pivot de 3,7 m**, mesuré dans une plantation de semis du nord de
+    // l'Albanie, les racines latérales surtout entre 60 et 80 cm (Zeneli & Kola
+    // 2006) ; la fiche wallonne le dit « à enracinement très profond », et donne
+    // 3 à 5 m. La valeur d'avant, 160 cm, n'avait pas de source (#377). C'est
+    // un enracinement **si le sol le permet** : aucun profil du dépôt ne dépasse
+    // 120 cm (#257), et ce que ce nombre change ici, c'est la vitesse à laquelle
+    // un jeune noyer atteint le fond du sien.
+    racines: { profondeurMaxCm: 370 },
     tBaseCroissanceC: 8,
     azote: { demandeRelative: 0.9, fixateur: false },
     // Les noix sont cachées par les corvidés, comme les glands : le même noyau
     // de dispersion, en terrain découvert où l'oiseau les retrouvera.
-    regeneration: { maturiteAns: 12, longeviteAns: 150, dissemination: "geai", semisParAn: 0.5 },
+    //
+    // Longévité : **200 ans**, la borne basse des « 200 - 300 ans » de la fiche
+    // wallonne, que #209 citait déjà sans les reprendre (#377). Elle fixe aussi
+    // la forme de la courbe de croissance (`exposantDeForme`) : un peu plus lente
+    // sous quatre mètres, un peu plus soutenue au-dessus.
+    regeneration: { maturiteAns: 12, longeviteAns: 200, dissemination: "geai", semisParAn: 0.5 },
     litiere: { cnRatio: 35, calciumMgG: 14 },
     // **Le** plus tardif de l'atlas, et ce n'est pas un détail : c'est ce qui lui
     // permet d'échapper aux gels d'avril, et ce qui rend l'agroforesterie au
@@ -972,7 +989,11 @@ export const ESPECES_V0: readonly EspeceV0[] = [
     economie: { prixPlantEur: 15 },
     // Bois précieux : le noyer se vend à la bille, plusieurs fois le chêne.
     // Infradensité : GWDD, moyenne de trois mesures (0,533 à 0,591).
-    bois: { densite: 0.56, prixOeuvreEurM3: 600, rejetteDeSouche: false },
+    // **Il rejette de souche**, et d'autant plus vigoureusement qu'il est jeune :
+    // « possibilité de rattraper une plantation par recépage » (fiche wallonne),
+    // « le recépage des plants est possible en fin d'hiver » (CNPF 2023). La
+    // fiche disait le contraire, sans source (#377).
+    bois: { densite: 0.56, prixOeuvreEurM3: 600, rejetteDeSouche: true },
     // Anémophile : le noyer lâche son pollen au vent, comme le noisetier. Il
     // fleurit après avoir feuillé, donc tard *(atlas)*.
     floraison: { debutDJ: 320, dureeDJ: 100, nectar: 0 },
@@ -1026,7 +1047,17 @@ export const ESPECES_V0: readonly EspeceV0[] = [
      * de verger avant d'être un fait de forêt *(à confirmer)*.
      */
     semences: { kgParM2HouppierAn: 0.06, periodeAns: 2, facteurAnneePleine: 1.4 },
-    sources: [ATLAS, GWDD_2009, RIETVELD_1983, CODER_2017, MEYER_NIFA, JARVIS_SHEAN_2017],
+    sources: [
+      ATLAS,
+      GWDD_2009,
+      FEE_HYBRIDE,
+      CNPF_NOYERS_2023,
+      ZENELI_2006,
+      RIETVELD_1983,
+      CODER_2017,
+      MEYER_NIFA,
+      JARVIS_SHEAN_2017,
+    ],
   },
   {
     id: "malus_domestica",
