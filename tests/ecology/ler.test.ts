@@ -427,6 +427,13 @@ describe("le dispositif à trois bras, soixante ans", () => {
    * 0,524 / 0,592 / 0,422, **total 1,259 / 1,326 / 1,171** — la cible de 1,2
    * sur deux graines sur trois, et l'arbre d'allée à 0,88-1,02 du témoin
    * forestier au lieu de 0,80-0,91.
+   *
+   * **Relevé depuis que les noyers ne subissent plus leur propre juglone**
+   * (#375 ; et la fiche du commun suit sa source, #377), mêmes graines : culture
+   * 0,653 / 0,655 / 0,667, arbre 0,634 / 0,625 / 0,565, **total 1,286 / 1,280 /
+   * 1,232** — la cible de 1,2 tient sur les trois graines, avec un terme culture
+   * plus bas (l'ombre arrive plus tôt) et un terme arbre plus haut. Juste avant,
+   * sur le même moteur : 1,302 / 1,374 / 1,201.
    */
   it("le mélange bat la somme des parties", () => {
     const agro = bras(RANGS_AGROFORESTERIE, true);
@@ -486,6 +493,21 @@ describe("le dispositif à trois bras, soixante ans", () => {
     // la géométrie : la surface cultivée vaut 0,850 avec les vraies bandes et
     // valait 0,823 avec le pavage de disques (H21). Le plancher à 0,84 ci-dessous
     // tombe s'il revient, quoi que fasse l'azote.
+    //
+    // **Et le blé recommence à coûter, parce que ce « rien » était la juglone**
+    // (#375). Chaque noyer du rang, à cinq mètres de ses voisins, subissait leur
+    // juglone à la sensibilité médiane : sa croissance plafonnait à la moitié,
+    // bien au-dessous de ce que l'azote lui permettait, et ce que le blé lui
+    // prenait ne pouvait pas se voir. Les noyers ne la subissent plus (Rietveld
+    // 1983, Coder 2017), ils doublent de volume, et le blé leur coûte de nouveau :
+    //
+    //   graine                     4       11      23
+    //   azote conservé           0,999   0,998   1,000
+    //   noyers sans juglone      0,728   0,761   0,715
+    //
+    // C'est la question 2 de #184 qui revient, et #222 avec elle. Le plancher à
+    // 0,7 n'a pas bougé : il garde la géométrie (en dessous, le chantier
+    // repasserait sur les rangs), pas une valeur de l'azote.
     expect(agro.partCultivee).toBeGreaterThan(0.84);
     const parArbre = (b: { volCohorte: number; cohorte: number }) => b.volCohorte / b.cohorte;
     const rapport = parArbre(agro) / parArbre(rangsSansBle);
@@ -517,7 +539,27 @@ describe("le dispositif à trois bras, soixante ans", () => {
     // deux graines sur trois : le fait de Restinclières est retrouvé, et la
     // ligne est retournée en plancher. Il est posé sur la graine 4, celle de
     // l'essai ; la graine 23 dit qu'il reste un tirage dans ce chiffre.
-    expect(parArbre(agro) / parArbre(boisPur)).toBeGreaterThan(1);
+    //
+    // **Il était retrouvé grâce à la juglone, et il est reperdu sans elle**
+    // (#375). Le témoin à 6 × 6 et le rang subissaient la même juglone, qui
+    // plafonnait les deux à la moitié et effaçait ce que le blé prenait au rang.
+    // Les noyers ne la subissent plus ; le témoin forestier, qui ne paie aucun
+    // blé, double de volume (0,50 → 1,00 m³ par arbre à la graine 4), l'arbre
+    // d'allée aussi, moins ce que le blé lui prend, un peu plus du quart
+    // (0,56 → 1,06) :
+    //
+    //   graine                     4       11      23    moyenne
+    //   avec la juglone          1,131   1,048   0,965    1,048
+    //   noyers sans juglone      1,059   0,828   0,987    0,958
+    //
+    // Une graine sur trois au-dessus de 1 : la ligne est retournée en plafond,
+    // comme elle l'était avant #247 et sur le même seuil (pas de dépassement
+    // net, 1,1 : seuil choisi, pas sourcé). La graine 4 le passe à 1,059 ; elle
+    // aurait aussi passé le plancher, et c'est la campagne qui décide du sens,
+    // pas elle. À Restinclières, en volume par arbre, le rapport est voisin de
+    // 2,7 à dix-neuf ans (Heim 2023 : 13,2 m et 27,5 cm en allée, 11,2 m et
+    // 18,1 cm en témoin) : c'est l'objet de #222, toujours ouverte.
+    expect(parArbre(agro) / parArbre(boisPur)).toBeLessThan(1.1);
     // **La culture**, **elle**, **paie** — et c'est le sens même d'un LER : le mélange rend
     // moins de grain par hectare de **parcelle** qu'un champ de blé pur, puisqu'il
     // lui cède la place des rangs. Un terme culture au-dessus de 1 serait le

@@ -2293,15 +2293,20 @@ export const ESPECES_V0: readonly EspeceV0[] = [
     // à 18 ans, 28 à 25, 41 à 35, 60 cm à la coupe finale vers 50 ans, à
     // 9 × 6 m. Un scénario, pas une mesure.
     //
-    // **Mesuré** (#213, trois graines, limon riche, plants de 2 m), et ce nombre
-    // n'a pas bougé pour l'obtenir : en allée à 100 tiges/ha, 5,1 m et 11,7 cm
-    // à dix ans, 8,4 m et 19,9 cm à vingt, 11,6 m et 27,7 cm à trente — devant
-    // le commun (4,0, 6,1 et 8,1 m), derrière le frêne (6,9, 11,2 et 14,6 m).
-    // Restinclières à dix-neuf ans : 13,2 m et 27,5 cm (Heim 2023) ; le moteur
-    // 8,1 m (−39 %) et 19,1 cm (−30 %). **L'écart ne vient pas de ce nombre** :
-    // chaque noyer pousse dans la juglone de ses voisins et la subit à la
-    // sensibilité médiane, faute d'en déclarer une ; sans elle, 13,2 m et
-    // 31,0 cm (`noyer-hybride.test.ts`).
+    // **Mesuré** (#213, #375 ; trois graines, limon riche, plants de 2 m), et ce
+    // nombre n'a pas bougé pour l'obtenir : en allée à 100 tiges/ha, 8,0 m et
+    // 18,9 cm à dix ans, 13,7 m et 32,0 cm à vingt, 18,7 m et 40,4 cm à trente —
+    // devant le commun (5,9, 9,6 et 12,8 m) et devant le frêne (6,9, 11,2 et
+    // 14,6 m). Restinclières à dix-neuf ans : 13,2 m et 27,5 cm
+    // (Heim 2023) ; le moteur 13,2 m (−0,1 %) et 31,0 cm (+13 %), gardés à 20 %
+    // près par `noyer-hybride.test.ts`. Entre cinq et dix ans, 61 cm/an et
+    // 15 mm/an, contre 78 cm et 8,5 mm en moyenne du réseau allemand (14 mm sur
+    // ses stations au-dessus de la moyenne) : en hauteur un peu dessous, en
+    // diamètre au niveau d'une bonne station.
+    //
+    // À l'entrée de la fiche, le moteur était à 8,1 m et 19,1 cm à dix-neuf ans :
+    // chaque noyer subissait la juglone de ses voisins à la sensibilité médiane,
+    // et sa croissance plafonnait à la moitié. Ce n'était pas ce nombre (#375).
     pousseMaxMAn: 0.8,
     // Le besoin en eau est « fort » pour les trois noyers (Coello 2013), la
     // résistance à la sécheresse **intermédiaire** entre celles des deux parents
