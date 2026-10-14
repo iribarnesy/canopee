@@ -118,7 +118,7 @@ beforeAll(() => {
   const vieux = parcelle(
     LIMON_RICHE,
     [
-      { especeId: "juglans_regia", count: 6 },
+      { especeId: "pinus_sylvestris", count: 6 },
       { especeId: "carpinus_betulus", count: 6 },
       { especeId: "corylus_avellana", count: 6 },
     ],
@@ -129,7 +129,8 @@ beforeAll(() => {
   const vivants = vieux.trees.filter((t) => t.alive);
   const ids = vivants.slice(0, 4).map((t) => t.id);
   // Le charme rejette de souche : trogner et receper ont besoin de lui, le
-  // noyer les refuserait tous les deux.
+  // pin les refuserait tous les deux. (C'était le noyer, jusqu'à ce que sa
+  // fiche suive sa source : il rejette de souche, #377.)
   const charmes = vivants
     .filter((t) => t.especeId === "carpinus_betulus")
     .slice(0, 3)
@@ -420,7 +421,7 @@ beforeAll(() => {
         attendu: "travail",
       },
       {
-        nom: "des noyers, qui ne rejettent pas",
+        nom: "des pins, qui ne rejettent pas",
         state: vieux,
         action: { type: "trogner", week: w, treeIds: ids, hauteurTeteM: 2 },
         attendu: "refus",
@@ -473,7 +474,7 @@ beforeAll(() => {
         attendu: "travail",
       },
       {
-        nom: "des noyers, qui en mourraient",
+        nom: "des pins, qui en mourraient",
         state: vieux,
         action: { type: "receper", week: w, treeIds: ids },
         attendu: "refus",
