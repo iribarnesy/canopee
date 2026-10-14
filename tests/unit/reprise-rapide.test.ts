@@ -23,7 +23,6 @@
 import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
 import { SANS_EAU } from "../../src/engine/eau_surface";
 import { bordersUniformes } from "../../src/engine/paysage";
-import { VERSION_FORMAT } from "../../src/engine/serialisation";
 import { FRICHE_LIMON } from "../../src/engine/stations";
 import type { FromWorker, SaveGame, Snapshot } from "../../src/game/protocol";
 import { lireReprise } from "../../src/game/reprise";
@@ -268,10 +267,12 @@ describe("un bloc qu'on ne sait pas relire rend la main au journal", () => {
     new DataView(autreConteneur.buffer).setUint16(8, 99);
     expect(lireReprise(autreConteneur, save, station())).toBeUndefined();
 
-    // Le bloc du moteur d'un format plus ancien (`VERSION_FORMAT`) : c'est le cas
-    // de toutes les sauvegardes quand le moteur change de format.
+    // Le bloc du moteur d'un format que le moteur refuse : c'est ce qui arrive à
+    // toutes les sauvegardes quand il change de format sans savoir relire
+    // l'ancien. Le format 1, refusé depuis #203 (`serialisation.ts`), et non
+    // « la version d'avant » : celle-là, une montée peut choisir de la relire.
     const ancienMoteur = bloc.slice();
-    new DataView(ancienMoteur.buffer).setUint16(debutDuMoteur(bloc) + 8, VERSION_FORMAT - 1);
+    new DataView(ancienMoteur.buffer).setUint16(debutDuMoteur(bloc) + 8, 1);
     expect(lireReprise(ancienMoteur, save, station())).toBeUndefined();
 
     // Un autosave plus ancien que la sauvegarde : IndexedDB n'a pas suivi.
