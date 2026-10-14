@@ -322,8 +322,28 @@ let semaineDuDernierInstantane = 0;
  * marche à côté. C'est ce qui en fait une relecture et non une reprise — le
  * §6.8 demande de **revoir** la période, pas de repartir de là, et rien de ce qui
  * se joue pendant n'est compté deux fois.
+ *
+ * `grandeursVivantes` part de côté avec lui : ce que le dernier tick a mesuré
+ * n'est pas dans l'état, et la relecture l'écrase semaine après semaine (#387).
  */
-let relecture: { depuis: number; jusqua: number; vivant: GameState; vitesse: number } | undefined;
+let relecture:
+  | {
+      depuis: number;
+      jusqua: number;
+      vivant: GameState;
+      grandeursVivantes: GrandeursDuTick;
+      vitesse: number;
+    }
+  | undefined;
+
+/** Les grandeurs du dernier tick, prises ensemble (voir `lastDebordement`). */
+interface GrandeursDuTick {
+  fluxes: TickFluxes | undefined;
+  debordement: Float32Array | undefined;
+  lumiereAuSol: Float32Array | undefined;
+  pollinisateurs: Float32Array | undefined;
+  oiseauxDePassage: readonly FrequentationDeGuilde[] | undefined;
+}
 
 /** Met l'état de la semaine de côté, si c'est une semaine à garder. */
 function poserUnPointDeReprise(etat: GameState): void {
@@ -1084,7 +1104,9 @@ function postSnapshot() {
   pendingCrues = [];
   // Les grandeurs du tick, elles, se **gardent** : une action reçue en pause
   // déclenche un instantané sans qu'aucune semaine n'ait été simulée, et le
-  // joueur ne doit pas voir la crue disparaître entre deux clics.
+  // joueur ne doit pas voir la crue disparaître entre deux clics. Les arbres que
+  // nomment les oiseaux de passage, eux, sont ramenés à ceux de l'instantané
+  // par `construireSnapshot` : un abattage en pause en a retiré (#387).
   post(
     {
       type: "snapshot",
@@ -1683,6 +1705,15 @@ function commencerLaRelecture(deSemaine: number, vitesse: number): void {
     depuis: Math.max(depart.semaine, deSemaine),
     jusqua: vivant.week,
     vivant,
+    // **Des références, pas des copies** : le worker ne modifie jamais ces
+    // tableaux, il les remplace — l'instantané copie ce qu'il transfère.
+    grandeursVivantes: {
+      fluxes: lastFluxes,
+      debordement: lastDebordement,
+      lumiereAuSol: lastLumiereAuSol,
+      pollinisateurs: lastPollinisateurs,
+      oiseauxDePassage: lastOiseauxDePassage,
+    },
     vitesse,
   };
   state = depart.etat;
@@ -1712,6 +1743,16 @@ function commencerLaRelecture(deSemaine: number, vitesse: number): void {
 function arreterLaRelecture(): void {
   if (!relecture) return;
   state = relecture.vivant;
+  // Les grandeurs du présent reviennent avec lui (#387). Sans ça, « revenir »
+  // montrait la crue, la lumière et les insectes de la semaine relue jusqu'au
+  // tick suivant. **Au terme aussi** : la dernière semaine relue rend en principe
+  // les mêmes, mais c'est le présent qu'on montre, pas une copie rejouée de lui.
+  const g = relecture.grandeursVivantes;
+  lastFluxes = g.fluxes;
+  lastDebordement = g.debordement;
+  lastLumiereAuSol = g.lumiereAuSol;
+  lastPollinisateurs = g.pollinisateurs;
+  lastOiseauxDePassage = g.oiseauxDePassage;
   const jusqua = relecture.jusqua;
   relecture = undefined;
   weeksPerSecond = 0;
