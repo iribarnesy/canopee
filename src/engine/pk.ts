@@ -96,10 +96,10 @@ export function potassiumDeLaStrateG(azoteG: number): number {
  * fertilisé prend chaque saison de l'ordre de ce que le limon porte de
  * potassium échangeable. Au printemps, le pool tombe à presque rien, et la
  * plante prenait alors son azote sans le potassium qui va avec. Sur le
- * terrain, ce potassium vient de la réserve. Les sols de Rothamsted et de
- * Woburn cultivés sans potasse ont fourni bien plus de potassium que leur
- * échangeable de départ ne le permettait (Johnston et Addiscott 1971,
- * *J. Agric. Sci.* 76 : 539-552). Un ray-grass cultivé en continu sous serre
+ * terrain, ce potassium vient de la réserve. Ce que les sols des essais de
+ * Rothamsted et de Woburn libèrent sous culture ne suit pas leur potassium
+ * échangeable de départ (Johnston et Addiscott 1971, *J. Agric. Sci.* 76 :
+ * 539-552). Un ray-grass cultivé en continu sous serre
  * tire de la réserve de vingt sols britanniques de presque rien à plus de
  * 2 000 livres de potassium par acre, selon leur argile fine (Arnold et Close
  * 1961, *J. Agric. Sci.* 57 : 295-304).
