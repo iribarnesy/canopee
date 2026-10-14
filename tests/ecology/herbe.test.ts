@@ -4,8 +4,10 @@
  *  - elle colonise d'elle-même un terrain découvert ;
  *  - elle dispute l'eau et l'azote aux jeunes plants — la première cause
  *    d'échec des plantations, d'autant plus forte que le sol est pauvre ;
- *  - la faucher sauve la plantation ;
+ *  - la faucher ne libère pas le plant, seuls le désherbage et le paillage le
+ *    font (Davies 1985) ;
  *  - elle disparaît sous un couvert fermé.
+ * Le moteur est encore loin des deux points du milieu (#210).
  */
 
 import { describe, expect, it } from "vitest";
@@ -159,21 +161,48 @@ describe("concurrence herbacée sur les jeunes plants", () => {
 
   it("faucher n'est pas désherber : sur la lande sèche, la fauche ne libère pas le plant", () => {
     // **L'essai disait « faucher ne nuit pas », et la fauche coûte maintenant
-    // 8 % au pin sur la lande** (#247) : 0,917 à la graine 3, 0,918 à la graine
-    // 7, prédit sous 1 avant la seconde mesure. La loi du minimum le dit. Le pin
-    // fauché a plus d'azote (0,98 contre 0,96) et moins d'eau (0,70-0,76 contre
-    // 0,72-0,79), et sur un sable sec c'est l'eau qui commande. Le sol découvert
-    // et la nappe de tontes lui en laissent moins ; emportées, les tontes ne
-    // rendent qu'un quart de l'écart (2,65 m contre 2,59, et 2,83 sans fauche).
-    // Tant que le frein de l'azote bridait la demande du pin partout, le petit
-    // gain d'azote de la fauche suffisait à faire passer l'essai.
+    // 11 % au pin sur la lande** (8 % depuis #247, 11 % depuis #310). Le sens est
+    // celui du terrain. La cause ne l'est pas : ce commentaire l'attribuait à
+    // l'eau, et c'est le **phosphore** (#210).
     //
-    // **C'est le constat des essais de la Forestry Commission** : couper l'herbe
-    // ne retire pas le concurrent, elle repousse et garde son système
-    // racinaire ; la fauche n'améliore pas la reprise et peut la dégrader, seuls
+    // Relevé sur ce banc même, graines 3, 7 et 11, par une copie instrumentée du
+    // moteur qui lit chaque semaine les facteurs de la loi du minimum du pin sans
+    // changer aucun calcul. Semaines 13 à 43 des quatre années de fauche :
+    //
+    //                              sans fauche   fauché
+    //     phosphore                   0,59        0,50
+    //     eau (facteur)               0,94        0,93
+    //     satisfaction hydrique       0,65        0,61
+    //     azote                    0,95-0,97   0,98-0,99
+    //
+    // Le phosphore est le facteur limitant de 104 semaines sur 124 dans les deux
+    // bras, l'eau de 11 à 12, le pH de 8 à 9. Le pin fauché a un peu moins d'eau,
+    // mais son facteur eau ne bouge presque pas. L'écart de phosphore, lui, dure
+    // après la dernière coupe (0,54 contre 0,50 de la cinquième à la douzième
+    // année). Les variantes, rapport fauché sur non fauché à douze ans :
+    //
+    //                                          graine 3   graine 7   graine 11
+    //     moteur                                0,887      0,890      0,891
+    //     eau retirée du minimum du pin         0,888      0,891      0,893
+    //     azote retiré du minimum               0,886      0,890      0,888
+    //     phosphore retiré du minimum           0,997      0,999      0,998
+    //     la strate ne prend plus de phosphore  0,980      0,978      0,982
+    //
+    // La strate prélève du phosphore avec l'azote qu'elle absorbe, et ne le rend
+    // qu'au rythme où l'humus de sa litière se minéralise. Privée de ce
+    // prélèvement, l'écart de phosphore entre les bras tombe de 0,09 à 0,02 :
+    // neuf des onze points de la perte viennent de là, les deux autres de cet
+    // écart résiduel, non attribué. Ce bilan se traite avec celui du potassium
+    // (#222).
+    //
+    // **Le terrain, lui, l'attribue à l'eau** : couper l'herbe ne retire pas le
+    // concurrent, elle repousse, garde son système racinaire et transpire
+    // davantage ; la fauche n'améliore pas la reprise et peut la dégrader, seuls
     // le désherbage chimique et le paillage la libèrent (Davies 1985,
-    // *Forestry* 58 : 167 ; Willoughby et al. 2009, *Reducing pesticide use in
-    // forestry*). Le moteur n'a ni l'un ni l'autre comme geste.
+    // *Forestry* 58 : 167 ; Davies et Gardiner 1989, *Arboriculture Research
+    // Note* 59/89/ARB ; Willoughby et al. 2009, *Reducing pesticide use in
+    // forestry*). Le moteur n'a ni l'un ni l'autre comme geste, et l'herbe n'y
+    // prend presque pas d'eau à un jeune plant (#210).
     expect(pauvre.rapport).toBeLessThan(1.05);
   });
 
@@ -181,28 +210,35 @@ describe("concurrence herbacée sur les jeunes plants", () => {
     // Celui-ci n'a pas bougé et il n'avait pas à bouger : sur un sol qui ne
     // manque de rien, ce que l'herbe prend ne manque à personne. C'est la
     // moitié du contraste qui survit intacte, parce qu'elle ne reposait sur
-    // aucun apport fantôme.
+    // aucun apport fantôme. Relevé sur ce banc (#210) : sur le limon, le pin ne
+    // manque ni d'eau, ni d'azote, ni de phosphore, seul le pH le freine (0,77 à
+    // 0,80), et la fauche rend 1,001 sur les graines 3, 7 et 11.
     expect(riche.rapport).toBeLessThan(1.1);
-    // Et l'arbre a bien poussé : 2,54 m à douze ans pour le pin sur limon
-    // riche, contre 1,67 sur la lande. Ce n'est pas un témoin mort.
+    // Et l'arbre a bien poussé : 3,11 m à douze ans pour le pin sur limon
+    // riche, contre 2,63 sur la lande (graine 3, relevé de #210). Ce n'est pas
+    // un témoin mort.
     expect(riche.sans).toBeGreaterThan(2);
     expect(riche.sans).toBeGreaterThan(pauvre.sans);
   });
 
-  it("la fauche coûte là où l'eau commande, pas sur un sol qui ne manque de rien", () => {
+  it("la fauche coûte sur sol pauvre, pas sur un sol qui ne manque de rien", () => {
     // **Le sens que cet essai gardait s'est retourné** (#247) : la fauche ne
-    // libérait le plant sur sol pauvre que par un gain d'azote, et sur la lande
-    // c'est l'eau qui commande (voir l'essai au-dessus). Il gardait ensuite un
-    // plafond de dix points entre les deux sols, relevé sur le moteur et sans
-    // source ; il est tombé à #310, quand l'herbe a puisé son eau dans tout son
-    // enracinement : 0,888 et 0,889 sur la lande (graines 3 et 7) contre 1,001
-    // sur le limon. Le plafond est retiré. Ce que dit le terrain est la
+    // libérait le plant sur sol pauvre que par un gain d'azote. Il gardait
+    // ensuite un plafond de dix points entre les deux sols, relevé sur le moteur
+    // et sans source ; il est tombé à #310, le lot où l'herbe a puisé son eau dans
+    // tout son enracinement : 0,888 et 0,889 sur la lande (graines 3 et 7) contre
+    // 1,001 sur le limon. Le plafond est retiré. Ce que dit le terrain est la
     // direction : faucher une graminée accroît sa transpiration et renforce la
     // concurrence pour l'eau (Davies et Gardiner 1989, *Arboriculture Research
     // Note* 59/89/ARB). Prédit avant la mesure sur une graine neuve : lande sous
     // limon, lande entre 0,85 et 0,95. Relevé graine 11 : 0,894 contre 1,001.
-    // Ce qui reste ouvert (#210) est la reprise d'un plant **désherbé**, et le
-    // moteur n'a pas le geste qui la mesurerait.
+    //
+    // **Le moteur trouve cette direction par le phosphore, pas par l'eau** (#210,
+    // relevé détaillé à l'essai « faucher n'est pas désherber ») : retirer l'eau
+    // du minimum du pin ne change pas le rapport, retirer le phosphore le ramène
+    // à 1. Le sens est juste, la cause ne l'est pas. Ce qui reste ouvert est ce
+    // que l'herbe prend en eau à un jeune plant, et la reprise d'un plant
+    // **désherbé**, que le moteur n'a pas de geste pour mesurer.
     expect(pauvre.rapport).toBeLessThan(riche.rapport);
   });
 });
