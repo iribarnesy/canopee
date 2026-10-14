@@ -56,7 +56,7 @@ export type FormeFeuille =
   | "cordee"
   /** lobée à sinus arrondis — les chênes, et personne d'autre */
   | "lobee"
-  /** composée : plusieurs folioles sur un même pétiole — frêne, sureau */
+  /** composée : plusieurs folioles sur un même rachis — frêne, sureau, noyers */
   | "composee"
   /** longue et étroite, dentée en scie — châtaignier, saule */
   | "lanceolee";
@@ -196,9 +196,10 @@ export function contourFeuille(forme: FormeFeuille): readonly PointFeuille[] {
         { x: -0.11, y: 0.07 },
       ];
     case "composee":
-      // Frêne, sureau : le contour d'**une** foliole. C'est le semis qui les pose
-      // par cinq ou sept le long d'un pétiole — une feuille composée dessinée
-      // d'un seul tenant ne se distinguerait pas d'une feuille simple.
+      // Frêne, sureau, noyers : le contour d'**une** foliole. C'est
+      // `polygonesDeFeuille` qui les pose par paires le long du rachis — une
+      // feuille composée dessinée d'un seul tenant ne se distinguerait pas
+      // d'une feuille simple.
       return [
         { x: 0, y: 0 },
         { x: 0.11, y: 0.16 },
@@ -261,11 +262,117 @@ export function largeurRelative(forme: FormeFeuille): number {
 }
 
 /**
- * Combien d'éléments un bouquet pose par « feuille » déclarée.
+ * Nombre de folioles d'une feuille composée quand la fiche ne le dit pas.
  *
- * Deux pour le pin : les aiguilles vont **par deux**, et c'est sa signature la
- * plus fiable en botanique de terrain. Un pour tout le reste.
+ * Cinq : c'est le nombre qui fait lire « composée » sans qu'on ait à les
+ * compter. Une fiche qui en a besoin d'autres le déclare
+ * (`Feuillage.folioles`) — le noyer hybride, dont la feuille se reconnaît
+ * justement à son compte.
  */
+export const FOLIOLES_PAR_DEFAUT = 5;
+
+/** Où se pose une foliole sur le rachis, dans le repère normalisé de la feuille. */
+export interface PoseFoliole {
+  /** hauteur du point d'attache sur le rachis ∈ ]0,1[ */
+  y: number;
+  /** inclinaison sur le rachis, en radians : 0 dans son prolongement, positive vers la droite */
+  angle: number;
+  /** longueur de la foliole, en part de la longueur de la feuille */
+  longueur: number;
+}
+
+/**
+ * Les folioles d'une feuille composée **imparipennée** : des paires opposées le
+ * long du rachis, et une terminale qui le prolonge.
+ *
+ * **Le semis d'origine les posait côte à côte**, décalées en largeur comme les
+ * deux aiguilles d'un faisceau de pin : cinq folioles de la longueur de la
+ * feuille entière, alignées en peigne. Ça se lisait « composée » à cinq, et ça
+ * ne pouvait plus rien dire au-delà — quinze folioles en rang auraient fait une
+ * feuille trois fois plus large que longue. Le noyer hybride, qui se reconnaît
+ * à ses onze à vingt-trois folioles contre cinq à neuf chez le commun,
+ * demandait une vraie feuille pennée.
+ *
+ * **Le compte règle la taille.** Le rachis est de longueur fixe — c'est la feuille
+ * entière, dont la fiche donne la longueur réelle — donc plus il porte de
+ * paires, plus elles sont serrées et petites : une feuille à dix-sept folioles
+ * est une plume, une feuille à cinq une main.
+ *
+ * **La terminale est la plus grande**, et les paires grandissent de la base vers
+ * le sommet. C'est le dessin des noyers — la terminale « très marquée » de
+ * l'hybride (CNPF 2023), la plus grande aussi chez le commun — et il ne trahit
+ * ni le frêne ni le sureau, qui ont aussi une terminale nette. Ce que ce semis
+ * ne sait pas faire : régler, espèce par espèce, de **combien** elle domine.
+ *
+ * Un compte pair est arrondi à l'impair supérieur : toutes les feuilles composées
+ * de l'atlas sont imparipennées.
+ */
+export function disposerFolioles(folioles: number): readonly PoseFoliole[] {
+  const paires = Math.max(1, Math.ceil((Math.round(folioles) - 1) / 2));
+  // La terminale prend ce que les paires lui laissent : un gros tiers de la
+  // feuille à cinq folioles, un petit quart à dix-sept.
+  const terminale = 0.16 + 0.7 / (paires + 1);
+  const attacheTerminale = 1 - terminale;
+  // La première paire laisse le pétiole nu, un peu plus long quand les paires
+  // sont peu nombreuses ; la dernière s'arrête juste sous la terminale.
+  const basse = 0.12 + 0.16 / paires;
+  const haute = attacheTerminale - 0.05;
+  const poses: PoseFoliole[] = [];
+  for (let k = 0; k < paires; k++) {
+    const t = paires > 1 ? k / (paires - 1) : 1;
+    // De la base au sommet : plus longues, et plus couchées sur le rachis — mais
+    // jamais autant que la terminale, qui reste la plus grande.
+    const longueur = terminale * (0.65 + 0.15 * t);
+    const angle = ((64 - 18 * t) * Math.PI) / 180;
+    const y = basse + (haute - basse) * t;
+    poses.push({ y, angle, longueur }, { y, angle: -angle, longueur });
+  }
+  poses.push({ y: attacheTerminale, angle: 0, longueur: terminale });
+  return poses;
+}
+
+/**
+ * Les contours d'**une feuille déclarée**, posés à leur place et prêts à tracer :
+ * un seul pour une feuille simple, deux aiguilles pour le pin, et pour une
+ * feuille composée son rachis plus chacune de ses folioles.
+ *
+ * Même repère que `contourFeuille` : pétiole à l'origine, sommet vers +y, la
+ * longueur de la feuille vaut 1. Le rendu les remplit **d'un seul tenant**, une
+ * feuille étant un objet et non quinze.
+ */
+export function polygonesDeFeuille(
+  forme: FormeFeuille,
+  folioles: number = FOLIOLES_PAR_DEFAUT,
+): readonly (readonly PointFeuille[])[] {
+  const contour = contourFeuille(forme);
+  // Deux aiguilles par faisceau chez le pin sylvestre — sa signature la plus
+  // fiable en botanique de terrain.
+  if (forme === "aiguille") {
+    return [-0.11, 0.11].map((dx) => contour.map((p) => ({ x: p.x + dx, y: p.y })));
+  }
+  if (forme !== "composee") return [contour];
+  const poses = disposerFolioles(folioles);
+  const sommet = poses[poses.length - 1]?.y ?? 0.7;
+  // Le rachis : un trait, qui ne se voit qu'à la loupe — à l'échelle du jeu, ce
+  // sont les folioles qui portent la silhouette.
+  const rachis: PointFeuille[] = [
+    { x: -0.008, y: 0 },
+    { x: 0.008, y: 0 },
+    { x: 0.006, y: sommet },
+    { x: -0.006, y: sommet },
+  ];
+  const posees = poses.map((f) => {
+    const c = Math.cos(f.angle);
+    const s = Math.sin(f.angle);
+    return contour.map((p) => {
+      const x = p.x * f.longueur;
+      const y = p.y * f.longueur;
+      return { x: x * c + y * s, y: f.y - x * s + y * c };
+    });
+  });
+  return [rachis, ...posees];
+}
+
 /**
  * Le port du **bouquet** : de combien il s'allonge le long du rameau, et de combien
  * son bord est découpé.
@@ -291,7 +398,10 @@ export function largeurRelative(forme: FormeFeuille): number {
  * couverture du houppier et donc sa transparence — un effet qu'on n'a pas
  * demandé. `decoupe` est l'amplitude du bord, de 0 (lisse) à 1 (lacéré).
  */
-export function portDuBouquet(forme: FormeFeuille): {
+export function portDuBouquet(
+  forme: FormeFeuille,
+  folioles: number = FOLIOLES_PAR_DEFAUT,
+): {
   allongement: number;
   decoupe: number;
 } {
@@ -302,9 +412,22 @@ export function portDuBouquet(forme: FormeFeuille): {
     case "aiguille":
       return { allongement: 3.2, decoupe: 0.75 };
     // Une fronde : les folioles s'échelonnent sur le pétiole, le bouquet
-    // s'étire et son bord est percé entre elles. Frêne, sureau.
-    case "composee":
-      return { allongement: 2.1, decoupe: 0.85 };
+    // s'étire et son bord est percé entre elles. Frêne, sureau, noyers.
+    //
+    // **Et le compte de folioles s'y lit encore**, ce qui est la même règle
+    // appliquée un cran plus loin : des folioles plus nombreuses font une feuille
+    // plus longue, en plume, donc une fronde plus étirée. C'est ce qui sépare de
+    // loin le bouquet du noyer hybride de celui du commun, bien en dessous du
+    // seuil où l'on dessine une feuille. À cinq folioles rien ne bouge, et la
+    // brosse du pin reste la plus allongée de toutes.
+    //
+    // La découpe, elle, ne suit pas : un bord plus finement percé demanderait
+    // plus de sommets, pas moins d'amplitude. Essayée, l'amplitude réduite
+    // donnait des fuseaux lisses — une feuille de saule, pas une fronde.
+    case "composee": {
+      const enPlus = Math.max(0, folioles - FOLIOLES_PAR_DEFAUT);
+      return { allongement: Math.min(2.6, 2.1 + 0.04 * enPlus), decoupe: 0.85 };
+    }
     // Longue et étroite : le bouquet suit. Châtaignier, saule.
     case "lanceolee":
       return { allongement: 1.7, decoupe: 0.6 };
@@ -325,13 +448,4 @@ export function portDuBouquet(forme: FormeFeuille): {
     default:
       return { allongement: 1, decoupe: 0.3 };
   }
-}
-
-export function elementsParFeuille(forme: FormeFeuille): number {
-  // Deux aiguilles par faisceau chez le pin sylvestre — sa signature la plus
-  // fiable en botanique de terrain. Cinq folioles pour une feuille composée :
-  // c'est le nombre qui fait lire « composée » sans qu'on ait à les compter.
-  if (forme === "aiguille") return 2;
-  if (forme === "composee") return 5;
-  return 1;
 }

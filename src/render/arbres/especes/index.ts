@@ -29,9 +29,10 @@
  * *une essence n'est finie que si quelqu'un d'autre la reconnaît sans
  * étiquette.* Aucune des vingt-sept ne l'a passé — elles ont passé celui du
  * générateur, qui n'est pas le même. Ce fichier dit qu'il n'y a plus de trou,
- * pas que le travail est fini. Et le **noyer hybride** n'a pas même passé le
- * premier : c'est le dessin du commun, sans fruit et la flèche plus dominante,
- * en attendant le sien.
+ * pas que le travail est fini. Le **noyer hybride** est le cas limite : il ne
+ * se sépare du commun que par sa feuille de dix-sept folioles et sa flèche plus
+ * dominante, et c'est sur la planche des deux noyers, côte à côte, qu'il faut
+ * juger si ça suffit.
  */
 
 import type { FicheGraphique } from "../fiche";
