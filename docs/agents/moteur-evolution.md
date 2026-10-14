@@ -61,7 +61,70 @@ qu'un rapport (voir la note de maintenance).
 Séparer calibration et validation : caler un paramètre sur un âge, garder
 l'autre âge pour vérifier.
 
-## Ce que le dernier lot a appris (ce que l'herbe prend à un jeune plant, #210, instruction)
+## Ce que le dernier lot a appris (l'arbre d'allée et le potassium de la strate, #222)
+
+L'arbre d'allée restait sous le témoin forestier sur deux graines sur trois. Ce que le blé lui coûtait était du potassium, que la strate prenait avec son azote et ne rendait jamais. Elle le rend maintenant (option A), le grain emporte le sien, et la réserve non échangeable fournit ce que l'échangeable n'a plus (option b, décidée par l'utilisateur). Le phosphore a été instruit, et il n'est pas fait : il ne suit pas le même chemin.
+
+### Relever tous les facteurs, pas seulement celui qu'on soupçonne
+
+Trois diagnostics avaient chacun leur suspect : les mycorhizes, puis l'azote, puis l'eau. Le relevé de **tous** les facteurs de la loi du minimum, semaine par semaine et bras par bras, a nommé le potassium en une passe : facteur 0,69 dans le rang semé, minimum sept semaines sur dix. L'eau, elle, ne descendait jamais sous 0,998. Aucune des trois hypothèses ne le nommait.
+
+### Un pool implicite n'est exact que si le prélèvement n'est jamais plafonné
+
+Le potassium de la strate n'est pas un état : il vaut 0,55 fois son azote. C'est exact tant que la plante a bien pris ce potassium. Si le sol ne peut plus fournir, elle prend son azote sans lui, et le pool compte un potassium qu'elle n'a pas pris. Un blé fertilisé vide chaque printemps l'échangeable du limon riche : 3 à 4,7 kg K/ha/an étaient créés ainsi.
+
+**Avant de déduire un pool d'un autre, mesurer où et combien le prélèvement est plafonné.** Pour le potassium, le plafond ne mord qu'à sol épuisé, et la réserve le repousse. Pour le phosphore, il mord en régime ordinaire sous une culture : le blé ne reçoit que la moitié de ce qu'il voudrait, dès la deuxième année.
+
+### La réserve repousse le problème, elle ne le supprime pas
+
+Elle se vide la trentième année sur un blé continu fertilisé à 192 kg N/ha. Dans les allées du LER, elle se vide par endroits entre la vingtième et la trentième. Après, la strate compte un potassium qu'elle n'a pas pris : 36 kg K/ha/an sur le blé continu, une dizaine dans la parcelle du LER. L'essai de bilan vérifie donc sa propre condition : il échoue avec son propre message si la réserve se vide. Il passerait à tort, sinon, le jour où un banc plus long la viderait.
+
+### Une borne basse sépare ce qui porte un résultat de ce qui l'accompagne
+
+Le potassium créé après la vidange gonflait-il le résultat de l'arbre d'allée ? Une variante où la strate ne rend plus rien là où la réserve est vide le dit : le potassium des allées après la moisson tombe de moitié, et le volume de l'arbre d'allée ne bouge pas (0,03 %). À trente ans, l'arbre lit son disque racinaire, et les cellules du rang le portent. **Quand un défaut connu accompagne un résultat, une borne qui l'aggrave dit s'il le porte**, sans avoir à le réparer d'abord.
+
+### Le phosphore n'est pas le potassium
+
+Le chemin symétrique a été mesuré sur une copie, et il tient mal pour quatre raisons :
+- le plafond mord sous culture, et 13 à 14 kg P/ha/an seraient créés ;
+- la règle de réserve viderait le phosphore fixé en sept à huit ans ;
+- le grain, au taux Comifer, emporterait plus de phosphore que le rapport ligneux N:P de 11 n'en prête à toute la plante ;
+- les stocks du moteur sont forestiers (10 kg P/ha assimilables sur le limon riche).
+
+Hors culture, il est exact, mais ce n'est pas un petit correctif. Sur le banc de `herbe.test.ts`, le pin non fauché de la lande gagne 20 à 30 % de hauteur, et la fauche ne lui coûte presque plus rien (0,982 au lieu de 0,89). Rapporté avant de coder (#222, commentaire du 14 octobre) ; aucune ligne du phosphore n'est changée.
+
+### Ce que ça donne
+
+Graines 4 / 11 / 23, déterministe à graine donnée. Les prédictions sont dans les commits de la branche, avant chaque course.
+
+| | main de #383 (relevés de ce fil) | branche |
+|---|---|---|
+| LER | 1,286 / 1,280 / 1,232 | **1,457 / 1,404 / 1,381** |
+| arbre d'allée / témoin forestier | 1,059 / 0,828 / 0,987 | **1,351 / 1,076 / 1,352** |
+| arbre d'allée / même rang sans blé | 0,728 / 0,761 / 0,715 | 0,927 / 0,987 / 0,978 |
+| E13, rapport à 33 ans | 0,534 / 0,506 / 0,601 | 0,533 / 0,506 / 0,601 |
+| banc de `herbe.test.ts`, lande / limon (graines 3, 7, 11) | 0,888 / 0,889 / 0,894 et 1,001 (commentaire de l'essai) | 0,887 / 0,890 / 0,891 et 1,001 |
+
+C18 (blé à 0 et 192 kg N/ha, ans 11-20 : 3,1326 et 9,3672 t/ha) est identique à main au dix-millième : la culture ne lit pas le potassium. Pour les bouleaux de `pk.test.ts`, le prélèvement de potassium est identique (43,83 kg/ha/an), et le stock final monte de 16,00 à 16,22 g/m².
+
+### Les prédictions fausses
+
+- R2 : après la vidange, 10 à 15 kg K/ha/an créés prédits sur le blé continu ; mesuré 36.
+- DP1 : le phosphore assimilable sous le blé devait tomber sous 0,3 g/m² avant la quatrième année, et le sol devait manquer 10 à 40 % du phosphore voulu. Il se pose vers 0,40, et il en manque la moitié.
+- C2 : la réserve des allées devait se vider entre la 30e et la 45e année ; elle se vide par endroits avant la 30e.
+- C3 : prélèvement des bouleaux de 48,47 kg/ha/an prédit. C'est le chiffre d'avant la fusion de #382 ; mesuré 43,83, identique à main.
+- VB : rapport de la graine 11 entre 0,97 et 1,07 prédit ; mesuré 1,076.
+- PA : la fauche sur la lande devait passer à 0,93-0,98 ; mesuré 0,982 / 0,982 / 0,983.
+
+### Ce qui reste ouvert
+
+- **Le phosphore de la strate et des cultures** : options A à D dans #222. La recommandation est une issue v0.6 qui porte avec lui le rapport N:P des cultures, les stocks d'un sol cultivé et la fertilisation P et K (option C de #222).
+- **La fertilisation potassique** : sans elle, la réserve se vide et le potassium redevient créé. La taille de la réserve (dix fois l'échangeable) est *à calibrer*.
+- **Une culture que le potassium freine** : la strate ne lit pas le potassium, un blé épuisé pousse comme un blé fertilisé.
+- **Le labour et les mycorhizes** (#384), et l'amplitude de Restinclières : 1,08 à 1,35 à soixante ans contre ~2,7 à dix-neuf ans.
+- **`prevoir.test.ts`** tourne à la limite des 120 s de vitest, sur main comme sur la branche (#394).
+
+## Ce qu'un lot précédent a appris (ce que l'herbe prend à un jeune plant, #210, instruction)
 
 Un lot d'instruction, sans une ligne de moteur : le diagnostic et les options
 sont dans #210, les prédictions et les mesures dans les commits de la branche

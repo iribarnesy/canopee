@@ -23,7 +23,10 @@
  *
  * Non modélisé : le calcium et le magnésium, la fertilisation minérale, les
  * différences d'exigence entre espèces (les besoins en P et K sont pris
- * proportionnels au besoin en azote, faute de données fiables par essence).
+ * proportionnels au besoin en azote, faute de données fiables par essence),
+ * et le potassium **dans** le cycle des cultures : une culture prélève et rend
+ * son potassium, le grain l'emporte, mais aucune ne pousse moins faute de lui
+ * (seuls les arbres le lisent).
  *
  * Les deux cycles sont complets, conservatifs et **branchés sur la loi du
  * minimum** : altération de la roche sur tout le profil, dépôts
@@ -54,6 +57,70 @@ export const RATIO_P_SUR_N = 0.09;
 
 /** Besoin en potassium rapporté au besoin en azote (N:K ≈ 1,8:1). */
 export const RATIO_K_SUR_N = 0.55;
+
+/**
+ * Le potassium que porte la strate herbacée, g/m², déduit de son azote.
+ *
+ * **La strate prélevait du potassium et n'en rendait jamais** (#222). Elle le
+ * prenait avec l'azote, au même rapport que les arbres, mais quand ses tissus
+ * mouraient, quand le soc l'enfouissait, quand la fauche la couchait ou quand
+ * on laissait la paille au champ, l'azote et le carbone revenaient au sol, et
+ * pas le potassium. Une allée fertilisée en perdait une centaine de kilos par
+ * hectare et par an, et son potassium échangeable tombait sous le seuil du
+ * noyer dès la dixième année. C'était tout ce que le blé coûtait à l'arbre
+ * d'allée, et aucun champ réel ne le connaît.
+ *
+ * Le potassium de la plante n'est pas un état de plus : il suit son azote, au
+ * rapport du prélèvement. Quand l'azote quitte la plante, le potassium qui
+ * l'accompagnait revient au sol, et tout de suite. C'est un ion libre que la
+ * pluie rince des tissus morts, comme pour la feuille d'un arbre (`tick.ts`).
+ * La paille d'un blé perd d'ailleurs une bonne part du sien entre la maturité
+ * et la récolte (RB209, note de la table 4.12). Seul le grain vendu l'emporte
+ * hors de la parcelle (`potassiumDansLeGrainGKgMS`, `herbacees.ts`).
+ *
+ * Ce pool implicite ne tient que si la plante a bien pris le potassium de son
+ * azote. Quand l'échangeable ne suffit plus, c'est la réserve qui fournit le
+ * reste (`prelevementPotassium`). Il ne compte un potassium que la plante n'a
+ * pas pris que si la réserve est vide elle aussi.
+ */
+export function potassiumDeLaStrateG(azoteG: number): number {
+  return azoteG * RATIO_K_SUR_N;
+}
+
+/**
+ * Ce que les racines prennent de potassium, g/m², quand elles en veulent
+ * `vouluG` : d'abord l'échangeable, puis, s'il ne suffit plus, la réserve non
+ * échangeable (#222).
+ *
+ * **Une culture vide l'échangeable, et elle continue de prélever.** Un blé
+ * fertilisé prend chaque saison de l'ordre de ce que le limon porte de
+ * potassium échangeable. Au printemps, le pool tombe à presque rien, et la
+ * plante prenait alors son azote sans le potassium qui va avec. Sur le
+ * terrain, ce potassium vient de la réserve. Ce que les sols des essais de
+ * Rothamsted et de Woburn libèrent sous culture ne suit pas leur potassium
+ * échangeable de départ (Johnston et Addiscott 1971, *J. Agric. Sci.* 76 :
+ * 539-552). Un ray-grass cultivé en continu sous serre
+ * tire de la réserve de vingt sols britanniques de presque rien à plus de
+ * 2 000 livres de potassium par acre, selon leur argile fine (Arnold et Close
+ * 1961, *J. Agric. Sci.* 57 : 295-304).
+ *
+ * La réserve ne fournit donc que ce que l'échangeable n'a plus. Elle ne vient
+ * pas en premier : l'équilibre entre les deux pools reste celui de
+ * `echangeReserveK`. Le moteur n'a pas d'état de plus pour cela, et le bilan
+ * de la parcelle reste exact tant que la réserve n'est pas vide
+ * (`potassium-conservation.test.ts`). Une fois vide, la plante prend de nouveau
+ * son azote sans son potassium. La culture ne lit pas le potassium : elle ne
+ * pousse pas moins faute de lui.
+ */
+export function prelevementPotassium(
+  echangeableG: number,
+  reserveG: number,
+  vouluG: number,
+): { echangeable: number; reserve: number } {
+  const echangeable = Math.min(Math.max(0, echangeableG), vouluG);
+  const reserve = Math.min(Math.max(0, reserveG), vouluG - echangeable);
+  return { echangeable, reserve };
+}
 
 /**
  * Disponibilité du phosphore selon le pH : une cloche centrée sur 6,5.

@@ -30,6 +30,7 @@ import { decoteEngorgement, indiceDuMarche } from "./marche";
 import { partMecanisable } from "./mecanisation";
 import { SURVIE_APRES_LABOUR, TYPES_MYCORHIZE } from "./mycorhizes";
 import { KG_PER_HA_TO_G_PER_M2, litterDecayRate } from "./nitrogen";
+import { potassiumDeLaStrateG } from "./pk";
 import { altitudeParCellule } from "./relief";
 import { profondeurPenetrableCm } from "./soil";
 import type { GameState } from "./state";
@@ -2006,14 +2007,15 @@ function grainDeLaCelluleT(matiereSecheGM2: number, culture: { indiceRecolte: nu
  * Verse à la litière d'une cellule la part `fraction` de la biomasse herbacée
  * qui y est sur pied, toutes espèces confondues, et la retire de la plante
  * (#247). Des tissus **coupés** ou retournés n'ont rien résorbé : leur azote
- * part entier, au C/N de la plante. Rend le carbone versé, g/m², que l'appelant
- * crédite à la production primaire.
+ * part entier, au C/N de la plante, et leur potassium revient au sol (#222).
+ * Rend le carbone versé, g/m², que l'appelant crédite à la production primaire.
  */
 function verserHerbeALaLitiere(
   i: number,
   fraction: number,
   herbe: { matiere: Float64Array; azote: Float64Array },
   litiere: { n: Float64Array; c: Float64Array; k: Float32Array | Float64Array },
+  potassiumSol: Float32Array | Float64Array,
 ): number {
   if (fraction <= 0) return 0;
   let c = 0;
@@ -2027,6 +2029,9 @@ function verserHerbeALaLitiere(
     c += dm * CARBON_FRACTION;
     n += dn;
   }
+  // Et le potassium qui accompagnait cet azote revient au sol, tout de suite :
+  // un ion que la pluie rince des tissus coupés ou enfouis (pk.ts, #222).
+  potassiumSol[i] = (potassiumSol[i] ?? 0) + potassiumDeLaStrateG(n);
   if (c > 0 && n > 0) {
     const oldN = litiere.n[i] ?? 0;
     litiere.k[i] = (oldN * (litiere.k[i] ?? 0) + n * litterDecayRate(c / n)) / (oldN + n);
@@ -2053,6 +2058,7 @@ function applyMoissonner(
   const litterNG = state.soil.litterNG.slice();
   const litterCG = state.soil.litterCG.slice();
   const litterK = state.soil.litterK.slice();
+  const potassiumG = state.soil.potassiumG.slice();
   // Ce qu'on récolte, culture par culture et cellule par cellule.
   let recolteEur = 0;
   let pailleKgC = 0;
@@ -2074,6 +2080,15 @@ function applyMoissonner(
       const azote = herbeAzoteG[k] ?? 0;
       const pailleC = matiere * (1 - culture.indiceRecolte) * CARBON_FRACTION;
       const pailleN = azote * (1 - culture.azoteDansLeGrain);
+      // **Le potassium se partage autrement** (#222) : le grain en emporte sa
+      // teneur de référence (Comifer), la paille rend le reste au sol. Le
+      // grain n'emporte jamais plus que ce que la plante porte.
+      const potassiumPlante = potassiumDeLaStrateG(azote);
+      const potassiumGrain = Math.min(
+        potassiumPlante,
+        grainDeLaCelluleT(matiere, culture) * 1000 * culture.potassiumDansLeGrainGKgMS,
+      );
+      potassiumG[i] = (potassiumG[i] ?? 0) + (potassiumPlante - potassiumGrain);
       if (pailleC > 0 && pailleN > 0) {
         const oldN = litterNG[i] ?? 0;
         litterK[i] =
@@ -2116,6 +2131,7 @@ function applyMoissonner(
         litterNG,
         litterCG,
         litterK,
+        potassiumG,
       },
       // Le carbone de la paille est crédité à la production primaire, comme
       // toute litière de la strate (#201) : c'est la plante qui l'a fixé.
@@ -2153,6 +2169,7 @@ function applyFaucher(
     c: state.soil.litterCG.slice(),
     k: state.soil.litterK.slice(),
   };
+  const potassiumG = state.soil.potassiumG.slice();
   let coupeG = 0;
   const cote = state.station.coteM;
   // Les cellules où l'outil a effectivement mordu : une pelouse déjà rase ne
@@ -2174,8 +2191,15 @@ function applyFaucher(
       // **L'herbe coupée tombe en litière** (#201, #247). La strate rendait jusqu'ici
       // son prélèvement au fil des semaines, et la coupe n'avait donc rien à
       // verser. Elle porte maintenant sa matière : ce que l'outil coupe, dans
-      // la même proportion que le feuillage, reste au sol avec tout son azote.
-      coupeG += verserHerbeALaLitiere(i, 1 - FAUCHE_COUVERTURE_RESIDUELLE / avant, herbe, litiere);
+      // la même proportion que le feuillage, reste au sol avec tout son azote,
+      // et son potassium revient au sol (#222).
+      coupeG += verserHerbeALaLitiere(
+        i,
+        1 - FAUCHE_COUVERTURE_RESIDUELLE / avant,
+        herbe,
+        litiere,
+        potassiumG,
+      );
     }
   }
   // ── **et le rotor ne trie pas** (issue #184) ────────────────────────────────────
@@ -2219,6 +2243,7 @@ function applyFaucher(
         litterNG: litiere.n,
         litterCG: litiere.c,
         litterK: litiere.k,
+        potassiumG,
       },
       carbon: { ...state.carbon, nppCumKgC: state.carbon.nppCumKgC + coupeG / 1000 },
       economy: {
@@ -2563,6 +2588,7 @@ function applyLabourer(
     c: state.soil.litterCG.slice(),
     k: state.soil.litterK.slice(),
   };
+  const potassiumG = state.soil.potassiumG.slice();
   let retourneeG = 0;
   const mycorhizes = {
     ecto: state.soil.mycorhizes.ecto.slice(),
@@ -2604,8 +2630,9 @@ function applyLabourer(
       // du tick fait déjà selon le C/N (seuil vers 27, C9) : la litière reste
       // où elle est, et la règle commune décide. Ce que le soc change est ce
       // qu'elle **couvre** : enfouie, elle ne paille plus le sol.
-      // L'herbe retournée y passe avec elle : sa matière et tout son azote.
-      retourneeG += verserHerbeALaLitiere(i, 1, herbe, litiere);
+      // L'herbe retournée y passe avec elle : sa matière et tout son azote, et
+      // son potassium revient au sol.
+      retourneeG += verserHerbeALaLitiere(i, 1, herbe, litiere, potassiumG);
       const auSol = Math.max(0, (litiere.c[i] ?? 0) - (litiereEnfouieCG[i] ?? 0));
       litiereEnfouieCG[i] = (litiereEnfouieCG[i] ?? 0) + auSol * LABOUR_ENFOUISSEMENT;
       // Sol nu : c'est tout l'objet du labour, et c'est aussi son prix. La
@@ -2651,6 +2678,7 @@ function applyLabourer(
         litiereEnfouieCG,
         mycorhizes,
         tassement,
+        potassiumG,
       },
       carbon: {
         ...state.carbon,

@@ -18,6 +18,7 @@ import {
   disponibilitePhosphore,
   echangeReserveK,
   lessivagePotassiumG,
+  prelevementPotassium,
   retrogradationHebdo,
   SATURATION_K_G_M2,
   SATURATION_P_G_M2,
@@ -76,6 +77,15 @@ describe("le potassium circule trop, le complexe le retient", () => {
     expect(echangeReserveK(9, 50, 5)).toBeLessThan(0);
     // Une réserve vide ne peut rien rendre.
     expect(echangeReserveK(1, 0, 5)).toBe(0);
+  });
+
+  it("la réserve fournit ce que l'échangeable n'a plus, et rien de plus (#222)", () => {
+    // L'échangeable suffit : la réserve n'y est pour rien.
+    expect(prelevementPotassium(5, 50, 2)).toEqual({ echangeable: 2, reserve: 0 });
+    // Il ne suffit plus : la réserve paie la différence.
+    expect(prelevementPotassium(0.5, 50, 2)).toEqual({ echangeable: 0.5, reserve: 1.5 });
+    // Les deux vides : la plante ne trouve que ce qui reste.
+    expect(prelevementPotassium(0.5, 1, 2)).toEqual({ echangeable: 0.5, reserve: 1 });
   });
 });
 

@@ -1140,6 +1140,8 @@ function emptyFluxes(): TickFluxes {
     uptakePKgHa: 0,
     uptakeKKgHa: 0,
     leachedKKgHa: 0,
+    apportKKgHa: 0,
+    retourKKgHa: 0,
     litterfallKgHa: 0,
     litterDecayKgHa: 0,
     fixationKgHa: 0,

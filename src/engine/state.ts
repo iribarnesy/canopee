@@ -681,6 +681,14 @@ export interface TickFluxes {
   /** potassium lessivé, kg/ha */
   leachedKKgHa: number;
   /**
+   * **le budget du potassium échangeable**, kg/ha (#222) : ce que la roche
+   * altérée et l'atmosphère apportent, et ce que les feuilles des arbres et la
+   * strate herbacée rendent. Avec le prélèvement, le lessivage et l'érosion, il
+   * referme le pool chaque semaine (`potassium-conservation.test.ts`).
+   */
+  apportKKgHa: number;
+  retourKKgHa: number;
+  /**
    * **le budget de bases** de la semaine, eq/ha, terme par terme (bases.ts). Il est
    * exposé pour être **vérifié** : la variation du pool doit valoir apports +
    * litière − lessivage − charge acide, à l'arrondi près. Un pool dont on ne

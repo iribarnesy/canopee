@@ -434,6 +434,12 @@ describe("le dispositif à trois bras, soixante ans", () => {
    * 1,232** — la cible de 1,2 tient sur les trois graines, avec un terme culture
    * plus bas (l'ombre arrive plus tôt) et un terme arbre plus haut. Juste avant,
    * sur le même moteur : 1,302 / 1,374 / 1,201.
+   *
+   * **Relevé depuis que la strate rend son potassium** (#222 : ses tissus morts,
+   * le labour, la fauche, le feu et la paille le rendent, le grain emporte le
+   * sien, et la réserve fournit ce que l'échangeable n'a plus), mêmes graines :
+   * culture 0,648 / 0,651 / 0,662, arbre 0,809 / 0,752 / 0,719, **total 1,457 /
+   * 1,404 / 1,381**.
    */
   it("le mélange bat la somme des parties", () => {
     const agro = bras(RANGS_AGROFORESTERIE, true);
@@ -508,6 +514,18 @@ describe("le dispositif à trois bras, soixante ans", () => {
     // C'est la question 2 de #184 qui revient, et #222 avec elle. Le plancher à
     // 0,7 n'a pas bougé : il garde la géométrie (en dessous, le chantier
     // repasserait sur les rangs), pas une valeur de l'azote.
+    //
+    // **Et ce que le blé coûtait était du potassium** (#222). Le relevé de tous
+    // les facteurs de la loi du minimum l'a montré : facteur potassium 0,69 dans
+    // le rang semé, minimum sept semaines sur dix, l'eau jamais sous 0,998. La
+    // strate prenait le potassium avec son azote et ne le rendait jamais. Elle
+    // le rend maintenant, et le grain emporte le sien :
+    //
+    //   graine                     4       11      23
+    //   noyers sans juglone      0,728   0,761   0,715
+    //   la strate rend son K     0,927   0,987   0,978
+    //
+    // Ce qui reste, de 1 à 7 %, est le soc hors potassium.
     expect(agro.partCultivee).toBeGreaterThan(0.84);
     const parArbre = (b: { volCohorte: number; cohorte: number }) => b.volCohorte / b.cohorte;
     const rapport = parArbre(agro) / parArbre(rangsSansBle);
@@ -561,6 +579,15 @@ describe("le dispositif à trois bras, soixante ans", () => {
     // 0,987, moyenne 0,958) : ce plancher passe sur la graine de l'essai, pas en
     // général. Le retourner en plafond aurait écrit le défaut dans l'essai, avec
     // un seuil sans source. C'est l'objet de #222, le lot suivant.
+    //
+    // **#222 l'a réglé : la strate rend son potassium.** Mêmes graines :
+    //
+    //   graine                     4       11      23    moyenne
+    //   noyers sans juglone      1,059   0,828   0,987    0,958
+    //   la strate rend son K     1,351   1,076   1,352    1,260
+    //
+    // Le plancher passe sur les trois graines. Le sens de Restinclières est
+    // retrouvé, pas son amplitude (~2,7 à dix-neuf ans).
     expect(parArbre(agro) / parArbre(boisPur)).toBeGreaterThan(1);
     // **La culture**, **elle**, **paie** — et c'est le sens même d'un LER : le mélange rend
     // moins de grain par hectare de **parcelle** qu'un champ de blé pur, puisqu'il
