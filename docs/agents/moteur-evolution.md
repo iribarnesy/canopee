@@ -68,7 +68,9 @@ sont dans #210, les prédictions et les mesures dans les commits de la branche
 `claude/v05-herbe`. Le terrain dit que désherber double ou triple la
 croissance d'un jeune feuillu en quatre ou cinq ans et que faucher n'y sert à
 rien (Davies 1985 ; McCormick et Bowersox 1997 ; von Althen 1985). Le moteur
-donne 0,88 à 1,18, et la fauche y rend autant que le désherbage.
+donne 0,88 à 1,18, et la fauche y rend autant que le désherbage. Décision
+du propriétaire : rien ne change à l'équilibre en v0.5, la documentation dit
+vrai (E12, H13, `herbe.test.ts`), et le lot passe en v0.6 (#391, #392).
 
 ### Un dispositif mêlé peut mesurer la juglone
 
@@ -105,13 +107,21 @@ lecteur est au plateau** : lire la loi de réponse avant de corriger l'apport.
 
 ### Un essai qui passe pour le phosphore
 
-Sur la lande, la fauche coûte 13 à 16 % aux plants, et `herbe.test.ts`
-l'attribue à l'eau. Le phosphore libre (variante), elle ne coûte plus rien :
-la strate prélève du phosphore avec son azote et ne le rend qu'avec l'humus,
-ni par ses tissus morts ni par l'herbe fauchée, et sa demande repart après
-chaque coupe. C'est le cousin, pour le phosphore, du potassium de #222.
-L'essai « faucher n'est pas désherber » dit vrai pour une raison fausse
-(mesuré sur mon banc, pas sur le sien).
+Sur la lande, la fauche coûte 13 à 16 % aux plants du banc d'instruction, et
+`herbe.test.ts` l'attribuait à l'eau. Relevé ensuite sur le banc de l'essai
+lui-même (un pin seul, douze ans, graines 3, 7 et 11) : le phosphore limite
+le pin 104 semaines de saison sur 124 dans les deux bras et tombe de 0,59 à
+0,50 sous la fauche ; le facteur eau ne bouge pas (0,94 contre 0,93). L'eau
+retirée du minimum du pin, le rapport ne change pas (0,888 à 0,893) ; le
+phosphore retiré, il revient à 0,997-0,999 ; la strate privée de phosphore,
+à 0,978-0,982. Elle prélève du phosphore avec son azote et ne le rend qu'au
+rythme où l'humus de sa litière se minéralise : le cousin, pour le phosphore,
+du potassium de #222, qui le traite. Les chiffres d'eau que citait le
+commentaire (0,70-0,76 contre 0,72-0,79) ont l'ordre de grandeur de la
+satisfaction hydrique brute (0,60 à 0,65 aujourd'hui), pas celui du facteur
+que le pin ressent. **Un bras qui a moins d'eau ne perd par l'eau que si
+l'eau est le minimum** : relever le minimum de chaque semaine, et sur le banc
+de l'essai qu'on corrige, pas sur un autre.
 
 ### Une variante sans effet sur sa cible
 
@@ -143,24 +153,27 @@ centimètre sur les limons, trois points au plus sur la lande.
   elle le rend un peu plus grand.
 - Le sol nu devait évaporer 30 à 100 mm de plus que le sol enherbé : 150 à
   170.
+- Sur le banc de `herbe.test.ts`, aucune : six prédictions justes, la
+  dernière de justesse (0,019 d'écart de phosphore entre les bras pour 0,02
+  prédit).
 
 ### Ce qui reste ouvert
 
-Les options sont détaillées dans #210, avec la recommandation : ne rien
-changer à l'équilibre en v0.5.
+Les options sont détaillées dans #210. #210 passe en v0.6 avec elles.
 
-- **L'eau du tapis et du sol nu** : partage FAO-56 et évaporation du sol nu en
-  deux phases (REW, TEW). Une couche évaporante grossière redonne le bon sens
-  (le désherbé repasse devant), mais fait évaporer au sol nu trois fois moins
-  que le moteur, alors que son total annuel est plausible.
-- **La soif des jeunes plants** : ils ne sont freinés que sous leur seuil de
-  confort, et l'herbe ne les y fait presque jamais descendre.
-- **Le phosphore de la strate**, à voir avec #222.
-- **Les bancs de tables de production** plantent dans l'herbe : une
-  concurrence renforcée les ferait descendre, alors qu'une table vient de
-  plants dégagés.
-- **Aucun geste ne désherbe ni ne paille** ; le broyat épandu ne supprime pas
-  l'herbe.
+- **L'eau du tapis et du sol nu, la soif des jeunes plants, les bancs de
+  tables sur sol dégagé** : un seul lot, #391. Partage FAO-56 et évaporation
+  du sol nu en deux phases (REW, TEW) ; une couche évaporante grossière
+  redonne le bon sens (le désherbé repasse devant), mais fait évaporer au sol
+  nu trois fois moins que le moteur, alors que son total annuel est
+  plausible. Les plants ne sont freinés que sous leur seuil de confort, et
+  l'herbe ne les y fait presque jamais descendre. Les bancs de tables
+  plantent dans l'herbe : une concurrence renforcée les ferait descendre.
+- **Le phosphore de la strate** : #222.
+- **Aucun geste ne désherbe ni ne paille** (#392) ; le broyat épandu ne
+  supprime pas l'herbe.
+- Deux points de la perte de la fauche sur la lande (sur onze) suivent un
+  écart de phosphore que la strate n'explique pas : non attribué.
 
 ## Ce qu'un lot précédent a appris (l'azote du bois mort et la vitesse du broyat, #328)
 
