@@ -60,9 +60,18 @@ export function pluriel(nom: string, n: number): string {
   return sortie.join(" ");
 }
 
-/** Le nom d'une essence, tel qu'on l'écrit au fil du texte : en minuscules. */
+/**
+ * Un nom de l'atlas tel qu'on l'écrit au fil du texte : la capitale **initiale**
+ * tombe, celle d'un nom propre reste — « fusain d'Europe », et non « fusain
+ * d'europe », ce que donnait un `toLowerCase()` sur le nom entier.
+ */
+export function auFilDuTexte(nom: string): string {
+  return nom.charAt(0).toLowerCase() + nom.slice(1);
+}
+
+/** Le nom d'une essence, tel qu'on l'écrit au fil du texte : « bouleau verruqueux ». */
 export function nomEspece(id: string): string {
-  return getEspece(id).nom.toLowerCase();
+  return auFilDuTexte(getEspece(id).nom);
 }
 
 /** Le nom d'une essence, accordé au nombre : « 34 bouleaux verruqueux ». */
@@ -188,6 +197,73 @@ export function causeDite(cause: CauseMort, n = 1, feminin = false): string {
   return dite.participe ? `${dite.participe}${accord(feminin, n)}${complement}` : complement;
 }
 
+// ── **l'essence dans la phrase** (#368) ─────────────────────────────────────────
+
+/**
+ * Un nom d'essence devant lequel l'article et la préposition **s'élident**.
+ *
+ * Une voyelle, et pas un h : les deux h du catalogue sont aspirés — « le
+ * hêtre », « le houx », « pied de hêtre ». Une essence à h muet qui s'ajouterait
+ * passerait ici du mauvais côté ; l'essai qui passe le catalogue entier, article
+ * compris, le dirait avant le joueur.
+ */
+const ELISION = /^[aeiouyàâäéèêëîïôöûü]/i;
+
+/**
+ * L'essence qu'on désigne, à l'article défini : « l'aubépine », « la ronce »,
+ * « le hêtre », « l'aulne glutineux ».
+ *
+ * Le jeu écrivait « le » devant tout nom d'essence, et le journal disait d'un
+ * couple de mésanges qu'il « quitte le aubépine ». Il faut les deux outils à la
+ * fois : le genre (`GENRE`) et l'élision.
+ */
+export function lEssence(id: string): string {
+  const nom = nomEspece(id);
+  if (ELISION.test(nom)) return `l'${nom}`;
+  return `${estFeminin(id) ? "la" : "le"} ${nom}`;
+}
+
+/** L'essence qu'on présente, à l'article indéfini : « une aubépine », « un hêtre ». */
+export function uneEssence(id: string): string {
+  return `${estFeminin(id) ? "une" : "un"} ${nomEspece(id)}`;
+}
+
+/**
+ * La préposition « de » devant un nom, élidée s'il le faut : « pied
+ * d'aubépine », « chandelles de hêtre », « 40 kg d'abricotier ».
+ *
+ * Elle prend le **nom** et non l'essence, parce qu'elle sert aussi là où l'on ne
+ * tient que lui — le recensement des panneaux rend l'identifiant quand l'atlas
+ * ne connaît pas l'espèce, et ne doit pas lever pour autant.
+ */
+export function de(nom: string): string {
+  return ELISION.test(nom) ? `d'${nom}` : `de ${nom}`;
+}
+
+/**
+ * Les pieds d'une essence, comptés : « aucun pied d'aubépine », « le seul pied
+ * de hêtre », « les 12 pieds d'aulne glutineux ».
+ *
+ * **« Pied » porte le genre et le nombre**, l'essence reste au singulier en
+ * complément : rien n'est à deviner sur elle, sinon l'élision. C'est la tournure
+ * des boutons qui sélectionnent une essence entière (#364).
+ */
+export function piedsDe(nom: string, n: number): string {
+  if (n <= 0) return `aucun pied ${de(nom)}`;
+  if (n === 1) return `le seul pied ${de(nom)}`;
+  return `les ${n} pieds ${de(nom)}`;
+}
+
+/**
+ * Ce que le journal dit d'une plantation : « 3 aubépines plantées et
+ * manchonnées », « 1 hêtre planté ». Le participe suit l'essence — il était au
+ * masculin pour toutes.
+ */
+export function direLaPlantation(especeId: string, n: number, avecManchon: boolean): string {
+  const fin = accord(estFeminin(especeId), n);
+  return `${n} ${nomEspeces(especeId, n)} planté${fin}${avecManchon ? ` et manchonné${fin}` : ""}`;
+}
+
 // ── **la faune en individus** (#187, #255, #259) ─────────────────────────────────
 
 /**
@@ -297,4 +373,29 @@ const DEPART_DIT: Record<CauseDepart, string> = {
 /** La cause d'un départ, telle qu'on la lit dans le journal. */
 export function departDit(cause: CauseDepart): string {
   return DEPART_DIT[cause];
+}
+
+/**
+ * La ligne du journal quand un habitant s'installe : « Un couple de mésanges
+ * bleues s'installe dans une aubépine ». Sans arbre connu, on ne dit pas où.
+ *
+ * `hote` est l'**essence** de l'arbre, et non l'arbre : c'est tout ce que la
+ * phrase en lit, et ce qui la rend vérifiable sans worker.
+ */
+export function direLInstallation(faune: FauneANommer, hote?: string): string {
+  return `${capitale(uneFaune(faune))} s'installe${hote ? ` dans ${uneEssence(hote)}` : ""}`;
+}
+
+/**
+ * La ligne du journal quand un habitant s'en va : « Le couple de mésanges
+ * bleues quitte l'aulne glutineux : son arbre est mort ». Sans arbre connu, il
+ * quitte la parcelle.
+ */
+export function direLeDepart(
+  faune: FauneANommer,
+  hote: string | undefined,
+  cause: CauseDepart,
+): string {
+  const quoi = hote ? lEssence(hote) : "la parcelle";
+  return `${capitale(laFaune(faune))} quitte ${quoi} : ${departDit(cause)}`;
 }

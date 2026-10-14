@@ -181,6 +181,27 @@ describe("agreger", () => {
     expect(textes).toContain("1 chandelle de hêtre tombée");
   });
 
+  it("élide la préposition devant une essence qui commence par une voyelle (#368)", () => {
+    const naissances: NaissanceDeLaSemaine[] = [
+      { id: 1, x: 1, y: 1, especeId: "alnus_glutinosa", heightM: 0.1 },
+    ];
+    const chutes: ChuteDeChandelle[] = [1, 2].map((id) => ({
+      id,
+      x: 5,
+      y: 5,
+      especeId: "crataegus_monogyna",
+      heightM: 4,
+      directionRad: 0,
+      masseKgC: 5,
+      empreinte: [],
+    }));
+    const textes = lignesDuBilan(agreger(BILAN_VIDE, { naissances, chutes }, 0, COTE_M)).map(
+      (l) => l.texte,
+    );
+    expect(textes).toContain("1 semis d'aulne glutineux");
+    expect(textes).toContain("2 chandelles d'aubépine tombées");
+  });
+
   it("accorde le PARTICIPE et pas la fin de la phrase", () => {
     // Vu en jouant : « 27 279 tiges broutée par le gibiers ».
     const gestes: GesteVisible[] = [{ type: "brouter", ids: [1, 2, 3] }];

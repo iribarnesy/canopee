@@ -81,15 +81,14 @@ import { prefixeSousLePlafond } from "./facture";
 import { journalDe, type PorteurDeJournal } from "./journal";
 import {
   accord,
-  capitale,
   causeDite,
-  departDit,
+  de,
+  direLaPlantation,
+  direLeDepart,
+  direLInstallation,
   estFeminin,
-  laFaune,
   nomEspece,
   nomEspeces,
-  s,
-  uneFaune,
 } from "./mots";
 import { accumuler, CUMULS_VIDES, type Cumuls } from "./niveaux";
 import { decorDesBordures } from "./parcelle";
@@ -749,7 +748,7 @@ function performAction(action: GameAction): EffetDeLAction {
       if (n > 0)
         event(
           "🌱",
-          `${n} ${nomEspeces(action.especeId, n)} planté${s(n)}${action.avecManchon ? ` et manchonné${s(n)}` : ""} (${eur}, ${dHeures.toFixed(0)} h)`,
+          `${direLaPlantation(action.especeId, n, !!action.avecManchon)} (${eur}, ${dHeures.toFixed(0)} h)`,
         );
       break;
     }
@@ -776,7 +775,7 @@ function performAction(action: GameAction): EffetDeLAction {
         parEspece.set(avant.especeId, (parEspece.get(avant.especeId) ?? 0) + avant.fruitsKg);
       }
       const detail = [...parEspece]
-        .map(([id, kg]) => `${kg.toFixed(0)} kg de ${nomEspece(id)}`)
+        .map(([id, kg]) => `${kg.toFixed(0)} kg ${de(nomEspece(id))}`)
         .join(", ");
       event("🧺", `Récolte : ${detail || "fruits"} → ${eur} (${dHeures.toFixed(1)} h)`);
       break;
@@ -1444,8 +1443,7 @@ function stepWeeks(n: number) {
       if (!espece) continue;
       // L'arbre d'**après** le tick : un gîte vient d'y être pris, il est debout.
       const hote = ticked.state.trees.find((t) => t.id === individu.arbreId);
-      const ou = hote ? ` dans un ${nomEspece(hote.especeId)}` : "";
-      event("🐾", `${capitale(uneFaune(espece))} s'installe${ou}`);
+      event("🐾", direLInstallation(espece, hote?.especeId));
     }
     for (const { individu, cause } of ticked.departsFaune) {
       const espece = especeFaune(individu.especeId);
@@ -1453,8 +1451,7 @@ function stepWeeks(n: number) {
       // L'arbre d'**avant** : quand la cause est `arbreDisparu`, il n'est déjà
       // plus dans l'état d'après, et c'est justement le cas qu'on veut nommer.
       const hote = before.trees.find((t) => t.id === individu.arbreId);
-      const ou = hote ? ` le ${nomEspece(hote.especeId)}` : " la parcelle";
-      event("🐾", `${capitale(laFaune(espece))} quitte${ou} : ${departDit(cause)}`);
+      event("🐾", direLeDepart(espece, hote?.especeId, cause));
     }
     // Sécheresse : le profil moyen presque à sec en saison de végétation. La
     // moyenne se prend **par cellule**, tous horizons sommés (#343).
