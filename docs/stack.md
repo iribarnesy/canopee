@@ -18,7 +18,7 @@
 | Lint/format | **Biome** | Un seul outil, rapide, remplace ESLint+Prettier. + une règle d'architecture : `engine/` n'importe jamais depuis `ui/`/`render/`. |
 | CI | **GitHub Actions** | typecheck + tests + golden runs sur chaque PR. |
 | Déploiement | **GitHub Pages** | Jeu 100 % client, aucun backend. Une URL de démo par push sur main. |
-| Sauvegardes | **IndexedDB** + export/import JSON | Local d'abord ; le format de save = (seed, station, scénario SSP, journal d'actions datées) — rejouable, donc compact et debuggable. |
+| Sauvegardes | **localStorage** (journal) + **IndexedDB** (bloc d'état) | Local d'abord ; le format de save = (seed, station, scénario SSP, journal d'actions datées) — rejouable, donc compact et debuggable, et c'est la vérité de secours. Un **bloc d'état** l'accompagne depuis #338 (`src/game/reprise.ts`) : l'état du moteur et ce que le worker tient à côté, à l'ouverture de la semaine, compressé dans IndexedDB. La reprise repart de lui s'il se relit, et rejoue le journal sinon. |
 
 ## Arborescence cible
 
