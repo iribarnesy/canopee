@@ -115,6 +115,82 @@ La faim du BRF de `sol-vivant` (minéral du bloc un mois après, g/m²), dans le
 - Le bois mort brûlé perd son azote en fumée, comme l'aérien d'un arbre qui brûle. Aucun flux ne compte ces pertes, pas plus que celles de la litière brûlée : la propriété de conservation de l'azote ne tourne pas sur une partie qui brûle.
 - Les feuilles d'un fût laissé se couchent avec lui, faute de carbone à part dans le modèle. Un caduc coupé en hiver n'en porte pas ; un persistant si.
 
+## Ce qu'un lot précédent a appris (la juglone des noyers et la fiche du commun, #375, #377)
+
+Une valeur d'atlas, posée sur une source qualitative, et elle a tout déplacé
+sauf ce qu'on attendait.
+
+### Une tolérance qualifiée vaut une valeur, si les sources disent la même chose
+
+Aucune source ne **chiffre** la sensibilité d'un noyer à la juglone : les
+bioessais exposent les essences qu'on voudrait planter **avec** le noyer, jamais
+le noyer (Rietveld 1983 : seize espèces, aucun *Juglans*). Quatre la
+**qualifient**, dans le même sens : la molécule est tenue sous forme non toxique
+dans les tissus du noyer et ne s'oxyde qu'au contact d'autres racines (Rietveld
+1983), celle qui revient dans ses racines y est aussitôt détoxiquée (Coder
+2017), l'USDA finance la recherche des gènes qui en protègent le noyer noir
+(Meyer, Purdue), et le problème de replantation des noyeraies est attribué aux
+organismes du sol, pas à la juglone (Jarvis-Shean 2017). Zéro est la
+traduction d'« indifférent », comme le pommier porte 1 parce qu'il est en tête
+de toutes les listes.
+
+### Un plafond en cache un autre
+
+Tant que chaque noyer du rang poussait à la moitié de ce qu'il pouvait, aucun
+autre facteur ne pouvait mordre. #247 avait conclu que le blé ne coûtait plus
+rien à l'arbre d'allée (0,999 du rang sans blé) : c'était vrai **sous le
+plafond**. Levé, le blé lui prend un peu plus du quart de son volume (0,73), le
+témoin forestier, qui ne paie aucun blé, double, et l'arbre d'allée retombe
+sous lui sur deux graines sur trois. **Une conclusion prise sous un facteur
+limitant ne dit rien de ce qui se passe au-dessus** : avant de dire qu'un
+mécanisme ne coûte rien, vérifier que rien d'autre ne plafonne déjà.
+
+### Ce que le blé prend à l'arbre d'allée n'est pas de l'azote
+
+Relevé chaque été sur la cohorte plantée : l'arbre du rang cultivé porte
+**plus** d'azote dans son feuillage que celui du rang sans blé (361 contre 322 g
+à la graine 4, même sens sur les trois graines) — l'engrais des bandes — et 27 %
+de volume de moins. Le bras du LER qui laboure et fertilise sans semer sépare
+les deux : **le soc seul coûte 15 à 19 %** (0,823 / 0,850 / 0,812 du rang sans
+blé), dans le bras qui a le plus d'azote des trois, et le blé ajoute 11 à 12 %
+par-dessus. #222 avait mesuré que « le labour seul coûte exactement zéro » :
+c'était le même plafond. Mesurer un flux plutôt qu'un stock avait corrigé une
+première erreur ; il fallait encore que rien d'autre ne plafonne.
+
+### Les prédictions fausses
+
+- **L'arbre d'allée devait passer devant le témoin forestier** (1,15 à 1,45) :
+  il retombe dessous (1,059 / 0,828 / 0,987). C'est le résultat du lot.
+- **L'allée non fertilisée** devait rendre 0,55 à 0,68 du blé pur à l'an 25 :
+  0,34. Des noyers deux fois plus grands, sans engrais pour le blé.
+- **H/L à trente-trois ans** dans l'allée fertilisée : 1,52 à 1,67, prédit 1,8
+  à 2,0 ; le rapport de rendement, lui, tombait juste.
+- **Le commun de la fiche corrigée** devait pousser de 0 à 6 % de plus : −0,6 %.
+  La longévité de 200 ans retarde un peu sa jeunesse, et ses racines plus
+  profondes n'y changent rien sur un profil d'un mètre.
+- **L'attribution** : j'attendais l'azote, comme #222 l'avait trouvé ; l'arbre
+  au blé en a plus que l'autre. Et le soc devait garder moins de 85 % du rang
+  sans blé : 0,823 et 0,812, et 0,850 sur la graine 11, à la limite.
+- **Les valeurs écrites d'E13** se retrouvaient à 3 % près, croyais-je : elles
+  avaient dérivé (0,753 à H/L 1,11 sur main, l'essai écrivait 0,706 à 1,28).
+
+### Ce qui reste ouvert
+
+- **#222**, toujours ouverte et rouverte sur le fond : l'arbre d'allée sous le
+  témoin forestier, le soc et le blé à départager (eau, racines coupées,
+  mycorhizes, tassement), commentaire chiffré posté.
+- **La ligne de `ler.test.ts`** reste un plancher : c'est le fait de
+  Restinclières, et l'essai ne doit pas écrire le défaut. Elle passe sur la
+  graine de l'essai (1,059), la campagne la dément sur deux graines sur trois
+  (moyenne 0,958). Je l'avais retournée en plafond « < 1,1 », un seuil sans
+  source : l'utilisateur l'a refusé, à raison.
+- **`noyer-hybride.test.ts`** borne le diamètre du réseau allemand entre sa
+  moyenne et ses meilleures stations, au lieu de ±25 % de la moyenne : réécrit
+  sur un critère sourcé (le limon riche coche les conditions du CNPF), mais
+  c'est une bande plus large, et c'est à relire.
+- **La maturité du commun** (12 ans) contre les 15 à 20 de sa fiche wallonne :
+  hors du périmètre de #377, non touchée.
+
 ## Ce qu'un lot précédent a appris (le noyer hybride, #213)
 
 Une essence de plus à l'atlas, *Juglans × intermedia*, celle qu'on plante

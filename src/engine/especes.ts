@@ -611,6 +611,27 @@ const CROXTON_2004 =
  */
 const IGN_DUPOUEY_2002 =
   "IGN d'après Dupouey 2002 (note non publiée), infradensités des essences françaises de taillis, tMS/m³ — table reproduite en annexe 3 de CNPF 2020, Méthode conversion de taillis en futaie sur souches v2 (label bas-carbone), et utilisée par l'inventaire national des GES";
+/**
+ * **sources de la tolérance des noyers à leur propre juglone** (#375). Aucune ne la
+ * **chiffre** : il n'existe pas de bioessai qui expose un semis de noyer à la
+ * juglone, ceux qui existent testent les essences qu'on voudrait planter **avec**
+ * le noyer (Rietveld 1983 : seize espèces, aucune n'est un *Juglans*). Toutes la
+ * **qualifient**, et dans le même sens : chez le noyer, la molécule est tenue sous
+ * une forme non toxique, et celle qui revient dans ses racines y est détoxiquée.
+ */
+const RIETVELD_1983 =
+  "Rietveld 1983, Allelopathic effects of juglone on germination and growth of several herbaceous and woody species, Journal of Chemical Ecology 9 : 295-308 (USDA Forest Service, Rhinelander)";
+const CODER_2017 =
+  "Coder 2017, Black Walnut Allelopathy: Tree Chemical Warfare, Warnell School of Forestry & Natural Resources, University of Georgia, publication WSFNR-17-06 — synthèse de vulgarisation";
+const MEYER_NIFA =
+  "Meyer (Purdue University), Investigation of metabolic mechanisms underlying juglone resistance, projet USDA NIFA 2022-2024 — énoncé du projet, pas un résultat";
+/** **sources des trois traits du commun que sa fiche wallonne contredisait** (#377). */
+const CNPF_NOYERS_2023 =
+  "Le Mesle & Trembleau 2023, Les noyers à bois, fiche essence 4 (2e édition), CNPF Centre-Val de Loire et Île-de-France";
+const ZENELI_2006 =
+  "Zeneli & Kola 2006, Soil physical and chemical characteristics and root system development in a walnut plantation in Northern Albania, Ekológia (Bratislava) 25(4) : 442-449 (Dibra) — résumé seul";
+const JARVIS_SHEAN_2017 =
+  "Jarvis-Shean 2017, Considerations for Replanting Walnut Orchards, Sacramento Valley Orchard Source (UC Cooperative Extension, Californie)";
 const GWDD_2009 =
   "Zanne, Lopez-Gonzalez, Coomes, Ilic, Jansen, Lewis, Miller, Swenson, Wiemann & Chave 2009, Global Wood Density Database, Dryad doi:10.5061/dryad.234 (exemplaire consulté : miroir Zenodo 13322441) — « oven dry mass/fresh volume », moyenne des mesures de l'espèce";
 
@@ -942,12 +963,24 @@ export const ESPECES_V0: readonly EspeceV0[] = [
     // pH, littérature : PFAF et World Agroforestry : tolère 5,1-8,3, préfère 6,6-7,5 ; la chaux libre ne le limite pas.
     ph: [5, 8.3],
     lumiere: { compensation: 0.2, saturation: 0.75, lai: 2.6, houppierRatio: 0.5, caduc: true },
-    racines: { profondeurMaxCm: 160 }, // pivot profond
+    // **Un pivot de 3,7 m**, mesuré dans une plantation de semis du nord de
+    // l'Albanie, les racines latérales surtout entre 60 et 80 cm (Zeneli & Kola
+    // 2006) ; la fiche wallonne le dit « à enracinement très profond », et donne
+    // 3 à 5 m. La valeur d'avant, 160 cm, n'avait pas de source (#377). C'est
+    // un enracinement **si le sol le permet** : aucun profil du dépôt ne dépasse
+    // 120 cm (#257), et ce que ce nombre change ici, c'est la vitesse à laquelle
+    // un jeune noyer atteint le fond du sien.
+    racines: { profondeurMaxCm: 370 },
     tBaseCroissanceC: 8,
     azote: { demandeRelative: 0.9, fixateur: false },
     // Les noix sont cachées par les corvidés, comme les glands : le même noyau
     // de dispersion, en terrain découvert où l'oiseau les retrouvera.
-    regeneration: { maturiteAns: 12, longeviteAns: 150, dissemination: "geai", semisParAn: 0.5 },
+    //
+    // Longévité : **200 ans**, la borne basse des « 200 - 300 ans » de la fiche
+    // wallonne, que #209 citait déjà sans les reprendre (#377). Elle fixe aussi
+    // la forme de la courbe de croissance (`exposantDeForme`) : un peu plus lente
+    // sous quatre mètres, un peu plus soutenue au-dessus.
+    regeneration: { maturiteAns: 12, longeviteAns: 200, dissemination: "geai", semisParAn: 0.5 },
     litiere: { cnRatio: 35, calciumMgG: 14 },
     // **Le** plus tardif de l'atlas, et ce n'est pas un détail : c'est ce qui lui
     // permet d'échapper aux gels d'avril, et ce qui rend l'agroforesterie au
@@ -956,7 +989,11 @@ export const ESPECES_V0: readonly EspeceV0[] = [
     economie: { prixPlantEur: 15 },
     // Bois précieux : le noyer se vend à la bille, plusieurs fois le chêne.
     // Infradensité : GWDD, moyenne de trois mesures (0,533 à 0,591).
-    bois: { densite: 0.56, prixOeuvreEurM3: 600, rejetteDeSouche: false },
+    // **Il rejette de souche**, et d'autant plus vigoureusement qu'il est jeune :
+    // « possibilité de rattraper une plantation par recépage » (fiche wallonne),
+    // « le recépage des plants est possible en fin d'hiver » (CNPF 2023). La
+    // fiche disait le contraire, sans source (#377).
+    bois: { densite: 0.56, prixOeuvreEurM3: 600, rejetteDeSouche: true },
     // Anémophile : le noyer lâche son pollen au vent, comme le noisetier. Il
     // fleurit après avoir feuillé, donc tard *(atlas)*.
     floraison: { debutDJ: 320, dureeDJ: 100, nectar: 0 },
@@ -978,6 +1015,28 @@ export const ESPECES_V0: readonly EspeceV0[] = [
      * chose qu'on apprend en plantant un verger à côté.
      */
     allelopathie: { porteeM: 17.5 },
+    /**
+     * **Et il ne la subit pas** (#375). Faute de ce champ, la sensibilité médiane
+     * s'appliquait aux noyers eux-mêmes : un noyer à cinq mètres d'un autre — un
+     * rang d'agroforesterie, une plantation à 6 × 6 — avait sa croissance
+     * plafonnée à la moitié par la juglone de ses voisins.
+     *
+     * Dans les tissus vivants du noyer, la juglone est tenue sous sa forme
+     * réduite, l'hydrojuglone, incolore et non toxique ; elle ne s'oxyde qu'à
+     * l'air ou au contact des racines d'**autres** plantes (Rietveld 1983). Celle
+     * qui revient dans une racine de noyer « est aussitôt rendue non toxique et
+     * stockée » (Coder 2017), et c'est l'hypothèse de départ d'un programme de
+     * l'USDA qui cherche les gènes du noyer noir « empêchant l'autotoxicité »
+     * (Meyer, Purdue, 2022-2024). Aucune source ne **chiffre** cette tolérance :
+     * elles la qualifient, et zéro est la traduction d'« indifférent ».
+     *
+     * L'autotoxicité partielle qu'on pourrait opposer — un jeune noyer replanté
+     * dans un sol de noyeraie pousse mal — existe, mais les vergers californiens
+     * l'attribuent aux organismes du sol accumulés sous les vieux arbres, et à
+     * aucun pathogène en particulier ; la juglone n'y figure pas (Jarvis-Shean
+     * 2017).
+     */
+    sensibiliteAllelopathie: 0,
     exigenceMinerale: 2.5,
     mycorhize: "arbusculaire",
     ravageurs: { sensibilite: 0.4 },
@@ -988,7 +1047,17 @@ export const ESPECES_V0: readonly EspeceV0[] = [
      * de verger avant d'être un fait de forêt *(à confirmer)*.
      */
     semences: { kgParM2HouppierAn: 0.06, periodeAns: 2, facteurAnneePleine: 1.4 },
-    sources: [ATLAS, GWDD_2009],
+    sources: [
+      ATLAS,
+      GWDD_2009,
+      FEE_HYBRIDE,
+      CNPF_NOYERS_2023,
+      ZENELI_2006,
+      RIETVELD_1983,
+      CODER_2017,
+      MEYER_NIFA,
+      JARVIS_SHEAN_2017,
+    ],
   },
   {
     id: "malus_domestica",
@@ -2224,15 +2293,20 @@ export const ESPECES_V0: readonly EspeceV0[] = [
     // à 18 ans, 28 à 25, 41 à 35, 60 cm à la coupe finale vers 50 ans, à
     // 9 × 6 m. Un scénario, pas une mesure.
     //
-    // **Mesuré** (#213, trois graines, limon riche, plants de 2 m), et ce nombre
-    // n'a pas bougé pour l'obtenir : en allée à 100 tiges/ha, 5,1 m et 11,7 cm
-    // à dix ans, 8,4 m et 19,9 cm à vingt, 11,6 m et 27,7 cm à trente — devant
-    // le commun (4,0, 6,1 et 8,1 m), derrière le frêne (6,9, 11,2 et 14,6 m).
-    // Restinclières à dix-neuf ans : 13,2 m et 27,5 cm (Heim 2023) ; le moteur
-    // 8,1 m (−39 %) et 19,1 cm (−30 %). **L'écart ne vient pas de ce nombre** :
-    // chaque noyer pousse dans la juglone de ses voisins et la subit à la
-    // sensibilité médiane, faute d'en déclarer une ; sans elle, 13,2 m et
-    // 31,0 cm (`noyer-hybride.test.ts`).
+    // **Mesuré** (#213, #375 ; trois graines, limon riche, plants de 2 m), et ce
+    // nombre n'a pas bougé pour l'obtenir : en allée à 100 tiges/ha, 8,0 m et
+    // 18,9 cm à dix ans, 13,7 m et 32,0 cm à vingt, 18,7 m et 40,4 cm à trente —
+    // devant le commun (5,9, 9,6 et 12,8 m) et devant le frêne (6,9, 11,2 et
+    // 14,6 m). Restinclières à dix-neuf ans : 13,2 m et 27,5 cm
+    // (Heim 2023) ; le moteur 13,2 m (−0,1 %) et 31,0 cm (+13 %), gardés à 20 %
+    // près par `noyer-hybride.test.ts`. Entre cinq et dix ans, 61 cm/an et
+    // 15 mm/an, contre 78 cm et 8,5 mm en moyenne du réseau allemand (14 mm sur
+    // ses stations au-dessus de la moyenne) : en hauteur un peu dessous, en
+    // diamètre au niveau d'une bonne station.
+    //
+    // À l'entrée de la fiche, le moteur était à 8,1 m et 19,1 cm à dix-neuf ans :
+    // chaque noyer subissait la juglone de ses voisins à la sensibilité médiane,
+    // et sa croissance plafonnait à la moitié. Ce n'était pas ce nombre (#375).
     pousseMaxMAn: 0.8,
     // Le besoin en eau est « fort » pour les trois noyers (Coello 2013), la
     // résistance à la sécheresse **intermédiaire** entre celles des deux parents
@@ -2268,11 +2342,12 @@ export const ESPECES_V0: readonly EspeceV0[] = [
     // parents, ni portée. Les quinze à vingt mètres sont ceux du genre, repris
     // du commun *(à confirmer)*.
     //
-    // **Et il la subit** : ni lui ni le commun ne déclarent de sensibilité, la
-    // médiane s'applique, et un noyer planté à cinq mètres d'un autre voit sa
-    // croissance plafonnée à la moitié. Aucune source du dépôt ne dit ce que
-    // vaut la juglone pour un noyer : question ouverte, pas tranchée ici (#375).
     allelopathie: { porteeM: 17.5 },
+    // **Et il ne la subit pas**, comme le commun (#375) : la juglone est tenue sous
+    // forme non toxique dans les tissus du noyer et détoxiquée quand elle y
+    // revient (Rietveld 1983, Coder 2017). Les sources parlent du noyer noir et
+    // du genre, pas de l'hybride en propre ; il descend des deux *(à confirmer)*.
+    sensibiliteAllelopathie: 0,
     // « Assez exigeant en chaleur » pour l'hybride comme pour le commun (fichier
     // wallon) : la température de démarrage du commun est reprise.
     tBaseCroissanceC: 8,
@@ -2349,6 +2424,8 @@ export const ESPECES_V0: readonly EspeceV0[] = [
       MAA_2024,
       COELLO_2013,
       GWDD_2009,
+      RIETVELD_1983,
+      CODER_2017,
     ],
   },
 ];

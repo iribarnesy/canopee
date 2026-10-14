@@ -364,6 +364,21 @@ describe("l'ombre des arbres coûte du rendement", () => {
     // plancher qui suivait (0,6) n'avait pas de source, c'était un relevé du
     // moteur ; il est remplacé par ce que chaque graine montre sans exception,
     // une perte qui croît avec l'âge.
+    //
+    // **Et elle s'est creusée de moitié quand les noyers ont cessé de subir
+    // leur propre juglone** (#375). Plantés à huit mètres les uns des autres, ils
+    // poussaient à la moitié de ce qu'ils pouvaient ; libérés, ils prennent à un
+    // blé sans apport l'ombre et l'azote d'arbres deux fois plus grands :
+    //
+    //     graine        4      1      7     33   2022   moyenne
+    //     an 25      0,274  0,316  0,427  0,337  0,340    0,339
+    //     an 33      0,151  0,209  0,198  0,176  0,195    0,186
+    //
+    // contre 0,723 et 0,534 de moyenne juste avant. Les directions tiennent sur
+    // chaque graine, et c'est tout ce que l'essai affirme. Le niveau, lui, n'a
+    // pas d'ancre : aucune allée de huit mètres ne porte des noyers de vingt-
+    // cinq ans sans engrais, et le moteur dit seulement qu'elle ne nourrirait
+    // plus grand-chose.
     expect(rapport(25)).toBeLessThan(0.95);
     expect(rapport(25)).toBeLessThan(rapport(3));
     // L'ombre gagne toujours avec l'âge, et le classement des âges reste strict.
