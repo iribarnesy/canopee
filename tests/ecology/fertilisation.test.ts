@@ -304,6 +304,24 @@ describe("et c'est la fertilisation qui rend le gradient LISIBLE (E13)", () => {
     // part mécanisable, plus petite entre des rangs d'arbres : l'allée payait
     // moins d'engin que le plein champ, et la mesure lui rendait une part de
     // son ombre (#247, `grainRecoltableT`).
+    //
+    // **Relevé depuis que les noyers ne subissent plus la juglone de leurs
+    // voisins** (#375). À huit mètres sur le rang et entre les rangs, chaque
+    // noyer était dans la juglone des autres, à la sensibilité médiane, et sa
+    // croissance plafonnait à la moitié ; l'allée montait donc deux fois moins
+    // vite. Même graine, même dispositif :
+    //
+    //   an                3      9      15     21     27     33
+    //   avant    H/L    0,34   0,49   0,65   0,81   0,96   1,11
+    //            ratio  0,992  0,970  0,933  0,896  0,848  0,753
+    //   après    H/L    0,40   0,66   0,93   1,19   1,44   1,66
+    //            ratio  0,989  0,931  0,853  0,685  0,575  0,534
+    //
+    // (le tableau du début avait déjà dérivé : il donnait 1,28 de H/L à 33 ans,
+    // le moteur d'avant ce lot n'en faisait que 1,11.) À H/L égal, la pente ne
+    // change presque pas — 0,853 à 0,93 contre 0,848 à 0,96 —, c'est l'allée
+    // qui l'atteint plus tôt. Les graines 11 et 23 donnent la même forme
+    // (0,506 et 0,601 à 33 ans, pour 1,63 et 1,50 de H/L).
     const ANS = 34;
     const pur = bleContinu(ANS, 192, 0, { cote: 40, rayonM: 3 });
     const allee = bleContinu(ANS, 192, 0, { cote: 40, rayonM: 3, rangs: [16, 24] });

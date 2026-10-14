@@ -77,6 +77,17 @@ describe("toutes les espèces n'en souffrent pas pareil", () => {
     // Entre les deux, c'est proportionnel — aucun seuil.
     expect(facteurAllelopathie(0.5, 0.5)).toBeCloseTo(0.75, 9);
   });
+
+  it("un noyer ne souffre pas de la juglone d'un autre noyer", () => {
+    // #375. Sans ce trait, la médiane s'appliquait aux noyers eux-mêmes, et tout
+    // noyer planté en rang poussait à moitié. Chez le noyer, la juglone est tenue
+    // sous forme non toxique et détoxiquée quand elle revient dans ses racines
+    // (Rietveld 1983, Coder 2017) : même collé à un congénère, il ne perd rien.
+    for (const id of ["juglans_regia", "juglans_x_intermedia"]) {
+      const sensibilite = getEspece(id).sensibiliteAllelopathie ?? SENSIBILITE_MEDIANE;
+      expect(facteurAllelopathie(1, sensibilite), id).toBe(1);
+    }
+  });
 });
 
 describe("dans une partie, un pommier sous un noyer ne pousse pas", () => {
