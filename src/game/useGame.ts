@@ -1,6 +1,7 @@
 /**
  * Pont React ↔ worker de simulation : cycle de vie du worker, dernier
- * instantané, journal de refus, sauvegarde locale (localStorage).
+ * instantané, journal de refus, sauvegarde locale (localStorage, et IndexedDB
+ * pour le bloc de reprise, #338).
  */
 
 import { useCallback, useEffect, useRef, useState } from "react";
@@ -17,6 +18,7 @@ let uid = 0;
 export type WithUid<T> = T & { uid: number };
 const withUid = <T>(x: T): WithUid<T> => ({ ...x, uid: ++uid });
 
+import { lireLeBloc, rangerLeBloc } from "./blocs";
 import type {
   ActionSansSemaine,
   FactureHoraire,
@@ -482,13 +484,23 @@ export function useGame(): GameApi {
         case "histoire":
           setHistoires((prev) => new Map(prev).set(msg.id, msg.evenements));
           break;
-        case "save":
+        case "save": {
           // Chaque partie a son entrée, et l'autosave écrit dans la sienne :
           // c'est ce qui fait qu'en commencer une n'efface plus l'autre (#147).
-          ecrireSauvegarde(localStorage, idPartie.current, msg.save);
+          const liste = ecrireSauvegarde(localStorage, idPartie.current, msg.save);
+          // Le bloc de reprise, quand il vient (#338), va dans IndexedDB sous la
+          // même entrée. On ne l'attend pas : la sauvegarde est écrite, et un
+          // bloc qui n'arriverait pas au bout ne coûterait qu'un rejeu.
+          if (msg.etat)
+            void rangerLeBloc(
+              idPartie.current,
+              msg.etat,
+              liste.map((e) => e.id),
+            );
           // Si l'on attendait cette sauvegarde pour quitter, c'est le moment.
           arretRef.current?.();
           break;
+        }
       }
     };
     workerRef.current = worker;
@@ -632,8 +644,19 @@ export function useGame(): GameApi {
       oublierLesHistoires();
       setBilanReference(BILAN_VIDE);
       setBilanDepuis(0);
-      send({ type: "resume", save });
-      send({ type: "autoHarvest", enabled: true });
+      // **Le bloc de reprise d'abord, s'il y en a un** (#338) : avec lui, le
+      // worker repart de l'état sauvegardé au lieu de rejouer toute la partie.
+      // Sa lecture est asynchrone ; une autre partie lancée entre-temps garde
+      // la main, et cette reprise-ci n'a plus lieu.
+      const partie = idPartie.current;
+      const reprendre = (etat?: Uint8Array) => {
+        if (idPartie.current !== partie) return;
+        if (etat) workerRef.current?.postMessage({ type: "resume", save, etat }, [etat.buffer]);
+        else send({ type: "resume", save });
+        send({ type: "autoHarvest", enabled: true });
+      };
+      if (id) lireLeBloc(id).then(reprendre, () => reprendre());
+      else reprendre();
       setAutoHarvestState(true);
       setSpeedState(0);
     },

@@ -1,7 +1,8 @@
 /**
  * Protocole UI ↔ worker de simulation (docs/stack.md : le moteur tourne dans
  * un Web Worker, l'UI ne reçoit que des instantanés). La sauvegarde est le
- * journal d'actions datées + la seed (rejouable, src/engine/game.ts).
+ * journal d'actions datées + la seed (rejouable, src/engine/game.ts) ; un bloc
+ * d'état l'accompagne pour reprendre sans rejouer (#338, `reprise.ts`).
  */
 
 import type { ActionRefusal, EconomyState, GameAction, GesteVisible } from "../engine/actions";
@@ -672,7 +673,13 @@ export type ToWorker =
       /** la faune vit-elle en individus ? (`station.faune`, #187) */
       faune: boolean;
     }
-  | { type: "resume"; save: SaveGame }
+  /**
+   * Reprendre une sauvegarde. `etat` est son bloc de reprise, tel que le
+   * worker l'avait envoyé avec elle (`save`, #338) : s'il se relit pour cette
+   * sauvegarde, la reprise part de lui ; absent ou illisible, elle rejoue le
+   * journal.
+   */
+  | { type: "resume"; save: SaveGame; etat?: Uint8Array }
   | { type: "speed"; weeksPerSecond: number }
   /**
    * **retenir** l'horloge sans toucher à la vitesse (#163).
@@ -882,7 +889,15 @@ export type FromWorker =
    * qu'on l'a voulu.
    */
   | { type: "recolteAuto"; semees: string[]; choix: ChoixRecolte }
-  | { type: "save"; save: SaveGame }
+  /**
+   * Une sauvegarde, et avec la première de chaque semaine de jeu, son **bloc de**
+   * **reprise** (#338) : l'état du moteur et ce que le worker tient à côté, à
+   * l'ouverture de la semaine (`reprise.ts`). La sauvegarde va dans
+   * `localStorage` ; le bloc, qui pèse des mégaoctets, dans IndexedDB
+   * (`blocs.ts`), sous la même entrée. `SaveGame` ne change pas : un bloc
+   * perdu ou périmé n'est qu'une reprise plus lente.
+   */
+  | { type: "save"; save: SaveGame; etat?: Uint8Array }
   | { type: "progress"; done: number; total: number; phase?: "vieillissement" | "rejeu" }
   /**
    * Le temps s'est arrêté tout seul (fruits mûrs…) : l'UI resynchronise la
