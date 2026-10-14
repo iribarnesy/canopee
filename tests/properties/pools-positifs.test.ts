@@ -71,6 +71,7 @@ const POOLS = [
   "litterCG",
   "humusCG",
   "boisAuSolCG",
+  "boisAuSolNG",
   "phosphoreG",
   "phosphoreFixeG",
   "potassiumG",
@@ -80,7 +81,7 @@ const POOLS = [
 ] as const;
 
 /** Les stocks de **parcelle**, qui ne sont pas des grilles mais se vident pareil. */
-const STOCKS_PARCELLE = ["deadWoodKgC", "oeuvreStockKgC"] as const;
+const STOCKS_PARCELLE = ["deadWoodKgC", "deadWoodNG", "oeuvreStockKgC"] as const;
 
 /**
  * Fait tourner une lande d'ajoncs et rend, pour chaque pool, la pire valeur

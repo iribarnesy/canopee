@@ -192,18 +192,21 @@ describe("la faim d'azote (C9)", () => {
     // `plantAt` pose un arbre sans azote dans son bois (le moteur n'en met que
     // dans le bois neuf), et ce bois au C/N infini prenait tout son azote au sol
     // (−0,98 g/m² un mois après). L'essai donne donc à ses aulnes l'azote que
-    // le moteur assigne à leur bois (`cnBois`) ; l'écart tombe alors à −0,39
-    // contre des arbres debout, parce que couper vingt arbres arrête leur
-    // prélèvement et verse l'azote de leurs racines à la litière. Le témoin juste
-    // fait le même geste moins ce qu'on mesure : une coupe **vendue**, mêmes
-    // arbres abattus, mêmes racines laissées, seul le broyat diffère (−0,72).
+    // le moteur assigne à leur bois (`cnBois`). Le témoin juste fait le même
+    // geste moins ce qu'on mesure : une coupe **vendue**, mêmes arbres abattus,
+    // mêmes racines laissées, seul le broyat diffère. Depuis que l'azote des
+    // racines coupées reste au bois mort avec leur carbone (#328), la coupe
+    // vendue et les arbres debout donnent le même minéral en février, et la faim
+    // vaut −0,46 g/m² contre l'un comme contre l'autre. Avant, l'azote des
+    // racines, versé sans carbone sous les souches, creusait l'écart avec la
+    // coupe vendue (−0,72) et le comblait avec les arbres debout (−0,39).
     //
     // Et le broyat abaisse le minéral du bloc même quand il ne se décompose pas :
     // un essai de #309 passait ainsi, sans faim, et la variante où sa vitesse est
-    // nulle garde ici −0,44 g/m² contre la coupe vendue (cause non tracée). D'où
+    // nulle garde ici −0,19 g/m² contre la coupe vendue (cause non tracée). D'où
     // le second bras : le même broyat, de même masse, rendu riche à la main (bois
     // à C/N 20, sous la bascule de 27). Même tapis, même geste ; seul le C/N
-    // diffère.
+    // diffère, et avec lui la vitesse, qui se lit sur le C/N du broyat.
     const COUPE = 5;
     const construire = (cnBoisImpose?: number) => {
       let state = createGameState(STATION, rngStateFromSeed(2));
@@ -247,10 +250,10 @@ describe("la faim d'azote (C9)", () => {
     // laquelle on n'enfouit pas du BRF juste avant de planter.
     expect(faim).toBeLessThan(0);
     // Et c'est la faim, pas le tapis : le broyat ligneux prend au sol plus que le
-    // même broyat rendu riche, d'au moins 0,1 g/m² (1 kg N/ha). Mesuré : −0,72
-    // contre −0,05. Sur la variante où le broyat ne se décompose pas, les deux
-    // écarts ne diffèrent que d'un millième (−0,444 et −0,443), et cette ligne
-    // tombe.
+    // même broyat rendu riche, d'au moins 0,1 g/m² (1 kg N/ha). Mesuré : −0,46
+    // contre +0,41. Sur la variante où le broyat ne se décompose pas, les deux
+    // écarts ne diffèrent que de deux dix-millièmes (−0,1929 et −0,1927), et
+    // cette ligne tombe.
     expect(faim).toBeLessThan(faimRiche - 0.1);
     // Rien n'est perdu pour autant : le total (minéral + litière) reste
     // supérieur, c'est ce que vérifie epandre-vs-vendre.test.ts.
