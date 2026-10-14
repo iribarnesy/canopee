@@ -104,12 +104,76 @@ interface Entete {
   etat: number;
   cumuls: Cumuls;
   bilan: [string, LigneDeBilan][];
-  histoires: [number, LigneDeSuivi[]][];
+  histoires: HistoiresSerrees;
   memoire: [number, EtatVu][];
   fluxes?: TickFluxes;
   oiseaux?: readonly FrequentationDeGuilde[];
   /** les morceaux binaires qui suivent l'en-tête, dans l'ordre, en octets */
   sections: { nom: string; n: number }[];
+}
+
+/**
+ * **L'histoire des arbres, serrée.** C'est, de loin, ce que le worker tient de
+ * plus gros à côté de l'état : sur une lande sèche de quarante ans, 77 387
+ * lignes pour 9 680 arbres ayant vécu, 8,4 Mo en JSON objet par objet — autant
+ * que l'état du moteur tout entier. Chaque ligne y répète ses six noms de champ,
+ * l'identifiant de l'arbre que la clé porte déjà, et sa phrase, alors qu'il n'y
+ * a que quelques dizaines de phrases différentes.
+ *
+ * Serrée, une ligne tient en quatre nombres : la semaine, le rang de sa phrase
+ * dans `phrases`, le compte, la première semaine. Rien ne se perd : l'arbre est
+ * la clé (`ecrireDansLHistoire` range chaque ligne sous son propre arbre), et la
+ * ligne se rebâtit champ par champ dans l'ordre où le worker l'écrit.
+ */
+interface HistoiresSerrees {
+  /** les couples [rubrique, phrase], dans l'ordre où on les rencontre */
+  phrases: [string, string][];
+  arbres: [number, [number, number, number, number][]][];
+}
+
+function serrerLesHistoires(histoires: Map<number, LigneDeSuivi[]>): HistoiresSerrees {
+  const phrases: [string, string][] = [];
+  const rang = new Map<string, number>();
+  const arbres: HistoiresSerrees["arbres"] = [];
+  for (const [id, lignes] of histoires) {
+    arbres.push([
+      id,
+      lignes.map((l) => {
+        const cle = `${l.quoi}\u0000${l.texte}`;
+        let r = rang.get(cle);
+        if (r === undefined) {
+          r = phrases.length;
+          rang.set(cle, r);
+          phrases.push([l.quoi, l.texte]);
+        }
+        return [l.semaine, r, l.fois, l.depuisSemaine];
+      }),
+    ]);
+  }
+  return { phrases, arbres };
+}
+
+function desserrerLesHistoires(s: HistoiresSerrees): Map<number, LigneDeSuivi[]> | undefined {
+  if (!Array.isArray(s?.phrases) || !Array.isArray(s.arbres)) return undefined;
+  const histoires = new Map<number, LigneDeSuivi[]>();
+  for (const [idArbre, lignes] of s.arbres) {
+    const rebaties: LigneDeSuivi[] = [];
+    for (const [semaine, r, fois, depuisSemaine] of lignes) {
+      const phrase = s.phrases[r];
+      if (!phrase) return undefined;
+      const [quoi, texte] = phrase;
+      rebaties.push({
+        semaine,
+        idArbre,
+        quoi: quoi as LigneDeSuivi["quoi"],
+        texte,
+        fois,
+        depuisSemaine,
+      });
+    }
+    histoires.set(idArbre, rebaties);
+  }
+  return histoires;
 }
 
 /** FNV-1a sur 32 bits, le même que `stateHash`. */
@@ -185,7 +249,7 @@ export function ecrireReprise(
     etat: stateHash(etat),
     cumuls: annexes.cumuls,
     bilan: [...annexes.bilan],
-    histoires: [...annexes.histoires],
+    histoires: serrerLesHistoires(annexes.histoires),
     memoire: [...annexes.memoire],
     ...(annexes.fluxes ? { fluxes: annexes.fluxes } : {}),
     ...(annexes.oiseauxDePassage ? { oiseaux: annexes.oiseauxDePassage } : {}),
@@ -265,10 +329,11 @@ export function lireReprise(
       // dans le tampon qu'on a reçu.
       grilles[nom] = new Float32Array(m.slice().buffer);
     }
+    const histoires = desserrerLesHistoires(entete.histoires);
     if (
       typeof entete.cumuls !== "object" ||
       !Array.isArray(entete.bilan) ||
-      !Array.isArray(entete.histoires) ||
+      !histoires ||
       !Array.isArray(entete.memoire)
     )
       return undefined;
@@ -277,7 +342,7 @@ export function lireReprise(
       annexes: {
         cumuls: entete.cumuls,
         bilan: new Map(entete.bilan),
-        histoires: new Map(entete.histoires),
+        histoires,
         memoire: new Map(entete.memoire),
         ...(entete.fluxes ? { fluxes: entete.fluxes } : {}),
         ...(entete.oiseaux ? { oiseauxDePassage: entete.oiseaux } : {}),

@@ -1247,22 +1247,27 @@ function seTenirAuPlafond(): number {
   // reproduira pour celles qui restent.
   const elaguee = prefixeSousLePlafond(debutDeSemaine, posees);
   pendingGestes = elaguee.gestes;
-  // Le cumul se rejoue comme l'état : il repart du début de la semaine, puis
-  // recompte les gestes des **seules** actions gardées. Sans ça, une récolte
-  // annulée resterait acquise.
-  cumuls = accumuler(cumulsAuDebut, elaguee.gestes, elaguee.etat.trees);
-  // Le bilan repart du même point que le cumul et l'état. Il n'y a que les
-  // **gestes** à recompter : la semaine n'a pas encore été close, donc ni mort ni
-  // naissance n'y est encore arrivée.
-  bilan = bilanAuDebut;
-  replierLeBilan(gestesSeuls(elaguee.gestes), elaguee.etat.week, elaguee.etat.trees);
-  // L'histoire des arbres se rejoue comme le reste : on oublie les gestes de la
-  // semaine, puis on note ceux des seuls gestes gardés.
-  defaireLesSuivisDeLaSemaine();
-  retenirLesGestes(elaguee.gestes, elaguee.etat.week, elaguee.etat.trees);
-  state = elaguee.etat;
   journal = [...journal.slice(0, journalAuDebut), ...elaguee.gardees];
-  actionsDeLaSemaine = elaguee.gardees;
+  // **La semaine se rejoue depuis son ouverture, avec les seules actions**
+  // **gardées**, et se recompte comme elle se compte à la reprise d'une
+  // sauvegarde (`rejouerLaSemaineOuverte`). Le cumul, le bilan et l'histoire
+  // des arbres repartent du point de retour figé à l'ouverture : sans ça, une
+  // récolte annulée resterait acquise. Il n'y a que des **gestes** à recompter :
+  // la semaine n'a pas encore été close, donc ni mort ni naissance n'y est
+  // arrivée.
+  //
+  // Recompter action par action et non d'un bloc, comme le faisait la première
+  // version, n'est pas un détail (#338) : c'est ainsi que la reprise les
+  // recompte, et une partie ramenée sous le plafond puis sauvegardée doit se
+  // reprendre telle qu'elle était — une cueillette suivie d'un abattage de la
+  // même tige ne se range pas sous la même essence selon qu'on regarde les
+  // arbres d'après chaque geste ou d'après la semaine.
+  state = debutDeSemaine;
+  actionsDeLaSemaine = [];
+  cumuls = cumulsAuDebut;
+  bilan = bilanAuDebut;
+  defaireLesSuivisDeLaSemaine();
+  rejouerLaSemaineOuverte();
   return elaguee.annulees;
 }
 
