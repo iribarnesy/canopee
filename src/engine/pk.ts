@@ -78,14 +78,48 @@ export const RATIO_K_SUR_N = 0.55;
  * et la récolte (RB209, note de la table 4.12). Seul le grain vendu l'emporte
  * hors de la parcelle (`potassiumDansLeGrainGKgMS`, `herbacees.ts`).
  *
- * Limite : le prélèvement est plafonné par ce que la cellule contient. Là où
- * le sol ne peut plus fournir, la plante prend son azote sans le potassium qui
- * va avec, et ce pool implicite le compte quand même. Cela n'arrive qu'à
- * potassium épuisé ; l'essai de bilan (`potassium-conservation.test.ts`) le
- * verrait.
+ * Ce pool implicite ne tient que si la plante a bien pris le potassium de son
+ * azote. Quand l'échangeable ne suffit plus, c'est la réserve qui fournit le
+ * reste (`prelevementPotassium`). Il ne compte un potassium que la plante n'a
+ * pas pris que si la réserve est vide elle aussi.
  */
 export function potassiumDeLaStrateG(azoteG: number): number {
   return azoteG * RATIO_K_SUR_N;
+}
+
+/**
+ * Ce que les racines prennent de potassium, g/m², quand elles en veulent
+ * `vouluG` : d'abord l'échangeable, puis, s'il ne suffit plus, la réserve non
+ * échangeable (#222).
+ *
+ * **Une culture vide l'échangeable, et elle continue de prélever.** Un blé
+ * fertilisé prend chaque saison de l'ordre de ce que le limon porte de
+ * potassium échangeable. Au printemps, le pool tombe à presque rien, et la
+ * plante prenait alors son azote sans le potassium qui va avec. Sur le
+ * terrain, ce potassium vient de la réserve. Les sols de Rothamsted et de
+ * Woburn cultivés sans potasse ont fourni bien plus de potassium que leur
+ * échangeable de départ ne le permettait (Johnston et Addiscott 1971,
+ * *J. Agric. Sci.* 76 : 539-552). Un ray-grass cultivé en continu sous serre
+ * tire de la réserve de vingt sols britanniques de presque rien à plus de
+ * 2 000 livres de potassium par acre, selon leur argile fine (Arnold et Close
+ * 1961, *J. Agric. Sci.* 57 : 295-304).
+ *
+ * La réserve ne fournit donc que ce que l'échangeable n'a plus. Elle ne vient
+ * pas en premier : l'équilibre entre les deux pools reste celui de
+ * `echangeReserveK`. Le moteur n'a pas d'état de plus pour cela, et le bilan
+ * de la parcelle reste exact tant que la réserve n'est pas vide
+ * (`potassium-conservation.test.ts`). Une fois vide, la plante prend de nouveau
+ * son azote sans son potassium. La culture ne lit pas le potassium : elle ne
+ * pousse pas moins faute de lui.
+ */
+export function prelevementPotassium(
+  echangeableG: number,
+  reserveG: number,
+  vouluG: number,
+): { echangeable: number; reserve: number } {
+  const echangeable = Math.min(Math.max(0, echangeableG), vouluG);
+  const reserve = Math.min(Math.max(0, reserveG), vouluG - echangeable);
+  return { echangeable, reserve };
 }
 
 /**

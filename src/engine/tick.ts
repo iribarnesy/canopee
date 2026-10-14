@@ -186,6 +186,7 @@ import {
   facteurNutriment,
   lessivagePotassiumG,
   potassiumDeLaStrateG,
+  prelevementPotassium,
   RATIO_K_SUR_N,
   RATIO_P_SUR_N,
   RELARGAGE_HEBDO,
@@ -2168,9 +2169,17 @@ export function tick(state: GameState, weather: WeekWeather): TickResult {
       const prisP = Math.min(offert, azotePris * RATIO_P_SUR_N);
       phosphoreG[i] = (phosphoreG[i] ?? 0) - prisP;
       uptakePSumG += prisP;
-      const prisK = Math.min(potassiumG[i] ?? 0, azotePris * RATIO_K_SUR_N);
-      potassiumG[i] = (potassiumG[i] ?? 0) - prisK;
-      uptakeKSumG += prisK;
+      // Le potassium vient de l'échangeable, et de la réserve quand
+      // l'échangeable ne suffit plus : une culture le vide chaque printemps
+      // (pk.ts, #222).
+      const prisK = prelevementPotassium(
+        potassiumG[i] ?? 0,
+        potassiumReserveG[i] ?? 0,
+        azotePris * RATIO_K_SUR_N,
+      );
+      potassiumG[i] = (potassiumG[i] ?? 0) - prisK.echangeable;
+      potassiumReserveG[i] = (potassiumReserveG[i] ?? 0) - prisK.reserve;
+      uptakeKSumG += prisK.echangeable + prisK.reserve;
     }
   }
 

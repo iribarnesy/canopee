@@ -34,7 +34,13 @@ import { tick } from "../../src/engine/tick";
  *
  * Le second bilan est le plus exigeant : il échoue si un retour manque, s'il
  * compte deux fois, ou si la strate prend son azote sans le potassium qui va
- * avec, ce qui arrive quand le sol n'en a plus (pk.ts).
+ * avec. Un blé fertilisé vide chaque printemps le potassium échangeable du
+ * limon ; la réserve non échangeable fournit alors le reste
+ * (`prelevementPotassium`, pk.ts), et le bilan reste exact **tant qu'elle n'est
+ * pas vide**. L'essai vérifie donc aussi qu'elle ne s'est vidée nulle part. Si
+ * elle se vide, la plante prend son azote sans son potassium, le pool implicite
+ * compte un potassium qu'elle n'a pas pris, et le bilan ne peut plus tenir :
+ * l'essai le dit alors par son propre message, avant l'écart du bilan.
  *
  * La précision est de 1e-4 kg/ha : le potassium échangeable est tenu en
  * flottants simples, et une dizaine de g/m² s'y arrondit au millionième.
@@ -144,6 +150,7 @@ describe("la parcelle sans arbre se referme, sol et plantes ensemble", () => {
     const total = (e: GameState) => solKgHa(e) + strateKgHa(e);
     let exporte = 0;
     let rendu = 0;
+    let reserveMinimum = Number.POSITIVE_INFINITY;
     for (let an = 0; an < ans; an++) {
       for (let w = 0; w < 52; w++) {
         for (const geste of gestes(an, w, centre)) {
@@ -160,6 +167,12 @@ describe("la parcelle sans arbre se referme, sol et plantes ensemble", () => {
         const r = tick(s, m);
         s = r.state;
         const f = r.fluxes;
+        // La condition du bilan exact : la réserve n'est vide nulle part.
+        const reserveMin = Math.min(...s.soil.potassiumReserveG);
+        expect(reserveMin, `réserve vide, an ${an} semaine ${w} : bilan inexact`).toBeGreaterThan(
+          0,
+        );
+        reserveMinimum = Math.min(reserveMinimum, reserveMin);
         // Le prélèvement et les retours sont internes : seuls l'apport et les
         // pertes changent le total.
         expect(total(s) - avant).toBeCloseTo(
@@ -169,7 +182,12 @@ describe("la parcelle sans arbre se referme, sol et plantes ensemble", () => {
         rendu += f.retourKKgHa;
       }
     }
-    return { exporte, rendu, potassiumKgHa: moyenne(s.soil.potassiumG) * 10 };
+    return {
+      exporte,
+      rendu,
+      reserveMinimum,
+      potassiumKgHa: moyenne(s.soil.potassiumG) * 10,
+    };
   }
 
   it("un blé labouré, fertilisé et moissonné : la paille rend, le grain emporte", () => {
