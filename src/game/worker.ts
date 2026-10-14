@@ -109,6 +109,7 @@ import {
   especesSemees,
   fautIlPrevenir,
 } from "./recolteAuto";
+import { ecrireReprise, empreinteDeLaPartie, lireReprise } from "./reprise";
 import { estUneMortaliteDeMasse, estUneTempeteAVoir } from "./scenes";
 import { construireSnapshot, transferablesDuSnapshot } from "./snapshot";
 import {
@@ -169,6 +170,14 @@ let suivis: ReadonlySet<number> = new Set();
  * la liste des actions posées depuis.
  */
 let debutDeSemaine: GameState | undefined;
+/**
+ * Le même état, **avant** `beginWeek` : ce que le dernier tick a rendu. C'est lui
+ * que le bloc de reprise emporte (#338), parce que la reprise rouvre la semaine
+ * comme le rejeu la rouvre — et `beginWeek`, qui paie les salaires, ne doit
+ * passer qu'une fois. Une référence de plus, pas une copie : `beginWeek` ne
+ * remplace que l'économie, le reste est partagé avec `debutDeSemaine`.
+ */
+let etatALOuverture: GameState | undefined;
 let actionsDeLaSemaine: GameAction[] = [];
 /**
  * Ce qui s'est accumulé depuis le début de la partie (#188) : les kilos
@@ -221,16 +230,29 @@ let memoireSuivis: MemoireDesSuivis = new Map();
 /** Ce qui est arrivé aux arbres **suivis** depuis le dernier instantané. */
 let pendingSuivis: EvenementSuivi[] = [];
 /**
- * Les lignes écrites par les **gestes de la semaine en cours**, pour pouvoir
- * les défaire.
+ * Ce que les **gestes de la semaine en cours** ont fait aux arbres, et qui
+ * n'est pas encore écrit dans leur histoire.
  *
  * Une semaine trop chargée se rejoue amputée (#133) : les derniers gestes
  * posés n'ont jamais eu lieu. Le bilan et le cumul repartent alors d'un point
- * de retour figé à l'ouverture de la semaine ; l'histoire des arbres, elle,
- * est faite de lignes déjà écrites, et c'est cette liste-là qui dit lesquelles
- * retirer. Sans elle, un arbre garderait « abattu » en restant debout.
+ * de retour figé à l'ouverture de la semaine ; l'histoire des arbres doit
+ * pouvoir en faire autant, sans quoi un arbre garderait « abattu » en restant
+ * debout.
+ *
+ * **Elle ne s'écrit donc qu'à la fermeture de la semaine**, juste avant le
+ * tick. La première version écrivait sur-le-champ et comptait retirer ensuite
+ * les lignes de cette liste ; elle ne retirait rien, parce que l'histoire
+ * range des **copies** groupées (`ajouterAuJournal`) et non ces événements-là.
+ * Différer règle les deux choses à la fois : il n'y a rien à retirer, et
+ * l'histoire telle qu'elle était à l'ouverture de la semaine reste intacte
+ * jusqu'au tick — c'est elle que le bloc de reprise emporte (#338).
+ *
+ * La fiche, elle, voit tout de suite le geste qu'on vient de faire :
+ * `histoireDe` ajoute ces événements à l'histoire écrite quand on la demande.
  */
 let suivisDeLaSemaine: EvenementSuivi[] = [];
+/** La mémoire des suivis à l'ouverture de la semaine, jumelle de `bilanAuDebut`. */
+let memoireAuDebut: MemoireDesSuivis = new Map();
 
 let bilan: Bilan = BILAN_VIDE;
 /** Le bilan à l'ouverture de la semaine, jumeau de `cumulsAuDebut`. */
@@ -395,8 +417,38 @@ function replierLeBilan(
 function oublierLesHistoires(): void {
   histoires = new Map();
   memoireSuivis = new Map();
+  memoireAuDebut = memoireSuivis;
   pendingSuivis = [];
   suivisDeLaSemaine = [];
+}
+
+/**
+ * Ce qui arrive aux arbres, d'après la mémoire de ce qu'on en a déjà dit (#225).
+ *
+ * Le volet des suivis, lui, ne montre que les abonnés : on ne lui envoie que
+ * ce qui le concerne, et l'histoire complète se demande à la fiche.
+ */
+function noterCeQuiArrive(
+  porteur: PorteurDeJournal,
+  semaine: number,
+  arbres: readonly TreeState[],
+): EvenementSuivi[] {
+  const { evenements, memoire } = accumulerLesSuivis(memoireSuivis, semaine, porteur, arbres);
+  memoireSuivis = memoire;
+  for (const e of evenements) if (suivis.has(e.idArbre)) pendingSuivis.push(e);
+  return evenements;
+}
+
+/**
+ * **Groupé à l'écriture** : mesuré dans le navigateur, un jeune plant brouté
+ * toutes les semaines écrivait 806 lignes en trente ans. Groupées, c'est une,
+ * avec son compte et sa plage — et c'est la même règle que celle qui rend le
+ * volet lisible, pas une seconde (§2.1).
+ */
+function ecrireDansLHistoire(e: EvenementSuivi): void {
+  const sienne = histoires.get(e.idArbre);
+  if (sienne) ajouterAuJournal(sienne, e);
+  else histoires.set(e.idArbre, [{ ...e, fois: 1, depuisSemaine: e.semaine }]);
 }
 
 /**
@@ -411,22 +463,39 @@ function retenirCeQuiArrive(
   porteur: PorteurDeJournal,
   semaine: number,
   arbres: readonly TreeState[],
-): EvenementSuivi[] {
-  const { evenements, memoire } = accumulerLesSuivis(memoireSuivis, semaine, porteur, arbres);
-  memoireSuivis = memoire;
-  for (const e of evenements) {
-    // **Groupé à l'écriture** : mesuré dans le navigateur, un jeune plant brouté
-    // toutes les semaines écrivait 806 lignes en trente ans. Groupées, c'est
-    // une, avec son compte et sa plage — et c'est la même règle que celle qui
-    // rend le volet lisible, pas une seconde (§2.1).
-    const sienne = histoires.get(e.idArbre);
-    if (sienne) ajouterAuJournal(sienne, e);
-    else histoires.set(e.idArbre, [{ ...e, fois: 1, depuisSemaine: e.semaine }]);
-    // Le volet des suivis, lui, ne montre que les abonnés : on ne lui envoie
-    // que ce qui le concerne, et l'histoire complète se demande à la fiche.
-    if (suivis.has(e.idArbre)) pendingSuivis.push(e);
-  }
-  return evenements;
+): void {
+  for (const e of noterCeQuiArrive(porteur, semaine, arbres)) ecrireDansLHistoire(e);
+}
+
+/**
+ * Ce que les gestes de la semaine ouverte font aux arbres : noté, mais écrit
+ * seulement à la fermeture de la semaine (`suivisDeLaSemaine`).
+ */
+function retenirLesGestes(
+  gestes: GesteVisible[],
+  semaine: number,
+  arbres: readonly TreeState[],
+): void {
+  suivisDeLaSemaine.push(...noterCeQuiArrive(gestesSeuls(gestes), semaine, arbres));
+}
+
+/** La semaine se ferme : ses gestes entrent dans l'histoire, dans l'ordre où on les a faits. */
+function verserLesSuivisDeLaSemaine(): void {
+  for (const e of suivisDeLaSemaine) ecrireDansLHistoire(e);
+  suivisDeLaSemaine = [];
+}
+
+/** L'histoire d'un arbre telle que la fiche la montre : l'écrite, et la semaine en cours. */
+function histoireDe(id: number): LigneDeSuivi[] {
+  const ecrite = histoires.get(id) ?? [];
+  const enCours = suivisDeLaSemaine.filter((e) => e.idArbre === id);
+  if (enCours.length === 0) return ecrite;
+  // Le groupage modifie la dernière ligne : on travaille sur une copie d'elle,
+  // l'histoire écrite ne doit pas bouger avant la fermeture de la semaine.
+  const derniere = ecrite[ecrite.length - 1];
+  const lignes = derniere ? [...ecrite.slice(0, -1), { ...derniere }] : [];
+  for (const e of enCours) ajouterAuJournal(lignes, e);
+  return lignes;
 }
 
 /** Un porteur qui ne porte que des gestes : ce qu'une action produit. */
@@ -434,19 +503,49 @@ function gestesSeuls(gestes: GesteVisible[]): PorteurDeJournal {
   return { morts: [], chutes: [], naissances: [], franchissements: [], gestes };
 }
 
-/** Retirer les lignes écrites par les gestes de la semaine qu'on rejoue. */
+/**
+ * **Compter les gestes d'une action**, sitôt appliquée : au cumul du niveau
+ * (#188), au bilan (#128), à l'histoire des arbres touchés (#225).
+ *
+ * Les arbres d'**après** le geste : une cueillette laisse l'arbre debout, donc
+ * son essence s'y lit encore — et c'est elle qui distingue « deux cents kilos
+ * de pommes » de « deux cents kilos de n'importe quoi » (#188).
+ *
+ * **Une seule fonction pour la partie vécue et pour la partie rejouée** (#338).
+ * Le rejeu comptait la semaine d'un bloc — gestes et tick ensemble, arbres
+ * d'avant les gestes —, et l'histoire d'un arbre abattu y gagnait une ligne
+ * « a quitté la parcelle » que la partie vécue n'avait pas écrite.
+ */
+function compterLesGestes(
+  gestes: GesteVisible[],
+  semaine: number,
+  arbres: readonly TreeState[],
+): void {
+  cumuls = accumuler(cumuls, gestes, arbres);
+  replierLeBilan(gestesSeuls(gestes), semaine, arbres);
+  retenirLesGestes(gestes, semaine, arbres);
+}
+
+/**
+ * **Compter ce que le tick a fait**, de même pour les deux parties. Les arbres
+ * d'**avant** le tick pour l'histoire (`retenirCeQuiArrive`), ceux d'après pour
+ * le cumul et le bilan, qui situent ce qui reste debout.
+ */
+function compterLaSemaine(ticked: ReturnType<typeof tick>, avant: GameState): void {
+  cumuls = accumuler(cumuls, ticked.gestes, ticked.state.trees);
+  replierLeBilan(ticked, avant.week, ticked.state.trees);
+  retenirCeQuiArrive(ticked, avant.week, avant.trees);
+}
+
+/**
+ * Oublier les gestes de la semaine qu'on rejoue : rien n'en est encore écrit,
+ * et la mémoire revient à l'ouverture de la semaine.
+ */
 function defaireLesSuivisDeLaSemaine(): void {
-  const jetees = new Set(suivisDeLaSemaine);
-  for (const e of suivisDeLaSemaine) {
-    const sienne = histoires.get(e.idArbre);
-    if (sienne)
-      histoires.set(
-        e.idArbre,
-        sienne.filter((x) => !jetees.has(x)),
-      );
-  }
-  pendingSuivis = pendingSuivis.filter((x) => !jetees.has(x));
+  const jetes = new Set(suivisDeLaSemaine);
+  pendingSuivis = pendingSuivis.filter((x) => !jetes.has(x));
   suivisDeLaSemaine = [];
+  memoireSuivis = memoireAuDebut;
 }
 /**
  * Le niveau joué et ses paliers franchis (#188) — **rangés**, pas joués.
@@ -644,6 +743,9 @@ function ouvrirLaSemaine(etat: GameState): void {
     if (ligne) compteAnnee = ajouterAuCompte(compteAnnee, ligne);
   }
   aCompter = new Map();
+  // Ce que le bloc de reprise emporte (#338) : l'état tel que le tick l'a rendu,
+  // **avant** `beginWeek` — qui paie les salaires, et les paierait deux fois.
+  etatALOuverture = etat;
   state = beginWeek(etat);
   debutDeSemaine = state;
   actionsDeLaSemaine = [];
@@ -652,9 +754,11 @@ function ouvrirLaSemaine(etat: GameState): void {
   // le plafond se rejoue amputée, et ce qu'elle a récolté doit se rejouer avec.
   cumulsAuDebut = cumuls;
   bilanAuDebut = bilan;
-  // Les lignes d'histoire de la semaine écoulée ne sont plus défaisables : la
-  // facture ne concerne que la semaine qui s'ouvre.
-  suivisDeLaSemaine = [];
+  // Les gestes de la semaine écoulée ne sont plus défaisables : la facture ne
+  // concerne que la semaine qui s'ouvre. `stepWeeks` les a déjà versés avant
+  // le tick ; ceci ne sert qu'à n'en perdre aucun.
+  verserLesSuivisDeLaSemaine();
+  memoireAuDebut = memoireSuivis;
   // Un point de reprise, tous les tant de semaines. Ici parce que c'est le
   // seul endroit traversé exactement une fois par semaine, quelle que soit la
   // vitesse — `stepWeeks` en avale jusqu'à vingt-six d'un coup.
@@ -690,10 +794,7 @@ function rejouerLaSemaineOuverte(): void {
     const result = applyAction(state, action);
     state = result.state;
     actionsDeLaSemaine.push(action);
-    const gestes = result.gestes ?? [];
-    cumuls = accumuler(cumuls, gestes, state.trees);
-    replierLeBilan(gestesSeuls(gestes), state.week, state.trees);
-    suivisDeLaSemaine.push(...retenirCeQuiArrive(gestesSeuls(gestes), state.week, state.trees));
+    compterLesGestes(result.gestes ?? [], state.week, state.trees);
   }
   // Le journal finit par les actions de la semaine ouverte : elles seules
   // tombent si la semaine est ramenée sous le plafond.
@@ -726,18 +827,7 @@ function performAction(action: GameAction): EffetDeLAction {
   // point de retour aurait donc toujours été en retard d'un lot entier — et
   // une semaine ramenée sous le plafond aurait effacé les récoltes de tout ce
   // lot, pas seulement les siennes.
-  // Les arbres d'**après** le geste : une cueillette laisse l'arbre debout, donc
-  // son essence s'y lit encore — et c'est elle qui distingue « deux cents kilos
-  // de pommes » de « deux cents kilos de n'importe quoi » (#188).
-  cumuls = accumuler(cumuls, result.gestes ?? [], state.trees);
-  replierLeBilan(gestesSeuls(result.gestes ?? []), state.week, state.trees);
-  // L'histoire de l'arbre se tient **ici aussi** (#225) : les gestes du joueur
-  // sont appliqués sur-le-champ et ne repassent pas par le tick. Sans cette
-  // ligne, une partie en cours n'aurait pas les plantations et les abattages
-  // qu'une partie reprise d'une sauvegarde retrouve, elle, par le rejeu.
-  suivisDeLaSemaine.push(
-    ...retenirCeQuiArrive(gestesSeuls(result.gestes ?? []), state.week, state.trees),
-  );
+  compterLesGestes(result.gestes ?? [], state.week, state.trees);
   const dEur = state.economy.treasuryEur - before.economy.treasuryEur;
   const dHeures = state.economy.hoursUsedWeek - before.economy.hoursUsedWeek;
   const eur = dEur >= 0 ? `+${dEur.toFixed(0)} €` : `${dEur.toFixed(0)} €`;
@@ -1166,14 +1256,10 @@ function seTenirAuPlafond(): number {
   // naissance n'y est encore arrivée.
   bilan = bilanAuDebut;
   replierLeBilan(gestesSeuls(elaguee.gestes), elaguee.etat.week, elaguee.etat.trees);
-  // L'histoire des arbres se rejoue comme le reste : on efface les lignes des
-  // gestes de la semaine, puis on réécrit celles des seuls gestes gardés.
+  // L'histoire des arbres se rejoue comme le reste : on oublie les gestes de la
+  // semaine, puis on note ceux des seuls gestes gardés.
   defaireLesSuivisDeLaSemaine();
-  suivisDeLaSemaine = retenirCeQuiArrive(
-    gestesSeuls(elaguee.gestes),
-    elaguee.etat.week,
-    elaguee.etat.trees,
-  );
+  retenirLesGestes(elaguee.gestes, elaguee.etat.week, elaguee.etat.trees);
   state = elaguee.etat;
   journal = [...journal.slice(0, journalAuDebut), ...elaguee.gardees];
   actionsDeLaSemaine = elaguee.gardees;
@@ -1301,6 +1387,9 @@ function stepWeeks(n: number) {
     }
     const w = meteoSemaine(state.week);
     if (!w) return;
+    // La semaine se ferme : ce que ses gestes ont fait aux arbres entre dans
+    // leur histoire, avant ce que le tick va leur faire.
+    verserLesSuivisDeLaSemaine();
     const before = state;
     const ticked = tick(state, w);
     lastFluxes = ticked.fluxes;
@@ -1315,9 +1404,7 @@ function stepWeeks(n: number) {
     pendingNaissances.push(...ticked.naissances);
     pendingFranchissements.push(...ticked.franchissements);
     pendingGestes.push(...ticked.gestes);
-    cumuls = accumuler(cumuls, ticked.gestes, ticked.state.trees);
-    replierLeBilan(ticked, before.week, ticked.state.trees);
-    retenirCeQuiArrive(ticked, before.week, before.trees);
+    compterLaSemaine(ticked, before);
     pendingChutes.push(...ticked.chutes);
     pendingInstallations.push(...ticked.installationsFaune);
     pendingDeparts.push(...ticked.departsFaune);
@@ -1903,6 +1990,7 @@ function init(
   bilan = BILAN_VIDE;
   oublierLesHistoires();
   pointsDeReprise = [];
+  semaineDuBloc = undefined;
   relecture = undefined;
   semaineDuDernierInstantane = 0;
   semees = new Set();
@@ -1953,6 +2041,132 @@ function init(
   startLoop();
 }
 
+/**
+ * ─── **le bloc de reprise** (#338) ───────────────────────────────────────────
+ *
+ * Reprendre une partie, c'était la rejouer depuis la première semaine : 35 s
+ * pour une friche de vingt ans, 276 s pour une lande sèche, mesuré à la
+ * recette v0.4. La sauvegarde emporte désormais l'état de la semaine ouverte
+ * et tout ce que le rejeu refaisait (`reprise.ts`), et la reprise repart de là.
+ *
+ * **Une fois par semaine de jeu, au plus.** Le bloc saisit la partie à
+ * l'ouverture de la semaine, avant ses gestes ; il ne change donc pas d'une
+ * sauvegarde à l'autre tant que la semaine ne change pas — et l'interface en
+ * demande une après chaque geste. Il part avec la première sauvegarde de la
+ * semaine, et les suivantes s'en passent : le fil principal l'a déjà rangé.
+ */
+let semaineDuBloc: number | undefined;
+
+/** Le bloc de la semaine ouverte, pour cette sauvegarde — ou rien si l'écriture échoue. */
+function blocDeReprise(save: SaveGame): Uint8Array | undefined {
+  if (!state || !etatALOuverture) return undefined;
+  try {
+    return ecrireReprise(
+      etatALOuverture,
+      {
+        // Les cumuls **à l'ouverture** : la reprise rejoue les gestes de la semaine
+        // et les recompte, comme le rejeu (`rejouerLaSemaineOuverte`).
+        cumuls: cumulsAuDebut,
+        bilan: bilanAuDebut,
+        // L'histoire écrite n'a pas bougé depuis l'ouverture : les gestes de la
+        // semaine attendent dans `suivisDeLaSemaine`.
+        histoires,
+        memoire: memoireAuDebut,
+        fluxes: lastFluxes,
+        debordement: lastDebordement,
+        lumiereAuSol: lastLumiereAuSol,
+        pollinisateurs: lastPollinisateurs,
+        oiseauxDePassage: lastOiseauxDePassage,
+      },
+      empreinteDeLaPartie(save, state.week),
+    );
+  } catch {
+    // Un bloc qu'on n'a pas su écrire n'est pas une sauvegarde perdue : le
+    // journal part quand même, et la reprise le rejouera.
+    return undefined;
+  }
+}
+
+/**
+ * **Reprendre depuis le bloc** (#338) : l'état, et ce que le worker tenait à
+ * côté, tels qu'ils étaient à l'ouverture de la semaine sauvegardée.
+ *
+ * Rend `undefined` si le bloc ne se relit pas pour **cette** sauvegarde — format
+ * ancien, tronqué, d'une autre semaine — et rien n'a alors été touché : la
+ * reprise rejoue le journal comme avant.
+ */
+function repartirDuBloc(octets: Uint8Array, save: SaveGame): GameState | undefined {
+  if (!sc) return undefined;
+  const lu = lireReprise(octets, save, stationAvecPaysage(sc.station));
+  if (!lu) return undefined;
+  const { annexes } = lu;
+  cumuls = annexes.cumuls;
+  bilan = annexes.bilan;
+  histoires = annexes.histoires;
+  memoireSuivis = annexes.memoire;
+  lastFluxes = annexes.fluxes;
+  lastDebordement = annexes.debordement;
+  lastLumiereAuSol = annexes.lumiereAuSol;
+  lastPollinisateurs = annexes.pollinisateurs;
+  lastOiseauxDePassage = annexes.oiseauxDePassage;
+  return lu.etat;
+}
+
+/**
+ * **Rejouer le journal** jusqu'à l'ouverture de la semaine sauvegardée : même
+ * séquence `beginWeek` → actions → tick que la partie vécue. C'est la reprise
+ * d'avant le bloc, et elle reste celle de toute sauvegarde qui n'en a pas.
+ */
+function rejouerLeJournal(save: SaveGame): GameState {
+  if (!sc) throw new Error("pas de station");
+  let replayed = createGameState(stationAvecPaysage(sc.station), rngStateFromSeed(seed), {
+    economie,
+  });
+  // Le vieillissement fait partie de l'histoire de la parcelle : il se rejoue
+  // à l'identique avant les actions du joueur. **Point zéro du carbone
+  // compris** : `init` le fige à l'arrivée du joueur (#202), et le rejeu ne le
+  // faisait pas — une partie vieillie reprenait avec le point zéro du profil
+  // nu, et son bilan carbone sautait au chargement. Comparer les deux voies de
+  // reprise l'a montré (#338).
+  if (maturationAns > 0) replayed = figerCarboneDeReference(faireVieillir(replayed, maturationAns));
+  // Le cumul se **refait** pendant le rejeu (#188). Rien d'autre ne pourrait le
+  // rendre : les kilos cueillis il y a dix ans ne sont plus nulle part dans
+  // l'état, et le journal de sauvegarde porte les actions, pas ce qu'elles
+  // ont donné. C'est le même rejeu qui refait la parcelle et son compte.
+  //
+  // **La semaine se rejoue comme elle s'est jouée**, et non d'un bloc par
+  // `advanceWeek` : chaque action est comptée sitôt appliquée, puis le tick,
+  // par les mêmes fonctions que la partie vécue. L'état est le même dans les
+  // deux cas — `advanceWeek` ne fait pas autre chose —, mais compter d'un bloc
+  // écrivait une ligne de trop dans l'histoire des arbres abattus (#338).
+  for (let i = 0; i < save.weeks; i++) {
+    let semaine = beginWeek(replayed);
+    for (const action of journal) {
+      if (action.week !== semaine.week) continue;
+      const result = applyAction(semaine, action);
+      semaine = result.state;
+      compterLesGestes(result.gestes ?? [], i, semaine.trees);
+    }
+    // **Le rejeu compte, et c'est tout l'intérêt de tenir le bilan ici** : une
+    // partie reprise retrouve les morts, les semis et les gestes de toutes ses
+    // années, qu'aucun instantané n'a jamais montrés — et le passé de ses
+    // arbres, sans quoi un chargement effacerait tous les journaux.
+    verserLesSuivisDeLaSemaine();
+    const ticked = tick(semaine, meteoSemaine(i));
+    compterLaSemaine(ticked, semaine);
+    replayed = ticked.state;
+    lastFluxes = ticked.fluxes;
+    // La dernière semaine rejouée est celle qu'on va montrer : son
+    // débordement et sa lumière au sol servent au premier instantané.
+    lastDebordement = ticked.debordementParCellule;
+    lastLumiereAuSol = ticked.lumiereAuSol;
+    lastPollinisateurs = ticked.pollinisateurs;
+    lastOiseauxDePassage = ticked.oiseauxDePassage;
+    if (i % 104 === 0) post({ type: "progress", done: i, total: save.weeks, phase: "rejeu" });
+  }
+  return replayed;
+}
+
 self.addEventListener("message", (event: MessageEvent<ToWorker>) => {
   const msg = event.data;
   switch (msg.type) {
@@ -1974,7 +2188,9 @@ self.addEventListener("message", (event: MessageEvent<ToWorker>) => {
       );
       break;
     case "resume": {
-      // Rejoue la sauvegarde : même séquence beginWeek → actions → tick.
+      // Reprend la sauvegarde : depuis son bloc s'il se relit, en rejouant le
+      // journal sinon (#338). Les deux voies se rejoignent à l'ouverture de la
+      // semaine sauvegardée, et la finissent de la même façon.
       sc = STATIONS_V0.find((s) => s.station.id === msg.save.stationId);
       if (!sc) throw new Error(`station inconnue : ${msg.save.stationId}`);
       meteoMode = msg.save.meteo;
@@ -2005,57 +2221,25 @@ self.addEventListener("message", (event: MessageEvent<ToWorker>) => {
       // viennent de la sauvegarde — rien ne permettrait de les deviner.
       semees = especesSemees(journal);
       choixRecolte = { ...(msg.save.recolteAuto ?? {}) };
-      let replayed = createGameState(stationAvecPaysage(sc.station), rngStateFromSeed(seed), {
-        economie,
-      });
       // **Oublier d'abord** : le vieillissement écrit l'histoire des arbres
       // d'avant l'arrivée (#225), et remettre les journaux à zéro après lui
       // effacerait ce qu'il vient d'écrire.
       oublierLesHistoires();
-      // Le vieillissement fait partie de l'histoire de la parcelle : il se
-      // rejoue à l'identique avant les actions du joueur.
-      if (maturationAns > 0) replayed = faireVieillir(replayed, maturationAns);
-      // Le cumul se **refait** pendant le rejeu (#188). Rien d'autre ne pourrait le
-      // rendre : les kilos cueillis il y a dix ans ne sont plus nulle part dans
-      // l'état, et le journal de sauvegarde porte les actions, pas ce qu'elles
-      // ont donné. C'est le même rejeu qui refait la parcelle et son compte.
       cumuls = CUMULS_VIDES;
       bilan = BILAN_VIDE;
       pointsDeReprise = [];
+      semaineDuBloc = undefined;
       relecture = undefined;
       semaineDuDernierInstantane = 0;
-      for (let i = 0; i < msg.save.weeks; i++) {
-        const step = advanceWeek(replayed, meteoSemaine(i), journal);
-        // Les arbres d'**avant** la semaine, gardés pour l'histoire : un arbre
-        // coupé ou consumé quitte `trees` dans le tick même où ça lui arrive,
-        // et n'aurait plus d'entrée pour porter sa dernière ligne.
-        const avantLaSemaine = replayed;
-        replayed = step.state;
-        cumuls = accumuler(cumuls, step.gestes, step.state.trees);
-        // **Le rejeu compte, et c'est tout l'intérêt de tenir le bilan ici** :
-        // une partie reprise retrouve les morts, les semis et les gestes de
-        // toutes ses années, qu'aucun instantané n'a jamais montrés.
-        replierLeBilan(step, i, step.state.trees);
-        // La partie reprise retrouve aussi le passé de ses arbres : c'est le
-        // même rejeu, et sans lui un chargement effacerait tous les journaux.
-        retenirCeQuiArrive(step, i, avantLaSemaine.trees);
-        lastFluxes = step.fluxes;
-        // La dernière semaine rejouée est celle qu'on va montrer : son
-        // débordement et sa lumière au sol servent au premier instantané.
-        lastDebordement = step.debordementParCellule;
-        lastLumiereAuSol = step.lumiereAuSol;
-        lastPollinisateurs = step.pollinisateurs;
-        lastOiseauxDePassage = step.oiseauxDePassage;
-        if (i % 104 === 0)
-          post({ type: "progress", done: i, total: msg.save.weeks, phase: "rejeu" });
-      }
-      // Rien à verser au compte : le rejeu passe par `advanceWeek` et non par les
+      const depart =
+        (msg.etat ? repartirDuBloc(msg.etat, msg.save) : undefined) ?? rejouerLeJournal(msg.save);
+      // Rien à verser au compte : ni le bloc ni le rejeu ne passent par les
       // consignes, donc aucune action n'a été mesurée. Le compte de l'année en
       // cours vient de la sauvegarde — les euros d'une cueillette ne sont nulle
       // part dans le journal d'actions, et rien ne permettrait de les refaire.
       aCompter = new Map();
       actionsDeLaSemaine = [];
-      ouvrirLaSemaine(replayed);
+      ouvrirLaSemaine(depart);
       rejouerLaSemaineOuverte();
       compteAnnee = msg.save.compteDeLAnnee ?? COMPTE_VIDE;
       // Le rejeu n'a rien à raconter : ce sont des semaines déjà vécues.
@@ -2093,7 +2277,7 @@ self.addEventListener("message", (event: MessageEvent<ToWorker>) => {
      * paie que celle-là.
      */
     case "histoire":
-      post({ type: "histoire", id: msg.id, evenements: histoires.get(msg.id) ?? [] });
+      post({ type: "histoire", id: msg.id, evenements: histoireDe(msg.id) });
       break;
     case "niveau":
       // On **range**, on ne joue pas : l'avancement se calcule côté interface, où
@@ -2218,7 +2402,16 @@ self.addEventListener("message", (event: MessageEvent<ToWorker>) => {
         weeks: state.week,
         actions: journal,
       };
-      post({ type: "save", save });
+      // Le bloc de reprise part avec la première sauvegarde de la semaine (#338).
+      // **Transféré, pas copié** : le worker n'en garde rien, il le refera la
+      // semaine prochaine.
+      const etat = semaineDuBloc === state.week ? undefined : blocDeReprise(save);
+      if (etat) {
+        semaineDuBloc = state.week;
+        post({ type: "save", save, etat }, [etat.buffer as ArrayBuffer]);
+      } else {
+        post({ type: "save", save });
+      }
       break;
     }
   }
