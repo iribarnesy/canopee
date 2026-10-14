@@ -7,7 +7,8 @@
  * `localStorage` accorde au site entier. Il est rangé sous l'identifiant de
  * l'entrée de la liste, celui-là même où l'autosave écrit, et **compressé** :
  * les cellules d'une parcelle se ressemblent, et gzip divise le bloc par trois
- * ou quatre (mesures dans `docs/agents/moteur-evolution.md`).
+ * (mesuré, #338 : 10,9 Mo → 3,7 Mo pour une lande sèche de quarante ans,
+ * 0,37 s de compression sous Node ; 2,1 → 0,72 Mo pour une friche de trente).
  *
  * **La compression se fait ici, sur le fil principal, et pas dans le worker.**
  * La faire dans le worker rendait la sauvegarde asynchrone : la réponse à

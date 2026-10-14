@@ -44,11 +44,15 @@
  *
  * ── **pourquoi pas dans localStorage** — **mesuré** ──────────────────────────────
  *
- * `localStorage` tient cinq mégaoctets pour tout le site, et une partie de
- * quarante ans sur 100 m pèse plusieurs mégaoctets compressée (la mesure est
- * dans la PR #385 et dans `docs/agents/moteur-evolution.md`). Huit parties
- * n'y tiendraient pas, une seule en prendrait le gros. IndexedDB range des
- * octets tels quels et n'a pas ce plafond.
+ * `localStorage` tient environ cinq mégaoctets pour tout le site, et ne range
+ * que du texte. Mesuré sur la sonde de la recette (#338), en fin de partie :
+ *
+ *     partie                         bloc brut   gzip     en base64
+ *     friche, 50 m, 30 ans             2,1 Mo    0,72 Mo    0,96 Mo
+ *     lande sèche, 100 m, 40 ans      10,9 Mo    3,7 Mo     4,9 Mo
+ *
+ * Une seule lande de quarante ans remplirait le quota, et la liste en garde
+ * huit. IndexedDB range des octets tels quels et n'a pas ce plafond.
  */
 
 import type { FrequentationDeGuilde } from "../engine/oiseaux";
@@ -114,9 +118,11 @@ interface Entete {
 
 /**
  * **L'histoire des arbres, serrée.** C'est, de loin, ce que le worker tient de
- * plus gros à côté de l'état : sur une lande sèche de quarante ans, 77 387
- * lignes pour 9 680 arbres ayant vécu, 8,4 Mo en JSON objet par objet — autant
- * que l'état du moteur tout entier. Chaque ligne y répète ses six noms de champ,
+ * plus gros à côté de l'état : sur une lande sèche de quarante ans (sonde de la
+ * recette, #338), 86 248 lignes pour 10 171 arbres ayant vécu, 9,4 Mo en JSON
+ * objet par objet — autant que l'état du moteur tout entier, 9,0 Mo. Serrée,
+ * elle tient dans 1,4 Mo environ (déduit du bloc de 10,9 Mo, état compris).
+ * Chaque ligne y répète ses six noms de champ,
  * l'identifiant de l'arbre que la clé porte déjà, et sa phrase, alors qu'il n'y
  * a que quelques dizaines de phrases différentes.
  *
