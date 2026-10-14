@@ -31,7 +31,7 @@ export type Grille = Float32Array;
  * **La règle est mécanique, et c'est ce qui la rend tenable** : une grille
  * qu'une propriété de conservation **somme** reste longue. Ce sont `waterMm`,
  * `excessMm` et `nappeMm` pour l'eau, `mineralNG` et `litterNG` pour l'azote,
- * `litterCG`, `humusCG` et `boisAuSolCG` pour le carbone, `phosphoreFixeG` et
+ * `litterCG`, `humusCG` et `boisAuSolCG` pour le carbone, `boisAuSolNG` pour l'azote du bois couché, `phosphoreFixeG` et
  * `potassiumReserveG` pour les réserves que `pk.test.ts` additionne à leurs
  * pools assimilables, `basesEq` et `basesProfondEq` pour les bases. Le jour où
  * une propriété nouvelle compte une grille de plus, c'est elle qui le dira — en
