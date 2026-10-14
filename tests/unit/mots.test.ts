@@ -207,7 +207,7 @@ describe("la faune, comptée comme le moteur la compte (#259)", () => {
   });
 
   it("chaque cause de départ a sa phrase, et aucune n'est vide", () => {
-    for (const cause of ["arbreDisparu", "giteTropPetit", "tableVide"] as const) {
+    for (const cause of ["arbreDisparu", "arbreMort", "giteTropPetit", "tableVide"] as const) {
       expect(departDit(cause).length, cause).toBeGreaterThan(5);
     }
   });

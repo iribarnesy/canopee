@@ -526,7 +526,7 @@ export interface Snapshot {
   /**
    * Les départs, avec leur **cause**.
    *
-   * `arbreDisparu` est le plus fort des trois : abattre l'arbre porteur expulse
+   * `arbreDisparu` est le plus fort des quatre : abattre l'arbre porteur expulse
    * quelqu'un de nommé, et c'est une conséquence de la conduite du joueur, pas
    * un message.
    */

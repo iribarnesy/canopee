@@ -61,7 +61,189 @@ qu'un rapport (voir la note de maintenance).
 Séparer calibration et validation : caler un paramètre sur un âge, garder
 l'autre âge pour vérifier.
 
-## Ce que le dernier lot a appris (la juglone des noyers et la fiche du commun, #375, #377)
+## Ce que le dernier lot a appris (les racines qui restent et l'arbre mort, #334 et #261)
+
+Deux défauts, une ligne de code chacun, aucun réglage ajouté.
+
+- **#334** : `nouvelleProfondeurRacines` bornait son résultat par le potentiel
+  de la hauteur **du moment**. Un recépé, un étêté, un rejet après le feu, une
+  casse au volis qui rejette ou un plant brouté retombaient la semaine suivante
+  aux racines de leur nouvelle taille, contre ce que disait le commentaire. Le
+  potentiel ne borne plus que la croissance. Rien ne change pour un arbre qui
+  n'a jamais été plus grand : sans gibier, les bancs témoins sont identiques à
+  main.
+- **#261** : un quatrième motif de départ, `arbreMort`, quand le même arbre,
+  vivant, conviendrait encore à l'occupant. La règle elle-même n'est pas
+  touchée : une hutte, une aire et un bois de cœur veulent un arbre vivant, un
+  creux reste un creux sur une chandelle, et le pic et la chauve-souris y
+  restaient déjà jusqu'à sa chute (désormais épinglé).
+
+### Ce que ça donne
+
+Graines 1, 2 et 3 (5 pour le feu, dont deux seulement brûlent en quarante
+ans), prédictions écrites avant chaque mesure dans les commits de la branche.
+La sonde est hors dépôt ; ses bancs sont décrits dans le premier commit.
+
+| banc | main | branche |
+|---|---|---|
+| taillis de châtaignier, limon acide, synthétique : racines une semaine après la coupe | 37,6 cm | 72,1 à 72,2 (celles d'avant) |
+| — hauteur des rejets à six ans | 3,19 / 3,12 / 2,83 m | 3,07 / 3,00 / 2,71 (−4 %) |
+| même taillis coupé le 1er janvier 2003, météo de Tours : hauteur à six ans | 3,20 / 3,15 / 2,85 | 3,26 / 3,21 / 2,89 (+2 %) |
+| trogne de frêne à 2 m, limon riche, météo réelle : racines une semaine après | 43,3 | 62,2 / 62,0 / 61,5 |
+| — hauteur à cinq ans | 3,68 / 3,66 / 3,52 | 3,83 / 3,79 / 3,68 (+4 %) |
+| lande de genêts brûlée, synthétique : racines une semaine après le feu | 34,0 | 74,9 / 68,2 |
+| — un an après | 46,1 / 41,3 | 74,9 / 67,8 |
+| — rejets morts de soif dans les deux ans | 0 / 75 sur 688 / 543 | 0 / 34 |
+| plants broutés, lande, Mont-de-Marsan 2004-2008 : racines des broutés | — | +0,1 à +0,2 cm |
+
+Aucune cépée, aucune trogne ne meurt, sur main comme sur la branche.
+
+### Des racines gardées ne sont pas toujours un avantage
+
+Prédit 0 à +15 % de repousse sur le taillis synthétique ; mesuré −4 %, sur
+les trois graines. Le relevé des facteurs de la loi du minimum, semaine par
+semaine de la saison, le dit tout de suite : eau, azote, phosphore, potassium
+et lumière valent 1,00 des deux côtés, mais le facteur limitant tombe à 0,88
+au lieu de 0,95, parce que l'engorgement ressenti monte à 0,15 au lieu de 0,05
+la quatrième année. Le châtaignier n'en tolère que 0,05. La coupe a retiré la
+transpiration de neuf arbres de dix mètres, l'horizon profond du limon acide
+s'engorge au printemps, et des racines qui y descendent le sentent. Sur la
+trogne de frêne, c'est l'inverse : l'eau manque l'été (0,62 de satisfaction
+la cinquième année sur main, 0,68 sur la branche), et la profondeur paie.
+
+La même correction déplace donc la repousse dans les deux sens selon la
+station. **`rootDepthCm` a cinq lecteurs** — l'eau, l'azote du fond, les
+bases, l'anoxie, l'ancrage — et ma prédiction n'en lisait qu'un. Avant de
+prédire le signe d'un changement d'état, lister qui lit cet état.
+
+Ce que ça révèle aussi : dans ce moteur, une racine plongée dans un horizon
+asphyxiant ne meurt pas, elle fait souffrir l'arbre indéfiniment. Le rabattage
+fautif l'en sortait par accident.
+
+### Un plant brouté perd sa pousse, pas ses racines
+
+L'issue donnait l'exemple d'un plant ramené de 0,35 à 0,20 m. Les bancs n'en
+produisent pas : le gibier mange la pousse de l'année, et un plant tenu au
+plancher (0,8 du potentiel) ne perd des racines que si cette pousse dépasse le
+quart de sa hauteur. Le piège à dents de `gibier.test.ts`, l'essai le plus
+près de sa borne, est identique à main au millimètre près sur ses six
+parcelles (noisetier nu à 1,405 m de médiane, racines comprises).
+
+Le premier banc de broutage, sur la lande en été synthétique, ne mesurait
+rien : hêtres et bouleaux y meurent tous de soif, broutés ou non (24 à 25 sur
+25 avec et sans gibier). **Un banc où tout meurt ne mesure rien** ; le témoin
+sans gibier, ajouté avant de conclure, l'a montré.
+
+### Les prédictions fausses
+
+- Un essai de chronométrage a tourné avant le premier commit de prédictions
+  (trogne, graine 3, sur main) : ces chiffres-là ont été vus avant d'être
+  prédits, et le commit le dit.
+- Taillis synthétique : 0 à +15 % de repousse prédit, −4 %.
+- Trogne : écart sous 3 % prédit, +4 %.
+- Taillis coupé en 2003 : +5 à +20 % à un an prédit, +1 %.
+- Lande brûlée : racines à un an sur main ≈ 60 cm prédit, 46,1 et 41,3.
+- Plants broutés : racines des broutés plus profondes de 2 à 5 cm prédit, 0
+  en synthétique, 0,1 à 0,2 cm en météo réelle.
+
+### Ce qui reste ouvert
+
+- **Le carbone racinaire contredit maintenant la profondeur.** Il se déduit de
+  la hauteur, et rabattre en verse plus de quatre-vingts pour cent au bois mort
+  (`racinesPerduesEnRabattant`) pendant que la profondeur dit que les racines
+  sont restées. Le corriger demande un carbone racinaire porté par l'arbre :
+  un état de plus et un format de sauvegarde, non fait sans accord.
+- **Le disque racinaire** suit lui aussi la hauteur (`rootRadiusM`) : un recépé
+  perd ses racines latérales comme il perdait ses racines profondes. Même
+  défaut, à l'horizontale ; le corriger demande aussi un état.
+- **La vigueur du rejet** reste celle de sa taille (`formeCroissance`) : une
+  cépée ne repart pas plus vite qu'un semis de même hauteur, sauf par l'eau.
+- **Les racines dans un horizon engorgé** ne meurent jamais (ci-dessus).
+- **Un gîte construit sur un arbre mort** : la hutte et l'aire partent la
+  semaine de la mort. Les laisser jusqu'à la chute séparerait l'entrée de la
+  sortie, que `giteConvient` tient en un seul tri ; les laisser un temps
+  demanderait une durée de vie des branches mortes. Non tranché.
+
+## Ce qu'un lot précédent a appris (les crues du sable profond, #337)
+
+La recette v0.4 comptait 137 débuts de crue en trente ans sur le sable profond
+(contre 31 dans la vallée engorgée). Il y avait trois défauts superposés, et
+un seul a été corrigé en v0.5, par arbitrage : la donnée de station. Les deux
+autres sont en v0.6 (#380, #381).
+
+### Un niveau déclaré n'est pas le niveau atteint
+
+`nappe.ts` le dit : la recharge tient la nappe au-dessus de son équilibre, et
+le niveau déclaré doit être calé pour que le niveau **atteint** soit celui du
+terrain. Le sable profond, arrivé après le modèle de nappe (#254), avait
+déclaré le niveau du terrain lui-même, 200 cm. L'échange régional (3 % par
+semaine) doit évacuer quelque 370 mm de recharge par an, et il lui faut pour
+cela 160 cm de surélévation dans un sable à 1,47 mm/cm. La nappe se tenait à
+47 cm. Au milieu de la parcelle, son niveau haut moyen (GHG) valait 23 cm et
+son niveau bas (GLG) 70 cm : un sable humide, pas le veldpodzol annoncé.
+Redéclarée à 260 cm, réglage calé sur le moteur pour une cible sourcée (classe
+de nappe VI : GHG 40-80, GLG au-delà de 120), elle rend 67-69 / 127-129 cm.
+**Quand une donnée décrit le terrain, demander si le moteur la lit comme une
+cible ou comme une consigne.**
+
+### Une oscillation peut venir de la plomberie et non du temps
+
+La nappe du sable sautait de 10 cm d'une semaine à l'autre (autocorrélation
+de rang 1 −0,90). Une colonne seule, sans pluie, partie de 60 cm, donne
+60 → 128 → 60 → 106 cm. La saturation imposée aux horizons noyés est prise au
+stock de l'aquifère, dont la conversion en profondeur compte déjà ces
+horizons ; le profil la rend la semaine suivante. Quand les porosités sont
+égales, le stock d'une semaine ne dépend plus que de celui d'il y a deux
+semaines. #291 avait vu la même boucle, mais par les solutés seulement.
+**Une colonne isolée, sans pluie, est le premier banc à passer** : si elle
+bouge, c'est le code.
+
+### Retirer un défaut ne retire pas forcément le symptôme
+
+La variante qui retirait le cycle (hors dépôt) laissait 106 crues sur 136. Il
+restait un plafond : une cellule dont l'aquifère est plein cède encore 0,5 %
+par semaine vers l'aval, sa nappe ne remonte jamais au-dessus de 4,6 cm, et
+le seuil d'affleurement est à 5 cm. Inondée veut donc dire « au plafond », et
+une semaine sèche suffit à vider toute l'emprise. La même variante doublait
+les crues de la vallée, dont le comportement reposait sur l'eau comptée deux
+fois. **Une correction se mesure aussi sur les stations qu'elle ne visait
+pas**, comme le banc apparié de #291 l'avait déjà appris.
+
+### L'hydrologie de ces bancs ne dépend presque pas de la graine
+
+136 / 139 / 135 crues sur main, 55 / 55 / 55 à 260 cm, 106 sur les trois
+graines de la variante. C'est la météo réelle qui fixe la nappe, pas le
+tirage. Trois graines restent la règle, mais un écart d'une unité n'est pas
+du bruit ici : c'est un effet.
+
+### Les prédictions fausses
+
+- 80 % de crues d'une ou deux semaines prédits, 75 % mesurés ; 90 % des
+  cellules inondées dans les quinze lignes du bas prédits, alors que
+  l'emprise au pic vaut 40 % de la parcelle.
+- La variante sans cycle devait diviser les crues par deux (106 contre 136)
+  et laisser la vallée à 30 % près (63 contre 31).
+- Avec la variante et 280 cm, aucune crue prédite : 41.
+- Code de main et 280 cm : 40 à 80 crues prédites, 29 ; GHG 40-80 prédit, 85.
+- Main relu au milieu de la parcelle : GHG sous 10 cm prédit, 23.
+- 260 cm : au moins 90 % de crues courtes prédits, 89 % ; quatre semaines
+  au plus prédites, six.
+- Le pin, prédit de 0 à +8 % à quarante ans : +0,4 %. Juste, et c'est la
+  nouvelle : il ne reposait pas sur la nappe haute.
+
+### Ce qui reste ouvert
+
+- Les crues du sable restent courtes (55 en trente ans, 89 % d'une ou deux
+  semaines) tant que #380 et #381 ne sont pas réglés. #337 n'est pas fermée.
+- La porosité drainable du sable vaut 15 %, contre 21 à 27 % de rendement
+  spécifique pour un sable fin à grossier (Johnson 1967, USGS WSP 1662-D).
+  La nappe bat donc 1,5 à 1,8 fois trop par millimètre, et la surélévation
+  due à la recharge suit le même facteur. Y toucher change tous les profils.
+- Le moteur n'a pas de stockage d'eau en surface : la nappe qui affleure fait
+  ressortir son eau, qui part dans la semaine. Une inondation par la nappe ne
+  peut donc pas durer plus longtemps que la pluie qui la nourrit.
+
+## Ce qu'un lot précédent a appris (la juglone des noyers et la fiche du commun, #375, #377)
 
 Une valeur d'atlas, posée sur une source qualitative, et elle a tout déplacé
 sauf ce qu'on attendait.
@@ -585,7 +767,7 @@ L'essai lit donc le rapport des deux profondeurs (6,58 mesuré, 6,6 prédit).
   `nouvelleProfondeurRacines` rabat ses racines au potentiel de sa nouvelle
   taille, alors que le commentaire dit qu'elles ne régressent jamais. Le défaut
   existait ; la borne par la hauteur le rend plus sensible chez un semis brouté
-  (#334).
+  (#334, réglé depuis : voir plus haut).
 - L'hiver noyé de 2000-2001 tue par engorgement la callune adulte de la lande,
   sur main comme sur la branche.
 - Toutes les stations ont un deuxième horizon de 45 à 70 cm sous la surface.
