@@ -427,6 +427,49 @@ describe("l'arbre qui disparaît expulse quelqu'un de nommé", () => {
     expect(partis).toContain("chouette_cheveche");
     expect(partis).not.toContain("mesange_bleue");
   });
+
+  it("un arbre mort sur pied garde ses creux jusqu'à sa chute, et dit sa mort à ceux qu'il chasse (#261)", () => {
+    // Un vieux chêne carié qui loge un occupant de chaque famille qui vit sur
+    // l'arbre vivant : deux cavernicoles, une hutte, une population de bois
+    // de cœur.
+    const vivant = futCarie(1, 70, 28, 0.6);
+    const occupants: IndividuFaune[] = [
+      "pic_epeiche",
+      "noctule_commune",
+      "ecureuil_roux",
+      "grand_capricorne",
+    ].map((especeId, i) => ({
+      id: i + 1,
+      especeId,
+      arbreId: vivant.id,
+      x: vivant.x,
+      y: vivant.y,
+      depuisSemaine: 0,
+    }));
+    expect(departs(occupants, [vivant])).toEqual([]);
+
+    // Il meurt et reste debout. Le gîte n'a pas rapetissé : la hutte voulait
+    // une ramure vivante, la larve un aubier vivant, et c'est la mort qui les
+    // chasse. Le creux, lui, est toujours là.
+    const chandelle: TreeState = { ...vivant, alive: false };
+    const aLaMort = departs(occupants, [chandelle]);
+    expect(aLaMort.map((d) => [d.individu.especeId, d.cause])).toEqual([
+      ["ecureuil_roux", "arbreMort"],
+      ["grand_capricorne", "arbreMort"],
+    ]);
+
+    // Le pic et la noctule restent tant que la chandelle tient, et partent
+    // quand elle tombe.
+    const restants = occupants.filter((o) => !aLaMort.some((d) => d.individu.id === o.id));
+    expect(departs(restants, [chandelle])).toEqual([]);
+    expect(departs(restants, []).map((d) => d.cause)).toEqual(["arbreDisparu", "arbreDisparu"]);
+
+    // Et la mort n'est pas dite là où elle n'est pas la raison : une chandelle
+    // cassée à quatre mètres n'aurait pas porté la hutte vivante non plus.
+    const ecureuil = occupants.filter((o) => o.especeId === "ecureuil_roux");
+    const moignon: TreeState = { ...chandelle, heightM: 4 };
+    expect(departs(ecureuil, [moignon]).map((d) => d.cause)).toEqual(["giteTropPetit"]);
+  });
 });
 
 describe("le commutateur, et la preuve qu'il ne déplace rien", () => {

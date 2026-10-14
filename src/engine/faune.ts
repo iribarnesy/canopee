@@ -708,8 +708,22 @@ export interface IndividuFaune {
   saisonsMaigres?: number;
 }
 
-/** Pourquoi un individu a quitté la parcelle. */
-export type CauseDepart = "arbreDisparu" | "giteTropPetit" | "tableVide";
+/**
+ * Pourquoi un individu a quitté la parcelle.
+ *
+ *  - `arbreDisparu` — l'arbre n'est plus dans la parcelle : abattu, ou sa
+ *    chandelle s'est abattue.
+ *  - `arbreMort` — l'arbre est mort et reste debout, et c'est sa mort, pas sa
+ *    taille, qui rend le gîte inhabitable : la hutte et l'aire veulent une
+ *    ramure vivante, le bois de cœur un aubier vivant autour de la carie
+ *    (#261). Un creux, lui, reste un creux sur une chandelle : le pic et la
+ *    chauve-souris y restent jusqu'à sa chute.
+ *  - `giteTropPetit` — le gîte ne convient plus par ses dimensions, et l'arbre
+ *    vivant ne lui conviendrait pas davantage : un creux trop étroit, une tête
+ *    rabattue sous la hauteur du nid.
+ *  - `tableVide` — deux saisons maigres de suite (lot 2).
+ */
+export type CauseDepart = "arbreDisparu" | "arbreMort" | "giteTropPetit" | "tableVide";
 
 export interface InstallationFaune {
   individu: IndividuFaune;
@@ -726,7 +740,8 @@ export interface DepartFaune {
  * Une chandelle sèche ne porte pas d'aire : il faut une ramure. `alive` compte
  * ici pour une raison physique — et depuis la guilde 5 il compte aussi dans
  * `boisConvient`, où il décide de l'inverse : la larve veut le bois que
- * l'oiseau fuit.
+ * l'oiseau fuit. L'occupant d'un arbre qui meurt part donc la semaine de sa
+ * mort, et `departs` le dit comme tel (`arbreMort`, #261).
  */
 function supporteUnGiteConstruit(tree: TreeState, espece: EspeceFaune): boolean {
   return (
@@ -868,10 +883,18 @@ export function tirageLocal(graine: number): number {
 /**
  * Les individus qui **partent**, parce que leur ancrage n'est plus là.
  *
- * Deux causes, et aucune n'est un tirage : l'arbre a quitté la parcelle (abattu,
+ * Trois causes, et aucune n'est un tirage : l'arbre a quitté la parcelle (abattu,
  * ou sa chandelle s'est abattue — `tick.ts` le retire alors de `state.trees`),
- * ou le gîte a cessé de convenir. La seconde arrive vraiment : une trogne qu'on
- * rabat ne perd pas son creux, mais un arbre dont on récolte la bille, si.
+ * il est mort debout et sa mort suffit à rendre le gîte inhabitable, ou le gîte
+ * a cessé de convenir par ses dimensions. La dernière arrive vraiment : une
+ * trogne qu'on rabat ne perd pas son creux, mais un arbre dont on récolte la
+ * bille, si.
+ *
+ * **La mort se reconnaît sans liste d'espèces ni de familles** (#261) : le même
+ * arbre, vivant, conviendrait-il encore ? Si oui, c'est elle qui chasse
+ * l'occupant. La question passe par `giteConvient`, qui sait déjà quelle famille
+ * regarde `alive` et dans quel sens. Avant, l'écureuil d'un arbre mort sur pied
+ * partait parce que son gîte était « trop petit ».
  */
 export function departs(
   individus: readonly IndividuFaune[],
@@ -888,7 +911,9 @@ export function departs(
     }
     const espece = especeFaune(individu.especeId);
     if (espece === undefined) continue;
-    if (!giteConvient(arbre, espece)) sortants.push({ individu, cause: "giteTropPetit" });
+    if (giteConvient(arbre, espece)) continue;
+    const parLaMort = !arbre.alive && giteConvient({ ...arbre, alive: true }, espece);
+    sortants.push({ individu, cause: parLaMort ? "arbreMort" : "giteTropPetit" });
   }
   return sortants;
 }

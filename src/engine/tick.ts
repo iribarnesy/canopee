@@ -3739,9 +3739,11 @@ export function tick(state: GameState, weather: WeekWeather): TickResult {
           carboneFeuKgC +=
             treeAboveCarbonKg(espece, tree.diametreCm, tree.heightM) -
             treeAboveCarbonKg(espece, tree.diametreCm, HAUTEUR_REJET_M);
-          // Elle ne porte plus pour autant les racines d'un arbre de dix
-          // mètres : l'excédent meurt et se décompose sur place (carbon.ts).
-          // Sans ce versement, le feu ferait **disparaître** ce carbone.
+          // Le carbone racinaire, que le modèle déduit de la hauteur, n'est
+          // plus celui d'un arbre de dix mètres : l'excédent est versé au bois
+          // mort et se décompose sur place (carbon.ts). Sans ce versement, le
+          // feu ferait **disparaître** ce carbone. La profondeur explorée, elle,
+          // reste à la souche (trees.ts, #334).
           //
           // Réservé aux **vivants** : cette branche est aussi empruntée par les
           // chandelles, dont le bois est déjà au pool depuis leur mort. Leur

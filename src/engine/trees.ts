@@ -749,6 +749,18 @@ const APPROFONDISSEMENT_CM_AN = 25;
  * lui suffit pas. Comblé en eau, il garde un chevelu superficiel (économe) ;
  * assoiffé, il descend chercher la réserve profonde. Les racines déjà faites
  * ne disparaissent pas — la profondeur ne régresse jamais.
+ *
+ * **Même quand l'arbre perd sa tête** (#334). Le potentiel suit la hauteur
+ * **du moment**, et il bornait aussi le résultat : un châtaignier recépé à un
+ * demi-mètre tombait la semaine suivante de 72 cm de racines à 38, un genêt
+ * rejeté après le feu de 75 à 34, un plant brouté perdait les siennes avec sa
+ * pousse — alors que cette phrase disait le contraire. Le potentiel borne la
+ * **croissance** des racines, pas leur existence. La souche d'un taillis garde
+ * son système racinaire : huit mois après la coupe, les racines d'un
+ * eucalyptus recépé portent encore une réserve substantielle de sucres
+ * solubles (Drake et al. 2013, *For. Ecol. Manage.* 306 : 161), et un taillis
+ * porte plus de grosses racines qu'une replantation du même âge (Pegoraro et
+ * al. 2022, *For. Sci.* 68 : 162).
  */
 export function nouvelleProfondeurRacines(
   espece: EspeceV0,
@@ -762,7 +774,10 @@ export function nouvelleProfondeurRacines(
   // La soif (et elle seule) déclenche l'investissement vers le bas.
   const soif = Math.max(0, 1 - waterSatisfaction);
   const gain = (APPROFONDISSEMENT_CM_AN / 52) * season * soif;
-  return Math.min(potentiel, Math.max(plancher, tree.rootDepthCm + gain));
+  return Math.max(
+    tree.rootDepthCm,
+    Math.min(potentiel, Math.max(plancher, tree.rootDepthCm + gain)),
+  );
 }
 
 /**
