@@ -163,8 +163,22 @@ export interface Feuillage {
    * par rameau donne une brindille décorée, pas une masse foliaire.
    */
   feuillesParBouquet: number;
-  /** Longueur d'une feuille, en mètres — oui, en mètres : tout est à l'échelle. */
+  /**
+   * Longueur d'une feuille, en mètres — oui, en mètres : tout est à l'échelle.
+   * Celle de la feuille **entière** pour une feuille composée, rachis compris.
+   */
   longueurFeuilleM: number;
+  /**
+   * Nombre de folioles d'une feuille **composée**, la terminale comprise ; absent =
+   * `FOLIOLES_PAR_DEFAUT`. Sans effet sur une autre forme.
+   *
+   * **Le seul cas où le compte est l'identité de l'espèce.** Le noyer hybride a
+   * le port, l'écorce et la feuille composée du commun ; ce qui l'en sépare au
+   * premier regard est une feuille de onze à vingt-trois folioles contre cinq à
+   * neuf (CNPF 2023). Une forme de plus aurait dit « une autre feuille » ; c'est
+   * la même, plus longue et plus divisée.
+   */
+  folioles?: number;
   /**
    * Densité relative du houppier ∈ [0,1] : combien de rameaux terminaux
    * portent effectivement un bouquet.

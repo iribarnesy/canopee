@@ -530,6 +530,26 @@ describe("les oiseaux de passage (#296)", () => {
     for (const g of guildes)
       for (const id of g.arbres) expect(ids.has(id), `arbre ${id}`).toBe(true);
   });
+
+  it("un arbre abattu depuis le tick n'est plus nommé, et la fréquentation ne bouge pas (#387)", () => {
+    // La fréquentation d'un tick, puis un état où deux de ses arbres sont tombés :
+    // c'est ce que poste une coupe en pause.
+    const e = entrees(aubepinesEnNovembre(true));
+    const hivernants = e.oiseauxDePassage?.find((g) => g.guildeId === "hivernants_frugivores");
+    const [a, b] = hivernants?.arbres ?? [];
+    if (a === undefined || b === undefined) throw new Error("pas assez d'arbres nommés");
+    const state = { ...e.state, trees: e.state.trees.filter((t) => t.id !== a && t.id !== b) };
+    const snapshot = construireSnapshot({ ...e, state });
+    const ids = new Set(snapshot.trees.map((t) => t.id));
+    for (const g of snapshot.oiseauxDePassage ?? [])
+      for (const id of g.arbres) expect(ids.has(id), `arbre ${id}`).toBe(true);
+    expect(snapshot.oiseauxDePassage).toEqual(
+      (e.oiseauxDePassage ?? []).map((g) => ({
+        ...g,
+        arbres: g.arbres.filter((id) => id !== a && id !== b),
+      })),
+    );
+  });
 });
 
 describe("les semaines de crue (#288)", () => {

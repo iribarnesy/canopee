@@ -1,7 +1,7 @@
 import { useMemo } from "react";
 import { getEspece } from "../../engine/especes";
 import { aireM2DeLaZone, type Zone } from "../../engine/zone";
-import { capitale } from "../mots";
+import { auFilDuTexte, capitale, de } from "../mots";
 import type { Snapshot } from "../protocol";
 import type { GameApi } from "../useGame";
 import { essencesPresentes } from "./recensement";
@@ -417,9 +417,10 @@ export function PanneauAction({
               ) : (
                 <>
                   {capitale(ditLaZone(zonePourLeDevis, rayonChaulage))}
-                  {aireM2 === undefined ? "" : ` fait ${Math.round(aireM2)} m²`} : on y abat les{" "}
+                  {aireM2 === undefined ? "" : ` fait ${Math.round(aireM2)} m²`} : on y abat{" "}
                   <strong>
-                    {tigesVisees} tiges de {nomVise}
+                    {tigesVisees === 1 ? "la seule tige" : `les ${tigesVisees} tiges`}{" "}
+                    {de(auFilDuTexte(nomVise))}
                   </strong>{" "}
                   et rien d'autre.
                 </>

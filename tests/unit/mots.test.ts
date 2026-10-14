@@ -14,16 +14,25 @@ import { especeFaune, FAUNE } from "../../src/engine/faune";
 import { type CauseMort, LIBELLE_CAUSE } from "../../src/engine/trees";
 import {
   accord,
+  auFilDuTexte,
   capitale,
   causeDite,
+  de,
   departDit,
+  direLaPlantation,
+  direLeDepart,
+  direLInstallation,
   estFeminin,
   GENRE,
   ilOuElle,
   laFaune,
+  lEssence,
+  nomEspece,
   nomEspeces,
+  piedsDe,
   pluriel,
   s,
+  uneEssence,
   uneFaune,
 } from "../../src/game/mots";
 
@@ -121,6 +130,13 @@ describe("pluriel", () => {
     expect(nomEspeces("betula_pendula", 1)).toBe("bouleau verruqueux");
   });
 
+  it("garde la capitale d'un nom propre", () => {
+    // Le nom entier passait en minuscules : « 3 ajoncs d'europe ».
+    expect(nomEspeces("ulex_europaeus", 3)).toBe("ajoncs d'Europe");
+    expect(nomEspece("euonymus_europaeus")).toBe("fusain d'Europe");
+    expect(auFilDuTexte("Chêne-liège")).toBe("chêne-liège");
+  });
+
   it("donne un genre à chaque essence du catalogue, et à rien d'autre", () => {
     for (const espece of ESPECES_V0) {
       expect(GENRE[espece.id], `genre non écrit pour « ${espece.nom} »`).toBeDefined();
@@ -215,5 +231,150 @@ describe("la faune, comptée comme le moteur la compte (#259)", () => {
   it("met la capitale sur la première lettre, élision comprise", () => {
     expect(capitale("l'écureuil roux s'installe")).toBe("L'écureuil roux s'installe");
     expect(capitale("la buse variable s'en va")).toBe("La buse variable s'en va");
+  });
+});
+
+/**
+ * L'article défini attendu de chaque essence du catalogue, écrit à la main.
+ *
+ * Il porte les deux choses que le jeu manquait (#368) : le genre (« la ronce »)
+ * et l'élision (« l'aulne glutineux »). Et la troisième, qu'une règle naïve
+ * manquerait : les deux h du catalogue sont aspirés (« le hêtre », « le houx »).
+ */
+const ARTICLE: Record<string, string> = {
+  alnus_glutinosa: "l'aulne glutineux",
+  fagus_sylvatica: "le hêtre",
+  quercus_pubescens: "le chêne pubescent",
+  pinus_sylvestris: "le pin sylvestre",
+  betula_pendula: "le bouleau verruqueux",
+  juglans_regia: "le noyer commun",
+  malus_domestica: "le pommier",
+  prunus_armeniaca: "l'abricotier",
+  corylus_avellana: "le noisetier",
+  prunus_spinosa: "le prunellier",
+  crataegus_monogyna: "l'aubépine",
+  rubus_fruticosus: "la ronce",
+  sambucus_nigra: "le sureau noir",
+  carpinus_betulus: "le charme",
+  ilex_aquifolium: "le houx",
+  salix_alba: "le saule blanc",
+  cornus_mas: "le cornouiller mâle",
+  euonymus_europaeus: "le fusain d'Europe",
+  ligustrum_vulgare: "le troène commun",
+  ulex_europaeus: "l'ajonc d'Europe",
+  cytisus_scoparius: "le genêt à balais",
+  calluna_vulgaris: "la callune",
+  castanea_sativa: "le châtaignier",
+  quercus_suber: "le chêne-liège",
+  fraxinus_excelsior: "le frêne commun",
+  arbutus_unedo: "l'arbousier",
+  juglans_x_intermedia: "le noyer hybride",
+};
+
+describe("l'essence dans la phrase (#368)", () => {
+  it("met le bon article défini devant les vingt-sept essences du catalogue", () => {
+    for (const espece of ESPECES_V0) {
+      const attendu = ARTICLE[espece.id];
+      expect(attendu, `article non écrit pour « ${espece.nom} »`).toBeDefined();
+      expect(lEssence(espece.id), espece.id).toBe(attendu);
+    }
+    expect(Object.keys(ARTICLE).length).toBe(ESPECES_V0.length);
+  });
+
+  it("élide la préposition exactement là où l'article s'élide", () => {
+    // Une seule règle pour « l' » et « d' » : l'une ne peut pas dire
+    // « l'aubépine » pendant que l'autre écrit « pied de aubépine ».
+    for (const espece of ESPECES_V0) {
+      const elide = lEssence(espece.id).startsWith("l'");
+      expect(de(nomEspece(espece.id)).startsWith("d'"), espece.id).toBe(elide);
+    }
+  });
+
+  it("l'article indéfini suit le genre de l'essence", () => {
+    expect(uneEssence("crataegus_monogyna")).toBe("une aubépine");
+    expect(uneEssence("rubus_fruticosus")).toBe("une ronce");
+    expect(uneEssence("calluna_vulgaris")).toBe("une callune");
+    expect(uneEssence("fagus_sylvatica")).toBe("un hêtre");
+    expect(uneEssence("alnus_glutinosa")).toBe("un aulne glutineux");
+    for (const espece of ESPECES_V0) {
+      const article = GENRE[espece.id] === "f" ? "une " : "un ";
+      expect(uneEssence(espece.id), espece.id).toBe(article + nomEspece(espece.id));
+    }
+  });
+
+  it("de() élide devant une voyelle, pas devant un h aspiré", () => {
+    expect(de("aubépine")).toBe("d'aubépine");
+    expect(de("aulne glutineux")).toBe("d'aulne glutineux");
+    expect(de("abricotier")).toBe("d'abricotier");
+    expect(de("hêtre")).toBe("de hêtre");
+    expect(de("houx")).toBe("de houx");
+    expect(de("ronce")).toBe("de ronce");
+  });
+
+  it("piedsDe() compte les pieds, et seul « pied » s'accorde", () => {
+    // Ce que le bouton de sélection écrivait : « les 1 pieds de aubépine ».
+    expect(piedsDe("aubépine", 0)).toBe("aucun pied d'aubépine");
+    expect(piedsDe("aubépine", 1)).toBe("le seul pied d'aubépine");
+    expect(piedsDe("aubépine", 12)).toBe("les 12 pieds d'aubépine");
+    expect(piedsDe("hêtre", 3)).toBe("les 3 pieds de hêtre");
+  });
+
+  it("la plantation accorde son participe à l'essence", () => {
+    // Le journal écrivait « 3 aubépines plantés et manchonnés ».
+    expect(direLaPlantation("crataegus_monogyna", 3, true)).toBe(
+      "3 aubépines plantées et manchonnées",
+    );
+    expect(direLaPlantation("crataegus_monogyna", 1, false)).toBe("1 aubépine plantée");
+    expect(direLaPlantation("fagus_sylvatica", 1, false)).toBe("1 hêtre planté");
+    expect(direLaPlantation("alnus_glutinosa", 5, true)).toBe(
+      "5 aulnes glutineux plantés et manchonnés",
+    );
+  });
+});
+
+describe("la faune et son arbre, dans le journal (#368)", () => {
+  const fiche = (id: string) => {
+    const e = especeFaune(id);
+    if (!e) throw new Error(id);
+    return e;
+  };
+
+  it("s'installe dans une essence accordée", () => {
+    // Le journal écrivait « s'installe dans un aubépine ».
+    expect(direLInstallation(fiche("mesange_bleue"), "crataegus_monogyna")).toBe(
+      "Un couple de mésanges bleues s'installe dans une aubépine",
+    );
+    expect(direLInstallation(fiche("ecureuil_roux"), "fagus_sylvatica")).toBe(
+      "Un écureuil roux s'installe dans un hêtre",
+    );
+    expect(direLInstallation(fiche("noctule_commune"), "alnus_glutinosa")).toBe(
+      "Une colonie de noctules communes s'installe dans un aulne glutineux",
+    );
+  });
+
+  it("sans arbre connu, l'installation ne dit pas où", () => {
+    expect(direLInstallation(fiche("ecureuil_roux"))).toBe("Un écureuil roux s'installe");
+  });
+
+  it("quitte l'essence avec l'article qu'elle demande", () => {
+    // Le journal écrivait « quitte le aubépine » et « quitte le aulne glutineux ».
+    expect(direLeDepart(fiche("mesange_bleue"), "crataegus_monogyna", "arbreMort")).toBe(
+      "Le couple de mésanges bleues quitte l'aubépine : son arbre est mort",
+    );
+    expect(direLeDepart(fiche("pic_epeiche"), "alnus_glutinosa", "arbreDisparu")).toBe(
+      "Le couple de pics épeiches quitte l'aulne glutineux : son arbre n'est plus là",
+    );
+    expect(direLeDepart(fiche("ecureuil_roux"), "fagus_sylvatica", "tableVide")).toBe(
+      "L'écureuil roux quitte le hêtre : il n'y a plus assez à manger",
+    );
+    expect(direLeDepart(fiche("loir_gris"), "rubus_fruticosus", "giteTropPetit")).toBe(
+      "Le loir gris quitte la ronce : son gîte ne lui suffit plus",
+    );
+  });
+
+  it("sans arbre connu, l'habitant quitte la parcelle", () => {
+    expect(direLeDepart(fiche("buse_variable"), undefined, "arbreDisparu")).toBe(
+      "Le couple de buses variables quitte la parcelle : son arbre n'est plus là",
+    );
   });
 });

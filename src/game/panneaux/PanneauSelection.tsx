@@ -8,6 +8,7 @@
 
 import { useState } from "react";
 import { getEspece } from "../../engine/especes";
+import { de, nomEspece, piedsDe, s } from "../mots";
 import type { SnapshotTree } from "../protocol";
 import type { LigneDeSuivi } from "../suivis";
 import type { GameApi } from "../useGame";
@@ -132,7 +133,7 @@ export function PanneauSelection({
       {essencesMontrees.map((id) => {
         const vivantsDeLEssence = vivants.filter((t) => t.especeId === id);
         const chandellesDeLEssence = chandellesDeLaParcelle.filter((t) => t.especeId === id);
-        const nom = getEspece(id).nom.toLowerCase();
+        const nom = nomEspece(id);
         return (
           <span key={id}>
             {/*
@@ -149,14 +150,14 @@ export function PanneauSelection({
               onClick={() => setSelectedIds(new Set(vivantsDeLEssence.map((t) => t.id)))}
               title={
                 vivantsDeLEssence.length === 0
-                  ? `aucun pied de ${nom} vivant sur la parcelle`
-                  : `les ${vivantsDeLEssence.length} pieds de ${nom} encore vivants`
+                  ? `${piedsDe(nom, 0)} vivant sur la parcelle`
+                  : `${piedsDe(nom, vivantsDeLEssence.length)} encore vivant${s(vivantsDeLEssence.length)}`
               }
             >
               {/* « Pieds de » porte l'accord : « tous les ronces » et « tous les
-                  frêne communs » étaient faux, et rien ne donne le genre
-                  d'une essence (la même raison que les avis du worker). */}
-              + tous les pieds de {nom} ({vivantsDeLEssence.length})
+                  frêne communs » étaient faux. Reste l'élision, que `de` fait :
+                  « pieds d'aubépine », et non « pieds de aubépine » (#368). */}
+              + tous les pieds {de(nom)} ({vivantsDeLEssence.length})
             </button>
             {chandellesDeLEssence.length > 0 && (
               <button
@@ -165,7 +166,7 @@ export function PanneauSelection({
                 onClick={() => setSelectedIds(new Set(chandellesDeLEssence.map((t) => t.id)))}
                 title="Le bois mort sur pied de cette essence : à vendre en chauffage ou à coucher au sol"
               >
-                + les chandelles de {nom} ({chandellesDeLEssence.length})
+                + les chandelles {de(nom)} ({chandellesDeLEssence.length})
               </button>
             )}
           </span>

@@ -49,7 +49,7 @@ import type { StadeDeDeveloppement } from "../engine/stades";
 import type { CauseMort } from "../engine/trees";
 import { centreDesCellules } from "../render/temps/changements";
 import type { JournalDeSemaine } from "../render/temps/ellipse";
-import { accord, causeDite, estFeminin, nomEspeces, s } from "./mots";
+import { accord, causeDite, de, estFeminin, nomEspeces, s } from "./mots";
 
 /** De quelle nature est une ligne de bilan. */
 export type SorteDeBilan = "feu" | "tempete" | "mort" | "chute" | "geste" | "naissance" | "montee";
@@ -381,9 +381,9 @@ function texteDe(l: LigneDeBilan): string {
       return `${n} ${nomEspeces(l.especeId ?? "", n)} mort${accord(f, n)} ${causeDite(l.cause ?? "vieillesse", n, f)}`;
     }
     case "chute":
-      return `${n} chandelle${s(n)} de ${nomEspeces(l.especeId ?? "", 1)} tombée${s(n)}`;
+      return `${n} chandelle${s(n)} ${de(nomEspeces(l.especeId ?? "", 1))} tombée${s(n)}`;
     case "naissance":
-      return `${n} semis de ${nomEspeces(l.especeId ?? "", 1)}`;
+      return `${n} semis ${de(nomEspeces(l.especeId ?? "", 1))}`;
     case "montee":
       return `${n} tige${s(n)} passée${s(n)} au stade ${l.stade}`;
     case "geste": {

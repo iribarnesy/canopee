@@ -17,6 +17,7 @@ import {
   KG_A_NOMMER,
   type LigneDeCompte,
 } from "../../src/game/compteDeLAnnee";
+import { nomEspece } from "../../src/game/mots";
 
 const nom = (id: string) => ({ malus_domestica: "pommes", juglans_regia: "noix" })[id] ?? id;
 
@@ -100,6 +101,11 @@ describe("la phrase de fin d'année", () => {
       fruitsKg: { malus_domestica: 40, juglans_regia: KG_A_NOMMER / 2 },
     });
     expect(direLeCompte(miettes, 2031, nom)).not.toContain("noix");
+  });
+
+  it("élide la préposition devant une essence qui commence par une voyelle (#368)", () => {
+    const abricots = ajouterAuCompte(COMPTE_VIDE, { eur: 80, fruitsKg: { prunus_armeniaca: 40 } });
+    expect(direLeCompte(abricots, 2031, nomEspece)).toContain("40 kg d'abricotier");
   });
 
   it("une année de saisonniers sans cueillette se dit aussi", () => {

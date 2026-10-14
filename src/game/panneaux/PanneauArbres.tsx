@@ -9,6 +9,7 @@
 import { useMemo } from "react";
 import { LIBELLE_CAUSE } from "../../engine/trees";
 import { COULEUR_AUTRES, SPECIES_COLORS } from "../../ui/couleurs";
+import { auFilDuTexte, piedsDe } from "../mots";
 import type { Snapshot, SnapshotTree } from "../protocol";
 import { etatDeLaRecolte } from "../recolteAuto";
 import { couleurDeLaPart } from "./fiche";
@@ -94,7 +95,7 @@ function ListeDesEssences({
             <button
               type="button"
               onClick={() => surSelectionner(e.especeId)}
-              title={`Sélectionner les ${e.tiges} ${e.nom.toLowerCase()} de la parcelle`}
+              title={`Sélectionner ${piedsDe(auFilDuTexte(e.nom), e.tiges)} de la parcelle`}
               style={{
                 flex: 1,
                 minWidth: 0,
