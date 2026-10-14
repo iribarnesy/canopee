@@ -61,7 +61,157 @@ qu'un rapport (voir la note de maintenance).
 Séparer calibration et validation : caler un paramètre sur un âge, garder
 l'autre âge pour vérifier.
 
-## Ce que le dernier lot a appris (l'azote du bois mort et la vitesse du broyat, #328)
+## Ce que le dernier lot a appris (la reprise sans rejeu, #338)
+
+Reprendre une partie rejouait tout son journal, semaine après semaine. Sur
+la sonde de la recette (le vrai worker piloté sous Node, ×52, gestes
+typiques, sauvegarde à mi-partie semaine ouverte, graine 1 — c'est
+déterministe, une partie suffit à chronométrer), mesuré sur main avant le
+lot : **354 s** pour reprendre la lande sèche de quarante ans à la semaine
+1 057, **51 s** pour la friche de trente ans à la semaine 797 (la machine
+était chargée par d'autres agents ; la recette v0.4 avait mesuré 276 et
+35 s). La sauvegarde emporte maintenant un bloc de reprise, et la même
+reprise prend **0,30 s** et **0,06 s**, décompression comprise. Le rejeu de
+la même sauvegarde, sur le même code et dans la même partie, a pris 373 et
+50 s ; il rend le même état à l'empreinte près (sha256 de l'état entier, clés
+triées), le même cumul, le même bilan, la même histoire des arbres, et les
+deux parties sont encore identiques cinquante-deux semaines plus loin. Vérifié
+sur cinq parties : les deux de la recette, la friche en graines 2 (qui
+embauche à la facture) et 3, et la vallée engorgée à vingt ans, 22 crues
+(0,07 à 0,12 s par le bloc, 50 à 115 s par le rejeu).
+
+### Deux chemins qui doivent rendre le même état s'éprouvent l'un par l'autre
+
+Le bloc rend l'état **vécu** ; le rejeu le **refait**. Les comparer, état
+complet et tout ce que le worker tient à côté, a trouvé trois défauts que
+ni l'un ni l'autre ne montrait seul, et qu'aucun essai ne voyait :
+
+- **le rejeu ne figeait pas le point zéro du carbone** après le
+  vieillissement (`init` le fait, #202) : une partie vieillie reprenait avec
+  le point zéro du profil nu. `stateHash` ne lit pas ce champ — une
+  empreinte partielle aurait dit « identique » ;
+- **le rejeu comptait la semaine d'un bloc**, gestes et tick ensemble, avec
+  les arbres d'avant les gestes : chaque arbre abattu gagnait une ligne
+  « a quitté la parcelle » que la partie vécue n'écrivait pas. Le rejeu suit
+  maintenant la séquence vécue, par les mêmes fonctions ;
+- **une semaine ramenée sous le plafond (#133) ne retirait rien de
+  l'histoire des arbres.** Le code promettait de retirer les lignes des gestes
+  annulés, mais l'histoire range des **copies** groupées, jamais les
+  événements qu'il cherchait : un arbre resté debout gardait « abattu ». Ici,
+  c'est la partie vécue qui avait tort et le rejeu raison. L'essai qui le
+  montre casse sur main.
+
+**Quand deux voies doivent rendre la même chose, l'essai qui les compare
+trouve ce que chacune cache** — à condition de comparer tout, et pas une
+empreinte qui ne lit qu'une partie de l'état.
+
+### Saisir la partie au bon instant
+
+Le bloc saisit la partie à l'**ouverture** de la semaine, avant ses gestes,
+et la reprise rejoue ceux-ci depuis le journal comme le fait le rejeu en
+arrivant au bout (#336). Les deux voies se rejoignent donc pour la fin, et
+le bloc ne dépend pas de ce qu'on fait pendant la semaine — or l'interface
+demande une sauvegarde après **chaque** geste. Il ne se calcule qu'une fois par
+semaine de jeu. Pour que l'histoire des arbres à l'ouverture reste intacte
+jusqu'au tick, les gestes de la semaine n'y sont écrits qu'à sa fermeture ;
+c'est la même chose qui a réglé le plafond.
+
+### Ce que pèse une partie
+
+En fin de partie, sur la même sonde :
+
+    partie                     état du moteur   bloc brut   gzip     reprise
+    friche, 50 m, 30 ans           1,8 Mo         2,1 Mo    0,72 Mo   0,06 s
+    lande sèche, 100 m, 40 ans     9,0 Mo        10,9 Mo    3,7 Mo    0,45 s
+
+`localStorage` tient environ cinq mégaoctets pour tout le site, en texte :
+la lande en base64 pèse 4,9 Mo, une seule partie le remplirait et la liste en
+garde huit. Le bloc va donc dans IndexedDB, compressé sur le fil principal
+(0,37 s sous Node pour la lande ; il ne bloque pas le worker, qui met 0,19 s
+à l'écrire une fois par semaine de jeu).
+
+**Ce qui pesait le plus n'était pas l'état.** L'histoire des arbres (#225)
+pesait 9,4 Mo en JSON à quarante ans — 86 248 lignes, autant que l'état du
+moteur —, parce que chaque ligne répétait ses six noms de champ et sa
+phrase. #225 avait mesuré 600 Kio pour un siècle de friche de 60 m ; sur la
+lande, dix fois plus de tiges ont vécu. Serrée en quatre nombres par ligne et
+une table de phrases, elle tient dans 1,4 Mo environ. Un ordre de grandeur
+mesuré sur une parcelle ne se transporte pas sur une autre.
+
+### Le temps d'une semaine à ×52 : le tick, et presque rien d'autre
+
+Chronométré dans le worker, tranche par tranche, sur la lande sèche (onze
+ans) : **280 ms de tick sur 284 ms par semaine**, 1,6 ms de tenue de compte
+(cumul, bilan, histoire des arbres), 15 ms par instantané, soit 3 ms par
+semaine à ×52 où un instantané en couvre cinq. Sur la friche : 60 ms de tick
+sur 60, 0,7 ms de compte. Le worker ne ralentit rien ; ×52 donne deux à trois
+semaines par seconde sur 100 m parce que le moteur coûte ce qu'il coûte.
+
+Deux fausses pistes, écrites pour qu'on ne les reprenne pas :
+
+- **Le profileur de V8 attribue 17 à 21 % du temps à `stepWeeks` lui-même**,
+  hors appels, et le maintient quand on interdit l'inlining. Le chronomètre
+  dit 1,5 %. Ce temps est celui de `tick`, mal rangé : le corps de `tick`
+  tourne en code de base, jamais optimisé (point suivant), et ses échantillons
+  retombent en partie sur l'appelant.
+- **`tick` dépasse la taille que TurboFan accepte d'optimiser** : 63 426
+  octets de bytecode pour une limite de 61 440 (`--max-optimized-bytecode-size`,
+  Node 22). Il n'est donc jamais optimisé. Mais lever la limite ne change rien
+  de mesurable (friche, 200 semaines : 55 et 54 ms par semaine contre 61 et
+  57) : son coût est dans ce qu'il appelle et dans ses fermetures par arbre,
+  pas dans son corps.
+
+Ce que le profil montre, sans que rien l'ait encore mesuré à part : le
+ramasse-miettes prend 7 à 11 % (le tick reconstruit douze fois par semaine le
+tableau des arbres, chaque fois en recopiant chaque tige), et `getEspece`
+cherche l'essence par une recherche linéaire dans l'atlas, appelée depuis 74
+endroits du moteur (2,8 % sans inlining). Rien n'a été optimisé ici : ce sont
+des pistes, pas des conclusions.
+
+### Les prédictions fausses
+
+- **La reprise sur main** : 250 à 300 s prédites pour la lande, 30 à 40 s pour
+  la friche ; 354 et 51 s. J'avais repris les chiffres de la recette v0.4
+  sans compter la charge de la machine, que d'autres agents partageaient.
+- **Ce qui sépare le rejeu de la partie vécue** : j'attendais « a quitté la
+  parcelle » dans l'histoire, et peut-être l'endroit d'une ligne du bilan. Le
+  bilan était identique ; et sur la friche, la différence venait de l'autre
+  côté — la partie vécue gardait les lignes des gestes que le plafond avait
+  annulés, le rejeu était juste.
+- **Le poids de l'histoire des arbres** : 1 à 4 Mo prédits, 0,2 à 0,5 Mo
+  compressée ; 8,4 Mo sur main et 9,4 sur la branche, 0,59 et 0,65 Mo
+  compressée. L'état du moteur, prédit à 9 à 11 Mo, en pèse 8,2 sur main.
+- **Où passe une semaine** : plus de 90 % dans le tick et aucune fonction au-delà
+  de 25 %, prédits. Le profil met 68 % dans le tick et 28 % dans son seul
+  corps ; le chronomètre trouve 98,5 %. Et 250 à 400 ms par semaine prédites
+  pour les ans 30 à 40 de la lande : 412 à 463 sur main.
+- **Sans inlining**, le temps propre de `stepWeeks` devait tomber sous 3 % : il
+  reste à 21 %. C'était le profileur, pas le worker.
+
+### Ce qui reste ouvert
+
+- **Les points de rembobinage ne survivent pas à une reprise**, ni par le bloc
+  ni par le rejeu (c'était déjà le cas) : après un chargement, « Revoir » ne
+  remonte pas avant le chargement.
+- **Quatre compteurs annuels du worker ne sont dans aucune sauvegarde**, et
+  aucune des deux reprises ne les refait : l'érosion de l'année (le bilan du
+  31 décembre sous-compte l'année du chargement), l'avis de sécheresse de
+  l'année (il peut revenir), le front des fruits mûrs (une cueillette ou une
+  pause peut se redéclencher au chargement), la faillite annoncée (elle se
+  réannonce). Rien de cela ne touche l'état.
+- **Les grandeurs du dernier tick** (crue, lumière au sol, insectes, oiseaux
+  de passage) que le bloc emporte sont celles qu'affiche la partie : après une
+  relecture arrêtée en route, elles sont périmées jusqu'au tick suivant, et
+  le bloc les garde telles (#387, label `rendu`).
+- **Chaque montée du format du moteur refuse tous les blocs** : la première
+  reprise de chaque partie après la mise à jour rejoue le journal, la
+  sauvegarde suivante emporte un bloc neuf. Le lot B (format 11, #382) en est
+  le premier exemple.
+- **La compression sur le fil principal n'a été mesurée que sous Node** :
+  dans un navigateur, le flux se lit par tranches et ne devrait pas geler
+  l'image, mais c'est à vérifier à la recette.
+
+## Ce qu'un lot précédent a appris (l'azote du bois mort et la vitesse du broyat, #328)
 
 Ce lot porte les deux points de #328 que le lot précédent avait laissés ouverts, sur les voies choisies par le propriétaire. Le troisième point, l'azote du bois posé par `plantAt`, est renvoyé à #379.
 
