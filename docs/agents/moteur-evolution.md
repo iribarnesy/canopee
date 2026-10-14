@@ -125,9 +125,11 @@ première erreur ; il fallait encore que rien d'autre ne plafonne.
 - **#222**, toujours ouverte et rouverte sur le fond : l'arbre d'allée sous le
   témoin forestier, le soc et le blé à départager (eau, racines coupées,
   mycorhizes, tassement), commentaire chiffré posté.
-- **La ligne de `ler.test.ts`** retournée en plafond (< 1,1) : elle tombera le
-  jour où l'arbre d'allée repassera devant, et il faudra une campagne pour
-  retourner le sens.
+- **La ligne de `ler.test.ts`** reste un plancher : c'est le fait de
+  Restinclières, et l'essai ne doit pas écrire le défaut. Elle passe sur la
+  graine de l'essai (1,059), la campagne la dément sur deux graines sur trois
+  (moyenne 0,958). Je l'avais retournée en plafond « < 1,1 », un seuil sans
+  source : l'utilisateur l'a refusé, à raison.
 - **`noyer-hybride.test.ts`** borne le diamètre du réseau allemand entre sa
   moyenne et ses meilleures stations, au lieu de ±25 % de la moyenne : réécrit
   sur un critère sourcé (le limon riche coche les conditions du CNPF), mais

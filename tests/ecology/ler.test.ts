@@ -552,14 +552,16 @@ describe("le dispositif à trois bras, soixante ans", () => {
     //   avec la juglone          1,131   1,048   0,965    1,048
     //   noyers sans juglone      1,059   0,828   0,987    0,958
     //
-    // Une graine sur trois au-dessus de 1 : la ligne est retournée en plafond,
-    // comme elle l'était avant #247 et sur le même seuil (pas de dépassement
-    // net, 1,1 : seuil choisi, pas sourcé). La graine 4 le passe à 1,059 ; elle
-    // aurait aussi passé le plancher, et c'est la campagne qui décide du sens,
-    // pas elle. À Restinclières, en volume par arbre, le rapport est voisin de
-    // 2,7 à dix-neuf ans (Heim 2023 : 13,2 m et 27,5 cm en allée, 11,2 m et
-    // 18,1 cm en témoin) : c'est l'objet de #222, toujours ouverte.
-    expect(parArbre(agro) / parArbre(boisPur)).toBeLessThan(1.1);
+    // **La ligne reste un plancher**, parce que c'est le fait : à Restinclières,
+    // l'arbre d'allée dépasse le témoin forestier d'un rapport voisin de 2,7 en
+    // volume par arbre à dix-neuf ans (Heim 2023 : 13,2 m et 27,5 cm en allée,
+    // 11,2 m et 18,1 cm en témoin). La graine de l'essai le passe à 1,059.
+    //
+    // **Mais la campagne le dément sur deux graines sur trois** (1,059 / 0,828 /
+    // 0,987, moyenne 0,958) : ce plancher passe sur la graine de l'essai, pas en
+    // général. Le retourner en plafond aurait écrit le défaut dans l'essai, avec
+    // un seuil sans source. C'est l'objet de #222, le lot suivant.
+    expect(parArbre(agro) / parArbre(boisPur)).toBeGreaterThan(1);
     // **La culture**, **elle**, **paie** — et c'est le sens même d'un LER : le mélange rend
     // moins de grain par hectare de **parcelle** qu'un champ de blé pur, puisqu'il
     // lui cède la place des rangs. Un terme culture au-dessus de 1 serait le
