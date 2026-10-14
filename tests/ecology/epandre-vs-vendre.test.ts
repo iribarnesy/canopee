@@ -314,13 +314,11 @@ describe("le tas de broyat : transporter la fertilité", () => {
       devenir: "broyer",
     }).state;
     // L'aérien est dans la remorque. Seules les racines restent en terre, avec
-    // leur azote, qui rejoint la litière de la souche (#247) : rien d'autre
-    // n'est tombé au sol.
+    // leur azote, au bois mort comme leur carbone (#328) : il rejoignait la
+    // litière de la souche, sans carbone (#247). Rien n'est tombé à la litière.
     expect(apres.stockBrf.azoteG).toBeGreaterThan(azoteRacines);
-    expect(apres.soil.litterNG.reduce((a, b) => a + b, 0) - litiereAvant).toBeCloseTo(
-      azoteRacines,
-      6,
-    );
+    expect(apres.carbon.deadWoodNG - state.carbon.deadWoodNG).toBeCloseTo(azoteRacines, 6);
+    expect(apres.soil.litterNG.reduce((a, b) => a + b, 0) - litiereAvant).toBeCloseTo(0, 6);
   });
 
   it("on l'épand où l'on veut, et l'azote y va — pas ailleurs", () => {
