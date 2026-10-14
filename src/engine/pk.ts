@@ -23,7 +23,10 @@
  *
  * Non modélisé : le calcium et le magnésium, la fertilisation minérale, les
  * différences d'exigence entre espèces (les besoins en P et K sont pris
- * proportionnels au besoin en azote, faute de données fiables par essence).
+ * proportionnels au besoin en azote, faute de données fiables par essence),
+ * et le potassium **dans** le cycle des cultures : une culture prélève et rend
+ * son potassium, le grain l'emporte, mais aucune ne pousse moins faute de lui
+ * (seuls les arbres le lisent).
  *
  * Les deux cycles sont complets, conservatifs et **branchés sur la loi du
  * minimum** : altération de la roche sur tout le profil, dépôts
@@ -54,6 +57,36 @@ export const RATIO_P_SUR_N = 0.09;
 
 /** Besoin en potassium rapporté au besoin en azote (N:K ≈ 1,8:1). */
 export const RATIO_K_SUR_N = 0.55;
+
+/**
+ * Le potassium que porte la strate herbacée, g/m², déduit de son azote.
+ *
+ * **La strate prélevait du potassium et n'en rendait jamais** (#222). Elle le
+ * prenait avec l'azote, au même rapport que les arbres, mais quand ses tissus
+ * mouraient, quand le soc l'enfouissait, quand la fauche la couchait ou quand
+ * on laissait la paille au champ, l'azote et le carbone revenaient au sol, et
+ * pas le potassium. Une allée fertilisée en perdait une centaine de kilos par
+ * hectare et par an, et son potassium échangeable tombait sous le seuil du
+ * noyer dès la dixième année. C'était tout ce que le blé coûtait à l'arbre
+ * d'allée, et aucun champ réel ne le connaît.
+ *
+ * Le potassium de la plante n'est pas un état de plus : il suit son azote, au
+ * rapport du prélèvement. Quand l'azote quitte la plante, le potassium qui
+ * l'accompagnait revient au sol, et tout de suite. C'est un ion libre que la
+ * pluie rince des tissus morts, comme pour la feuille d'un arbre (`tick.ts`).
+ * La paille d'un blé perd d'ailleurs une bonne part du sien entre la maturité
+ * et la récolte (RB209, note de la table 4.12). Seul le grain vendu l'emporte
+ * hors de la parcelle (`potassiumDansLeGrainGKgMS`, `herbacees.ts`).
+ *
+ * Limite : le prélèvement est plafonné par ce que la cellule contient. Là où
+ * le sol ne peut plus fournir, la plante prend son azote sans le potassium qui
+ * va avec, et ce pool implicite le compte quand même. Cela n'arrive qu'à
+ * potassium épuisé ; l'essai de bilan (`potassium-conservation.test.ts`) le
+ * verrait.
+ */
+export function potassiumDeLaStrateG(azoteG: number): number {
+  return azoteG * RATIO_K_SUR_N;
+}
 
 /**
  * Disponibilité du phosphore selon le pH : une cloche centrée sur 6,5.

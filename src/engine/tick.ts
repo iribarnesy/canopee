@@ -185,6 +185,7 @@ import {
   facteurAlterationBiologique,
   facteurNutriment,
   lessivagePotassiumG,
+  potassiumDeLaStrateG,
   RATIO_K_SUR_N,
   RATIO_P_SUR_N,
   RELARGAGE_HEBDO,
@@ -1031,6 +1032,10 @@ export function tick(state: GameState, weather: WeekWeather): TickResult {
   let uptakePSumG = 0;
   let uptakeKSumG = 0;
   let leachedKSumG = 0;
+  /** Ce que la roche et l'atmosphère apportent au potassium échangeable, g (Σ cellules). */
+  let apportKSumG = 0;
+  /** Ce que les feuilles des arbres et la strate rendent au potassium échangeable, g. */
+  let retourKSumG = 0;
   // Apport hebdomadaire moyen, g N/m² ; la part humide suit la pluie de la
   // semaine, rapportée à une semaine moyenne de l'année.
   const depositionSemaineG = station.depositionNKgHaAn / G_PER_M2_TO_KG_PER_HA / 52;
@@ -1416,7 +1421,9 @@ export function tick(state: GameState, weather: WeekWeather): TickResult {
     );
     phosphoreG[i] =
       (phosphoreG[i] ?? 0) + pOrganique + alterationPSemaine * bio + depositionPSemaine;
-    potassiumG[i] = (potassiumG[i] ?? 0) + alterationKSemaine * bio + depositionKSemaine;
+    const apportK = alterationKSemaine * bio + depositionKSemaine;
+    potassiumG[i] = (potassiumG[i] ?? 0) + apportK;
+    apportKSumG += apportK;
     // Les bases suivent la même plomberie que le potassium — et pour cause, le
     // potassium **est** une de ces bases. L'altération les libère dans tout le
     // profil, la rhizosphère l'accélère, l'atmosphère en dépose (bases.ts).
@@ -2272,6 +2279,14 @@ export function tick(state: GameState, weather: WeekWeather): TickResult {
       herbeMatiereSecheG[k] = matiere;
       herbeAzoteG[k] = azote;
     }
+    // **Et le potassium de ce qui meurt revient au sol** (#222). La strate le
+    // prenait avec son azote et ne le rendait jamais : une allée fertilisée
+    // perdait ainsi son potassium en dix ans. Il suit l'azote qui quitte la
+    // plante (pk.ts), et il revient tout de suite, comme celui des feuilles
+    // d'un arbre plus bas : la pluie le rince des tissus morts.
+    const rendK = potassiumDeLaStrateG(litiereNCellule);
+    potassiumG[i] = (potassiumG[i] ?? 0) + rendK;
+    retourKSumG += rendK;
     if (litiereNCellule > 0 && litiereCCellule > 0) {
       // Le carbone est **crédité** à la production primaire — c'est la plante
       // qui l'a fixé — et l'azote déclaré comme un retour de litière, sans quoi
@@ -3296,8 +3311,9 @@ export function tick(state: GameState, weather: WeekWeather): TickResult {
       // rince de la feuille avant même qu'elle ait fini de se décomposer. Le
       // phosphore, lui, est dans les molécules — il attend la décomposition,
       // et revient donc plus haut, au rythme de la minéralisation.
-      potassiumG[i] =
-        (potassiumG[i] ?? 0) + share * RATIO_K_SUR_N * (RETOUR_LITIERE_K / LITTER_RETURN_FRACTION);
+      const feuillesK = share * RATIO_K_SUR_N * (RETOUR_LITIERE_K / LITTER_RETURN_FRACTION);
+      potassiumG[i] = (potassiumG[i] ?? 0) + feuillesK;
+      retourKSumG += feuillesK;
       // On ne prend que ce qui est là : un sous-sol vidé ne s'endette pas. Le
       // flux publié est ce qui a **réellement** été retiré, sans quoi l'invariant
       // de conservation mentirait le jour où le fond touche le fond.
@@ -3806,6 +3822,11 @@ export function tick(state: GameState, weather: WeekWeather): TickResult {
           herbeAzoteG[i * N_HERBACEES + s] = 0;
           herbeMatiereSecheG[i * N_HERBACEES + s] = 0;
         }
+        // Son potassium, lui, ne part pas en fumée : il reste dans les cendres,
+        // qui en sont riches, et revient au sol (#222).
+        const cendresK = potassiumDeLaStrateG(azoteHerbe);
+        potassiumG[i] = (potassiumG[i] ?? 0) + cendresK;
+        retourKSumG += cendresK;
         const cendresN = ((litterNG[i] ?? 0) + azoteHerbe) * 0.2;
         mineralNG[i] = (mineralNG[i] ?? 0) + cendresN;
         // L'azote des cendres est ammoniacal (#280) — c'est même la forme sous
@@ -4415,6 +4436,8 @@ export function tick(state: GameState, weather: WeekWeather): TickResult {
       uptakePKgHa: (uptakePSumG / nCells) * G_PER_M2_TO_KG_PER_HA,
       uptakeKKgHa: (uptakeKSumG / nCells) * G_PER_M2_TO_KG_PER_HA,
       leachedKKgHa: (leachedKSumG / nCells) * G_PER_M2_TO_KG_PER_HA,
+      apportKKgHa: (apportKSumG / nCells) * G_PER_M2_TO_KG_PER_HA,
+      retourKKgHa: (retourKSumG / nCells) * G_PER_M2_TO_KG_PER_HA,
       basesApportEqHa: (basesApportSumEq / nCells) * 10_000,
       basesLessiveEqHa: (basesLessiveSumEq / nCells) * 10_000,
       basesLitiereEqHa: (basesLitiereSumEq / nCells) * 10_000,

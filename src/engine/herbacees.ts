@@ -261,6 +261,18 @@ export interface HerbaceeV0 {
      * et c'est la même observation vue des deux côtés *(à confirmer)*.
      */
     azoteDansLeGrain: number;
+    /**
+     * Potassium que le grain emporte hors de la parcelle, g K par kg de grain
+     * **sec** (#222).
+     *
+     * Le potassium de la plante suit son azote (`potassiumDeLaStrateG`, pk.ts) ;
+     * à la moisson, le grain en emporte cette part, et la paille rend le reste
+     * au sol. Ce n'est pas la part de l'azote : le grain est riche en azote et
+     * pauvre en potassium, la paille l'inverse. Prendre `azoteDansLeGrain`
+     * aurait exporté plus de deux fois trop (un blé de 7 t/ha qui a pris
+     * 200 kg N : 82 kg K au lieu de 34).
+     */
+    potassiumDansLeGrainGKgMS: number;
   };
   /*
    * **ce que l'espèce rend au sol** (#201, #247). La fiche portait un C/N de
@@ -286,6 +298,10 @@ const ROTHAMSTED_BROADBALK =
   "Rothamsted, essai de Broadbalk (blé continu depuis 1843, le plus ancien essai agronomique au monde) : parcelles sans aucun apport ~1 t/ha tenues sur 170 ans, parcelles pleinement fumées 8-9 t/ha (e-RA, dataset 03-OAWWYields)";
 const AGRESTE_BLE =
   "Agreste, statistique agricole annuelle : rendement moyen français du blé tendre d'hiver, ordre de 7 t/ha sur la dernière décennie";
+const COMIFER_2007_PKMG =
+  "Comifer, groupe PKMg 2007, Teneurs en P, K et Mg des organes végétaux récoltés pour les cultures de plein champ et les principaux fourrages : blé tendre, grain à 85 % MS, 0,65 kg P2O5, 0,50 kg K2O et 0,12 kg MgO par quintal ; paille à 88 % MS, 12,3 kg K2O par tonne";
+const AHDB_RB209_2023 =
+  "AHDB, Nutrient Management Guide (RB209), section 4 Arable crops, juin 2023, table 4.12 : blé d'hiver, grain seul 5,5 kg K2O par tonne de matière fraîche (15 % d'humidité), grain et paille 10,5 ; le potassium de la paille peut baisser nettement entre la maturité et la récolte";
 const TAYLOR_2001 =
   "Taylor, Rowland & Jones 2001, Biological Flora of the British Isles: Molinia caerulea (L.) Moench, Journal of Ecology 89:126-144 (Grande-Bretagne)";
 
@@ -508,8 +524,22 @@ export const HERBACEES: readonly HerbaceeV0[] = [
       heuresRecolteHa: 1,
       semenceEurHa: 90,
       azoteDansLeGrain: 0.75,
+      // Comifer 2007 : 0,50 kg K₂O par quintal de blé tendre à 85 % de matière
+      // sèche, soit 5,0 kg K₂O par tonne aux normes. Par kilo de grain sec :
+      // 5,0 × 0,830 (K dans K₂O) / 0,85 = 4,88 g K. La table RB209 dit 5,5 kg
+      // K₂O par tonne à 15 % d'humidité (5,37 g K/kg sec), 10 % au-dessus.
+      // Les teneurs réelles varient de l'ordre de 20 % autour de ces
+      // moyennes (Comifer).
+      potassiumDansLeGrainGKgMS: 4.88,
     },
-    sources: [ROTHAMSTED_BROADBALK, AGRESTE_BLE, ARTRU_2019, DUPRAZ_CAPILLON],
+    sources: [
+      ROTHAMSTED_BROADBALK,
+      AGRESTE_BLE,
+      ARTRU_2019,
+      DUPRAZ_CAPILLON,
+      COMIFER_2007_PKMG,
+      AHDB_RB209_2023,
+    ],
   },
 ];
 
