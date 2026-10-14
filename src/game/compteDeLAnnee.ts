@@ -33,6 +33,8 @@
  * Module **pur** : le worker mesure, ce module additionne et dit.
  */
 
+import { de } from "./mots";
+
 /** Une action automatique, mesurée au moment où elle s'est appliquée. */
 export interface LigneDeCompte {
   /** mouvement de trésorerie de l'action, € (positif = recette) */
@@ -106,7 +108,7 @@ export function direLeCompte(
   const fruits = Object.entries(compte.fruitsKg)
     .filter(([, kg]) => kg >= KG_A_NOMMER)
     .sort((a, b) => b[1] - a[1])
-    .map(([id, kg]) => `${Math.round(kg).toLocaleString("fr-FR")} kg de ${nomEspece(id)}`);
+    .map(([id, kg]) => `${Math.round(kg).toLocaleString("fr-FR")} kg ${de(nomEspece(id))}`);
   const parties: string[] = [];
   if (fruits.length > 0) {
     parties.push(`récolte automatique : ${fruits.join(", ")} → ${euros(compte.recetteEur)}`);

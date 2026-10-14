@@ -188,6 +188,38 @@ export function engorgementParCellule(state: GameState, nH: number): Float32Arra
 }
 
 /**
+ * Les oiseaux de passage, **sans les arbres qui ne sont plus debout** (#387).
+ *
+ * La fréquentation est celle du dernier tick, et elle se garde d'un instantané
+ * à l'autre : une action reçue en pause en poste un sans qu'aucune semaine
+ * n'ait tourné. Un abattage en pause laissait donc la tige abattue parmi les
+ * arbres qui attirent, alors qu'elle n'était plus dans `trees` — la sonde de la
+ * recette v0.4 l'a relevé en semaine 308.
+ *
+ * On **retire** les identifiants, on ne recalcule rien : combien d'oiseaux, et
+ * pour quelle lisière, est une règle du moteur (`oiseaux.ts`), et elle reste
+ * celle de la semaine simulée jusqu'à la suivante. Le moteur promet des arbres
+ * « vivants et présents dans la parcelle de fin de semaine » : c'est le critère
+ * qu'on tient ici. Quand aucun n'est tombé, la liste part telle quelle.
+ */
+export function oiseauxSurLesArbresDebout(
+  guildes: readonly FrequentationDeGuilde[],
+  trees: readonly TreeState[],
+): readonly FrequentationDeGuilde[] {
+  if (!guildes.some((g) => g.arbres.length > 0)) return guildes;
+  const debout = new Set<number>();
+  for (const t of trees) if (t.alive) debout.add(t.id);
+  let retire = false;
+  const gardees = guildes.map((g) => {
+    const arbres = g.arbres.filter((id) => debout.has(id));
+    if (arbres.length === g.arbres.length) return g;
+    retire = true;
+    return { ...g, arbres };
+  });
+  return retire ? gardees : guildes;
+}
+
+/**
  * Ce qu'il faut au constructeur d'instantané en plus de l'état : la météo de
  * la semaine, les grandeurs du dernier tick (elles ne sont pas dans l'état),
  * et ce qui s'est passé depuis le dernier envoi.
@@ -355,8 +387,11 @@ export function construireSnapshot(e: EntreesSnapshot): Snapshot {
     // **Les oiseaux de passage**, eux, sont un flux du tick (#296) : la
     // fréquentation de la dernière semaine simulée. Même convention que les
     // habitants pour l'absence — faune éteinte, pas de champ du tout ; allumée
-    // mais aucun tick encore, une liste vide.
-    ...(station.faune ? { oiseauxDePassage: e.oiseauxDePassage ?? [] } : {}),
+    // mais aucun tick encore, une liste vide. Les arbres qu'elle nomme sont ceux
+    // de **cet** instantané : un abattage en pause en a retiré (#387).
+    ...(station.faune
+      ? { oiseauxDePassage: oiseauxSurLesArbresDebout(e.oiseauxDePassage ?? [], state.trees) }
+      : {}),
     installationsFaune: e.installationsFaune,
     departsFaune: e.departsFaune,
     incendie: e.incendie,

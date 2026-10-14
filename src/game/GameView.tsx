@@ -46,6 +46,7 @@ import { lignesDuBilan } from "./bilan";
 import { ESTOMPE } from "./ceQuiAChange";
 import { EditeurTerrain, terrainInitial } from "./EditeurTerrain";
 import { useEcranEmpile } from "./ecranEmpile";
+import { nomEspece } from "./mots";
 import type { Niveau } from "./niveaux";
 import { NIVEAUX_LIVRES } from "./niveauxLivres";
 import { PlanEau } from "./PlanEau";
@@ -265,7 +266,7 @@ function StartScreen({
   const essences = [...(entourage?.voisinage ?? [])]
     .sort((a, b) => b.semisParAn - a.semisParAn)
     .slice(0, 3)
-    .map((v) => getEspece(v.especeId).nom.toLowerCase());
+    .map((v) => nomEspece(v.especeId));
 
   // Le terrain dessiné remplace la silhouette paramétrique (relief.ts), et il
   // impose l'eau déduite : on ne déclare plus rien, c'est le modelé qui parle.

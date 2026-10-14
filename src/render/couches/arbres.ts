@@ -41,7 +41,7 @@ import { getEspece } from "../../engine/especes";
 import { HAUTEUR_BROUTAGE_M } from "../../engine/gibier";
 import { CAVITE_HABITAT_L, DIAMETRE_TETE_MAX_CM } from "../../engine/trogne";
 import { ficheDe } from "../arbres/especes";
-import { contourFeuille, elementsParFeuille, portDuBouquet } from "../arbres/feuilles";
+import { polygonesDeFeuille, portDuBouquet } from "../arbres/feuilles";
 import type { FicheGraphique } from "../arbres/fiche";
 import {
   contourFruit,
@@ -1941,15 +1941,16 @@ function dessinerFeuillage(
   // Le bois est déjà dessiné à ce stade : ne pas poser de bouquet suffit donc à
   // faire apparaître la ramure, sans une primitive de plus.
   const terminaux = seuilCimeSeche(tous, dommageHydraulique, versPx);
-  const contour = contourFeuille(fiche.feuillage.forme);
-  const parFeuille = elementsParFeuille(fiche.feuillage.forme);
+  // Les contours d'une feuille déclarée, posés une fois pour toutes : la feuille
+  // simple, la paire d'aiguilles, ou le rachis et ses folioles.
+  const polygones = polygonesDeFeuille(fiche.feuillage.forme, fiche.feuillage.folioles);
   const tailleFeuillePx = fiche.feuillage.longueurFeuilleM * echelle;
   const detaille = tailleFeuillePx >= FEUILLE_DES_PX;
   const aiguilles = fiche.feuillage.forme === "aiguille";
   // Le port du bouquet, déduit de la forme de la feuille : c'est ce qui sépare
   // une fronde de frêne d'une rosette de hêtre à l'échelle où l'on joue,
   // c'est-à-dire bien en dessous du seuil où l'on dessine une feuille.
-  const port = portDuBouquet(fiche.feuillage.forme);
+  const port = portDuBouquet(fiche.feuillage.forme, fiche.feuillage.folioles);
 
   // **Le rayon d'une tache se déduit de la surface à couvrir, pas de la taille
   // d'une feuille**, et c'est la deuxième moitié de la correction du houppier
@@ -2120,19 +2121,21 @@ function dessinerFeuillage(
       ctx.save();
       ctx.translate(cx, cy);
       if (aiguilles) ctx.rotate(angle + Math.PI / 2);
-      for (let e = 0; e < parFeuille; e++) {
-        // Les aiguilles vont **par deux** : c'est la signature du pin sylvestre.
-        const ecart = parFeuille > 1 ? (e - 0.5) * 0.22 : 0;
-        ctx.beginPath();
-        contour.forEach((p, n) => {
-          const px = (p.x + ecart) * tailleFeuillePx;
+      // **Un seul remplissage par feuille**, quel que soit le nombre de ses
+      // éléments : les deux aiguilles du pin, ou le rachis et les dix-sept
+      // folioles du noyer hybride. Une feuille est un objet ; un remplissage
+      // par foliole aurait multiplié par dix-huit ceux de cette espèce.
+      ctx.beginPath();
+      for (const polygone of polygones) {
+        polygone.forEach((p, n) => {
+          const px = p.x * tailleFeuillePx;
           const py = -p.y * tailleFeuillePx;
           if (n === 0) ctx.moveTo(px, py);
           else ctx.lineTo(px, py);
         });
         ctx.closePath();
-        ctx.fill();
       }
+      ctx.fill();
       ctx.restore();
     }
   }

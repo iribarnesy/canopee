@@ -3,7 +3,13 @@ import { getEspece } from "../../src/engine/especes";
 import { HAUTEUR_BROUTAGE_M } from "../../src/engine/gibier";
 import { diametreTeteCm, volumeCaviteL } from "../../src/engine/trogne";
 import { HETRE } from "../../src/render/arbres/especes";
-import { type FormeFeuille, portDuBouquet } from "../../src/render/arbres/feuilles";
+import {
+  disposerFolioles,
+  FOLIOLES_PAR_DEFAUT,
+  type FormeFeuille,
+  polygonesDeFeuille,
+  portDuBouquet,
+} from "../../src/render/arbres/feuilles";
 import { contraindre } from "../../src/render/arbres/port";
 import { engendrer, type Segment } from "../../src/render/arbres/squelette";
 import { type Vue, vueInitiale } from "../../src/render/camera";
@@ -1096,6 +1102,21 @@ describe("le bouquet : l'unité de dessin, et ce qui la distingue d'une espèce 
         brosse,
       );
     }
+    // Y compris la fronde la plus divisée qu'une source donne : les vingt-trois
+    // folioles du haut de la fourchette du noyer hybride.
+    expect(portDuBouquet("composee", 23).allongement).toBeLessThan(brosse);
+  });
+
+  it("étire la fronde avec le compte de folioles, et ne touche pas celle à cinq", () => {
+    // Le bouquet est une conséquence de la feuille : une plume de dix-sept
+    // folioles fait une fronde plus longue qu'une main de cinq. Le frêne, le
+    // sureau et le commun, qui ne déclarent rien, gardent exactement la leur.
+    expect(portDuBouquet("composee", FOLIOLES_PAR_DEFAUT)).toEqual(portDuBouquet("composee"));
+    expect(portDuBouquet("composee", 17).allongement).toBeGreaterThan(
+      portDuBouquet("composee").allongement,
+    );
+    // Une forme simple ignore le compte.
+    expect(portDuBouquet("ovale", 17)).toEqual(portDuBouquet("ovale"));
   });
 
   it("borne la découpe : un bord irrégulier, jamais une explosion", () => {
@@ -1175,6 +1196,75 @@ describe("le bouquet : l'unité de dessin, et ce qui la distingue d'une espèce 
     // n'en ajoute ni n'en retire.
     expect(pin.compte.remplissages).toBeGreaterThan(0);
     expect(hetre.compte.remplissages).toBeGreaterThan(0);
+  });
+});
+
+describe("la feuille composée : des paires sur un rachis, et une terminale", () => {
+  /**
+   * **Le semis d'origine posait les folioles côte à côte**, comme les deux
+   * aiguilles d'un faisceau : cinq folioles de la longueur de la feuille, en
+   * peigne. Il ne pouvait pas dire quinze ni dix-sept, et c'est pourtant ce
+   * compte qui sépare le noyer hybride du commun (#376).
+   */
+  it("pose exactement le compte déclaré, arrondi à l'impair supérieur", () => {
+    for (const n of [3, 5, 7, 9, 11, 15, 17, 23]) expect(disposerFolioles(n)).toHaveLength(n);
+    // Toutes les feuilles composées de l'atlas sont imparipennées.
+    expect(disposerFolioles(6)).toHaveLength(7);
+  });
+
+  it("des paires opposées, symétriques, et la terminale qui prolonge le rachis", () => {
+    const poses = disposerFolioles(17);
+    const terminale = poses[poses.length - 1];
+    expect(terminale?.angle).toBe(0);
+    for (let k = 0; k + 1 < poses.length - 1; k += 2) {
+      const [d, g] = [poses[k], poses[k + 1]];
+      expect(d?.y).toBe(g?.y);
+      expect(d?.longueur).toBe(g?.longueur);
+      expect(d?.angle).toBeCloseTo(-(g?.angle ?? 0));
+      // Chaque paire s'attache sous la terminale.
+      expect(d?.y ?? 1).toBeLessThan(terminale?.y ?? 0);
+    }
+  });
+
+  it("**la terminale est la plus grande**, et les paires grandissent vers elle", () => {
+    // « La foliole terminale très marquée » (CNPF 2023, pour l'hybride) — et
+    // c'est vrai du commun aussi : la terminale du noyer est sa plus grande.
+    for (const n of [5, 17]) {
+      const poses = disposerFolioles(n);
+      const terminale = poses[poses.length - 1]?.longueur ?? 0;
+      const laterales = poses.slice(0, -1).map((p) => p.longueur);
+      expect(Math.max(...laterales), `${n} folioles`).toBeLessThan(terminale);
+      for (let k = 2; k < laterales.length; k += 2) {
+        expect(laterales[k], `${n} folioles`).toBeGreaterThanOrEqual(laterales[k - 2] ?? 0);
+      }
+    }
+  });
+
+  it("tient dans le repère de la feuille, et plus de folioles font une plume plus étroite", () => {
+    const largeur = (n: number) => {
+      let x = 0;
+      for (const poly of polygonesDeFeuille("composee", n)) {
+        for (const p of poly) {
+          // La feuille va du pétiole (0) au sommet (1) : la fiche donne sa
+          // longueur réelle, le tracé ne doit pas la dépasser.
+          expect(p.y).toBeGreaterThanOrEqual(-1e-9);
+          expect(p.y).toBeLessThanOrEqual(1 + 1e-9);
+          x = Math.max(x, Math.abs(p.x));
+        }
+      }
+      return 2 * x;
+    };
+    // Une main de cinq folioles contre une plume de dix-sept : c'est la
+    // silhouette qui doit les séparer, à longueur de feuille égale.
+    expect(largeur(17)).toBeLessThan(largeur(5) * 0.8);
+  });
+
+  it("une feuille simple reste un contour, la paire d'aiguilles en reste deux", () => {
+    expect(polygonesDeFeuille("ovale")).toHaveLength(1);
+    expect(polygonesDeFeuille("aiguille")).toHaveLength(2);
+    // Le rachis, plus chaque foliole.
+    expect(polygonesDeFeuille("composee")).toHaveLength(FOLIOLES_PAR_DEFAUT + 1);
+    expect(polygonesDeFeuille("composee", 17)).toHaveLength(18);
   });
 });
 

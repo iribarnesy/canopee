@@ -634,8 +634,8 @@ interface Planche {
 /**
  * Les arbres de futaie et les fruitiers, dans l'ordre des familles de port.
  *
- * Treize sujets à seize mètres : c'est la hauteur à laquelle ces essences-là se
- * comparent. Les arbustes de haie ont leur propre planche, plus bas — les
+ * Quatorze sujets à seize mètres : c'est la hauteur à laquelle ces essences-là
+ * se comparent. Les arbustes de haie ont leur propre planche, plus bas — les
  * mettre ici les réduirait à des points, puisque `heightM` est plafonné par la
  * hauteur maximale de l'espèce et qu'une aubépine n'en fait que huit.
  */
@@ -645,6 +645,9 @@ const FUTAIE = [
   "castanea_sativa",
   "fraxinus_excelsior",
   "juglans_regia",
+  // L'hybride avait sa fiche et n'était sur aucune planche : la même absence que
+  // celle du commun à son arrivée (docs/interface-visuelle.md, section 9).
+  "juglans_x_intermedia",
   "carpinus_betulus",
   "betula_pendula",
   "alnus_glutinosa",
@@ -717,6 +720,23 @@ const PLANCHE: Planche[] = [
     hauteurM: 16,
     titre: "futaie et vergers · sénescence",
     options: { senescence: 1 },
+  },
+  // **Les deux noyers côte à côte**, parce que la planche de futaie les sépare
+  // d'une ligne et qu'ils ne se distinguent qu'en se comparant : même famille,
+  // même écorce, même feuille composée. Ce qui doit se lire ici, c'est la main
+  // du commun contre la plume de l'hybride, et sa flèche qui monte (#376).
+  {
+    scene: "",
+    especes: ["juglans_regia", "juglans_x_intermedia"],
+    hauteurM: 16,
+    titre: "les deux noyers · le commun, l'hybride (cinq folioles contre dix-sept)",
+  },
+  {
+    scene: "",
+    especes: ["juglans_regia", "juglans_x_intermedia"],
+    hauteurM: 16,
+    titre: "les deux noyers · nus (la flèche de l'hybride domine, le commun se ramifie plus serré)",
+    options: { nu: true },
   },
   {
     scene: "",

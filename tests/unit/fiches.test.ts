@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { ESPECES_V0, getEspece } from "../../src/engine/especes";
 import { FICHES, ficheDe } from "../../src/render/arbres/especes";
+import { FOLIOLES_PAR_DEFAUT } from "../../src/render/arbres/feuilles";
 import type { Port } from "../../src/render/arbres/fiche";
 import { contraindre } from "../../src/render/arbres/port";
 import { engendrer, rayonAtteintM, SEGMENTS_MAX } from "../../src/render/arbres/squelette";
@@ -440,6 +441,45 @@ describe("les couleurs de feuillage", () => {
     for (const f of FICHES) {
       expect(clarte(f.couleurs.printemps), f.especeId).toBeGreaterThan(clarte(f.couleurs.ete));
     }
+  });
+});
+
+describe("les folioles : le compte qui sépare les deux noyers", () => {
+  it("seule une feuille composée déclare des folioles, et en nombre impair", () => {
+    // Un compte sur une feuille simple ne serait lu par personne, et c'est
+    // précisément ce qui le rendrait faux sans que rien ne le signale.
+    for (const f of FICHES) {
+      const n = f.feuillage.folioles;
+      if (n === undefined) continue;
+      expect(f.feuillage.forme, f.especeId).toBe("composee");
+      expect(Number.isInteger(n) && n % 2 === 1 && n >= 3, `${f.especeId} : ${n}`).toBe(true);
+    }
+  });
+
+  it("**l'hybride porte la feuille des sources : onze à vingt-trois folioles, plus que le commun**", () => {
+    // CNPF 2023, *Les noyers à bois* : onze à vingt-trois chez l'hybride, cinq à
+    // neuf chez le commun. C'est le signe qui le sépare au premier regard.
+    const commun = ficheDe("juglans_regia")?.feuillage;
+    const hybride = ficheDe("juglans_x_intermedia")?.feuillage;
+    expect(hybride?.forme).toBe("composee");
+    const nCommun = commun?.folioles ?? FOLIOLES_PAR_DEFAUT;
+    const nHybride = hybride?.folioles ?? FOLIOLES_PAR_DEFAUT;
+    expect(nCommun).toBeGreaterThanOrEqual(5);
+    expect(nCommun).toBeLessThanOrEqual(9);
+    expect(nHybride).toBeGreaterThanOrEqual(11);
+    expect(nHybride).toBeLessThanOrEqual(23);
+  });
+
+  it("l'hybride a l'écorce du commun, une flèche plus dominante et moins tortueuse", () => {
+    // Ce que les sources disent de lui **par rapport** au commun : une écorce qui
+    // « rappelle » la sienne (CNPF 2023), « une meilleure dominance de la cime »
+    // et une moindre sensibilité au phototropisme (Coello 2013).
+    const commun = ficheDe("juglans_regia");
+    const hybride = ficheDe("juglans_x_intermedia");
+    expect(hybride?.ecorce).toEqual(commun?.ecorce);
+    expect(hybride?.port).toBe(commun?.port);
+    expect(hybride?.branchement.dominance ?? 0).toBeGreaterThan(commun?.branchement.dominance ?? 1);
+    expect(hybride?.branchement.tortuosite ?? 1).toBeLessThan(commun?.branchement.tortuosite ?? 0);
   });
 });
 
