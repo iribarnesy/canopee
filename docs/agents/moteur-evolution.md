@@ -76,6 +76,8 @@ Appliquer la règle partout où le carbone du bois bouge a fait apparaître deux
 
 Les deux suivent maintenant la même règle. C'est le signe qu'un découpage est bon : la règle tombe sur des cas qu'on n'avait pas cherchés.
 
+Le premier compte : le carbone racinaire reste déduit de la hauteur (#334), si bien qu'un recépage ou une trogne verse au bois mort plus des quatre cinquièmes des racines. La propriété de conservation du carbone vérifie les deux gestes. L'azote de ces racines va au bois mort, à la même part que leur carbone. Ce qui reste à la souche, ce qui va au bois mort et ce que la tige emporte font exactement l'azote d'avant.
+
 Le format de sauvegarde monte à 11. Un bloc de version 10 est refusé, et le journal reprend la main.
 
 ### Ce que ça donne
