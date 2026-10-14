@@ -31,7 +31,7 @@ import { syntheticYear } from "../../src/engine/meteo";
 import { rngStateFromSeed } from "../../src/engine/rng";
 import { createGameState, type GameState, plantAt, plantScattered } from "../../src/engine/state";
 import { LANDE_SECHE, LIMON_RICHE } from "../../src/engine/stations";
-import { diametreInitialCm, dureeChandelleSemaines } from "../../src/engine/trees";
+import { cnBois, diametreInitialCm, dureeChandelleSemaines } from "../../src/engine/trees";
 
 const STATION = { ...LIMON_RICHE.station, coteM: 50 };
 const WEATHER = syntheticYear(LIMON_RICHE.climat);
@@ -517,6 +517,50 @@ describe("rabattre un arbre vivant ne détruit pas son carbone", () => {
       6,
     );
     expect(exporte).toBeLessThan(treeAboveCarbonKg(espece, diametreInitialCm(12), 12));
+  });
+
+  it.each([
+    { type: "receper" as const, hauteurApresM: RECEPAGE_HAUTEUR_M },
+    { type: "trogner" as const, hauteurApresM: 2 },
+  ])("$type : l'azote des racines perdues suit leur carbone au bois mort (#328)", (geste) => {
+    // Le carbone racinaire se déduit de la hauteur (#334) : rabattre un arbre en
+    // verse l'essentiel au bois mort, et l'azote de ces racines doit l'y suivre.
+    // Il partait avec la tige exportée. Le bois du charme porte l'azote de son
+    // espèce, que `plantAt` ne pose pas (#379).
+    const { state: nu, id } = charmeDe(12);
+    const state: GameState = {
+      ...nu,
+      trees: nu.trees.map((t) => ({
+        ...t,
+        azoteBoisG: (treeTotalCarbonKg(espece, t.diametreCm, t.heightM) * 1000) / cnBois(espece),
+      })),
+    };
+    const avant = state.trees.find((t) => t.id === id);
+    if (!avant) throw new Error("charme manquant");
+    const r = applyAction(
+      state,
+      geste.type === "receper"
+        ? { type: "receper", week: 0, treeIds: [id] }
+        : { type: "trogner", week: 0, treeIds: [id], hauteurTeteM: geste.hauteurApresM },
+    );
+    expect(r.refusals).toEqual([]);
+    const apres = r.state.trees.find((t) => t.id === id);
+    if (!apres) throw new Error("charme disparu");
+    const azoteAvant = avant.azoteBoisG ?? 0;
+    const totalAvantKgC = treeTotalCarbonKg(espece, avant.diametreCm, avant.heightM);
+    const verseNG = r.state.carbon.deadWoodNG - state.carbon.deadWoodNG;
+    const verseKgC = r.state.carbon.deadWoodKgC - state.carbon.deadWoodKgC;
+    // La même part de l'azote du bois que de son carbone.
+    expect(verseNG).toBeGreaterThan(0);
+    expect(verseNG / azoteAvant).toBeCloseTo(verseKgC / totalAvantKgC, 9);
+    // Et rien ne se crée ni ne se perd : ce qui reste à la souche, ce qui va au
+    // bois mort et ce que la tige emporte font l'azote d'avant.
+    const exporteNG =
+      (azoteAvant *
+        (treeAboveCarbonKg(espece, avant.diametreCm, avant.heightM) -
+          treeAboveCarbonKg(espece, avant.diametreCm, geste.hauteurApresM))) /
+      totalAvantKgC;
+    expect((apres.azoteBoisG ?? 0) + verseNG + exporteNG).toBeCloseTo(azoteAvant, 9);
   });
 });
 
