@@ -14,8 +14,9 @@
  *
  * L'essai passe par le **worker lui-même**, avec les messages de l'interface :
  * c'est lui qui tient ces grandeurs, et aucun essai du moteur ne pouvait le voir.
- * Une seule partie pour les trois cas, qui se suivent : la vieillir coûte
- * l'essentiel du temps.
+ * Une seule partie pour les quatre cas, qui se suivent : la vieillir coûte
+ * l'essentiel du temps. Le dernier vient de #393 : le premier instantané d'une
+ * relecture montrait les grandeurs du présent sur la semaine relue.
  */
 
 import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
@@ -180,5 +181,27 @@ describe("les grandeurs du dernier tick (#387)", () => {
     const retour = dernierInstantane();
     expect(retour.week).toBe(present.week);
     expect(grandeurs(retour)).toEqual(duPresent);
+  });
+
+  it("le premier instantané d'une relecture porte les grandeurs de sa semaine (#393)", () => {
+    // Vivre semaine par semaine jusqu'au-delà du point de retour de la semaine
+    // 78, en notant ce que chaque instantané montrait.
+    const vecues = new Map<number, ReturnType<typeof grandeurs>>();
+    while (dernierInstantane().week < 84) {
+      avancer(1);
+      const s = dernierInstantane();
+      vecues.set(s.week, grandeurs(s));
+    }
+    // Pile sur le point de retour : rien à rattraper, et il fallait donc que le
+    // point garde lui-même ses grandeurs. Puis entre deux points : la semaine
+    // rattrapée en silence laisse les siennes.
+    for (const deSemaine of [78, 80]) {
+      envoyer({ type: "relire", deSemaine, weeksPerSecond: 1 });
+      const premier = dernierInstantane();
+      expect(premier.week).toBe(deSemaine);
+      expect(grandeurs(premier), `semaine ${deSemaine}`).toEqual(vecues.get(deSemaine));
+      envoyer({ type: "arreterLaRelecture" });
+      expect(dernierInstantane().week).toBe(84);
+    }
   });
 });
