@@ -57,6 +57,19 @@ export interface WeekWeather {
    * y aura **une** ligne à changer, dans `climat.ts`, et rien d'autre.
    */
   facteurRafale?: number;
+  /**
+   * La semaine comptée depuis le **début du vieillissement**, et non depuis
+   * l'arrivée du joueur (#348). C'est sur elle que la rafale de la semaine se
+   * tire (`tempete.ts`) : la tempête fait partie du temps qu'il fait, au même
+   * titre que la pluie, et le temps ne recommence pas quand le joueur arrive.
+   *
+   * `state.week`, lui, repart de zéro à l'arrivée sur une parcelle vieillie :
+   * c'est le compteur du joueur, son an 1. Si la rafale le suivait, le joueur
+   * revivrait une à une les tempêtes que la parcelle vient de traverser sans
+   * lui. Absente, la rafale lit `state.week` : c'est le cas de toute parcelle
+   * qui n'a pas vieilli, où les deux comptes sont le même nombre.
+   */
+  semaineContinue?: number;
 }
 
 /**

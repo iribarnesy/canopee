@@ -948,7 +948,10 @@ export function tick(state: GameState, weather: WeekWeather): TickResult {
   // issue #58). Elle dérive de la graine de partie, pas du flux principal.
   const rafaleMs = rafaleDeLaSemaine(
     state.graineMarche,
-    state.week,
+    // La semaine du temps qu'il fait, et non celle du joueur (#348) : sur une
+    // parcelle vieillie, le compteur du joueur repart de zéro à son arrivée, et
+    // la rafale qui le suivait rejouait les tempêtes du vieillissement.
+    weather.semaineContinue ?? state.week,
     weather.ventMoyMs,
     // La trajectoire climatique, arrivée jusqu'ici par la météo de la semaine
     // (F19). Elle vaut 1 tant que le chiffre manque, mais les deux moitiés du

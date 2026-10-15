@@ -1002,7 +1002,11 @@ function performAction(action: GameAction): EffetDeLAction {
  * rempli — demande du temps. On le lui donne d'un coup, en simulant les
  * années qui précèdent le début de partie : le joueur ne fait rien, seul le
  * moteur tourne. Le climat de ces années-là est celui de l'époque, pas celui
- * du début de partie.
+ * du début de partie : l'anomalie est celle de leurs années, et la série
+ * observée défile depuis son début. La partie la reprend **là où le
+ * vieillissement l'a laissée**, rafale comprise (`meteoDeLaPartie`) : elle
+ * relisait la série depuis son début, et le joueur revivait les sécheresses,
+ * les hivers et les tempêtes que la parcelle venait de traverser (#348).
  */
 function faireVieillir(depart: GameState, annees: number): GameState {
   let etat = depart;
@@ -1022,7 +1026,8 @@ function faireVieillir(depart: GameState, annees: number): GameState {
       post({ type: "progress", done: k, total: semaines, phase: "vieillissement" });
   }
   // Le compteur de semaines repart de zéro : l'an 1 du joueur, c'est son
-  // arrivée, pas la naissance du terrain.
+  // arrivée, pas la naissance du terrain. Le temps qu'il fait, lui, ne repart
+  // pas de zéro (`meteoDeLaPartie`).
   return { ...etat, week: 0 };
 }
 
@@ -1030,15 +1035,19 @@ const post = (msg: FromWorker, transfer: Transferable[] = []) =>
   (postMessage as (m: FromWorker, t?: Transferable[]) => void)(msg, transfer);
 
 /**
- * Météo d'une semaine de partie : l'observation correspondante, décalée par la
+ * Météo d'une semaine : l'observation correspondante, décalée par la
  * trajectoire climatique choisie. C'est ici que le climat se met à dériver —
  * le moteur, lui, ne sait rien du scénario, il ne voit qu'une semaine plus
  * chaude et un CO₂ plus élevé.
+ *
+ * `absolue` compte les semaines depuis le début du vieillissement, et
+ * `anneeBase` est l'année où il a commencé. La météo emporte ce compte
+ * (`semaineContinue`) : c'est sur lui que le tick tire la rafale.
  */
-function meteoSemaine(absolue: number, anneeBase = anneeDepart): WeekWeather {
+function meteoSemaine(absolue: number, anneeBase: number): WeekWeather {
   const base = weather[((absolue % weather.length) + weather.length) % weather.length];
   if (!base) throw new Error("météo manquante");
-  return meteoDerivee(
+  const derivee = meteoDerivee(
     base,
     ((absolue % 52) + 52) % 52,
     getScenario(scenario),
@@ -1052,6 +1061,21 @@ function meteoSemaine(absolue: number, anneeBase = anneeDepart): WeekWeather {
           anomalieExpositionC(relief ?? sc.station.relief)
       : 0,
   );
+  return { ...derivee, semaineContinue: absolue };
+}
+
+/**
+ * Météo de la semaine `semaine` **du joueur** (#348).
+ *
+ * Le vieillissement a déjà vécu les `52 × maturationAns` premières semaines de
+ * la série, et le compteur du joueur est reparti de zéro à son arrivée. La
+ * partie continue la série là où le vieillissement l'a laissée, au lieu de la
+ * relire depuis son début. L'année du climat ne change pas : celle de la
+ * semaine 0 du joueur reste `anneeDepart`. Sans vieillissement, c'est la
+ * semaine du joueur elle-même.
+ */
+function meteoDeLaPartie(semaine: number): WeekWeather {
+  return meteoSemaine(semaine + 52 * maturationAns, anneeDepart - maturationAns);
 }
 
 /** La station telle qu'elle est, mais dans le paysage et le relief choisis. */
@@ -1154,7 +1178,7 @@ function postSnapshot() {
   // est pure et testée dans snapshot.ts.
   const snapshot = construireSnapshot({
     state,
-    weather: meteoSemaine(state.week),
+    weather: meteoDeLaPartie(state.week),
     anneeCivile: anneeDepart + Math.floor(state.week / 52),
     paysage: resumeBordures(bordures),
     fluxes: lastFluxes ?? emptyFluxes(),
@@ -1413,7 +1437,7 @@ function stepWeeks(n: number) {
         return;
       }
     }
-    const w = meteoSemaine(state.week);
+    const w = meteoDeLaPartie(state.week);
     if (!w) return;
     // La semaine se ferme : ce que ses gestes ont fait aux arbres entre dans
     // leur histoire, avant ce que le tick va leur faire.
@@ -1751,7 +1775,7 @@ function stepWeeks(n: number) {
 function avancerLaRelecture(n: number): void {
   if (!state || !relecture) return;
   for (let k = 0; k < n && state.week < relecture.jusqua; k++) {
-    const w = meteoSemaine(state.week);
+    const w = meteoDeLaPartie(state.week);
     if (!w) return;
     const step = advanceWeek(state, w, journal);
     state = step.state;
@@ -1814,7 +1838,7 @@ function commencerLaRelecture(deSemaine: number, vitesse: number): void {
   // Rattraper la semaine demandée sans rien montrer : ce qu'on veut revoir
   // commence à `deSemaine`, pas au point de reprise qui la précède.
   while (state.week < deSemaine && state.week < vivant.week) {
-    const w = meteoSemaine(state.week);
+    const w = meteoDeLaPartie(state.week);
     if (!w) break;
     state = advanceWeek(state, w, journal).state;
   }
@@ -2197,7 +2221,7 @@ function rejouerLeJournal(save: SaveGame): GameState {
     // années, qu'aucun instantané n'a jamais montrés — et le passé de ses
     // arbres, sans quoi un chargement effacerait tous les journaux.
     verserLesSuivisDeLaSemaine();
-    const ticked = tick(semaine, meteoSemaine(i));
+    const ticked = tick(semaine, meteoDeLaPartie(i));
     compterLaSemaine(ticked, semaine);
     replayed = ticked.state;
     lastFluxes = ticked.fluxes;
