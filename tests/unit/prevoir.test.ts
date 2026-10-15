@@ -94,14 +94,32 @@ function avance(s: GameState, semaines: number, meteo: WeekWeather[]): GameState
  */
 const COTE_M = 40;
 
+/**
+ * **Une parcelle qui ne sert qu'à un cas ne demande que l'âge de ses arbres**
+ * (#394). Les chênes-lièges ne servent qu'à lever l'écorce, qui ne demande
+ * qu'un arbre vivant de vingt-cinq ans ; les pommiers qu'à récolter des fruits.
+ * Sur 40 m, ils prenaient 55,6 s et 19,6 s d'un crochet de 117,7 s
+ * (chronométré dans vitest, 14 octobre 2026), à la limite de son délai. Sur
+ * 20 m, 15,2 s et 5,5 s, pour les mêmes années et les mêmes plants : leurs cas
+ * écrivent exactement les mêmes champs, rendent les mêmes gestes, et les huit
+ * lièges restent récoltables.
+ *
+ * La vieille parcelle, elle, reste sur 40 m : sur 30 m, elle n'a plus aucun
+ * arbre mort à vingt ans, et les gestes qui coupent ne s'éprouvaient plus sur
+ * un état qui contient des chandelles. Mesuré en comparant, cas par cas, ce que
+ * chaque geste écrit sur les deux bancs.
+ */
+const COTE_UN_SEUL_CAS_M = 20;
+
 function parcelle(
   sc: StationClimat,
   plantations: { especeId: string; count: number }[],
   annees: number,
+  coteM = COTE_M,
   seed = 7,
 ): GameState {
   let s = createGameState(
-    { ...sc.station, coteM: COTE_M, gibierParHa: 0, voisinage: [] },
+    { ...sc.station, coteM, gibierParHa: 0, voisinage: [] },
     rngStateFromSeed(seed),
   );
   for (const p of plantations) s = plantScattered(s, p.especeId, p.count, 0.3);
@@ -206,14 +224,24 @@ beforeAll(() => {
   // Le chêne-liège ne tient pas sur le limon — il y meurt en moins de dix ans.
   // Il faut la lande sableuse, et trente ans : l'écorce ne se lève pas avant
   // vingt-cinq (atlas, `ecorce.premierAge`).
-  const lieges = parcelle(LANDE_SECHE, [{ especeId: "quercus_suber", count: 8 }], 30);
+  const lieges = parcelle(
+    LANDE_SECHE,
+    [{ especeId: "quercus_suber", count: 8 }],
+    30,
+    COTE_UN_SEUL_CAS_M,
+  );
   const liegesRecoltables = lieges.trees
     .filter((t) => t.alive && ecorceRecoltable(t, lieges.week))
     .slice(0, 3)
     .map((t) => t.id);
 
   // Des pommiers en fruits : la semaine 39 de l'année est celle qui les porte.
-  const pommiers = parcelle(LIMON_RICHE, [{ especeId: "malus_domestica", count: 8 }], 12);
+  const pommiers = parcelle(
+    LIMON_RICHE,
+    [{ especeId: "malus_domestica", count: 8 }],
+    12,
+    COTE_UN_SEUL_CAS_M,
+  );
   const enFruits = avance(pommiers, (39 - (pommiers.week % 52) + 52) % 52, meteo);
   const pIds = enFruits.trees
     .filter((t) => t.alive)
@@ -544,6 +572,9 @@ beforeAll(() => {
       },
     ],
   };
+  // Un délai de calcul, pas une borne de réalisme : le crochet prend une
+  // soixantaine de secondes dans un conteneur de session (14 octobre 2026), ce
+  // délai lui laisse le double. Il en prenait 117, et cassait au hasard (#394).
 }, 120_000);
 
 describe("prevoirAction : répondre sans rien changer", () => {
