@@ -62,7 +62,10 @@ mécanisme : neutraliser le tirage et remesurer.
   mordu — ça a fait perdre silencieusement deux assertions et un mécanisme.
 - La CI est plus lente que la machine de dev. Deux tests ont eu besoin d'un
   `timeout` explicite (900 s et 600 s). Préférer allonger le délai à réduire
-  l'échantillon.
+  l'échantillon. Un banc qui ne sert qu'à atteindre des chemins de code
+  n'est pas un échantillon : il peut rétrécir, si chaque cas écrit encore les
+  mêmes champs (`prevoir.test.ts`, #394 ; la garde « ce cas travaille » ne
+  suffit pas à le dire).
 - **Compter une cohorte, c'est deux pièges.** Le moteur **purge** les morts de
   `state.trees` une fois leur bois retourné au sol : un relevé des causes de
   mort fait à la fin d'une partie n'en retrouve que les derniers tombés — 2 sur

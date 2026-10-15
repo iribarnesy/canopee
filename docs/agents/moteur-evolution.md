@@ -61,7 +61,56 @@ qu'un rapport (voir la note de maintenance).
 Séparer calibration et validation : caler un paramètre sur un âge, garder
 l'autre âge pour vérifier.
 
-## Ce que le dernier lot a appris (l'arbre d'allée et le potassium de la strate, #222)
+## Ce que le dernier lot a appris (la météo d'une parcelle vieillie, #348, et la marge de `prevoir.test.ts`, #394)
+
+Deux issues de maintenance. Une parcelle vieillie de N ans relisait la série observée depuis son début et retirait les rafales de ses N premières années : le joueur revivait le temps que la parcelle venait de traverser. Elle le continue maintenant. Et le crochet de `prevoir.test.ts` prenait 117,7 s pour un délai de 120 : il en prend 60,5. Les prédictions et les mesures sont dans les commits de la branche, avant chaque course.
+
+### Un compteur remis à zéro ne remet pas le monde à zéro
+
+`state.week` portait deux rôles : le compteur du joueur, qui doit repartir de zéro à son arrivée, et l'index du temps qu'il fait (l'observation de la série, la graine de la rafale), qui ne le doit pas. `faireVieillir` remettait le premier à zéro et emportait le second avec lui. La correction ne touche ni l'état ni l'écran : la météo porte sa propre semaine (`semaineContinue`), comme elle porte déjà l'année et le facteur de rafale, et le tick tire la rafale sur elle. Sans vieillissement, les deux comptes sont le même nombre, et les parties sont identiques à l'octet.
+
+**Quand un compteur sert à deux choses, chercher ce qu'il indexe avant de le remettre à zéro.** Il indexait aussi les dates que l'état garde du vieillissement : une chandelle morte à la semaine 2 000 d'un vieillissement de quarante ans est, pour le moteur et pour l'écran, morte dans 2 000 semaines, et tient N ans de trop. Deux écrans le contournent chacun à sa façon, et les deux façons se contredisent. Ce n'est pas #348 : #397.
+
+### Ce qui se chronomètre sous tsx ne se chronomètre pas sous vitest
+
+L'issue chronométrait les trois parcelles du crochet sous tsx : 60 s à elles trois, pour un crochet qui en prenait 117. Dans vitest, la lande coûte 2,4 fois plus que sous tsx (55,6 s contre 23,2), le limon 1,3 fois. **Un délai se mesure là où il s'applique** : dans le lanceur qui l'impose, étape par étape.
+
+### Alléger un banc d'essai : comparer ce que chaque cas écrit, pas seulement qu'il passe
+
+Le premier allègement (la vieille parcelle sur 30 m, lièges et pommiers sur 20 m) passait les quatre essais en 48 s. Il avait perdu quelque chose : la vieille parcelle de 30 m n'a plus d'arbre mort à vingt ans, celle de 40 m en a deux, et les gestes qui coupent ne s'éprouvaient plus sur un état qui contient des chandelles. L'essai de garde (« chaque cas éprouve ce qu'il prétend ») ne le voit pas : il demande qu'un geste travaille, pas qu'il travaille sur le même état. Une sonde qui relève, cas par cas, l'ensemble des champs que le geste écrit, les motifs de refus et les sortes de gestes rendus, l'a montré en une course. La vieille parcelle est restée sur 40 m ; seules les deux parcelles qui ne servent qu'à un cas ont rétréci, et leurs cas écrivent exactement les mêmes champs.
+
+La note de maintenance dit : « Préférer allonger le délai à réduire l'échantillon. » Elle vaut pour un échantillon, dont la taille porte la mesure. **Un banc qui ne sert qu'à atteindre des chemins de code peut rétrécir, à condition de vérifier qu'il atteint les mêmes.**
+
+### Ce que ça donne
+
+#348, vrai worker sous Node, friche du limon, série réelle, ssp245 ; déterministe à graine donnée :
+
+| | main | branche |
+|---|---|---|
+| vieillie 5 ans (graines 1 / 2 / 3), semaines du joueur qui relisent une année du vieillissement, sur 260 | 260 / 260 / 260 | **0 / 0 / 0** |
+| rafales fortes (au moins 25 m/s) du joueur déjà tirées au vieillissement | 8 sur 8 / 8 sur 8 / 4 sur 4 | **0 sur 8 / 0 sur 4 / 0 sur 7** |
+| vieillie 40 ans (graine 1), trois ans de jeu : observations lues | 0 à 155 | **2 080 à 2 235** |
+| non vieillies, empreinte du bloc de reprise après trois ans (trois parties) | | identique à l'octet |
+
+#394, dans vitest, fichier seul : crochet 117,7 s sur main (vieux limon 33,1 ; lièges 55,6 ; pommiers 19,6 ; le reste 9,3), **60,5 s** sur la branche (lièges 15,2, pommiers 5,5).
+
+### Les prédictions fausses
+
+- P1 : le crochet devait prendre 55 à 80 s ; 117. J'avais additionné les chronos de l'issue, pris sous tsx.
+- P2 : le fichier devait prendre 100 à 125 s, dont 30 à 50 pour les essais ; 118, dont 1,3 pour les essais.
+- P4 : vieux limon 35 à 50 s et lièges 35 à 50 s dans vitest ; 33,1 et 55,6.
+- P6 : zéro écart entre l'ancien banc et le premier allègement ; cinq, tous dus aux deux chandelles perdues.
+
+Les prédictions de #348 étaient justes, y compris le nombre de rafales fortes en cinq ans (3 à 20 prédites ; 4 à 8).
+
+### Ce qui reste ouvert
+
+- **#397** : les dates de l'état (mort, chablis, brûlis, frottis, abroutissement, installation d'un habitant) restent comptées depuis le début du vieillissement. Option recommandée : les décaler de −52 N à l'arrivée, comme l'histoire des arbres le fait déjà.
+- **D'autres tirages repartent de zéro à l'arrivée**, sans effet visible relevé : la glandée (par année), les oiseaux de passage, les boutis du sanglier, la chute des chandelles et le chablis (par arbre) se tirent sur `state.week`. Ils pourraient lire `semaineContinue` dans le lot de #397.
+- **La série fait soixante ans, le vieillissement peut en faire cent vingt** : au-delà de soixante ans de vieillissement et de jeu, la partie relit des années que la parcelle a déjà vues. Rien ne l'évite sans une série plus longue.
+- **Une partie vieillie sauvegardée avant ce lot** reprend par son bloc (le format reste 11) et continue avec la nouvelle météo depuis la semaine sauvegardée. Rejouée par son journal, elle refait une autre parcelle, comme après tout changement du moteur.
+
+## Ce qu'un lot précédent a appris (l'arbre d'allée et le potassium de la strate, #222)
 
 L'arbre d'allée restait sous le témoin forestier sur deux graines sur trois. Ce que le blé lui coûtait était du potassium, que la strate prenait avec son azote et ne rendait jamais. Elle le rend maintenant (option A), le grain emporte le sien, et la réserve non échangeable fournit ce que l'échangeable n'a plus (option b, décidée par l'utilisateur). Le phosphore a été instruit, et il n'est pas fait : il ne suit pas le même chemin.
 

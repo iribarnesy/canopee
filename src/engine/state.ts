@@ -551,7 +551,11 @@ export interface SoilState {
 }
 
 export interface GameState {
-  /** semaine absolue depuis le début de partie (0, 1, 2, …) */
+  /**
+   * semaine absolue depuis le début de partie (0, 1, 2, …). Sur une parcelle
+   * vieillie, elle repart de zéro à l'arrivée du joueur ; le temps qu'il fait,
+   * lui, continue de se compter dans `WeekWeather.semaineContinue` (#348).
+   */
   week: number;
   station: Station;
   soil: SoilState;
