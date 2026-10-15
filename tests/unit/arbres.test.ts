@@ -1109,8 +1109,8 @@ describe("le bouquet : l'unité de dessin, et ce qui la distingue d'une espèce 
 
   it("étire la fronde avec le compte de folioles, et ne touche pas celle à cinq", () => {
     // Le bouquet est une conséquence de la feuille : une plume de dix-sept
-    // folioles fait une fronde plus longue qu'une main de cinq. Le frêne, le
-    // sureau et le commun, qui ne déclarent rien, gardent exactement la leur.
+    // folioles fait une fronde plus longue qu'une main de cinq. Le sureau et le
+    // commun, qui ne déclarent rien, gardent exactement la leur.
     expect(portDuBouquet("composee", FOLIOLES_PAR_DEFAUT)).toEqual(portDuBouquet("composee"));
     expect(portDuBouquet("composee", 17).allongement).toBeGreaterThan(
       portDuBouquet("composee").allongement,

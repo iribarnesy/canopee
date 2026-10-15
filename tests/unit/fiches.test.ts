@@ -444,7 +444,7 @@ describe("les couleurs de feuillage", () => {
   });
 });
 
-describe("les folioles : le compte qui sépare les deux noyers", () => {
+describe("les folioles : le compte qui sépare les deux noyers, et le frêne du commun", () => {
   it("seule une feuille composée déclare des folioles, et en nombre impair", () => {
     // Un compte sur une feuille simple ne serait lu par personne, et c'est
     // précisément ce qui le rendrait faux sans que rien ne le signale.
@@ -468,6 +468,22 @@ describe("les folioles : le compte qui sépare les deux noyers", () => {
     expect(nCommun).toBeLessThanOrEqual(9);
     expect(nHybride).toBeGreaterThanOrEqual(11);
     expect(nHybride).toBeLessThanOrEqual(23);
+  });
+
+  it("**le frêne porte la feuille des flores : neuf à treize folioles, plus que le commun**", () => {
+    // Flora Gallica ; Rameau et al., *Flore forestière française* : neuf à
+    // treize en général, sept à quinze au plus. Le défaut de cinq lui donnait
+    // la main du noyer commun (#398).
+    const frene = ficheDe("fraxinus_excelsior")?.feuillage;
+    expect(frene?.forme).toBe("composee");
+    const n = frene?.folioles ?? FOLIOLES_PAR_DEFAUT;
+    expect(n).toBeGreaterThanOrEqual(9);
+    expect(n).toBeLessThanOrEqual(13);
+    expect(n).toBeGreaterThan(ficheDe("juglans_regia")?.feuillage.folioles ?? FOLIOLES_PAR_DEFAUT);
+    // Et la longueur est celle de la feuille **entière** (#376), pas d'une
+    // foliole : vingt à trente-cinq centimètres.
+    expect(frene?.longueurFeuilleM ?? 0).toBeGreaterThanOrEqual(0.2);
+    expect(frene?.longueurFeuilleM ?? 1).toBeLessThanOrEqual(0.35);
   });
 
   it("l'hybride a l'écorce du commun, une flèche plus dominante et moins tortueuse", () => {

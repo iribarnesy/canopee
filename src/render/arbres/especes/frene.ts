@@ -30,7 +30,23 @@ export const FRENE: FicheGraphique = {
     conicite: 0.86,
     tortuosite: 0.14,
   },
-  feuillage: { forme: "composee", feuillesParBouquet: 3, longueurFeuilleM: 0.22, densite: 0.66 },
+  feuillage: {
+    forme: "composee",
+    // **Onze, le milieu de la plage** : neuf à treize folioles en général, sept à
+    // quinze au plus (Flora Gallica ; Rameau et al., *Flore forestière
+    // française*). La fiche n'en disait rien, et le défaut lui en donnait cinq —
+    // la main du noyer commun, alors que le compte est l'un des traits qui
+    // séparent les deux feuilles à l'œil (#398).
+    folioles: 11,
+    feuillesParBouquet: 3,
+    // **La feuille entière, rachis compris** — c'est le sens du champ (#376), et
+    // 22 cm le tient : les flores donnent vingt à trente-cinq centimètres pour
+    // la feuille, une foliole n'en fait qu'une fraction. On la garde. À onze
+    // folioles sur la même longueur, chacune sort plus petite qu'à cinq, et
+    // c'est ce qui fait de la main une plume.
+    longueurFeuilleM: 0.22,
+    densite: 0.66,
+  },
   couleurs: {
     printemps: { r: 132, g: 170, b: 82 },
     ete: { r: 84, g: 124, b: 66 },
@@ -41,6 +57,7 @@ export const FRENE: FicheGraphique = {
   ecorce: { r: 130, g: 126, b: 112 },
   references: [
     "Rameau et al., Flore forestière française, t. 1 — Fraxinus excelsior",
+    "Tison & de Foucault (2014), Flora Gallica — Fraxinus excelsior, compte des folioles",
     "Dobrowolska et al. (2011), A review of European ash — port et phénologie",
   ],
 };

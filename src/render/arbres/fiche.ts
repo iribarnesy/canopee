@@ -177,6 +177,10 @@ export interface Feuillage {
    * premier regard est une feuille de onze à vingt-trois folioles contre cinq à
    * neuf (CNPF 2023). Une forme de plus aurait dit « une autre feuille » ; c'est
    * la même, plus longue et plus divisée.
+   *
+   * Le frêne le déclare aussi, pour une raison plus simple : ses neuf à treize
+   * folioles sont le compte des flores, et le défaut de cinq lui faisait la
+   * main du noyer commun (#398).
    */
   folioles?: number;
   /**
