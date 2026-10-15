@@ -325,8 +325,14 @@ let bilanAuDebut: Bilan = BILAN_VIDE;
 const PAS_DE_REPRISE = 26;
 const POINTS_GARDES = 8;
 
-/** Les états mis de côté, du plus ancien au plus récent. */
-let pointsDeReprise: { semaine: number; etat: GameState }[] = [];
+/**
+ * Les états mis de côté, du plus ancien au plus récent — **avec** ce que le tick
+ * de leur semaine a mesuré (#393). Ces grandeurs ne sont pas dans l'état ; sans
+ * elles, le premier instantané d'une relecture posait la crue, la lumière et les
+ * insectes du présent sur une parcelle passée. Trois grilles par cellule, une
+ * centaine de kilo-octets à côté des trois mégaoctets de l'état.
+ */
+let pointsDeReprise: { semaine: number; etat: GameState; grandeurs: GrandeursDuTick }[] = [];
 
 /**
  * La semaine du dernier instantané **posté**.
@@ -367,12 +373,53 @@ interface GrandeursDuTick {
   oiseauxDePassage: readonly FrequentationDeGuilde[] | undefined;
 }
 
-/** Met l'état de la semaine de côté, si c'est une semaine à garder. */
+/** Les grandeurs du dernier tick telles qu'elles sont, prises ensemble. */
+function grandeursDuTick(): GrandeursDuTick {
+  return {
+    fluxes: lastFluxes,
+    debordement: lastDebordement,
+    lumiereAuSol: lastLumiereAuSol,
+    pollinisateurs: lastPollinisateurs,
+    oiseauxDePassage: lastOiseauxDePassage,
+  };
+}
+
+/** Les remettre en place — celles d'un point de reprise, ou celles du présent. */
+function remettreLesGrandeurs(g: GrandeursDuTick): void {
+  lastFluxes = g.fluxes;
+  lastDebordement = g.debordement;
+  lastLumiereAuSol = g.lumiereAuSol;
+  lastPollinisateurs = g.pollinisateurs;
+  lastOiseauxDePassage = g.oiseauxDePassage;
+}
+
+/** Retenir ce qu'une semaine simulée vient de mesurer. */
+function retenirLeTick(t: {
+  fluxes: TickFluxes;
+  debordementParCellule: Float32Array;
+  lumiereAuSol: Float32Array;
+  pollinisateurs: Float32Array;
+  oiseauxDePassage: readonly FrequentationDeGuilde[];
+}): void {
+  lastFluxes = t.fluxes;
+  lastDebordement = t.debordementParCellule;
+  lastLumiereAuSol = t.lumiereAuSol;
+  lastPollinisateurs = t.pollinisateurs;
+  lastOiseauxDePassage = t.oiseauxDePassage;
+}
+
+/**
+ * Met l'état de la semaine de côté, si c'est une semaine à garder. Les grandeurs
+ * du tick partent avec lui : elles sont, à cet instant, celles de cette semaine
+ * — `ouvrirLaSemaine`, qui appelle ici, vient juste après le tick.
+ */
 function poserUnPointDeReprise(etat: GameState): void {
   if (etat.week % PAS_DE_REPRISE !== 0) return;
   const dernier = pointsDeReprise[pointsDeReprise.length - 1];
   if (dernier && dernier.semaine >= etat.week) return;
-  pointsDeReprise.push({ semaine: etat.week, etat });
+  // Des références, pas des copies : le worker remplace ces tableaux, il ne les
+  // modifie jamais.
+  pointsDeReprise.push({ semaine: etat.week, etat, grandeurs: grandeursDuTick() });
   if (pointsDeReprise.length > POINTS_GARDES) pointsDeReprise.shift();
 }
 
@@ -1789,11 +1836,7 @@ function avancerLaRelecture(n: number): void {
     if (step.incendie) pendingIncendie = step.incendie;
     if (step.tempete) pendingTempete = step.tempete;
     if (step.crue) pendingCrues.push(step.crue);
-    lastFluxes = step.fluxes;
-    lastDebordement = step.debordementParCellule;
-    lastLumiereAuSol = step.lumiereAuSol;
-    lastPollinisateurs = step.pollinisateurs;
-    lastOiseauxDePassage = step.oiseauxDePassage;
+    retenirLeTick(step);
   }
 }
 
@@ -1825,22 +1868,24 @@ function commencerLaRelecture(deSemaine: number, vitesse: number): void {
     vivant,
     // **Des références, pas des copies** : le worker ne modifie jamais ces
     // tableaux, il les remplace — l'instantané copie ce qu'il transfère.
-    grandeursVivantes: {
-      fluxes: lastFluxes,
-      debordement: lastDebordement,
-      lumiereAuSol: lastLumiereAuSol,
-      pollinisateurs: lastPollinisateurs,
-      oiseauxDePassage: lastOiseauxDePassage,
-    },
+    grandeursVivantes: grandeursDuTick(),
     vitesse,
   };
+  // L'état du point **et** ce que son tick avait mesuré (#393) : sans elles, le
+  // premier instantané de la relecture montrait la crue, la lumière et les
+  // insectes du présent sur la parcelle d'il y a deux ans.
   state = depart.etat;
+  remettreLesGrandeurs(depart.grandeurs);
   // Rattraper la semaine demandée sans rien montrer : ce qu'on veut revoir
-  // commence à `deSemaine`, pas au point de reprise qui la précède.
+  // commence à `deSemaine`, pas au point de reprise qui la précède. Chaque
+  // semaine rattrapée laisse ses grandeurs, pour que le premier instantané soit
+  // celui de `deSemaine`.
   while (state.week < deSemaine && state.week < vivant.week) {
     const w = meteoDeLaPartie(state.week);
     if (!w) break;
-    state = advanceWeek(state, w, journal).state;
+    const pas = advanceWeek(state, w, journal);
+    state = pas.state;
+    retenirLeTick(pas);
   }
   viderLesTampons();
   weeksPerSecond = vitesse;
@@ -1865,12 +1910,7 @@ function arreterLaRelecture(): void {
   // montrait la crue, la lumière et les insectes de la semaine relue jusqu'au
   // tick suivant. **Au terme aussi** : la dernière semaine relue rend en principe
   // les mêmes, mais c'est le présent qu'on montre, pas une copie rejouée de lui.
-  const g = relecture.grandeursVivantes;
-  lastFluxes = g.fluxes;
-  lastDebordement = g.debordement;
-  lastLumiereAuSol = g.lumiereAuSol;
-  lastPollinisateurs = g.pollinisateurs;
-  lastOiseauxDePassage = g.oiseauxDePassage;
+  remettreLesGrandeurs(relecture.grandeursVivantes);
   const jusqua = relecture.jusqua;
   relecture = undefined;
   weeksPerSecond = 0;

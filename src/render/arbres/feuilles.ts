@@ -267,7 +267,7 @@ export function largeurRelative(forme: FormeFeuille): number {
  * Cinq : c'est le nombre qui fait lire « composée » sans qu'on ait à les
  * compter. Une fiche qui en a besoin d'autres le déclare
  * (`Feuillage.folioles`) — le noyer hybride, dont la feuille se reconnaît
- * justement à son compte.
+ * justement à son compte, et le frêne, qui en porte neuf à treize.
  */
 export const FOLIOLES_PAR_DEFAUT = 5;
 
