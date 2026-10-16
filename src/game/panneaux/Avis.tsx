@@ -5,12 +5,21 @@
  * aucun bouton, justement parce qu'on ne pense pas à aller les chercher.
  */
 
-import { useMemo, useState } from "react";
+import { type CSSProperties, useMemo, useState } from "react";
 import type { GameAction } from "../../engine/actions";
 import type { SnapshotTree } from "../protocol";
 import type { AvisDuGel } from "../useAvisDuGel";
 import type { GameApi } from "../useGame";
 import { btn, panel } from "./styles";
+
+/** Le ✕ d'un avis qu'on referme : petit, collé en haut à droite de sa ligne. */
+const FERMER: CSSProperties = {
+  ...btn(),
+  marginRight: 0,
+  marginBottom: 0,
+  padding: "0 6px",
+  alignSelf: "start",
+};
 
 /**
  * Le nom du geste tel qu'on le dit, pour les refus. Sans cette table, le
@@ -41,6 +50,7 @@ export function Avis({
   game,
   vivants,
   rejouer,
+  voirLesMorts,
   gel,
 }: {
   game: GameApi;
@@ -52,6 +62,13 @@ export function Avis({
    * rejoue rien est pire qu'un bouton absent.
    */
   rejouer?: (() => void) | undefined;
+  /**
+   * Sélectionner les arbres qu'une mortalité de masse vient de tuer (#401).
+   *
+   * Absent quand l'avis n'en annonce pas, ou qu'aucun n'est resté debout pour
+   * être montré.
+   */
+  voirLesMorts?: (() => void) | undefined;
   /** La gelée qui commence, et ce qu'elle fait (#355). */
   gel?: AvisDuGel | undefined;
 }) {
@@ -140,51 +157,70 @@ export function Avis({
             )
           )}
           {/*
-            **Le bouton qui répond à « on ne voit pas l'incendie » (#157).**
-            L'ellipse se joue une fois, à l'instant précis où ce bandeau
-            apparaît — donc au moment où le joueur lit le bandeau et pas la
-            parcelle. Allonger l'acte ne suffisait pas : le défaut n'est pas sa
-            durée, c'est qu'il n'a lieu qu'une fois. Il est POSÉ SUR L'AVIS et
-            non dans le journal, parce que c'est là que le regard est.
+            **Lesquels** (#401). « 16 arbres meurent d'un coup » se lisait, et
+            rien ne disait où : le joueur cherchait des chandelles parmi des
+            centaines de tiges. Le bouton les sélectionne — la surbrillance les
+            allume sur la parcelle, et le volet de sélection dit ce qu'on peut
+            faire de ce bois. Posé sur l'avis pour la même raison que le
+            rejeu : c'est là que le regard est quand on se le demande.
           */}
-          {rejouer && (
+          {voirLesMorts && (
             <button
               type="button"
               style={{ ...btn(false), marginLeft: 10, marginRight: 0, marginBottom: 0 }}
-              onClick={rejouer}
-              title="Rejouer l'animation de la semaine"
+              onClick={voirLesMorts}
+              title="Sélectionner les arbres morts : ils s'éclairent sur la parcelle"
             >
-              ▶ revoir
+              👁 Les voir
             </button>
           )}
           {/*
-            LE MODE CINÉMA (#128, §6.8) — et ce n'est pas le même bouton que
-            celui d'à côté.
+            REVOIR — UN SEUL BOUTON, celui qui montre le plus (#401).
 
-            « ▶ revoir » rejoue l'ELLIPSE de l'instantané : à ×52, c'est
-            vingt-six semaines rangées dans deux secondes et demie, où
-            l'incendie est un acte parmi quarante. « ↺ Revoir la scène »
-            REMBOBINE d'une semaine et rejoue à ×1 : la scène s'y déroule au
-            lieu d'y être résumée. C'est ce que le §6.8 demande d'une
-            catastrophe — « on repasse en temps réel, ce sont les moments où
-            le joueur doit voir se dérouler, pas résumer ».
+            Il y en avait deux côte à côte — le retour de jeu les cite
+            ensemble, sans voir ce qui les sépare — pour deux rejeux dont l'un
+            contient l'autre. « ▶ revoir » rejoue l'ELLIPSE de l'instantané
+            (#157) — à
+            ×52, vingt-six semaines rangées dans deux secondes et demie, où la
+            catastrophe est un acte parmi quarante ; « ↺ Revoir la scène »
+            (#128, §6.8) REMBOBINE jusqu'au dernier instantané montré et rejoue
+            à ×1 — la scène s'y déroule au lieu d'y être résumée, et tout ce que
+            l'ellipse aurait montré s'y joue aussi, semaine par semaine. C'est
+            ce que le §6.8 demande d'une catastrophe : « on repasse en temps
+            réel, ce sont les moments où le joueur doit voir se dérouler, pas
+            résumer ».
 
-            Il n'apparaît que sur les pauses qui en portent une : l'arrivée
-            d'un « +1 an » ou des fruits mûrs n'ont pas de scène.
+            Le second contient donc le premier : quand la pause porte une
+            scène, il est seul. « ▶ revoir » reste pour les pauses qui n'en
+            ont pas — une mort suivie, l'arrivée d'un « +1 an » — où l'ellipse
+            est tout ce qu'il y a à rejouer, et où un bouton qui ne rejoue rien
+            serait pire qu'un bouton absent. Pendant que la scène se rejoue,
+            ni l'un ni l'autre : on est déjà en train de la revoir.
           */}
-          {game.sceneARevoir !== undefined && game.rembobinage.enCours === undefined && (
-            <button
-              type="button"
-              style={{ ...btn(true), marginLeft: 10, marginRight: 0, marginBottom: 0 }}
-              onClick={() => {
-                const depuis = game.sceneARevoir;
-                if (depuis !== undefined) game.rembobinage.revoir(depuis, 1);
-              }}
-              title="Revenir juste avant, et rejouer au ralenti"
-            >
-              ↺ Revoir la scène
-            </button>
-          )}
+          {game.sceneARevoir !== undefined
+            ? game.rembobinage.enCours === undefined && (
+                <button
+                  type="button"
+                  style={{ ...btn(true), marginLeft: 10, marginRight: 0, marginBottom: 0 }}
+                  onClick={() => {
+                    const depuis = game.sceneARevoir;
+                    if (depuis !== undefined) game.rembobinage.revoir(depuis, 1);
+                  }}
+                  title="Revenir juste avant, et rejouer au ralenti"
+                >
+                  ↺ Revoir la scène
+                </button>
+              )
+            : rejouer && (
+                <button
+                  type="button"
+                  style={{ ...btn(false), marginLeft: 10, marginRight: 0, marginBottom: 0 }}
+                  onClick={rejouer}
+                  title="Rejouer l'animation de la semaine"
+                >
+                  ▶ revoir
+                </button>
+              )}
           {/*
             **Refuser l'interruption, là où elle arrive** (#359). On ne va pas
             chercher un réglage dans un menu au moment où il agace : la case est
@@ -213,13 +249,7 @@ export function Avis({
           <span style={{ flex: 1 }}>❄️ {gel.texte}</span>
           <button
             type="button"
-            style={{
-              ...btn(),
-              marginRight: 0,
-              marginBottom: 0,
-              padding: "0 6px",
-              alignSelf: "start",
-            }}
+            style={FERMER}
             onClick={gel.fermer}
             title="Fermer jusqu'à la prochaine gelée"
           >
@@ -227,13 +257,29 @@ export function Avis({
           </button>
         </div>
       )}
+      {/*
+        **Les refus passent** (#402) : chacun s'efface seul après quelques
+        secondes, les identiques font une ligne avec leur compte, et le ✕ les
+        efface tous d'un coup — on a lu, on veut voir la parcelle.
+      */}
       {game.refusals.length > 0 && (
-        <div style={{ ...panel, color: "#8a4b2d" }}>
-          {game.refusals.slice(0, 3).map((r) => (
-            <div key={r.uid}>
-              ⚠ {NOM_DU_GESTE[r.action] ?? r.action} : {r.reason}
-            </div>
-          ))}
+        <div style={{ ...panel, color: "#8a4b2d", display: "flex", gap: 8 }}>
+          <div style={{ flex: 1 }}>
+            {game.refusals.map((r) => (
+              <div key={r.cle}>
+                ⚠ {NOM_DU_GESTE[r.action] ?? r.action} : {r.reason}
+                {r.fois > 1 && <strong> ×{r.fois}</strong>}
+              </div>
+            ))}
+          </div>
+          <button
+            type="button"
+            style={FERMER}
+            onClick={game.fermerLesRefus}
+            title="Effacer ces refus"
+          >
+            ✕
+          </button>
         </div>
       )}
       {fruitsPrets.length > 0 && !game.autoHarvest && (

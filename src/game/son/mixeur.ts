@@ -22,6 +22,14 @@ import { AMBIANCES, type Ambiance, type Niveaux, VOIX, type Voix } from "./nivea
 
 /** Temps de glissement d'un volume vers sa cible, s. */
 export const GLISSEMENT_S = 0.8;
+/**
+ * Celui de la tronçonneuse, s (#403). Le vent et la pluie montent et
+ * retombent ; un moteur qu'on lâche se tait d'un coup, et un coup de scie de
+ * plus d'une seconde dont le tiers se passe à monter et à descendre n'est plus
+ * un coup. Un cinquième de seconde reste loin du clic d'un gain qui saute,
+ * qui se joue en quelques millisecondes.
+ */
+export const GLISSEMENT_TRONCONNEUSE_S = 0.2;
 /** Niveau maximal de chaque couche dans le mélange : le vent ne couvre pas les oiseaux. */
 export const POIDS: Record<Ambiance | Voix, number> = {
   vent: 0.55,
@@ -115,7 +123,10 @@ export class MixeurDuSon {
     for (const nom of AMBIANCES) {
       const couche = this.couches.get(nom);
       if (!couche) continue;
-      couche.gain.gain.setTargetAtTime(niveaux.ambiances[nom] * POIDS[nom], t, GLISSEMENT_S / 3);
+      const glissement = nom === "tronconneuse" ? GLISSEMENT_TRONCONNEUSE_S : GLISSEMENT_S;
+      // Un tiers du glissement pour constante de temps : la cible est atteinte
+      // à 95 % au bout du glissement entier.
+      couche.gain.gain.setTargetAtTime(niveaux.ambiances[nom] * POIDS[nom], t, glissement / 3);
     }
     for (const voix of VOIX) {
       const cadence = niveaux.cadences[voix];

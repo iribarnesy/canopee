@@ -921,6 +921,17 @@ export type FromWorker =
       enRoute?: true;
       /** La pause vient de la mort d'un arbre suivi : on peut la refuser (#359). */
       motif?: "mortSuivie";
+      /**
+       * **Les arbres qu'une mortalité de masse vient de tuer** (#401) : ceux
+       * d'un mètre et plus, qui font la scène, et seulement ceux qui sont
+       * encore là — en chandelles, donc sélectionnables. « 👁 Les voir » les
+       * sélectionne : le bandeau disait combien, et le joueur ne pouvait pas
+       * les retrouver sur la parcelle.
+       *
+       * Absent de toute autre pause. Les semis n'y sont pas : ils ne se
+       * cherchent pas, et ce n'est pas pour eux que le temps s'est arrêté.
+       */
+      arbresMorts?: number[];
     }
   /** Le réglage en vigueur, pour l'écran — il vient de la sauvegarde. */
   | { type: "arretSurLesMorts"; oui: boolean }

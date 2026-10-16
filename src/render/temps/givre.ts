@@ -109,7 +109,15 @@ export const HERBE_QUI_GIVRE = 0.2;
  * Le givre de la semaine, ou rien.
  *
  * L'opacité suit le froid moyen des cellules gelées : une nuit à −1 °C pose un
- * givre à peine visible, une nuit à −6 °C une vraie gelée blanche. Les brins
+ * givre à peine visible, une nuit à −6 °C une vraie gelée blanche.
+ *
+ * **Elle part de zéro**, en racine du froid (#406). Elle avait un plancher —
+ * 40 % du plein dès le premier dixième sous zéro —, et une nuit à −0,1 °C
+ * voilait la parcelle presque autant qu'une nuit à −1 °C. Le seuil du gel
+ * devenait un bord franc à l'écran : là où le moteur tamponnait la nuit d'un
+ * rien au-dessus de zéro, un cadre de sol nu au cordeau (#407). La racine
+ * garde la gelée légère lisible (−1 °C : la moitié du plein) et rend la
+ * limite insensible. Les brins
  * vont là où l'herbe pousse (`soilHerbe`) : c'est elle qui se couvre de rime ;
  * la terre nue ne reçoit qu'un voile.
  */
@@ -124,6 +132,6 @@ export function givreDeLaSemaine(
   return {
     cellules: gelees.map((g) => g.cellule),
     brins: gelees.filter((g) => (herbe?.[g.cellule] ?? 1) >= HERBE_QUI_GIVRE).map((g) => g.cellule),
-    opacite: OPACITE_DU_GIVRE * (0.4 + 0.6 * force),
+    opacite: OPACITE_DU_GIVRE * Math.sqrt(force),
   };
 }

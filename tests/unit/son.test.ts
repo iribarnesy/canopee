@@ -3,18 +3,25 @@
  *
  * Les niveaux ne s'écoutent pas dans un essai, mais ils se défendent : du vent
  * sans feuillage bruisse moins, une mare ne coule pas, une parcelle sans
- * nicheur ne chante pas, un chantier de mille tiges ne tourne pas un quart
- * d'heure.
+ * nicheur ne chante pas, une coupe s'entend comme un coup bref, et vingt
+ * coupes enchaînées ne font pas tourner la scie plus de trois secondes et
+ * demie après la dernière (#403).
  */
 
 import { describe, expect, it } from "vitest";
+import type { GesteVisible } from "../../src/engine/actions";
 import {
   CADENCE_MAX,
   CHANTIER_MAX_MS,
+  COUP_MAX_MS,
+  COUP_MS,
   couvert,
-  dureeDuChantier,
+  dureeDuCoup,
   type EntreeDuSon,
+  MS_PAR_TIGE_DE_PLUS,
   niveauxDuSon,
+  prolongerLeChantier,
+  RELANCE_MS,
 } from "../../src/game/son/niveaux";
 
 const CALME: EntreeDuSon = {
@@ -89,14 +96,84 @@ describe("le feu et les chantiers", () => {
   });
 
   it("la tronçonneuse tourne pour les tiges qu'on démonte, pas pour une plantation", () => {
-    expect(dureeDuChantier([{ type: "planter", ids: [1, 2, 3] }])).toBe(0);
-    expect(dureeDuChantier([{ type: "brouter", ids: [1, 2, 3] }])).toBe(0);
-    expect(dureeDuChantier([{ type: "couper", ids: [1, 2] }])).toBeGreaterThan(0);
+    expect(dureeDuCoup([{ type: "planter", ids: [1, 2, 3] }])).toBe(0);
+    expect(dureeDuCoup([{ type: "brouter", ids: [1, 2, 3] }])).toBe(0);
+    expect(dureeDuCoup([{ type: "labourer", cellules: [4, 5] }])).toBe(0);
+    expect(dureeDuCoup([{ type: "couper", ids: [] }])).toBe(0);
+    expect(dureeDuCoup([{ type: "couper", ids: [1, 2] }])).toBeGreaterThan(0);
+  });
+});
+
+/**
+ * **Des bouts de tronçonneuse, prolongés quand on enchaîne** (#403) : « le son
+ * est trop long, beaucoup trop long […] si on enchaîne les actions alors le
+ * bruit dure un peu plus, sans repartir à zéro à chaque fois qu'on clique ».
+ */
+describe("les coups de tronçonneuse", () => {
+  const coupe = (n = 1): GesteVisible[] => [
+    { type: "couper", ids: Array.from({ length: n }, (_, i) => i) },
+  ];
+  const T = 100_000;
+
+  it("une coupe seule est un coup bref, la scie arrêtée", () => {
+    expect(prolongerLeChantier(0, T, coupe())).toBe(T + COUP_MS);
+    // Une échéance passée depuis un instant ne compte plus : coup neuf.
+    expect(prolongerLeChantier(T - 1, T, coupe())).toBe(T + COUP_MS);
+    expect(COUP_MS).toBeLessThanOrEqual(1500);
   });
 
-  it("un éclaircissage de mille tiges ne fait pas un quart d'heure de moteur", () => {
+  it("beaucoup de tiges d'un geste font un coup à peine plus long, plafonné", () => {
+    expect(dureeDuCoup(coupe(3))).toBe(COUP_MS + 2 * MS_PAR_TIGE_DE_PLUS);
+    expect(dureeDuCoup(coupe(3))).toBeGreaterThan(dureeDuCoup(coupe(1)));
     const ids = Array.from({ length: 1000 }, (_, i) => i);
-    expect(dureeDuChantier([{ type: "eclaircir", ids }])).toBe(CHANTIER_MAX_MS);
+    expect(dureeDuCoup([{ type: "eclaircir", ids }])).toBe(COUP_MAX_MS);
+    // Les tiges de tous les gestes de l'instantané comptent ensemble.
+    expect(
+      dureeDuCoup([
+        { type: "couper", ids: [1] },
+        { type: "elaguer", ids: [2] },
+        { type: "planter", ids: [3] },
+      ]),
+    ).toBe(COUP_MS + MS_PAR_TIGE_DE_PLUS);
+    expect(COUP_MAX_MS).toBeLessThan(CHANTIER_MAX_MS);
+  });
+
+  it("une coupe pendant que la scie tourne prolonge l'échéance, elle ne la remplace pas", () => {
+    const fin = prolongerLeChantier(0, T, coupe());
+    const ensuite = prolongerLeChantier(fin, T + 300, coupe());
+    expect(ensuite).toBe(fin + RELANCE_MS);
+    // Remplacer, c'eût été repartir d'un coup entier depuis le second clic.
+    expect(ensuite).toBeGreaterThan(T + 300 + COUP_MS);
+  });
+
+  it("une coupe à la toute fin d'une autre ne s'entend pas plus courte qu'une coupe seule", () => {
+    const fin = prolongerLeChantier(0, T, coupe());
+    const tard = fin - 50;
+    expect(prolongerLeChantier(fin, tard, coupe())).toBe(tard + COUP_MS);
+  });
+
+  it(`vingt coupes enchaînées : jamais plus de ${CHANTIER_MAX_MS} ms de moteur devant soi`, () => {
+    let fin = 0;
+    let maintenant = T;
+    for (let i = 0; i < 20; i++) {
+      fin = prolongerLeChantier(fin, maintenant, coupe(5));
+      expect(fin - maintenant).toBeLessThanOrEqual(CHANTIER_MAX_MS);
+      maintenant += 200;
+    }
+    // Au rythme d'un clic tous les deux dixièmes, la scie a atteint son
+    // plafond : elle se tait trois secondes et demie après le dernier.
+    expect(fin).toBe(maintenant - 200 + CHANTIER_MAX_MS);
+  });
+
+  it("des gestes qui ne démontent rien laissent l'échéance où elle était", () => {
+    const planter: GesteVisible[] = [{ type: "planter", ids: [1, 2] }];
+    const labour: GesteVisible[] = [{ type: "labourer", cellules: [1, 2] }];
+    // La scie arrêtée reste arrêtée…
+    expect(prolongerLeChantier(0, T, planter)).toBe(0);
+    expect(prolongerLeChantier(0, T, [])).toBe(0);
+    // … et celle qui tourne n'est ni prolongée ni coupée.
+    expect(prolongerLeChantier(T + 800, T, labour)).toBe(T + 800);
+    expect(prolongerLeChantier(T + 800, T, [{ type: "brouter", ids: [7] }])).toBe(T + 800);
   });
 });
 

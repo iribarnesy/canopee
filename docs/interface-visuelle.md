@@ -1303,7 +1303,7 @@ le bandeau, et le réglage se garde.
 | Pluie | `weather.rainMm` de la semaine | `pluie.ogg` |
 | Eau | un **ruisseau** coule toujours ; une **mare** ne fait de bruit que quand la crue la déborde (`estInondee`) | `ruisseau.ogg` |
 | Incendie | les particules de feu en vol : un grand front gronde plus qu'une lisière | `feu.ogg` |
-| Chantiers | les gestes qui démontent une tige (`couper`, `eclaircir`, `elaguer`, `trogner`, `receper`), environ une seconde par tige, neuf au plus | `tronconneuse.ogg` |
+| Chantiers | les gestes qui démontent une tige (`couper`, `eclaircir`, `elaguer`, `trogner`, `receper`) : un coup bref par geste (1,2 s, 2 au plus), qu'un geste de plus prolonge au lieu de le relancer, jamais plus de 3,5 s après le dernier (#403) | `tronconneuse.ogg` |
 | Oiseaux | **les nicheurs du moteur**, espèce par espèce, à une cadence de saison (le printemps chante, l'été se tait) ; le geai quand il vient à un semis. Une parcelle sans nicheur ne chante pas | un cri par espèce |
 
 **Les fichiers** : dix extraits d'enregistrements **déposés par leurs auteurs**

@@ -9,7 +9,7 @@
 
 import { describe, expect, it } from "vitest";
 import { fermetureDuCouvert, tMinimumSousCouvert } from "../../src/engine/microclimat";
-import { phraseDuGel } from "../../src/game/useAvisDuGel";
+import { degresDuGel, phraseDuGel } from "../../src/game/useAvisDuGel";
 import {
   brumeEnCours,
   cellulesAffleurantes,
@@ -137,5 +137,24 @@ describe("le givre à l'échelle des arbres (#357) et dit en clair (#355)", () =
     // Le moteur ne gèle que les fleurs ouvertes : l'avis ne promet rien d'autre.
     expect(phrase).toContain("fleurs ouvertes");
     expect(phrase).not.toMatch(/pousse/);
+  });
+
+  it("une nuit à −0,1 °C ne se dit pas « -0 °C » (#406)", () => {
+    expect(degresDuGel(-0.12)).toBe("−0,1 °C");
+    expect(degresDuGel(-0.6)).toBe("−0,6 °C");
+    expect(degresDuGel(-0.96)).toBe("−1 °C");
+    expect(degresDuGel(-0.03)).toBe("0 °C");
+    expect(degresDuGel(-5.6)).toBe("−6 °C");
+    expect(phraseDuGel(-0.12)).toContain("Gel : −0,1 °C");
+  });
+});
+
+describe("le givre d'une gelée à peine (#406)", () => {
+  it("part de zéro : une nuit à −0,1 °C ne voile presque rien, et la limite ne se voit pas", () => {
+    const juste = givreDeLaSemaine(cellulesGelees(-0.1, [1, 1]));
+    const franc = givreDeLaSemaine(cellulesGelees(-1, [1, 1]));
+    expect(juste?.opacite ?? 1).toBeLessThan(0.2 * OPACITE_DU_GIVRE);
+    // Une gelée d'un degré reste lisible : la moitié du plein.
+    expect(franc?.opacite ?? 0).toBeCloseTo(0.5 * OPACITE_DU_GIVRE, 5);
   });
 });

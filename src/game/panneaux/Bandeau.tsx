@@ -10,6 +10,7 @@ import { coutDuDepassement, depassementHoraire } from "../../engine/actions";
 import type { FenetreDuChangement } from "../ceQuiAChange";
 import type { Snapshot } from "../protocol";
 import type { ReglagesDuSon } from "../son/useSon";
+import { degresDuGel } from "../useAvisDuGel";
 import type { CeQuiAChange } from "../useCeQuiAChange";
 import type { GameApi } from "../useGame";
 import { btn } from "./styles";
@@ -116,7 +117,7 @@ export function Bandeau({
           {snapshot.weather.tMinAbsC < 0 && (
             <span title="La nuit la plus froide de la semaine : là où le sol est à découvert, il a givré">
               {" "}
-              · ❄ gel {snapshot.weather.tMinAbsC.toFixed(0)} °C
+              · ❄ gel {degresDuGel(snapshot.weather.tMinAbsC)}
             </span>
           )}
           {snapshot.neigeMm > 0.5 && (

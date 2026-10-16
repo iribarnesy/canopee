@@ -66,7 +66,6 @@ import type {
 } from "../engine/tick";
 import { tick } from "../engine/tick";
 import type { CauseMort, TreeState } from "../engine/trees";
-import { HAUTEUR_TROUVABLE_M } from "../render/temps/changements";
 import { solPresqueASec } from "./avisSecheresse";
 import { agreger, BILAN_VIDE, type Bilan } from "./bilan";
 import {
@@ -79,6 +78,7 @@ import {
 } from "./compteDeLAnnee";
 import { prefixeSousLePlafond } from "./facture";
 import { journalDe, type PorteurDeJournal } from "./journal";
+import { direLaMortaliteDesArbres, direLaMortaliteDesSemis, lireLaMortalite } from "./mortalite";
 import {
   accord,
   causeDite,
@@ -109,7 +109,7 @@ import {
   fautIlPrevenir,
 } from "./recolteAuto";
 import { ecrireReprise, empreinteDeLaPartie, lireReprise } from "./reprise";
-import { estUneMortaliteDeMasse, estUneTempeteAVoir } from "./scenes";
+import { estUneTempeteAVoir } from "./scenes";
 import { construireSnapshot, transferablesDuSnapshot } from "./snapshot";
 import {
   accumulerLesSuivis,
@@ -695,7 +695,10 @@ let arretSurLesMorts = true;
  * elle coupe une traversée : sans ça, l'avis n'offrait que « revoir », et un
  * « +1 an » interrompu en juin ne pouvait plus aller jusqu'en décembre (#359).
  */
-function pause(reason: string, extra: { scene?: number; motif?: "mortSuivie" } = {}): void {
+function pause(
+  reason: string,
+  extra: { scene?: number; motif?: "mortSuivie"; arbresMorts?: number[] } = {},
+): void {
   post({
     type: "autopause",
     reason,
@@ -1695,32 +1698,35 @@ function stepWeeks(n: number) {
     // §6.8 nomme. Pas une cause en particulier : ce qui la fait, c'est le
     // **nombre** — une sécheresse qui emporte le tiers d'un peuplement en une
     // semaine se voit autant qu'un feu, et ne se dit nulle part ailleurs.
-    if (weeksPerSecond > 1 && estUneMortaliteDeMasse(ticked.morts.length, before.trees.length)) {
-      const part = ticked.morts.length / Math.max(1, before.trees.length);
-      /**
-       * **Dire ce que la parcelle peut montrer** (#233).
-       *
-       * Le bandeau annonçait « 924 arbres meurent d'un coup (34 % du
-       * peuplement) », et le joueur ne voyait rien. Les deux sont vrais et ne
-       * parlent pas de la même chose : sur ces 924 tiges, **852 font moins d'un
-       * mètre** — moins de huit pixels — et la médiane en fait 37 centimètres.
-       * Le chiffre promettait un spectacle que l'écran ne pouvait pas rendre.
-       *
-       * La phrase le dit maintenant, et seulement quand elle a quelque chose à
-       * dire : si tout ce qui meurt se voit, l'ancienne suffit. Le compte
-       * complet, lui, reste dans le bilan de période — « un phénomène de masse
-       * ne se cherche pas, il se lit dans une phrase » (`changements.ts`).
-       */
-      const trouvables = ticked.morts.filter((m) => m.heightM >= HAUTEUR_TROUVABLE_M).length;
+    //
+    // **Mais seulement des arbres (#401).** Le bandeau comptait toutes les
+    // tiges et s'arrêtait pour seize semis — « dont 0 de plus d'un mètre » :
+    // rien à voir, et le temps arrêté quand même. #233 avait fait dire à la
+    // phrase ce que l'écran pouvait montrer ; il fallait aussi que la
+    // **décision** le lise. Les morts vont maintenant en deux tas, chacun jugé
+    // contre son propre peuplement (`mortalite.ts`) : les arbres d'un mètre et
+    // plus font la scène, les semis n'ont qu'une ligne au journal.
+    const mortalite = lireLaMortalite(ticked.morts, before.trees);
+    if (weeksPerSecond > 1 && mortalite.scene) {
       weeksPerSecond = 0;
       scenePosee = true;
-      pause(
-        trouvables < ticked.morts.length
-          ? `${ticked.morts.length} arbres meurent d'un coup, dont ${trouvables} de plus d'un mètre`
-          : `${ticked.morts.length} arbres meurent d'un coup (${Math.round(part * 100)} % du peuplement)`,
-        { scene: sceneDeLaSemaine() },
-      );
+      // **Lesquels** : le joueur ne pouvait pas les retrouver sur la parcelle.
+      // Un mort reste en jeu comme chandelle, donc son identifiant reste
+      // sélectionnable — sauf l'écrasé, que le moteur a déjà couché au sol et
+      // retiré des tiges : le montrer ne sélectionnerait rien. Il reste dans
+      // le compte de la phrase, qui dit ce qui est mort et non ce qu'on voit.
+      const debout = new Set(ticked.state.trees.map((t) => t.id));
+      pause(direLaMortaliteDesArbres(mortalite.arbres, mortalite.semis.length), {
+        scene: sceneDeLaSemaine(),
+        arbresMorts: mortalite.arbres.filter((m) => debout.has(m.id)).map((m) => m.id),
+      });
     }
+    // Les semis, eux, ne s'arrêtent pas : une hécatombe de brins de trente
+    // centimètres ne se voit pas, et c'est l'ordinaire d'un recrû qui
+    // s'éclaircit. Elle a sa ligne — une, quelle que soit la vitesse —, et
+    // seulement quand elle est massive **pour des semis** : sinon chaque
+    // semaine où meurt un brin aurait la sienne, en plus de ses « 💀 ».
+    if (mortalite.semisEnMasse) event("🌱", direLaMortaliteDesSemis(mortalite.semis));
     // Incendie : l'événement le plus marquant d'une partie sur lande.
     if (ticked.incendie) {
       const f = ticked.incendie;
