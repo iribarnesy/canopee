@@ -19,7 +19,8 @@
  * - **le feu** : les particules que l'ellipse fait voler — un grand front
  *   gronde plus qu'une lisière qui fume.
  * - **les chantiers** : les gestes du joueur qui démontent une tige, dans
- *   l'instantané. C'est la tronçonneuse, le temps d'un chantier.
+ *   l'instantané. C'est la tronçonneuse, un coup bref par geste, prolongé
+ *   quand on enchaîne (#403).
  * - **les oiseaux** : **ceux qui nichent** (`Snapshot.faune`), espèce par
  *   espèce, et le geai quand il visite un semis. Une parcelle sans nicheur
  *   ne chante pas, et c'est ce qu'elle doit faire entendre.
@@ -157,20 +158,76 @@ export function niveauxDuSon(e: EntreeDuSon): Niveaux {
 /** Les gestes qui démontent une tige : ceux qu'on entend à la tronçonneuse. */
 const A_LA_TRONCONNEUSE = new Set(["couper", "eclaircir", "elaguer", "trogner", "receper"]);
 
-/** Temps d'un chantier à l'oreille, par tige, ms, et son plafond. */
-export const MS_PAR_TIGE = 900;
-export const CHANTIER_MAX_MS = 9000;
+/*
+ * ── **la tronçonneuse : des coups courts, qu'on enchaîne** (#403) ───────────
+ *
+ * Elle tournait une seconde par tige, neuf au plus, et le premier retour l'a
+ * dit sans détour : « beaucoup trop long ». Une coupe est un geste, et le son
+ * le **ponctue** — il ne le raconte pas tige à tige. D'où un coup bref par
+ * instantané, à peine plus long quand il démonte beaucoup, et un chantier qui
+ * **dure** quand on enchaîne : un geste qui arrive pendant que la scie tourne
+ * prolonge son échéance au lieu de la remplacer, jusqu'à un plafond compté
+ * depuis maintenant. Le moteur se tait donc peu après le dernier clic, quel
+ * que soit le nombre de clics d'avant.
+ */
 
 /**
- * Combien de temps la tronçonneuse tourne pour les gestes d'un instantané :
- * une seconde par tige, à peu près, et pas plus de neuf. Un éclaircissage de
- * mille tiges ne fait pas un quart d'heure de moteur.
+ * Le coup d'un geste d'une tige, ms. Une seconde et un cinquième : de quoi
+ * entendre la scie monter et mordre — en deçà, la boucle n'est plus qu'un
+ * bourdonnement qu'on ne reconnaît pas.
  */
-export function dureeDuChantier(gestes: readonly GesteVisible[]): number {
+export const COUP_MS = 1200;
+/** Ce que chaque tige de plus ajoute au coup, ms : un éclaircissage s'entend un peu plus. */
+export const MS_PAR_TIGE_DE_PLUS = 100;
+/**
+ * Le plus long coup d'un seul instantané, ms — atteint à neuf tiges. Mille
+ * tiges éclaircies d'un geste restent un geste, et s'entendent comme un.
+ */
+export const COUP_MAX_MS = 2000;
+/**
+ * Ce qu'un geste ajoute à un chantier en cours, ms. Moins qu'un coup : on
+ * n'entend pas une seconde scie partir, on entend la même qui continue.
+ */
+export const RELANCE_MS = 700;
+/**
+ * Jamais plus de tant de moteur devant soi, ms, comptés depuis le dernier
+ * geste : on a beau enchaîner vingt coupes, la scie se tait trois secondes et
+ * demie après la dernière.
+ */
+export const CHANTIER_MAX_MS = 3500;
+
+/**
+ * Le coup de tronçonneuse des gestes d'un instantané, ms — 0 s'ils ne
+ * démontent aucune tige (une plantation, un labour, le gibier qui broute).
+ */
+export function dureeDuCoup(gestes: readonly GesteVisible[]): number {
   let tiges = 0;
   for (const g of gestes) {
     if (!A_LA_TRONCONNEUSE.has(g.type) || !("ids" in g)) continue;
     tiges += g.ids.length;
   }
-  return Math.min(CHANTIER_MAX_MS, tiges * MS_PAR_TIGE);
+  if (tiges === 0) return 0;
+  return Math.min(COUP_MAX_MS, COUP_MS + (tiges - 1) * MS_PAR_TIGE_DE_PLUS);
+}
+
+/**
+ * L'échéance de la tronçonneuse après les gestes d'un instantané, ms.
+ *
+ * `finMs` est l'échéance d'avant : dans le passé, la scie est arrêtée et ces
+ * gestes en lancent un coup neuf ; dans l'avenir, elle tourne, et ils la
+ * prolongent de `RELANCE_MS` — mais jamais à moins d'un coup entier depuis
+ * maintenant, sinon une coupe qui tombe à la fin d'une autre s'entendrait
+ * plus courte qu'une coupe seule. Des gestes sans tige laissent l'échéance
+ * telle qu'elle était.
+ */
+export function prolongerLeChantier(
+  finMs: number,
+  maintenantMs: number,
+  gestes: readonly GesteVisible[],
+): number {
+  const coup = dureeDuCoup(gestes);
+  if (coup === 0) return finMs;
+  const neuf = maintenantMs + coup;
+  const fin = maintenantMs < finMs ? Math.max(finMs + RELANCE_MS, neuf) : neuf;
+  return Math.min(maintenantMs + CHANTIER_MAX_MS, fin);
 }

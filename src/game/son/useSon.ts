@@ -13,7 +13,7 @@ import type { PoseDHabitant } from "../../render/faune/residents";
 import type { IncendieAPoser } from "../../render/temps/lecteur";
 import type { Snapshot, StationInfo } from "../protocol";
 import { MixeurDuSon } from "./mixeur";
-import { dureeDuChantier, type EntreeDuSon, niveauxDuSon } from "./niveaux";
+import { type EntreeDuSon, niveauxDuSon, prolongerLeChantier } from "./niveaux";
 import { URLS_DES_SONS } from "./sons";
 
 const CLE = "canopee.son";
@@ -45,16 +45,58 @@ export function useSon(
   const [reglages, setReglages] = useState(lire);
   const mixeur = useRef<MixeurDuSon | undefined>(undefined);
   const chantierJusqua = useRef(0);
+  /** Le minuteur qui arrête la scie à son échéance (#403). */
+  const arretDuChantier = useRef<ReturnType<typeof setTimeout>>(undefined);
   const dernier = useRef({ snapshot, station, feu, residents, reglages, partNoyee });
   dernier.current = { snapshot, station, feu, residents, reglages, partNoyee };
 
+  /**
+   * Refaire les niveaux et les donner au mixeur, à `maintenantMs`. Le pas
+   * régulier s'en sert, et la tronçonneuse aussi, qui n'attend pas le pas.
+   */
+  const ecouter = useCallback((maintenantMs: number) => {
+    const m = mixeur.current;
+    const { snapshot: s, station: st, feu: f, residents: r, partNoyee: p } = dernier.current;
+    if (!m || !s || !st) return;
+    m.suivre(
+      niveauxDuSon(
+        entreeDuSon(
+          s,
+          st,
+          f(maintenantMs),
+          r(maintenantMs),
+          maintenantMs,
+          chantierJusqua.current,
+          p,
+        ),
+      ),
+    );
+  }, []);
+
   // Un chantier s'entend quand son instantané arrive — c'est aussi le moment
-  // où l'ellipse le joue.
+  // où l'ellipse le joue. Un geste pendant que la scie tourne la prolonge, il
+  // ne la relance pas (#403).
   useEffect(() => {
     if (!snapshot) return;
-    const d = dureeDuChantier(snapshot.gestes);
-    if (d > 0) chantierJusqua.current = performance.now() + d;
-  }, [snapshot]);
+    const maintenant = performance.now();
+    const avant = chantierJusqua.current;
+    const fin = prolongerLeChantier(avant, maintenant, snapshot.gestes);
+    if (fin === avant) return;
+    chantierJusqua.current = fin;
+    // **Avec le geste, et pas jusqu'à un quart de seconde après** : un coup
+    // d'une seconde qui part au pas suivant du mixeur s'entend en retard sur
+    // le clic. Une scie qui tourne déjà n'a rien à changer au mélange.
+    if (maintenant >= avant) ecouter(maintenant);
+    // Et elle se tait à son heure, pas au pas d'après : sur un coup aussi
+    // court, un quart de seconde de trop se compte. Jamais avant `fin`, même
+    // si le minuteur part une fraction de milliseconde trop tôt.
+    clearTimeout(arretDuChantier.current);
+    arretDuChantier.current = setTimeout(
+      () => ecouter(Math.max(performance.now(), fin)),
+      fin - maintenant,
+    );
+  }, [snapshot, ecouter]);
+  useEffect(() => () => clearTimeout(arretDuChantier.current), []);
 
   // Le premier geste du joueur ouvre le son.
   useEffect(() => {
@@ -80,19 +122,9 @@ export function useSon(
   }, []);
 
   useEffect(() => {
-    const id = window.setInterval(() => {
-      const m = mixeur.current;
-      const { snapshot: s, station: st, feu: f, residents: r, partNoyee: p } = dernier.current;
-      if (!m || !s || !st) return;
-      const maintenant = performance.now();
-      m.suivre(
-        niveauxDuSon(
-          entreeDuSon(s, st, f(maintenant), r(maintenant), maintenant, chantierJusqua.current, p),
-        ),
-      );
-    }, PAS_MS);
+    const id = window.setInterval(() => ecouter(performance.now()), PAS_MS);
     return () => window.clearInterval(id);
-  }, []);
+  }, [ecouter]);
 
   const regler = useCallback((r: Partial<ReglagesDuSon>) => {
     setReglages((avant) => {
