@@ -16,6 +16,7 @@ import { type Vue, versEcranVue, vueInitiale, zoomer } from "../../src/render/ca
 import {
   APLATISSEMENT,
   type ArbreOmbre,
+  contourDuSol,
   DENSITES,
   indexDensite,
   MODE_ACCUMULATION,
@@ -287,5 +288,45 @@ describe("les ombres s'arrêtent au terrain", () => {
     // Dans cette projection `sy` croît avec `x + y` : aller vers le nord fait
     // **descendre** à l'écran, donc la tache est plus bas que la limite.
     expect(auBord.sy).toBeGreaterThan(limite.sy);
+  });
+});
+
+describe("le contour qui borne l'ombre à la parcelle (#400)", () => {
+  const plat = new Array<number>(COTE * COTE).fill(0);
+
+  it("fait le tour de la parcelle, un point par mètre de bord", () => {
+    expect(contourDuSol(plat, COTE, vue())).toHaveLength(4 * COTE);
+  });
+
+  it("passe par les quatre coins, à leur altitude", () => {
+    const pente = Array.from({ length: COTE * COTE }, (_, i) => 0.01 * Math.floor(i / COTE));
+    const contour = contourDuSol(pente, COTE, vue());
+    const coin = (x: number, y: number, z: number) => versEcranVue({ x, y, z }, vue());
+    // Le bord est rabattu sur le centre des cellules de lisière, comme la
+    // cuisson du terrain : le coin du fond est à l'altitude du premier rang.
+    expect(contour[0]).toEqual(coin(0, 0, 0));
+    expect(contour[COTE]).toEqual(coin(COTE, 0, 0));
+    expect(contour[2 * COTE]?.sx).toBeCloseTo(coin(COTE, COTE, 0.99).sx, 6);
+    expect(contour[2 * COTE]?.sy).toBeCloseTo(coin(COTE, COTE, 0.99).sy, 6);
+  });
+
+  it("enferme les ombres de la parcelle et laisse dehors celles qui en débordent", () => {
+    const contour = contourDuSol(plat, COTE, vue());
+    // Point dans un polygone, par la règle du nombre de croisements.
+    const dedans = (sx: number, sy: number) => {
+      let n = 0;
+      for (let k = 0; k < contour.length; k++) {
+        const a = contour[k];
+        const b = contour[(k + 1) % contour.length];
+        if (!a || !b) continue;
+        if (a.sy > sy !== b.sy > sy && sx < ((b.sx - a.sx) * (sy - a.sy)) / (b.sy - a.sy) + a.sx)
+          n++;
+      }
+      return n % 2 === 1;
+    };
+    const centre = versEcranVue({ x: COTE / 2, y: COTE / 2, z: 0 }, vue());
+    const dehors = versEcranVue({ x: -5, y: COTE / 2, z: 0 }, vue());
+    expect(dedans(centre.sx, centre.sy)).toBe(true);
+    expect(dedans(dehors.sx, dehors.sy)).toBe(false);
   });
 });

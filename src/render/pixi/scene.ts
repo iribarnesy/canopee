@@ -43,7 +43,6 @@ import {
   Application,
   ColorMatrixFilter,
   Container,
-  type Filter,
   Graphics,
   RenderTexture,
   Sprite,
@@ -112,6 +111,7 @@ import {
 } from "../couches/marqueurs";
 import {
   type ArbreOmbre,
+  contourDuSol,
   cuireTachesOmbre,
   MODE_ACCUMULATION_GPU,
   MODE_COMPOSITION,
@@ -372,8 +372,17 @@ export class SceneParcelle {
   private atlas?: AtlasArbres;
   private taches: Texture[] = [];
   private masque?: RenderTexture;
-  private silhouette?: RenderTexture;
+  /** Le masque d'ombre en trois rangs : le fond blanc, les taches, le cadre. */
   private readonly pinceau = new Container();
+  private readonly tachesDOmbre = new Container();
+  /**
+   * **Le cadre qui borne l'ombre à la parcelle** (#400) : blanc, percé de la
+   * forme du sol (`contourDuSol`), posé sur les taches. Hors de la parcelle le
+   * masque reste blanc, et le `multiply` n'y fait rien.
+   */
+  private readonly cadreDOmbre = new Graphics();
+  /** Les altitudes dont le cadre a été tracé : une autre parcelle le périme. */
+  private solDuCadre?: readonly number[];
   /**
    * Le fond blanc du masque d'ombre — « blanc » voulant dire « pas d'ombre ».
    *
@@ -398,7 +407,6 @@ export class SceneParcelle {
    */
   private signatureOmbres = "";
   private spriteOmbres?: Sprite;
-  private decoupeOmbres?: Sprite;
   /**
    * Ce qui déforme les arbres en cours d'animation, s'il y a lieu.
    *
@@ -737,15 +745,12 @@ export class SceneParcelle {
     this.app.renderer.resize(Math.max(1, Math.round(largeur)), Math.max(1, Math.round(hauteur)));
     this.masque?.destroy(true);
     this.masque = undefined;
-    this.silhouette?.destroy(true);
-    this.silhouette = undefined;
-    // **Les deux sprites tenaient ces textures**, et depuis qu'ils survivent
-    // d'une image à l'autre, les oublier ici laisserait la couche d'ombre
-    // pointer sur deux textures détruites — le même plantage que la clé de
-    // classe recopiée, un cran plus bas. Ils se refont à la prochaine image.
+    // **Le sprite tenait cette texture**, et depuis qu'il survit d'une image à
+    // l'autre, l'oublier ici laisserait la couche d'ombre pointer sur une
+    // texture détruite — le même plantage que la clé de classe recopiée, un
+    // cran plus bas. Il se refait à la prochaine image.
     this.couches.ombres.removeChildren();
     this.spriteOmbres = undefined;
-    this.decoupeOmbres = undefined;
     this.signatureOmbres = "";
   }
 
@@ -816,13 +821,11 @@ export class SceneParcelle {
     spritesPoses += this.poserMarqueurs(etat, vue);
     this.poserLaVisee(etat, vue);
     spritesPoses += this.poserLeFantome(etat, vue);
-    // **Un morceau de sol cuit invalide le masque d'ombre**, et l'oublier
-    // laissait une découpe périmée. La signature ne regarde que les arbres et
-    // la caméra ; or l'ombre est aussi découpée à la **silhouette** de la parcelle,
-    // rendue depuis la couche du sol — qui, elle, change tant que la cuisson
-    // rattrape son retard. Sans ce forçage, les premières secondes d'une
-    // parcelle froide gardaient l'ombre découpée sur un sol à moitié cuit.
-    const msPose = performance.now() - debutPose + this.poserOmbres(etat, vue, morceauxCuits > 0);
+    // L'ombre ne dépend plus de la cuisson du sol : elle était découpée à la
+    // silhouette rendue depuis la couche du sol, et chaque morceau cuit la
+    // forçait à se refaire. Elle l'est maintenant au contour de la parcelle,
+    // qui ne tient qu'au relief et à la caméra (#400).
+    const msPose = performance.now() - debutPose + this.poserOmbres(etat, vue);
 
     this.app.render();
     return {
@@ -2285,14 +2288,15 @@ export class SceneParcelle {
   }
 
   /**
-   * Les ombres, en deux temps : accumulation dans une texture blanche, puis une
-   * seule composition en `multiply`.
+   * Les ombres, en deux temps : accumulation dans une texture blanche, bornée à
+   * la parcelle par un cadre blanc (#400), puis une seule composition en
+   * `multiply`.
    *
    * Rend les millisecondes de **pose**, et elles seules : les deux passes de rendu
    * de cette couche sont du GPU et n'ont rien à faire dans un chiffre censé
    * mesurer notre JavaScript.
    */
-  private poserOmbres(etat: EtatScene, vue: Vue, forcer: boolean): number {
+  private poserOmbres(etat: EtatScene, vue: Vue): number {
     const largeur = this.app.renderer.width;
     const hauteur = this.app.renderer.height;
     this.masque ??= RenderTexture.create({ width: largeur, height: hauteur });
@@ -2311,10 +2315,19 @@ export class SceneParcelle {
       h = Math.imul(h ^ (a.heightM * 64), 0x01000193) >>> 0;
     }
     const signature = `${largeur}x${hauteur}|${vue.cam.zoom.toFixed(4)}|${vue.cam.orientation}|${vue.centre.x.toFixed(3)},${vue.centre.y.toFixed(3)}|${etat.arbres.length}|${etat.semaineAnnee}|${h}`;
-    if (!forcer && signature === this.signatureOmbres && this.spriteOmbres && this.decoupeOmbres) {
+    if (
+      signature === this.signatureOmbres &&
+      this.solDuCadre === etat.sol.altitudesM &&
+      this.spriteOmbres
+    ) {
       return performance.now() - debut;
     }
     this.signatureOmbres = signature;
+    this.solDuCadre = etat.sol.altitudesM;
+    if (this.pinceau.children.length === 0) {
+      // Trois rangs, dans cet ordre : le fond, les taches, le cadre.
+      this.pinceau.addChild(this.tachesDOmbre, this.cadreDOmbre);
+    }
     const taille = `${largeur}x${hauteur}`;
     if (!this.fondOmbre || this.fondOmbreTaille !== taille) {
       const ancien = this.fondOmbre;
@@ -2339,12 +2352,11 @@ export class SceneParcelle {
         houppierRatio: a.houppierRatio,
         partOmbrageante: etat.ombreDe(a),
       }));
-    // Le rang 0 du pinceau est le fond ; les taches suivent.
-    let rang = 1;
+    let rang = 0;
     for (const o of ombresAPoser(arbresOmbre, vue)) {
       const tache = this.taches[o.densite];
       if (!tache) continue;
-      const sprite = SceneParcelle.sprite(this.pinceau, rang++, tache);
+      const sprite = SceneParcelle.sprite(this.tachesDOmbre, rang++, tache);
       sprite.x = o.sx - o.largeurPx / 2;
       sprite.y = o.sy - o.hauteurPx / 2;
       sprite.width = o.largeurPx;
@@ -2359,7 +2371,16 @@ export class SceneParcelle {
       // l'escalier de rectangles le long du bord de la parcelle.
       sprite.blendMode = MODE_ACCUMULATION_GPU;
     }
-    SceneParcelle.tailler(this.pinceau, rang);
+    SceneParcelle.tailler(this.tachesDOmbre, rang);
+    // Le cadre, par-dessus : ce qu'une ombre de bordure jette hors de la
+    // parcelle redevient blanc, donc neutre sous le `multiply`.
+    const contour = contourDuSol(etat.sol.altitudesM, etat.sol.coteM, vue);
+    this.cadreDOmbre
+      .clear()
+      .rect(0, 0, largeur, hauteur)
+      .fill(0xffffff)
+      .poly(contour.flatMap((p) => [p.sx, p.sy]))
+      .cut();
     const ms = performance.now() - debut;
     this.app.renderer.render({ container: this.pinceau, target: this.masque, clear: true });
 
@@ -2388,41 +2409,23 @@ export class SceneParcelle {
     // parcelle, c'est pas important ». Ce qui compte, c'est l'ombre **portée sur**
     // **ce qu'on gère** : elle dit où il fait sombre, donc où rien ne poussera.
     //
-    // On découpe donc toujours, et sur `couches.sol` seul — jamais sur le décor,
-    // qui n'est pas la parcelle.
+    // On découpe donc toujours, au contour de la parcelle — jamais sur le décor,
+    // qui n'est pas la parcelle. La découpe est le cadre posé dans le masque,
+    // plus haut (#400).
     //
-    // **Ce que ça coûte, mesuré et non supposé** : une passe plein écran de
-    // plus, soit +10 % sur le temps par image (1 640 → 1 807 ms de médiane sur
-    // 90 images, friche de 3 264 sprites, 1 500 × 1 000). Le chiffre **absolu** ne
-    // veut rien dire — le conteneur de mesure n'a pas de GPU et rend par
-    // SwiftShader, un rastériseur logiciel — mais l'écart **relatif**, si : une
-    // passe plein écran n'est pas gratuite ici, et il ne faut pas prétendre
-    // qu'elle l'est. Sur un vrai GPU, un quad plein écran se compte en dixièmes
-    // de milliseconde et la part serait invisible ; ce n'est pas vérifiable
-    // depuis ce conteneur, donc ce n'est pas affirmé.
+    // **Elle était une passe plein écran de plus**, et une passe fausse : la
+    // silhouette du sol rendue dans une texture, puis posée en masque-sprite.
+    // Pixi v8 lit un masque-sprite dans son canal rouge — la couleur du sol, pas
+    // sa présence —, et le sol entier sortait assombri de 45 %, rayé aux joints
+    // des morceaux. Le cadre se trace dans la passe du masque : une passe de
+    // moins, qui coûtait +10 % par image dans ce conteneur sans GPU.
     //
     // Le vrai poste de cette couche était ailleurs, et il était bien plus gros :
     // un `Sprite` reconstruit **par arbre à chaque image**. C'est corrigé — la
     // couche est un pool (voir `sprite`), et le masque entier est sauté quand
     // ni la caméra ni les arbres n'ont bougé, ce qui est le régime normal d'un
-    // jeu au tour. Ces deux passes-ci ne se paient donc plus qu'aux images qui
-    // changent vraiment.
-    this.silhouette ??= RenderTexture.create({ width: largeur, height: hauteur });
-    // La silhouette ne veut que l'**alpha** du sol : le filtre du manteau n'a
-    // rien à y faire, et rendu hors écran il la noircissait.
-    const filtres = this.couches.sol.filters as Filter[] | null;
-    this.couches.sol.filters = null;
-    this.app.renderer.render({
-      container: this.couches.sol,
-      target: this.silhouette,
-      clear: true,
-    });
-    this.couches.sol.filters = filtres;
-    if (!this.decoupeOmbres) {
-      this.decoupeOmbres = new Sprite(this.silhouette);
-      this.couches.ombres.addChild(this.decoupeOmbres);
-      this.spriteOmbres.mask = this.decoupeOmbres;
-    }
+    // jeu au tour. Sa passe ne se paie donc plus qu'aux images qui changent
+    // vraiment.
     return ms;
   }
 
@@ -2435,10 +2438,7 @@ export class SceneParcelle {
     this.taches = [];
     this.masque?.destroy(true);
     this.masque = undefined;
-    this.silhouette?.destroy(true);
-    this.silhouette = undefined;
     this.spriteOmbres = undefined;
-    this.decoupeOmbres = undefined;
     this.fondOmbre = undefined;
     this.fondOmbreTaille = "";
     this.signatureOmbres = "";

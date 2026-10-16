@@ -318,3 +318,52 @@ export function ombresAPoser(arbres: readonly ArbreOmbre[], vue: Vue): OmbreAPos
   sortie.sort((a, b) => a.profondeur - b.profondeur);
   return sortie;
 }
+
+/**
+ * **Le contour du dessus de la parcelle, à l'écran** : ce que l'ombre ne doit
+ * pas dépasser (#400).
+ *
+ * La scène bornait l'ombre par un masque-sprite, la silhouette du sol rendue
+ * dans une texture. Pixi v8 lit un masque-sprite dans son canal **rouge**
+ * (`MaskFilter`) : il lisait donc la couleur du sol et non sa présence, et le
+ * masque d'ombre — blanc partout où il n'y a pas d'ombre — n'était plus
+ * composé qu'à moitié. Mesuré sur une parcelle sans un arbre : le `multiply`
+ * assombrissait tout le sol de 45 %, et aux joints des morceaux de terrain,
+ * où l'alpha de la silhouette fléchit d'un rien, il laissait des liserés
+ * clairs tous les seize mètres — les « traits bleus » d'un retour de jeu.
+ *
+ * Le contour sert à borner l'ombre **dans le masque même** : un cadre blanc
+ * percé de cette forme, posé par-dessus les taches, et le `multiply` est
+ * neutre partout ailleurs. C'est l'étape 4 ci-dessus, sans texture de plus.
+ *
+ * Les bords suivent le relief, mètre par mètre : l'altitude d'un point du bord
+ * est interpolée entre les centres des cellules voisines, rabattue sur la
+ * lisière comme le fait la cuisson du terrain.
+ */
+export function contourDuSol(
+  altitudesM: ArrayLike<number>,
+  coteM: number,
+  vue: Vue,
+): { sx: number; sy: number }[] {
+  const altitude = (x: number, y: number): number => {
+    const u = Math.min(coteM - 1, Math.max(0, x - 0.5));
+    const v = Math.min(coteM - 1, Math.max(0, y - 0.5));
+    const i = Math.max(0, Math.min(coteM - 2, Math.floor(u)));
+    const j = Math.max(0, Math.min(coteM - 2, Math.floor(v)));
+    const fu = u - i;
+    const fv = v - j;
+    const z = (ii: number, jj: number) => altitudesM[jj * coteM + ii] ?? 0;
+    const haut = z(i, j) * (1 - fu) + z(i + 1, j) * fu;
+    const bas = z(i, j + 1) * (1 - fu) + z(i + 1, j + 1) * fu;
+    return haut * (1 - fv) + bas * fv;
+  };
+  const points: { sx: number; sy: number }[] = [];
+  const poser = (x: number, y: number) =>
+    points.push(versEcranVue({ x, y, z: altitude(x, y) }, vue));
+  // Un tour dans le sens des coins, sans répéter le premier point.
+  for (let k = 0; k < coteM; k++) poser(k, 0);
+  for (let k = 0; k < coteM; k++) poser(coteM, k);
+  for (let k = coteM; k > 0; k--) poser(k, coteM);
+  for (let k = coteM; k > 0; k--) poser(0, k);
+  return points;
+}
