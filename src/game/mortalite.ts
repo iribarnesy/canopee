@@ -39,8 +39,12 @@ import { estUneMortaliteDeMasse } from "./scenes";
  */
 export const CAUSES_NOMMEES = 3;
 
-/** Ce que la phrase lit d'une mort : sa cause, et la taille de ce qui est mort. */
-type Mort = Pick<MortDeLaSemaine, "cause" | "heightM">;
+/** Ce que la phrase lit d'une mort : sa cause, la taille de ce qui est mort, et qui. */
+type Mort = Pick<MortDeLaSemaine, "cause" | "heightM"> & { id?: number };
+
+/** Ce que le partage lit du peuplement d'avant la semaine. */
+type Tige = Pick<TreeState, "alive" | "heightM"> &
+  Partial<Pick<TreeState, "id" | "brulEeSemaine" | "renverseSemaine">>;
 
 /** Une mort qui compte parmi les arbres, et non parmi les semis. */
 export function estUnArbre(heightM: number): boolean {
@@ -72,14 +76,29 @@ export interface MortaliteDeLaSemaine<M extends Mort> {
  * hécatombe de pommiers se noyait dans deux mille ronces de vingt
  * centimètres, et seize brins suffisaient à arrêter le temps dès que le
  * peuplement était petit — c'est le cas relevé.
+ *
+ * **Une mort déjà dite ne se redit pas.** Un arbre que le feu a tué sur pied,
+ * ou que la tempête a couché, reste récupérable un an : le moteur ne le met
+ * dans `morts` qu'à la fin de ce délai (`CHABLIS_RECUPERABLE_SEMAINES`). Sans
+ * ce tri, un incendie annoncé la semaine où il brûle revenait un an plus tard
+ * en « 30 arbres meurent d'un coup, tous brûlés ». L'incendie et la tempête
+ * ont leur bandeau et leur scène ; ces morts-là n'en refont pas.
  */
 export function lireLaMortalite<M extends Mort>(
   morts: readonly M[],
-  avant: readonly Pick<TreeState, "alive" | "heightM">[],
+  avant: readonly Tige[],
 ): MortaliteDeLaSemaine<M> {
+  const dejaDites = new Set<number>();
+  for (const t of avant) {
+    if (t.id === undefined) continue;
+    if (t.brulEeSemaine !== undefined || t.renverseSemaine !== undefined) dejaDites.add(t.id);
+  }
   const arbres: M[] = [];
   const semis: M[] = [];
-  for (const m of morts) (estUnArbre(m.heightM) ? arbres : semis).push(m);
+  for (const m of morts) {
+    if (m.id !== undefined && dejaDites.has(m.id)) continue;
+    (estUnArbre(m.heightM) ? arbres : semis).push(m);
+  }
   let arbresAvant = 0;
   let semisAvant = 0;
   for (const t of avant) {

@@ -67,6 +67,30 @@ describe("deux tas, deux niveaux d'alerte", () => {
     expect(m.scene).toBe(true);
   });
 
+  it("ne redit pas, un an plus tard, les morts que l'incendie ou la tempête ont déjà dites", () => {
+    // Le moteur ne met un arbre brûlé ou chablis dans `morts` qu'à la fin de
+    // l'année où il reste récupérable : trente brûlés reviennent d'un coup.
+    const brules = Array.from({ length: 30 }, (_, id) => ({
+      id,
+      alive: false,
+      heightM: 9,
+      brulEeSemaine: 100,
+    }));
+    const couches = Array.from({ length: 5 }, (_, i) => ({
+      id: 30 + i,
+      alive: false,
+      heightM: 9,
+      renverseSemaine: 110,
+    }));
+    const avant = [...brules, ...couches, ...peuplement(40, 0)];
+    const m = lireLaMortalite(
+      [...morts(30, "feu", 9), ...morts(5, "chablis", 9).map((x, i) => ({ ...x, id: 30 + i }))],
+      avant,
+    );
+    expect(m.arbres).toHaveLength(0);
+    expect(m.scene).toBe(false);
+  });
+
   it("ne compte pas les chandelles dans le peuplement d'avant", () => {
     // Dix morts sur deux cents vivants, c'est 5 % — le seuil. Les cent
     // chandelles debout ne sont pas un peuplement qui dilue la part.
