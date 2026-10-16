@@ -6,6 +6,8 @@
  * de l'autre ; ce qu'on voit et ce qu'on entend suivent la même courbe.
  */
 
+import { readdirSync, readFileSync } from "node:fs";
+import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 import { type EntreeDuSon, niveauxDuSon } from "../../src/game/son/niveaux";
 import type { Vue } from "../../src/render/camera";
@@ -41,9 +43,27 @@ describe("une semaine sèche", () => {
     expect(gouttesDeLaPluie(temps(0), vue(), 1234)).toEqual([]);
   });
 
-  it("une rosée de semaine ne fait pas pleuvoir", () => {
+  it("une rosée de semaine ne fait pas pleuvoir, et ne grise pas le ciel", () => {
+    expect(gouttesDeLaPluie(temps(1), vue(), 0)).toEqual([]);
+    expect(couvertDuCiel(1)).toBe(0);
+  });
+
+  it("une averse dans une semaine de soleil ne fait pas pleuvoir l'ellipse (#404)", () => {
+    expect(gouttesDeLaPluie(temps(8), vue(), 0)).toEqual([]);
     expect(gouttesDeLaPluie(temps(PLUIE_MUETTE_MM), vue(), 0)).toEqual([]);
-    expect(couvertDuCiel(PLUIE_MUETTE_MM)).toBe(0);
+    expect(cielDeLaSemaine(temps(8)).mouille).toBe(0);
+  });
+
+  it("il pleut à l'écran au plus une semaine sur deux, sur chaque série du jeu (#404)", () => {
+    // Le seuil d'un millimètre faisait pleuvoir quatre semaines sur cinq.
+    const dossier = join(__dirname, "../../data/meteo");
+    for (const fichier of readdirSync(dossier).filter((f) => f.endsWith(".json"))) {
+      const serie = JSON.parse(readFileSync(join(dossier, fichier), "utf8")) as {
+        semaines: number[][];
+      };
+      const pluvieuses = serie.semaines.filter((s) => intensiteDeLaPluie(s[3] ?? 0) > 0).length;
+      expect(pluvieuses / serie.semaines.length, fichier).toBeLessThan(0.5);
+    }
   });
 });
 
@@ -58,6 +78,11 @@ describe("la pluie", () => {
 
   it("le ciel se couvre avant que l'averse soit franche", () => {
     expect(couvertDuCiel(10)).toBeGreaterThan(intensiteDeLaPluie(10));
+  });
+
+  it("commence fine au seuil, sans rideau qui tombe d'un coup", () => {
+    expect(intensiteDeLaPluie(PLUIE_MUETTE_MM + 1)).toBeGreaterThan(0);
+    expect(intensiteDeLaPluie(PLUIE_MUETTE_MM + 1)).toBeLessThan(0.15);
   });
 
   it("une averse fait plus de gouttes qu'une bruine, et jamais plus que le plafond", () => {

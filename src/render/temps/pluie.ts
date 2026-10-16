@@ -21,7 +21,8 @@
  * dessin des gouttes : leur nombre à l'écran, leur longueur, leur vitesse.
  * **La pluie tombe toute l'ellipse** : le moteur donne un cumul de semaine, pas
  * les jours où il a plu, donc le rendu ne sait pas quand l'averse a eu lieu.
- * Il dit combien, et seulement combien.
+ * Il dit combien, et seulement combien — et seulement quand la semaine a été
+ * franchement pluvieuse (`PLUIE_MUETTE_MM`, #404).
  *
  * **La neige n'est pas ici**, et ce n'est pas un oubli : le moteur ne dit pas
  * quelle part de `rainMm` tombe en neige, et ne tient pas de manteau. Le rendu
@@ -38,11 +39,29 @@ import { blancheurDuSol } from "./neige";
 const borne = (v: number) => Math.min(1, Math.max(0, v));
 
 /** Pluie de la semaine qui fait une averse franche, mm. Le son suit la même. */
-export const PLUIE_PLEINE_MM = 35;
-/** Pluie de la semaine en deçà de laquelle rien ne tombe à l'écran, mm : une bruine de rosée. */
-export const PLUIE_MUETTE_MM = 1;
+export const PLUIE_PLEINE_MM = 45;
+/**
+ * **Pluie de la semaine en deçà de laquelle rien ne tombe à l'écran, mm** (#404).
+ *
+ * Le seuil était d'un millimètre — une rosée —, et il pleuvait à l'écran
+ * quatre semaines sur cinq : mesuré sur les séries du jeu, 79 à 83 % des
+ * semaines dépassent 1 mm (59 % aux Maures). Le joueur l'a dit : « quand il
+ * fait beau toute la semaine mais qu'il y a une averse, l'animation ne devrait
+ * pas montrer de pluie ».
+ *
+ * Le moteur ne donne que le **cumul** de la semaine, pas les jours où il a plu
+ * (#405) : quinze millimètres peuvent être un orage d'un après-midi ou une
+ * bruine de sept jours, et le rendu ne sait pas les distinguer. Le seuil choisit
+ * donc ce qu'une semaine **résume** : à 15 mm, deux ou trois jours de pluie à
+ * six ou sept millimètres le jour (l'ordre de grandeur des normales en France
+ * tempérée), une semaine qu'on dit pluvieuse. Il pleut alors à l'écran une semaine sur trois (29 à 43 % selon la
+ * station). Choisi, non déduit ; à reprendre quand le moteur dira les jours.
+ */
+export const PLUIE_MUETTE_MM = 15;
+/** Pluie de la semaine à partir de laquelle le ciel se charge, mm : un temps gris sans averse. */
+export const PLUIE_QUI_GRISE_MM = 8;
 /** Pluie de la semaine à laquelle le ciel est tout à fait couvert, mm. */
-export const PLUIE_QUI_COUVRE_MM = 20;
+export const PLUIE_QUI_COUVRE_MM = 25;
 
 /**
  * La force de la pluie à l'écran et à l'oreille ∈ [0,1].
@@ -50,21 +69,24 @@ export const PLUIE_QUI_COUVRE_MM = 20;
  * **Une seule courbe pour les deux**, et c'est pour ça qu'elle est ici : une
  * averse qu'on entend mais qu'on ne voit pas, ou l'inverse, se remarque tout
  * de suite. `son/niveaux.ts` la lit.
+ *
+ * Elle part de zéro **au seuil** et non de l'origine : la première semaine
+ * pluvieuse est une pluie fine, pas un rideau qui tombe d'un coup.
  */
 export function intensiteDeLaPluie(pluieMm: number): number {
   if (!(pluieMm > PLUIE_MUETTE_MM)) return 0;
-  return borne(pluieMm / PLUIE_PLEINE_MM) ** 0.7;
+  return borne((pluieMm - PLUIE_MUETTE_MM) / (PLUIE_PLEINE_MM - PLUIE_MUETTE_MM)) ** 0.7;
 }
 
 /**
  * De combien le ciel est chargé ∈ [0,1].
  *
- * Il monte plus vite que la pluie : dix millimètres dans la semaine, c'est
- * déjà un temps gris, même si l'averse n'est pas franche.
+ * Il se charge avant que la pluie tombe à l'écran : une semaine de dix
+ * millimètres est un temps gris, sans être une semaine de pluie.
  */
 export function couvertDuCiel(pluieMm: number): number {
-  if (!(pluieMm > PLUIE_MUETTE_MM)) return 0;
-  return borne((pluieMm - PLUIE_MUETTE_MM) / (PLUIE_QUI_COUVRE_MM - PLUIE_MUETTE_MM)) ** 0.6;
+  if (!(pluieMm > PLUIE_QUI_GRISE_MM)) return 0;
+  return borne((pluieMm - PLUIE_QUI_GRISE_MM) / (PLUIE_QUI_COUVRE_MM - PLUIE_QUI_GRISE_MM)) ** 0.6;
 }
 
 /** Ce que le rendu lit de la semaine pour le temps qu'il fait. */
