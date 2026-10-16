@@ -27,11 +27,30 @@ export interface AvisDuGel {
   fermer: () => void;
 }
 
+/**
+ * **Une température de gelée, dite** (#406) : « −6 °C », et au dixième sous un
+ * degré — « −0,4 °C ».
+ *
+ * L'arrondi à l'entier disait « -0 °C » d'une nuit à −0,1 °C : un zéro signé,
+ * avec le trait d'union du clavier. Sous un degré, l'entier ne dit plus rien
+ * d'une gelée, le dixième si. Un dixième qui s'arrondit à zéro se dit « 0 °C »,
+ * sans signe. Le vrai signe moins partout, et la virgule française.
+ */
+export function degresDuGel(tC: number): string {
+  const dixieme = Math.round(tC * 10) / 10;
+  const texte =
+    Math.abs(dixieme) >= 1
+      ? String(Math.round(tC))
+      : dixieme === 0
+        ? "0"
+        : dixieme.toFixed(1).replace(".", ",");
+  return `${texte.replace("-", "−")} °C`;
+}
+
 /** La phrase de l'avis, pour la nuit la plus froide de la semaine. */
 export function phraseDuGel(tMinC: number): string {
   return (
-    // Le vrai signe moins, et non le trait d'union du clavier.
-    `Gel : ${String(Math.round(tMinC)).replace("-", "−")} °C au plus froid de la nuit, l'herbe a blanchi. ` +
+    `Gel : ${degresDuGel(tMinC)} au plus froid de la nuit, l'herbe a blanchi. ` +
     "Il ne détruit que les fleurs ouvertes — un arbre en fleur y perd sa récolte de l'année ; " +
     "sous le couvert, la nuit est moins froide."
   );
