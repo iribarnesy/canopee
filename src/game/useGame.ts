@@ -30,6 +30,7 @@ import type {
   StationInfo,
   ToWorker,
 } from "./protocol";
+import { ajouterLesRefus, type LigneDeRefus, prochaineFin, refusEnCours } from "./refus";
 import { derniereSauvegarde, ecrireSauvegarde, idNeuf } from "./sauvegardes";
 import type { LigneDeSuivi } from "./suivis";
 
@@ -49,7 +50,13 @@ export function loadSave(): SaveGame | undefined {
 export interface GameApi {
   station?: StationInfo;
   snapshot?: Snapshot;
-  refusals: WithUid<ActionRefusal>[];
+  /**
+   * Les refus à montrer, le plus récent en tête : les identiques regroupés, et
+   * chacun s'efface seul quelques secondes après être arrivé (#402, `refus.ts`).
+   */
+  refusals: readonly LigneDeRefus[];
+  /** Le ✕ de la boîte des refus : ils s'effacent tous, tout de suite. */
+  fermerLesRefus: () => void;
   events: WithUid<GameEvent>[];
   speed: number;
   autoHarvest: boolean;
@@ -233,7 +240,7 @@ export function useGame(): GameApi {
   const arretRef = useRef<(() => void) | null>(null);
   const [station, setStation] = useState<StationInfo>();
   const [snapshot, setSnapshot] = useState<Snapshot>();
-  const [refusals, setRefusals] = useState<WithUid<ActionRefusal>[]>([]);
+  const [refusals, setRefusals] = useState<readonly LigneDeRefus[]>([]);
   const [speed, setSpeedState] = useState(0);
   /**
    * La dernière vitesse de lecture demandée, pour savoir à quoi reprendre.
@@ -416,7 +423,9 @@ export function useGame(): GameApi {
           setCumuls(msg.cumuls);
           setRevision((n) => n + 1);
           if (msg.snapshot.refusals.length > 0) {
-            setRefusals((prev) => [...msg.snapshot.refusals.map(withUid), ...prev].slice(0, 4));
+            const maintenant = performance.now();
+            const arrives = msg.snapshot.refusals;
+            setRefusals((avant) => ajouterLesRefus(avant, arrives, maintenant));
           }
           if (msg.snapshot.events.length > 0) {
             setEvents((prev) =>
@@ -517,10 +526,30 @@ export function useGame(): GameApi {
 
   useEffect(() => () => workerRef.current?.terminate(), []);
 
+  /**
+   * **Un refus s'efface seul** (#402). Un seul minuteur, réglé sur la ligne qui
+   * part la première, et refait à chaque changement de la liste : un refus
+   * identique qui revient la change — sa ligne remonte avec une heure neuve —,
+   * donc son horloge repart sans qu'on ait rien à défaire. Le nettoyage de
+   * l'effet emporte le minuteur, au démontage comme à chaque changement.
+   */
+  useEffect(() => {
+    const fin = prochaineFin(refusals);
+    if (fin === undefined) return;
+    const minuteur = setTimeout(
+      // Jamais avant `fin`, même si le minuteur part une fraction de
+      // milliseconde trop tôt : la ligne due s'en va à coup sûr.
+      () => setRefusals((l) => refusEnCours(l, Math.max(performance.now(), fin))),
+      Math.max(0, fin - performance.now()),
+    );
+    return () => clearTimeout(minuteur);
+  }, [refusals]);
+
   return {
     station,
     snapshot,
     refusals,
+    fermerLesRefus: () => setRefusals([]),
     events,
     speed,
     autoHarvest,

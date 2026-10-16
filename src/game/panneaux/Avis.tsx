@@ -5,12 +5,21 @@
  * aucun bouton, justement parce qu'on ne pense pas à aller les chercher.
  */
 
-import { useMemo, useState } from "react";
+import { type CSSProperties, useMemo, useState } from "react";
 import type { GameAction } from "../../engine/actions";
 import type { SnapshotTree } from "../protocol";
 import type { AvisDuGel } from "../useAvisDuGel";
 import type { GameApi } from "../useGame";
 import { btn, panel } from "./styles";
+
+/** Le ✕ d'un avis qu'on referme : petit, collé en haut à droite de sa ligne. */
+const FERMER: CSSProperties = {
+  ...btn(),
+  marginRight: 0,
+  marginBottom: 0,
+  padding: "0 6px",
+  alignSelf: "start",
+};
 
 /**
  * Le nom du geste tel qu'on le dit, pour les refus. Sans cette table, le
@@ -213,13 +222,7 @@ export function Avis({
           <span style={{ flex: 1 }}>❄️ {gel.texte}</span>
           <button
             type="button"
-            style={{
-              ...btn(),
-              marginRight: 0,
-              marginBottom: 0,
-              padding: "0 6px",
-              alignSelf: "start",
-            }}
+            style={FERMER}
             onClick={gel.fermer}
             title="Fermer jusqu'à la prochaine gelée"
           >
@@ -227,13 +230,29 @@ export function Avis({
           </button>
         </div>
       )}
+      {/*
+        **Les refus passent** (#402) : chacun s'efface seul après quelques
+        secondes, les identiques font une ligne avec leur compte, et le ✕ les
+        efface tous d'un coup — on a lu, on veut voir la parcelle.
+      */}
       {game.refusals.length > 0 && (
-        <div style={{ ...panel, color: "#8a4b2d" }}>
-          {game.refusals.slice(0, 3).map((r) => (
-            <div key={r.uid}>
-              ⚠ {NOM_DU_GESTE[r.action] ?? r.action} : {r.reason}
-            </div>
-          ))}
+        <div style={{ ...panel, color: "#8a4b2d", display: "flex", gap: 8 }}>
+          <div style={{ flex: 1 }}>
+            {game.refusals.map((r) => (
+              <div key={r.cle}>
+                ⚠ {NOM_DU_GESTE[r.action] ?? r.action} : {r.reason}
+                {r.fois > 1 && <strong> ×{r.fois}</strong>}
+              </div>
+            ))}
+          </div>
+          <button
+            type="button"
+            style={FERMER}
+            onClick={game.fermerLesRefus}
+            title="Effacer ces refus"
+          >
+            ✕
+          </button>
         </div>
       )}
       {fruitsPrets.length > 0 && !game.autoHarvest && (
