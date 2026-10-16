@@ -72,6 +72,12 @@ export interface GameApi {
    */
   sceneARevoir?: number;
   /**
+   * Les arbres que la mortalité de masse annoncée par l'avis vient de tuer
+   * (#401) — d'un mètre et plus, restés debout en chandelles. « 👁 Les voir »
+   * les sélectionne. Présents avec l'avis qui les annonce, oubliés avec lui.
+   */
+  arbresMorts?: readonly number[];
+  /**
    * La pause a coupé une traversée « +1 mois » / « +1 an » : `continuer` la
    * mène à son terme (#359).
    */
@@ -255,6 +261,7 @@ export function useGame(): GameApi {
   const oublierLaPause = () => {
     setNotice(undefined);
     setSceneARevoir(undefined);
+    setArbresMorts(undefined);
     setEnRoute(false);
     setPauseSurUneMort(false);
   };
@@ -265,6 +272,7 @@ export function useGame(): GameApi {
   }>();
   const [notice, setNotice] = useState<string>();
   const [sceneARevoir, setSceneARevoir] = useState<number>();
+  const [arbresMorts, setArbresMorts] = useState<readonly number[]>();
   const [enRoute, setEnRoute] = useState(false);
   const [pauseSurUneMort, setPauseSurUneMort] = useState(false);
   const [arretSurLesMorts, setArretSurLesMortsState] = useState(true);
@@ -450,6 +458,9 @@ export function useGame(): GameApi {
           setSpeedState(0);
           setNotice(msg.reason);
           setSceneARevoir(msg.scene);
+          // Remplacés à chaque pause, et pas seulement posés : un avis de fruits
+          // mûrs qui suit une mortalité ne doit pas garder ses « Les voir ».
+          setArbresMorts(msg.arbresMorts);
           setEnRoute(msg.enRoute === true);
           setPauseSurUneMort(msg.motif === "mortSuivie");
           break;
@@ -559,6 +570,7 @@ export function useGame(): GameApi {
     },
     notice,
     ...(sceneARevoir === undefined ? {} : { sceneARevoir }),
+    ...(arbresMorts === undefined ? {} : { arbresMorts }),
     enRoute,
     pauseSurUneMort,
     arretSurLesMorts,

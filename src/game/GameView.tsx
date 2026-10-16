@@ -1891,6 +1891,24 @@ export function GameView({ surPartie }: { surPartie?: (enPartie: boolean) => voi
   );
   const moitieDroite = voletEnHautADroite && voletEnBasADroite ? "calc(50vh - 52px)" : undefined;
 
+  /**
+   * **« 👁 Les voir »** : les morts d'une mortalité de masse, sélectionnés d'un
+   * clic (#401). La sélection fait tout le travail — la surbrillance les allume
+   * sur la parcelle, chandelles comprises, et le volet du coin dit combien et
+   * ce qu'on peut faire de ce bois.
+   *
+   * « La partie » est refermée s'il occupe le coin : il passe devant la
+   * sélection, et le clic n'aurait rien ouvert.
+   */
+  const arbresMorts = game.arbresMorts;
+  const voirLesMorts =
+    arbresMorts && arbresMorts.length > 0
+      ? () => {
+          setSelectedIds(new Set(arbresMorts));
+          if (volets.estOuvert("hd", "partie")) volets.fermer("hd");
+        }
+      : undefined;
+
   return (
     <div style={SCENE}>
       {/*
@@ -2019,6 +2037,7 @@ export function GameView({ surPartie }: { surPartie?: (enPartie: boolean) => voi
             game={game}
             vivants={vivants}
             rejouer={ellipse.rejouable ? ellipse.rejouer : undefined}
+            voirLesMorts={voirLesMorts}
             gel={avisDuGel}
           />
         </div>
