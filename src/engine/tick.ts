@@ -760,6 +760,16 @@ export function tick(state: GameState, weather: WeekWeather): TickResult {
   const dims = gridDims(station);
   const nCells = cellCount(dims);
   const week = weekOfYear(state);
+  // **La semaine du temps qu'il fait, et non celle du joueur** (#348, #397). Sur
+  // une parcelle vieillie, le compteur du joueur repart de zéro à son arrivée ;
+  // le temps, lui, continue. C'est sur elle que se font les tirages qui
+  // reviennent chaque semaine ou chaque année : la rafale, le chablis, les
+  // boutis du sanglier, la glandée, les oiseaux de passage, l'installation d'un
+  // habitant. Sur le compteur du joueur, une parcelle vieillie rejouait un à un
+  // les tirages de son vieillissement. Sans vieillissement, les deux comptes
+  // sont le même nombre. Les **dates**, elles, restent dans le compte du
+  // joueur : `week − date` est le temps écoulé.
+  const semaineDuTemps = weather.semaineContinue ?? state.week;
   // Un versant sud reçoit plus de rayonnement qu'un terrain plat, un versant
   // nord moins : c'est l'écart adret/ubac, et il suffit à porter deux
   // végétations différentes de part et d'autre d'une crête (relief.ts).
@@ -948,10 +958,7 @@ export function tick(state: GameState, weather: WeekWeather): TickResult {
   // issue #58). Elle dérive de la graine de partie, pas du flux principal.
   const rafaleMs = rafaleDeLaSemaine(
     state.graineMarche,
-    // La semaine du temps qu'il fait, et non celle du joueur (#348) : sur une
-    // parcelle vieillie, le compteur du joueur repart de zéro à son arrivée, et
-    // la rafale qui le suivait rejouait les tempêtes du vieillissement.
-    weather.semaineContinue ?? state.week,
+    semaineDuTemps,
     weather.ventMoyMs,
     // La trajectoire climatique, arrivée jusqu'ici par la météo de la semaine
     // (F19). Elle vaut 1 tant que le chiffre manque, mais les deux moitiés du
@@ -3108,7 +3115,7 @@ export function tick(state: GameState, weather: WeekWeather): TickResult {
     }
     const attraitMoyen = attraitTotal / nCells;
     for (let i = 0; i < nCells; i++) {
-      if (!retournee(i, state.week, effort, attraits[i] ?? 0, attraitMoyen)) continue;
+      if (!retournee(i, semaineDuTemps, effort, attraits[i] ?? 0, attraitMoyen)) continue;
       cellulesRetournees++;
       retourneesCetteSemaine.add(i);
       // La litière est **enfouie** : elle ne disparaît pas, elle passe sous terre
@@ -3542,7 +3549,9 @@ export function tick(state: GameState, weather: WeekWeather): TickResult {
     // Un chablis est parti dans le sens du coup de vent, et il l'a retenu
     // (`chuteRad`). Une chandelle, elle, compose la pente et le coup de vent de
     // la semaine où elle s'abat (issue #58) : ce qui fait tomber un tronc mort
-    // est rarement le terrain tout seul.
+    // est rarement le terrain tout seul. Ce tirage-là peut se faire sur le
+    // compte du joueur : un arbre ne tombe qu'une fois, il n'a pas de suite de
+    // tirages qu'une parcelle vieillie rejouerait (#397).
     const radians =
       tree.chuteRad ??
       directionDeChute(
@@ -3964,7 +3973,7 @@ export function tick(state: GameState, weather: WeekWeather): TickResult {
         // un sujet jamais assoiffé garde un chevelu superficiel (trees.ts).
         profondeurEffectiveCm: tree.rootDepthCm,
       };
-      if (!verse(tree, exposition, state.week, espece.bois.densite)) {
+      if (!verse(tree, exposition, semaineDuTemps, espece.bois.densite)) {
         // **Il tient** — mais il peut y laisser des branches (F17, troisième mode).
         // C'est le dégât le plus fréquent d'une tempête, celui qu'on voit après
         // chaque coup de vent sans que rien ne soit par terre.
@@ -4181,7 +4190,7 @@ export function tick(state: GameState, weather: WeekWeather): TickResult {
       glandeeDeLAnnee[especeId] = glandeeRelative(
         nextTrees,
         especeId,
-        Math.floor(state.week / 52),
+        Math.floor(semaineDuTemps / 52),
         state.graineMarche,
         station.sanglierParHa,
         surfaceHaParcelle,
@@ -4311,6 +4320,7 @@ export function tick(state: GameState, weather: WeekWeather): TickResult {
       aireParcelleM2,
       dims,
       table,
+      semaineDuTemps,
     );
     nextFauneId = premierId + installationsFaune.length;
     faune =
@@ -4323,7 +4333,7 @@ export function tick(state: GameState, weather: WeekWeather): TickResult {
     // son fourré — et sur le calendrier des guildes. Une haie qu'on arrache
     // cette semaine n'attire plus personne la suivante, sans que rien ne s'en
     // souvienne (`oiseaux.ts`).
-    oiseauxDePassage = frequentationOiseaux(nextTrees, state.week, dims, state.graineMarche);
+    oiseauxDePassage = frequentationOiseaux(nextTrees, semaineDuTemps, dims, state.graineMarche);
   }
 
   // ── La crue comme événement ───────────────────────────────────────────────

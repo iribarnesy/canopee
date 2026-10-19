@@ -62,12 +62,15 @@ export interface WeekWeather {
    * l'arrivée du joueur (#348). C'est sur elle que la rafale de la semaine se
    * tire (`tempete.ts`) : la tempête fait partie du temps qu'il fait, au même
    * titre que la pluie, et le temps ne recommence pas quand le joueur arrive.
+   * Les autres tirages qui reviennent chaque semaine ou chaque année la lisent
+   * aussi : le chablis, les boutis, la glandée, les oiseaux de passage,
+   * l'installation d'un habitant (#397).
    *
    * `state.week`, lui, repart de zéro à l'arrivée sur une parcelle vieillie :
-   * c'est le compteur du joueur, son an 1. Si la rafale le suivait, le joueur
-   * revivrait une à une les tempêtes que la parcelle vient de traverser sans
-   * lui. Absente, la rafale lit `state.week` : c'est le cas de toute parcelle
-   * qui n'a pas vieilli, où les deux comptes sont le même nombre.
+   * c'est le compteur du joueur, son an 1. Si ces tirages le suivaient, le
+   * joueur revivrait un à un ceux que la parcelle vient de traverser sans lui.
+   * Absente, ils lisent `state.week` : c'est le cas de toute parcelle qui n'a
+   * pas vieilli, où les deux comptes sont le même nombre.
    */
   semaineContinue?: number;
 }

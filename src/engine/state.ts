@@ -553,8 +553,10 @@ export interface SoilState {
 export interface GameState {
   /**
    * semaine absolue depuis le début de partie (0, 1, 2, …). Sur une parcelle
-   * vieillie, elle repart de zéro à l'arrivée du joueur ; le temps qu'il fait,
-   * lui, continue de se compter dans `WeekWeather.semaineContinue` (#348).
+   * vieillie, elle repart de zéro à l'arrivée du joueur, et les dates que
+   * l'état garde repartent avec elle : celles d'avant l'arrivée sont négatives
+   * (`remettreLeCompteurAZero`, #397). Le temps qu'il fait, lui, continue de se
+   * compter dans `WeekWeather.semaineContinue` (#348).
    */
   week: number;
   station: Station;
@@ -1086,4 +1088,70 @@ export function plantScattered(
 /** Semaine dans l'année (0–51). */
 export function weekOfYear(state: GameState): number {
   return state.week % 52;
+}
+
+/**
+ * Les dates qu'un arbre garde, en semaines **du compte de la partie** (`week`) :
+ * `week − date` est le temps écoulé depuis. Une date neuve se nomme `…Semaine`,
+ * et elle s'ajoute ici : `dates-de-l-etat.test.ts` refuse un champ d'état qui
+ * porte ce nom sans être décalé (#397).
+ */
+export const DATES_D_UN_ARBRE = [
+  "mortSemaine",
+  "renverseSemaine",
+  "brulEeSemaine",
+  "frotteSemaine",
+  "brouteSemaine",
+  "derniereLeveeSemaine",
+] as const satisfies readonly (keyof TreeState)[];
+
+/**
+ * **Le compteur de semaines repart de zéro, et les dates que l'état garde
+ * repartent avec lui** (#397).
+ *
+ * C'est l'arrivée du joueur sur une parcelle vieillie (critère A26) : le moteur
+ * a tourné des années sans lui, et son an 1 commence là. Le compteur repartait
+ * seul. Les dates que l'état avait gardées de ces années — la mort d'une
+ * chandelle, le coup de vent qui a couché un arbre, le feu, la dent du
+ * chevreuil, l'installation d'un habitant, le début d'une crue — restaient
+ * comptées depuis le début du vieillissement, et se lisaient dans le compte du
+ * joueur : une chandelle morte à la semaine 2 000 d'un vieillissement de
+ * quarante ans était, pour le moteur, morte dans 2 000 semaines, et tenait
+ * debout quarante ans de trop.
+ *
+ * Toutes sont décalées du même nombre de semaines que le compteur. Une date
+ * d'avant l'arrivée devient donc **négative**, et `week − date` reste partout
+ * le temps écoulé : c'est ce que lisent le moteur (la chandelle qui tient, le
+ * chablis encore récupérable, le répit du frottis, la plaie fraîche) et
+ * l'écran. C'était déjà la convention de l'histoire des arbres (#225).
+ */
+export function remettreLeCompteurAZero(state: GameState): GameState {
+  const d = -state.week;
+  if (d === 0) return state;
+  return {
+    ...state,
+    week: 0,
+    trees: state.trees.map((arbre) => decalerLesDates(arbre, d)),
+    economy: {
+      ...state.economy,
+      saisonniersFinSemaine: state.economy.saisonniersFinSemaine.map((fin) => fin + d),
+    },
+    ...(state.faune === undefined
+      ? {}
+      : { faune: state.faune.map((f) => ({ ...f, depuisSemaine: f.depuisSemaine + d })) }),
+    // L'identifiant d'une crue est la semaine où elle a commencé (`crue.ts`).
+    ...(state.crue === undefined ? {} : { crue: { ...state.crue, id: state.crue.id + d } }),
+  };
+}
+
+/** L'arbre, ses dates décalées de `d` semaines ; le même objet s'il n'en a aucune. */
+function decalerLesDates(arbre: TreeState, d: number): TreeState {
+  let decale: TreeState | undefined;
+  for (const champ of DATES_D_UN_ARBRE) {
+    const semaine = arbre[champ];
+    if (semaine === undefined) continue;
+    decale ??= { ...arbre };
+    decale[champ] = semaine + d;
+  }
+  return decale ?? arbre;
 }

@@ -14,7 +14,7 @@ import { describe, expect, it } from "vitest";
 import { carbonInventory, figerCarboneDeReference } from "../../src/engine/carbon";
 import { syntheticYear } from "../../src/engine/meteo";
 import { rngStateFromSeed } from "../../src/engine/rng";
-import { createGameState, type GameState } from "../../src/engine/state";
+import { createGameState, type GameState, remettreLeCompteurAZero } from "../../src/engine/state";
 import { LIMON_RICHE } from "../../src/engine/stations";
 import { tick } from "../../src/engine/tick";
 
@@ -29,7 +29,7 @@ function vieillir(annees: number): GameState {
     if (!w) throw new Error("météo manquante");
     s = tick(s, w).state;
   }
-  return { ...s, week: 0 };
+  return remettreLeCompteurAZero(s);
 }
 
 describe("le bilan part de ce que le joueur trouve", () => {
