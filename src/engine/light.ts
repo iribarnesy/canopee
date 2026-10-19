@@ -222,9 +222,15 @@ interface Shadow {
  */
 export type PartOmbrageante = (tree: TreeState) => number;
 
+/**
+ * `decalageNord` dit **d'où vient la lumière** qu'on suit : le soleil moyen, au
+ * sud, pour l'ombre (`SHADOW_NORTH_OFFSET`) ; le zénith pour le couvert qui
+ * surplombe un point (zéro, `couvertAuDessusDuSol`).
+ */
 function buildShadowIndex(
   trees: readonly TreeState[],
   part: PartOmbrageante,
+  decalageNord = SHADOW_NORTH_OFFSET,
 ): Map<number, Shadow[]> {
   const buckets = new Map<number, Shadow[]>();
   for (const tree of trees) {
@@ -236,7 +242,7 @@ function buildShadowIndex(
     if (r <= 0) continue;
     const shadow: Shadow = {
       cx: tree.x,
-      cy: tree.y + SHADOW_NORTH_OFFSET * tree.heightM,
+      cy: tree.y + decalageNord * tree.heightM,
       r2: r * r,
       heightM: tree.heightM,
       // L'indice foliaire suit le déploiement : c'est là que la phénologie
@@ -467,6 +473,65 @@ export function abriVentIndexe(
     if (shelter >= 1) return 1;
   }
   return Math.min(1, shelter);
+}
+
+/**
+ * ─── **le couvert au-dessus**, **qui n'est pas l'ombre** ──────────────────────────────
+ *
+ * L'ombre suit le soleil : elle tombe au nord de l'arbre, à 0,4 fois sa hauteur,
+ * et l'entourage de la parcelle en porte sa part (lisiere.ts). Le jour, c'est ce
+ * qui compte. La nuit, il n'y a pas de soleil : ce qui garde un point du gel
+ * radiatif, c'est ce qui le **surplombe** et lui cache le ciel froid vers lequel il
+ * rayonne (microclimat.ts). Les deux cartes ne se confondent pas : un semis à
+ * l'aplomb d'un houppier est couvert sans être forcément à l'ombre de midi, et
+ * la bande qu'un bois voisin ombrage au sud de la parcelle n'a rien au-dessus
+ * d'elle (#407).
+ *
+ * Le couvert au-dessus est donc la même loi que l'ombre — Beer-Lambert à travers
+ * les houppiers, feuillage de saison compris, pénombre vers le bord du
+ * houppier — prise **à la verticale** : sans décalage vers le nord, et sans
+ * l'entourage. Il vaut `1 − lumière zénithale` ∈ [0,1] : 0 en plein découvert,
+ * près de 1 sous une futaie fermée.
+ *
+ * *(Limite assumée : ce qui compte vraiment pour le rayonnement nocturne est le
+ * **facteur de vue du ciel**, et il voit aussi de côté. Sous un houppier isolé, la
+ * projection verticale l'exagère — le ciel reste visible tout autour ; près
+ * d'une lisière haute ou au fond d'une trouée étroite, elle l'ignore, alors que
+ * le minimum y remonte (Groot et Carlson 1996 : il baisse linéairement avec la
+ * part de ciel vue). Le moteur ne calcule pas ce facteur ; la projection
+ * verticale est ce qu'il sait de ce qui surplombe un point.)*
+ */
+export function couvertAuDessusDuSol(
+  trees: readonly TreeState[],
+  widthM: number,
+  heightM: number,
+  part: PartOmbrageante,
+): number[] {
+  const buckets = buildShadowIndex(trees, part, 0);
+  const out = new Array<number>(widthM * heightM);
+  for (let y = 0; y < heightM; y++) {
+    for (let x = 0; x < widthM; x++) {
+      out[y * widthM + x] = 1 - Math.exp(-extinctionAt(buckets, x + 0.5, y + 0.5, 0));
+    }
+  }
+  return out;
+}
+
+/**
+ * Le couvert au-dessus de **chaque** arbre ∈ [0,1] (index aligné sur `trees`, 0 pour
+ * les morts) : les houppiers plus hauts que lui dont la projection le couvre —
+ * et pour une part ceux de sa taille, selon la même règle que l'ombre. Ce
+ * qui abrite les fleurs d'un fruitier d'une nuit de gel, c'est ce qui pousse
+ * au-dessus de lui, pas le bois voisin qui lui prend le soleil du soir.
+ */
+export function couvertAuDessusDesArbres(
+  trees: readonly TreeState[],
+  part: PartOmbrageante,
+): number[] {
+  const buckets = buildShadowIndex(trees, part, 0);
+  return trees.map((tree) =>
+    tree.alive ? 1 - Math.exp(-extinctionAt(buckets, tree.x, tree.y, tree.heightM)) : 0,
+  );
 }
 
 /**

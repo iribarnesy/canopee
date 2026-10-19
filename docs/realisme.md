@@ -393,7 +393,7 @@ maladie-là, pas une preuve de santé.*
 | D3 | La floraison suit un cumul de degrés-jours | ✅ | `ddYearBase5` ; `fruits.test.ts` |
 | D4 | Un gel tardif détruit les fleurs ouvertes : les précoces sont un pari | ✅ | `tMinAbsC` ; `fruits.test.ts` |
 | D5 | La variabilité climatique ouvre des fenêtres d'installation | 🟡 | visible (`fenetres-installation.test.ts`), non piloté par un mécanisme dédié |
-| D6 | Le couvert tamponne la température (moins de gel, moins de canicule) | 🟡 | `microclimat.ts` : les trois offsets de De Frenne et al. 2019 (max −4,1 °C, moyenne −1,7, min **+1,1**), appliqués à proportion de la fermeture. Branché sur le **gel de floraison** — un fruitier abrité échappe au gel tardif qui tue celui d'à côté. Pas encore sur la phénologie ni sur le stress thermique |
+| D6 | Le couvert tamponne la température (moins de gel, moins de canicule) | 🟡 | `microclimat.ts` : les trois offsets de De Frenne et al. 2019 (max −4,1 °C, moyenne −1,7, min **+1,1**), appliqués à proportion de la fermeture. Branché sur le **gel de floraison** — un fruitier abrité échappe au gel tardif qui tue celui d'à côté. **La nuit lit le couvert qui surplombe, pas l'ombre** (#407) : la fermeture qui relève le minimum est la projection verticale des houppiers (`couvertAuDessusDesArbres`, `couvertAuDessusDuSol`), elle se lisait sur la lumière reçue, qui suit le soleil — l'ombre d'un arbre tombe 0,4 fois sa hauteur au nord de son tronc, et celle du paysage voisin borde la parcelle. Un abricotier au bord sud d'une parcelle entourée de massif gelait 4 floraisons sur 16 à Dijon contre 6 au centre ; il en gèle 6 comme le centre, et le givre ne laisse plus de cadre vert au cordeau. *Limite* : ce qui compte pour le rayonnement nocturne est le facteur de vue du ciel, qui voit aussi de côté — une lisière haute ou une trouée étroite relèvent le minimum (Groot et Carlson 1996), le moteur ne le calcule pas. Pas encore sur la phénologie ni sur le stress thermique |
 | D7 | Les espèces ont un besoin de froid hivernal (vernalisation) | ✅ | `besoinFroidSemaines` par espèce ; un hiver doux gonfle le forçage exigé (`debourrementExigeDJ`), `phenologie.test.ts` |
 | D12 | Le feuillage a un calendrier par espèce : forçage, photopériode, déploiement progressif | ✅ | `phenologie.ts` ; `phenologie.test.ts` |
 | D13 | L'automne se joue en deux temps : la feuille jaunit et cesse d'assimiler **avant** de tomber | 🟡 | `senescenceFoliaire` existe et se mesure ; elle ne commande pas encore la croissance ni la transpiration — voir ci-dessous |
@@ -3224,10 +3224,37 @@ particulier n'est codé en dur.
 désormais sous le couvert de **chaque** arbre, pas au-dessus de la parcelle. La
 nuit, un couvert renvoie vers le sol le rayonnement que le ciel clair
 emporterait, et la floraison qu'il abrite y échappe. C'est l'argument
-agroforestier pour mettre les fruitiers à l'abri d'une haie plutôt qu'en plein
-découvert, et il n'est écrit nulle part dans le moteur : il tombe de la
+agroforestier pour mettre les fruitiers sous de plus grands arbres plutôt qu'en
+plein découvert, et il n'est écrit nulle part dans le moteur : il tombe de la
 composition du tampon nocturne et du seuil de gel de l'espèce. Mesuré, un
 abricotier entouré de charmes garde sa floraison là où celui d'à côté la perd.
+
+**La nuit ne lit pas l'ombre** (#407). Le couvert qui compte contre le gel
+radiatif est celui qui **surplombe** le point : il lui cache le ciel froid vers
+lequel il rayonne. La première version le lisait sur la lumière reçue, qui suit
+le soleil, et c'était faux deux fois. L'ombre d'un arbre tombe au nord de son
+tronc, à 0,4 fois sa hauteur : la cellule à l'aplomb d'un houppier pouvait ne
+compter aucun couvert, celle de quatre mètres plus au nord tout le couvert. Et
+l'ombre du paysage voisin (`lisiere.ts`) borde la parcelle au sud, à l'est et à
+l'ouest : un pommier de bordure se croyait abrité par le champ d'à côté, et le
+givre d'une nuit à peine sous zéro laissait un cadre vert au cordeau sur trois
+côtés. Le minimum se lit maintenant sur la projection verticale des houppiers,
+la même loi de Beer-Lambert que l'ombre, sans décalage et sans entourage. Mesuré
+sur quatre séries réelles et quatre entourages : un abricotier à cinquante
+centimètres du bord sud d'une parcelle entourée de massif gelait 4 floraisons
+sur 16 à Dijon et 5 à Tours, contre 6 et 8 au centre ; il en gèle autant que le
+centre. Le jour, c'est bien l'ombre qui rabote le maximum, et rien ne change de
+ce côté.
+
+*Limite de cette lecture* : le rayonnement nocturne dépend du **facteur de vue
+du ciel**, qui voit aussi de côté. Groot et Carlson (1996) mesurent un minimum
+qui baisse linéairement avec la part de ciel vue d'une trouée : une bande de
+0,6 hauteur d'arbre de large reste aussi douce que la forêt. La projection
+verticale exagère donc le couvert d'un houppier isolé, sous lequel le ciel
+reste visible tout autour, et ignore celui d'une lisière haute ou d'une trouée
+étroite. Une lisière de futaie relève vraiment le minimum sur une hauteur
+d'arbre, et de tous les côtés, pas seulement au sud ; l'ombre portée n'en était
+pas une approximation.
 
 *Ce qui reste à faire* : le tampon n'agit encore ni sur la phénologie — un
 débourrement retardé sous couvert, ce qui est justement une protection

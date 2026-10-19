@@ -433,6 +433,22 @@ export interface Snapshot {
    */
   soilLumiere: Float32Array;
   /**
+   * **Couvert au-dessus** de chaque cellule ∈ [0,1] (`couvertAuDessusDuSol`,
+   * light.ts) : la part du ciel que les houppiers cachent à la verticale, 0 en
+   * plein découvert. C'est la fermeture qui tamponne le **gel** nocturne —
+   * `tMinimumSousCouvert(weather.tMinAbsC, soilCouvertAuDessus[i])` est la nuit
+   * vécue au sol de la cellule, la même règle que celle qui gèle les fleurs.
+   *
+   * **Ce n'est pas `1 − soilLumiere`** (#407). La lumière au sol suit le soleil :
+   * l'ombre d'un arbre tombe à 0,4 fois sa hauteur au nord de son tronc, et la
+   * bande que les champs ou le bois voisins ombragent sur les bords de la
+   * parcelle n'a rien au-dessus d'elle. Lue comme un couvert, elle dessinait
+   * un cadre sans givre au cordeau sur trois côtés. Le jour (le maximum, la
+   * canicule), c'est bien l'ombre qui compte, et `soilLumiere` reste la bonne
+   * entrée.
+   */
+  soilCouvertAuDessus: Float32Array;
+  /**
    * Où sont les insectes pollinisateurs par cellule ∈ [0,1] : le gîte et la
    * table, `min(habitat, ressource florale)`, la grandeur même que lit le
    * service de pollinisation, **sans** son plancher (vent, abeilles
