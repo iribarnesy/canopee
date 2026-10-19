@@ -127,6 +127,9 @@ export const LANDE_SECHE: StationClimat = {
     tDiurnalRange: 11,
     rainAnnualMm: 800,
     rainWinterShare: 0.68,
+    // Jours d'au moins 1 mm à Mont-de-Marsan, 1964-2023 : 122,4 par an
+    // (relevés quotidiens Météo-France, `scripts/build_meteo.py`).
+    joursDePluieAnnuels: 122,
   },
 };
 
@@ -160,6 +163,9 @@ export const VALLEE_ENGORGEE: StationClimat = {
     tDiurnalRange: 9,
     rainAnnualMm: 1050,
     rainWinterShare: 0.62,
+    // Jours d'au moins 1 mm à Tours, 1964-2023 : 111,0 par an (relevés
+    // quotidiens Météo-France, `scripts/build_meteo.py`).
+    joursDePluieAnnuels: 111,
   },
 };
 
@@ -190,6 +196,9 @@ export const LIMON_RICHE: StationClimat = {
     tDiurnalRange: 8,
     rainAnnualMm: 750,
     rainWinterShare: 0.55,
+    // Jours d'au moins 1 mm à Abbeville, 1964-2023 : 127,5 par an (relevés
+    // quotidiens Météo-France, `scripts/build_meteo.py`).
+    joursDePluieAnnuels: 128,
   },
 };
 
@@ -288,6 +297,9 @@ export const FRICHE_LIMON: StationClimat = {
     tDiurnalRange: 8,
     rainAnnualMm: 850,
     rainWinterShare: 0.55,
+    // Jours d'au moins 1 mm à Dijon-Longvic, 1964-2023 : 113,4 par an
+    // (relevés quotidiens Météo-France, `scripts/build_meteo.py`).
+    joursDePluieAnnuels: 113,
   },
 };
 
@@ -396,6 +408,10 @@ export const SUBERAIE_MAURES: StationClimat = {
     tDiurnalRange: 12.5,
     rainAnnualMm: 820,
     rainWinterShare: 0.72,
+    // Jours d'au moins 1 mm au Luc, 1964-2023 : 65,4 par an, deux fois moins
+    // qu'en Picardie pour plus de pluie — la pluie méditerranéenne tombe en
+    // peu de jours (relevés quotidiens Météo-France, `scripts/build_meteo.py`).
+    joursDePluieAnnuels: 65,
   },
 };
 

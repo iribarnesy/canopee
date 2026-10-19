@@ -67,7 +67,16 @@ export function emprisesParEspece(emprise: ArrayLike<number>): Uint8Array[] {
   return grilles;
 }
 
-export function arbreDuSnapshot(t: TreeState, ddYearBase5: number): SnapshotTree {
+/**
+ * `satisfactionEau` est la soif que le **dernier tick** a mesurée sur cet arbre
+ * (#372), absente quand il n'en a pas mesuré : une chandelle, un semis levé
+ * dans la semaine, un plant mis en terre depuis.
+ */
+export function arbreDuSnapshot(
+  t: TreeState,
+  ddYearBase5: number,
+  satisfactionEau?: number,
+): SnapshotTree {
   return {
     id: t.id,
     especeId: t.especeId,
@@ -112,6 +121,9 @@ export function arbreDuSnapshot(t: TreeState, ddYearBase5: number): SnapshotTree
     pousseTendreM: t.pousseTendreM,
     frotteSemaine: t.frotteSemaine,
     brouteSemaine: t.brouteSemaine,
+    // Une chandelle n'a plus soif : la valeur que le tick a mesurée la semaine
+    // où l'arbre est mort ne dit plus rien de lui.
+    ...(t.alive && satisfactionEau !== undefined ? { satisfactionEau } : {}),
   };
 }
 
@@ -243,6 +255,8 @@ export interface EntreesSnapshot {
   pollinisateurs?: Float32Array;
   /** oiseaux de passage de la dernière semaine simulée, par guilde (`TickResult`, #296) */
   oiseauxDePassage?: readonly FrequentationDeGuilde[];
+  /** satisfaction hydrique de la dernière semaine simulée, par identifiant d'arbre (`TickResult`, #372) */
+  satisfactionEau?: ReadonlyMap<number, number>;
   refusals: ActionRefusal[];
   events: GameEvent[];
   morts: MortDeLaSemaine[];
@@ -317,7 +331,9 @@ export function construireSnapshot(e: EntreesSnapshot): Snapshot {
     ),
     // Aucun filtre : les chandelles sont des arbres, elles ont juste cessé de
     // vivre. Les compter comme vivants est l'affaire de l'UI, pas la nôtre.
-    trees: state.trees.map((t) => arbreDuSnapshot(t, state.ddYearBase5)),
+    trees: state.trees.map((t) =>
+      arbreDuSnapshot(t, state.ddYearBase5, e.satisfactionEau?.get(t.id)),
+    ),
     // Carte : on montre l'eau de l'horizon de **surface**, celle que voient les
     // semis et l'évaporation.
     soilWater: eauDeSurface(state, nH),

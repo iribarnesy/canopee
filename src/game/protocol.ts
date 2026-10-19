@@ -160,6 +160,26 @@ export interface SnapshotTree {
   causeLente?: CauseMort;
   stressRavageurs?: number;
   stressMaladie?: number;
+  /**
+   * **La soif de l'arbre** la dernière semaine simulée (#372) : l'eau obtenue
+   * sur l'eau qu'un arbre intact demanderait, ∈ [0,1]. 1 = il a eu toute son
+   * eau ; un caduc nu en hiver vaut 1, il ne demande rien.
+   *
+   * C'est la valeur de la semaine, et non une mémoire : `stress` et `stressLent`
+   * en gardent la trace amortie, mêlée aux autres causes. Absente sur une
+   * chandelle et sur un arbre que le dernier tick n'a pas vu (semis levé dans
+   * la semaine, plant mis en terre en pause).
+   *
+   * **Ce que le moteur appelle avoir soif** se lit sur la fiche de l'espèce,
+   * `getEspece(especeId).eau` : sous `seuilConfortSecheresse`, la croissance
+   * ralentit ; sous `seuilStressSecheresse`, l'arbre puise dans ses réserves et
+   * risque la mort. Les deux seuils changent d'une espèce à l'autre (0,08 à
+   * 0,65 pour le second) : un même 0,4 laisse un pin sylvestre tranquille et
+   * met un aulne en danger. Pour un arbre à la cime sèche, elle reste basse
+   * même sous un sol plein : le moteur la rapporte au besoin d'un arbre
+   * intact (`dommageHydraulique`).
+   */
+  satisfactionEau?: number;
   fruitsKg: number;
   /** hauteur de bille élaguée, m (ce qui fera du bois d'œuvre) */
   hauteurElagueeM: number;

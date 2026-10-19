@@ -93,10 +93,28 @@ export interface AnnexesDeReprise {
   lumiereAuSol?: Float32Array;
   pollinisateurs?: Float32Array;
   oiseauxDePassage?: readonly FrequentationDeGuilde[];
+  /** la soif de chaque arbre au dernier tick, par identifiant (#372) */
+  satisfactionEau?: ReadonlyMap<number, number>;
 }
 
 /** Les grilles du dernier tick, rangées en binaire : en JSON, un flottant en coûterait cinq. */
 const GRILLES = ["debordement", "lumiereAuSol", "pollinisateurs"] as const;
+
+/**
+ * La soif des arbres, en binaire elle aussi : deux sections de flottants
+ * doubles, les identifiants puis les valeurs, dans le même ordre. En double et
+ * non en simple, pour que la reprise montre au chiffre près ce que le présent
+ * montrait. Une section inconnue est ignorée à la lecture : un bloc écrit avant
+ * ce champ se relit sans lui, et ce conteneur n'a pas à changer de version.
+ */
+const SATISFACTION_IDS = "satisfactionEauIds";
+const SATISFACTION_VALEURS = "satisfactionEau";
+
+function doubles(m: Uint8Array | undefined): Float64Array | undefined {
+  if (!m || m.length % 8 !== 0) return undefined;
+  // Recopiée, comme les grilles : rien ne garantit l'alignement du tampon reçu.
+  return new Float64Array(m.slice().buffer);
+}
 
 interface Entete {
   v: number;
@@ -248,6 +266,12 @@ export function ecrireReprise(
         octets: new Uint8Array(grille.buffer, grille.byteOffset, grille.byteLength),
       });
   }
+  if (annexes.satisfactionEau) {
+    const ids = Float64Array.from(annexes.satisfactionEau.keys());
+    const valeurs = Float64Array.from(annexes.satisfactionEau.values());
+    sections.push({ nom: SATISFACTION_IDS, octets: new Uint8Array(ids.buffer) });
+    sections.push({ nom: SATISFACTION_VALEURS, octets: new Uint8Array(valeurs.buffer) });
+  }
   const entete: Entete = {
     v: VERSION_REPRISE,
     semaine: etat.week,
@@ -335,6 +359,10 @@ export function lireReprise(
       // dans le tampon qu'on a reçu.
       grilles[nom] = new Float32Array(m.slice().buffer);
     }
+    const ids = doubles(morceaux.get(SATISFACTION_IDS));
+    const valeurs = doubles(morceaux.get(SATISFACTION_VALEURS));
+    if ((ids === undefined) !== (valeurs === undefined)) return undefined;
+    if (ids && valeurs && ids.length !== valeurs.length) return undefined;
     const histoires = desserrerLesHistoires(entete.histoires);
     if (
       typeof entete.cumuls !== "object" ||
@@ -352,6 +380,9 @@ export function lireReprise(
         memoire: new Map(entete.memoire),
         ...(entete.fluxes ? { fluxes: entete.fluxes } : {}),
         ...(entete.oiseaux ? { oiseauxDePassage: entete.oiseaux } : {}),
+        ...(ids && valeurs
+          ? { satisfactionEau: new Map(Array.from(ids, (id, k) => [id, valeurs[k] ?? 1])) }
+          : {}),
         ...grilles,
       },
     };
