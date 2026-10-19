@@ -284,13 +284,25 @@ import {
   volumeTigeM3,
 } from "./trees";
 import type { HorizonHydro } from "./water";
-import { drynessFactor, profilHydro } from "./water";
+import { drynessFactor, eauEvaporableMm, profilHydro } from "./water";
 
 /**
- * Part de l'ETP qu'un sol **nu** peut évaporer (la strate herbacée, elle, est
- * modélisée explicitement dans herbe.ts et transpire pour son compte).
+ * **Le plafond de ce qu'une surface peut rendre à l'air**, en multiple de l'ETP
+ * de référence : FAO-56 (Allen et al. 1998, éq. 72), 1,20 en climat subhumide
+ * (vent de 2 m/s, humidité minimale de 45 %), 1,05 à 1,30 selon le climat. Un
+ * couvert rugueux, ou un sol nu sombre et humide, capte un peu plus d'énergie
+ * qu'un gazon de référence.
+ *
+ * Il sert deux fois, et c'est le même plafond. Un sol **découvert et humide**
+ * évapore jusqu'à lui, la semaine où sa surface est mouillée (`water.ts`,
+ * `evaporationEnDeuxPhases`) ; ce que la strate et les houppiers couvrent ne
+ * l'est pas (FAO-56, éq. 75 : few = 1 − fc). Et la transpiration d'une cellule
+ * ne le dépasse pas (`plafond d'énergie`, plus bas).
+ *
+ * Il remplace deux nombres *(à calibrer)* : la demi-ETP d'un sol nu, qui ne
+ * lisait pas ce qui le couvrait, et un plafond de transpiration de 1,15.
  */
-const SOIL_EVAP_FRACTION = 0.5;
+const KC_MAX = 1.2;
 /**
  * Microclimat forestier (docs/regles.md §3, volet humidité) : sous couvert
  * fermé, l'évaporation du sol tombe à cette fraction de sa valeur plein soleil
@@ -306,13 +318,6 @@ const CANOPY_EVAP_FLOOR = 0.15;
  * — ~250 g C/m² ≈ 5 t MS/ha au sol *(à calibrer)*.
  */
 const MULCH_MAX_EFFECT = 0.5;
-/**
- * Plafond de transpiration d'une cellule, en multiple de l'ETP. Un couvert
- * rugueux capte un peu plus d'énergie qu'un gazon de référence — advection,
- * turbulence — d'où une valeur légèrement supérieure à 1 *(à calibrer)*.
- */
-const PLAFOND_ENERGIE = 1.15;
-
 const MULCH_FULL_CG = 250;
 /**
  * Seuil de compensation du prélèvement d'eau, ωc ∈ (0, 1] (Jarvis 1989 ;
@@ -844,6 +849,9 @@ export function tick(state: GameState, weather: WeekWeather): TickResult {
   const epaisseurs = profil.map((h) => h.epaisseurCm);
   const solPenetrableCm = profondeurPenetrableCm(profil);
   const ruSurface = horizonsHydro[0]?.ruMm ?? 1;
+  // L'eau que l'horizon de surface garde au point de flétrissement, mm/cm : la
+  // couche qui évapore sèche au-dessous (water.ts, `eauEvaporableMm`).
+  const fletrissementSurface = profil[0] ? eauFletrissementMmParCm(profil[0]) : 0;
   // Réserve utile **dynamique** de l'horizon de surface (critère A12) : elle suit
   // l'humus de la cellule. C'est le retour sur investissement de « construire
   // du sol » — et, à l'inverse, ce qu'un labour répété finit par coûter en
@@ -1189,8 +1197,17 @@ export function tick(state: GameState, weather: WeekWeather): TickResult {
       excesCellule[h] = excessMm[base + h] ?? 0;
     }
     const surface = horizonsCellule[0];
+    let eauEvaporable = 0;
     if (surface) {
       surface.ruMm = ruSurfacePourHumus(humusCG[i] ?? humusInitialG, epaisseurPerdueCm[i] ?? 0);
+      eauEvaporable = eauEvaporableMm(
+        surface.ruMm,
+        Math.max(
+          EPAISSEUR_MINIMALE_CM,
+          surface.epaisseurCm - Math.max(0, epaisseurPerdueCm[i] ?? 0),
+        ),
+        fletrissementSurface,
+      );
     }
     // Ce qui ruisselle ne rentre pas : on le retire de la pluie qui s'infiltre,
     // et il rejoindra l'aval (relief.ts). La couverture du sol et la litière
@@ -1218,11 +1235,19 @@ export function tick(state: GameState, weather: WeekWeather): TickResult {
         eauMm: eauCellule,
         excesMm: excesCellule,
         rainMm: eauLiquideMm + amontIci - ruissele,
+        // **Ce que le sol découvert peut évaporer** quand sa surface est
+        // mouillée : le plafond FAO-56, sur la part que la strate ne couvre pas
+        // (éq. 75), sous l'ombre des houppiers et sous la litière. Sous un
+        // tapis fermé, le sol n'évapore presque plus : c'est la strate qui
+        // transpire à sa place, et la même énergie ne sert pas deux fois.
+        // `profilHydro` le réduit ensuite selon ce que la surface a déjà perdu.
         evapDemandMm:
           etpMm *
-          SOIL_EVAP_FRACTION *
+          KC_MAX *
+          (1 - Math.min(1, herbeCouverture[i] ?? 0)) *
           (CANOPY_EVAP_FLOOR + (1 - CANOPY_EVAP_FLOOR) * (groundLight[i] ?? 1)) *
           (1 - MULCH_MAX_EFFECT * Math.min(1, litiereAuSolCG(i) / MULCH_FULL_CG)),
+        eauEvaporableMm: eauEvaporable,
         // La remontée capillaire **puise** dans la nappe : ce n'est plus un apport
         // venu de nulle part, c'est un transfert.
         nappeMm: Number.isFinite(nappeCm[i] ?? Number.POSITIVE_INFINITY)
@@ -2046,11 +2071,15 @@ export function tick(state: GameState, weather: WeekWeather): TickResult {
   // *(Le défaut est apparu avec la nappe : tant que l'eau manquait, c'est elle
   // qui bridait, et le plafond ne servait jamais. Une aulnaie de fond de
   // vallée alimentée par la nappe transpirait 1 021 mm par an.)*
+  //
+  // La demande de la strate est déjà dans celle des horizons (3 bis) : elle
+  // n'est comptée qu'une fois. Et l'ETP porte déjà l'exposition du versant : le
+  // plafond ne la relit pas (#391).
+  const plafond = etpMm * KC_MAX;
   for (let i = 0; i < nCells; i++) {
     const base = i * nH;
-    let demandeCellule = herbeDemandeL[i] ?? 0;
+    let demandeCellule = 0;
     for (let h = 0; h < nH; h++) demandeCellule += cellWaterDemand[base + h] ?? 0;
-    const plafond = etpMm * facteurExpositionRayonnement(station.relief) * PLAFOND_ENERGIE;
     if (demandeCellule <= plafond || demandeCellule <= 0) continue;
     const facteur = plafond / demandeCellule;
     for (let h = 0; h < nH; h++) {
