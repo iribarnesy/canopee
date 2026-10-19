@@ -120,12 +120,19 @@ export function humiditeVecue(precedente: number, remplissageActuel: number): nu
  * est devenu le point de compensation de chacune.
  */
 
-/** Demande en eau d'une cellule d'herbe, L/semaine (1 m² : 1 mm = 1 L). */
-export function herbeDemandeEauL(
-  couverture: number,
-  etpMm: number,
-  lumiereAuSol: number,
-  saison: number,
-): number {
-  return etpMm * couverture * lumiereAuSol * KCB_HERBE * saison;
+/**
+ * Demande en eau d'une cellule d'herbe, L/semaine (1 m² : 1 mm = 1 L) : le
+ * coefficient d'un tapis fermé, sur ce qu'elle couvre de vert, sous la lumière
+ * que les houppiers lui laissent.
+ *
+ * **Sans facteur de saison par-dessus** (#391). Elle en portait un, nul sous
+ * 4 °C et plein à 12 °C, sans source : un dactyle qui passe l'hiver vert ne
+ * transpirait plus rien de novembre à mars, et sous lui le sol, couvert,
+ * n'évaporait rien non plus. Un gazon d'hiver rend pourtant à l'air environ 0,6
+ * fois ce qu'évapore une eau libre (Penman 1948, *Proc. R. Soc. A* 193 : 120,
+ * Rothamsted). La saison est déjà dans ce qui est vert (`herbacees.ts`) et dans
+ * l'ETP, petite en hiver.
+ */
+export function herbeDemandeEauL(couverture: number, etpMm: number, lumiereAuSol: number): number {
+  return etpMm * couverture * lumiereAuSol * KCB_HERBE;
 }

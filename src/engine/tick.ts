@@ -1961,8 +1961,10 @@ export function tick(state: GameState, weather: WeekWeather): TickResult {
     });
   }
 
-  // ── 3 bis. La strate herbacée demande sa part, en surface uniquement ──────
+  // ── 3 bis. La strate herbacée demande sa part, là où sont ses racines ─────
   // C'est la concurrence qui fait échouer les plantations non entretenues.
+  // La saison de l'herbe ne règle plus sa soif (herbe.ts) : elle ne sert qu'au
+  // gibier, plus bas.
   const saisonHerbe = Math.min(1, Math.max(0, (weather.tMean - 4) / 8));
   const herbeDemandeL = new Array<number>(nCells).fill(0);
   /** Azote voulu par le tapis, rangé pour que le service relise la demande. */
@@ -1976,7 +1978,7 @@ export function tick(state: GameState, weather: WeekWeather): TickResult {
   for (let i = 0; i < nCells; i++) {
     const couverture = herbeCouverture[i] ?? 0;
     if (couverture <= 0) continue;
-    const demandeEau = herbeDemandeEauL(couverture, etpMm, groundLight[i] ?? 1, saisonHerbe);
+    const demandeEau = herbeDemandeEauL(couverture, etpMm, groundLight[i] ?? 1);
     herbeDemandeL[i] = demandeEau;
     // L'eau de la strate se prend là où sont ses racines (lot B) : chaque espèce
     // au prorata de son feuillage, sur ses fractions racinaires. Une anémone
