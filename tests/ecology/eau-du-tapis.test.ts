@@ -26,46 +26,12 @@
 
 import { describe, expect, it } from "vitest";
 import { serieMeteoPour } from "../../src/data/meteo";
-import { CARBON_FRACTION } from "../../src/engine/carbon";
-import { N_HERBACEES, rabattreParEspece } from "../../src/engine/herbacees";
 import { serieToWeeks } from "../../src/engine/meteo";
-import { litterDecayRate } from "../../src/engine/nitrogen";
-import { potassiumDeLaStrateG } from "../../src/engine/pk";
 import { rngStateFromSeed } from "../../src/engine/rng";
-import { createGameState, type GameState, type Station } from "../../src/engine/state";
+import { createGameState, type Station } from "../../src/engine/state";
 import { LIMON_RICHE } from "../../src/engine/stations";
 import { tick } from "../../src/engine/tick";
-
-/** Tient toute la parcelle sans herbe : l'herbe tuée part à la litière. */
-function desherber(state: GameState): void {
-  const s = state.soil;
-  let carbone = 0;
-  for (let i = 0; i < s.herbeCouverture.length; i++) {
-    let c = 0;
-    let n = 0;
-    for (let k = 0; k < N_HERBACEES; k++) {
-      const j = i * N_HERBACEES + k;
-      c += (s.herbeMatiereSecheG[j] ?? 0) * CARBON_FRACTION;
-      n += s.herbeAzoteG[j] ?? 0;
-      s.herbeMatiereSecheG[j] = 0;
-      s.herbeAzoteG[j] = 0;
-    }
-    s.potassiumG[i] = (s.potassiumG[i] ?? 0) + potassiumDeLaStrateG(n);
-    if (n > 0) {
-      const avant = s.litterNG[i] ?? 0;
-      if (c > 0)
-        s.litterK[i] = (avant * (s.litterK[i] ?? 0) + n * litterDecayRate(c / n)) / (avant + n);
-      s.litterNG[i] = avant + n;
-      s.litterCG[i] = (s.litterCG[i] ?? 0) + c;
-    }
-    carbone += c;
-    s.herbeCouverture[i] = 0;
-    s.herbeBiomasse[i] = 0;
-    rabattreParEspece(s.herbeFeuillage, i * N_HERBACEES, 0);
-    rabattreParEspece(s.herbeEmprise, i * N_HERBACEES, 0);
-  }
-  state.carbon.nppCumKgC += carbone / 1000;
-}
+import { desherber } from "../helpers";
 
 interface Bilan {
   pluie: number;

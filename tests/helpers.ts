@@ -1,4 +1,8 @@
+import { CARBON_FRACTION } from "../src/engine/carbon";
+import { N_HERBACEES, rabattreParEspece } from "../src/engine/herbacees";
 import { syntheticYear, type WeekWeather } from "../src/engine/meteo";
+import { litterDecayRate } from "../src/engine/nitrogen";
+import { potassiumDeLaStrateG } from "../src/engine/pk";
 import { rngStateFromSeed } from "../src/engine/rng";
 import { createGameState, type GameState, plantScattered } from "../src/engine/state";
 import type { StationClimat } from "../src/engine/stations";
@@ -54,4 +58,46 @@ export function meanHeight(state: GameState, especeId: string, maxId = Infinity)
 
 export function aliveCount(state: GameState, especeId: string, maxId = Infinity): number {
   return state.trees.filter((t) => t.especeId === especeId && t.alive && t.id <= maxId).length;
+}
+
+/**
+ * **Désherbe** des cellules, comme un herbicide localisé : la strate y meurt,
+ * emprise comprise, et ce qu'elle portait tombe à la litière avec tout son
+ * azote, son potassium revenant au sol (le même chemin que l'herbe retournée par
+ * un labour, `actions.ts`). Le carbone versé est crédité à la production
+ * primaire, comme le fait la fauche, pour que le bilan carbone reste fermé.
+ *
+ * Aucun geste du jeu ne désherbe ni ne paille (#392) : ce sont les essais qui
+ * en ont besoin, pour tenir un sol nu (#391) ou le pied des plants dont on tire
+ * une table de production. Sans liste, toute la parcelle.
+ */
+export function desherber(state: GameState, cellules?: Iterable<number>): void {
+  const s = state.soil;
+  const toutes = cellules ?? s.herbeCouverture.keys();
+  let carbone = 0;
+  for (const i of toutes) {
+    let c = 0;
+    let n = 0;
+    for (let k = 0; k < N_HERBACEES; k++) {
+      const j = i * N_HERBACEES + k;
+      c += (s.herbeMatiereSecheG[j] ?? 0) * CARBON_FRACTION;
+      n += s.herbeAzoteG[j] ?? 0;
+      s.herbeMatiereSecheG[j] = 0;
+      s.herbeAzoteG[j] = 0;
+    }
+    s.potassiumG[i] = (s.potassiumG[i] ?? 0) + potassiumDeLaStrateG(n);
+    if (n > 0) {
+      const avant = s.litterNG[i] ?? 0;
+      if (c > 0)
+        s.litterK[i] = (avant * (s.litterK[i] ?? 0) + n * litterDecayRate(c / n)) / (avant + n);
+      s.litterNG[i] = avant + n;
+      s.litterCG[i] = (s.litterCG[i] ?? 0) + c;
+    }
+    carbone += c;
+    s.herbeCouverture[i] = 0;
+    s.herbeBiomasse[i] = 0;
+    rabattreParEspece(s.herbeFeuillage, i * N_HERBACEES, 0);
+    rabattreParEspece(s.herbeEmprise, i * N_HERBACEES, 0);
+  }
+  state.carbon.nppCumKgC += carbone / 1000;
 }
