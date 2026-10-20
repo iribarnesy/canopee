@@ -97,6 +97,10 @@ L'option 6 prévoyait de passer les bancs de tables sur sol dégagé s'ils desce
 
 Trois propriétés de conservation sont tombées, toutes faute de feu : leur feu part quand la surface de la lande est sèche (remplissage sous 0,12) et qu'il fait chaud (plus de 24 °C). Dans l'année synthétique, la pluie lissée tombe chaque semaine ; un sol découvert qui n'évapore plus que son eau évaporable ne vide plus son horizon de surface entre deux pluies, et la surface reste au-dessus du seuil en juillet et en août (0,12 à 0,25, contre 0,00 à 0,05 sur main) : la moitié des semaines à risque (57 à 61 en vingt ans, contre 117 à 125). Sur la série réelle de Mont-de-Marsan, avec ses semaines sèches, c'est l'inverse : 222 à 287 semaines à risque en trente ans contre 214 à 237, et sept graines sur treize du décor d'ajoncs de `feu.test.ts` brûlent en vingt-cinq ans, contre six. Les deux scénarios de `carbon-conservation` passent sur la série réelle, et `potassium-conservation` reprend la graine la plus précoce du même balayage, comme son commentaire le prévoyait. **Une pluie lissée n'a pas de semaine sèche** : un mécanisme qui vit des intervalles entre les pluies se juge sur la série réelle (c'est la leçon de #312 sur l'été synthétique, vue de l'autre côté).
 
+### Une prairie qui boit sa part déplace ce qui reposait sur sa sobriété
+
+Sept assertions écologiques cassent, et aucune ne porte sur la prairie. Le fond de vallée s'inondait chaque hiver parce que sa prairie, posée sur la nappe, ne rendait à l'air que 374 mm par an à Tours, 0,43 fois l'ETP de Penman ; elle en rend 611, et la vallée ne s'inonde plus que les hivers humides (quatre sur dix de 1964 à 1973, contre neuf). L'aulnaie pure du limon riche passait 1976 en perdant 23 de ses 144 plants ; sous des aulnes de douze ans qui laissent passer 55 % de la lumière l'été, l'herbe transpire maintenant dès mars, le profil entre en juin à 60 mm au lieu de 99, et 136 aulnes meurent de soif la même année, sur les trois graines. Ces équilibres n'avaient pas de source : c'étaient des relevés du moteur, posés sur un tapis qui ne buvait pas. **Quand une grandeur devient juste, relever d'abord ce qui reposait sur son erreur**, et le rapporter avant de recaler quoi que ce soit : les sept assertions sont instruites, aucune n'est touchée.
+
 ### Ce que ça donne
 
 Banc de #210 (25 plants de 0,30 m protégés, une espèce par parcelle de 30 m, cinq ans, météo réelle, graine g = fenêtre 1964 + 20 (g − 1) ; déterministe à graine donnée), désherbé sur enherbé, graines 1 / 2 / 3 :
@@ -139,6 +143,9 @@ Les tables de production ne bougent pas de plus de 3 % à quarante ans (pin -3 %
 - G1 : l'année synthétique devait garder moins d'une semaine à risque par an ; elle en garde trois.
 - Le décor d'ajoncs devait brûler sur deux à six graines sur treize ; sept.
 - `chandelle-tombee` allongé à dix ans devait voir 12 à 25 chutes ; 66.
+- E3 : la minéralisation de la zone labourée devait passer devant celle de la friche par l'été d'un sol nu ; la zone est réenherbée dès l'été (0,94), l'écart est de 0,07 %.
+- E4 : la baisse des morts par ravageurs de l'aulnaie devait venir des semis ; elle vient des plants, tués par la soif en 1976.
+- E6 : la part pionnière de la canopée de soixante ans devait baisser faute de pionniers ; elle baisse par quatre dryades de plus.
 
 ### Ce qui reste ouvert
 
@@ -147,6 +154,8 @@ Les tables de production ne bougent pas de plus de 3 % à quarante ans (pin -3 %
 - **Le haut du sol nu** (56 à 65 % de la pluie, l'excès de janvier à avril sur Rothamsted) : ce n'est pas l'ETP, à 2 % de celle de Penman de Météo-France sur 2001-2020 ; le climat de Harpenden ou le plafond d'un sol mouillé, à instruire.
 - **Le phosphore de la strate** fait le gros du désherbage et de la fauche sur la lande (#395).
 - **Le pin du banc dégagé** meurt sur le sable profond quand plus rien ne pousse sous lui : cause à relever.
+- **Sept assertions écologiques attendent une décision**, instruites et non touchées (mesures, options et recommandations dans #391 et la PR #411) : la crue d'hiver de la vallée (`eau-surface`, deux assertions), le facteur 3 de la transpiration après le feu (`incendie-nappe`), l'aulnaie de 1976 (`ravageurs`), le feu dans la comparaison nurse (`nurse`), un écart de 0,07 % (`sol-vivant`), la canopée de soixante ans à un arbre du seuil (`succession`).
+- **La fermeture du couvert d'un jeune peuplement** : sous des aulnes de douze ans plantés à 3 m, 55 % de la lumière atteint encore le sol l'été, et l'herbe y transpire à plein.
 
 ## Ce qu'un lot précédent a appris (le gel : le couvert au-dessus, #407 ; le gel des pousses instruit, #371)
 
