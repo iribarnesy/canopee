@@ -422,6 +422,25 @@ export interface Snapshot {
    * d'espèces grandira avec l'atlas.
    */
   soilHerbeEmprises: Uint8Array[];
+  /**
+   * **Hauteur du tapis** de chaque espèce herbacée, par cellule, en centimètres
+   * (0-255), une grille par espèce dans l'ordre d'`herbesIds` (#370).
+   *
+   * C'est la hauteur des touffes de l'espèce là où elle se tient : à pondérer par
+   * son emprise (`soilHerbeEmprises`) pour composer une cellule. Elle se lit sur
+   * la matière sur pied, vivante et morte, à la densité apparente de l'espèce
+   * (ModVege), sous sa hauteur de canopée (LEDA) : une prairie de juin, une
+   * pelouse de février, un pré fauché à quelques centimètres. Elle hérite de la
+   * production du moteur, et la molinie de la lande est trop maigre, donc trop
+   * basse (#433).
+   */
+  soilHerbeHauteursCm: Uint8Array[];
+  /**
+   * **Part morte** de ce qui est sur pied, par espèce et par cellule, en 0-255
+   * pour 0 à 1, même ordre (#370) : le foin d'été, la paille d'hiver. Zéro
+   * quand rien n'est sur pied.
+   */
+  soilHerbePartsMortes: Uint8Array[];
   /** les identifiants d'espèce, dans l'ordre de `soilHerbeEmprises`. */
   herbesIds: readonly string[];
   /**

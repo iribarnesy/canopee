@@ -16,7 +16,7 @@ import { CARBON_FRACTION, carbonInventory } from "../engine/carbon";
 import { CO2_ACTUEL_PPM } from "../engine/climat";
 import { getEspece } from "../engine/especes";
 import type { DepartFaune, InstallationFaune } from "../engine/faune";
-import { HERBACEES, N_HERBACEES } from "../engine/herbacees";
+import { HERBACEES, hauteurDuTapisM, N_HERBACEES } from "../engine/herbacees";
 import { couvertAuDessusDuSol } from "../engine/light";
 import type { WeekWeather } from "../engine/meteo";
 import { profondeurPourStock } from "../engine/nappe";
@@ -68,6 +68,57 @@ export function emprisesParEspece(emprise: ArrayLike<number>): Uint8Array[] {
       const grille = grilles[s];
       if (grille)
         grille[i] = Math.round(255 * Math.min(1, Math.max(0, emprise[i * N_HERBACEES + s] ?? 0)));
+    }
+  }
+  return grilles;
+}
+
+/**
+ * La **hauteur du tapis** de chaque espèce, en centimètres sur un octet (#370) :
+ * une grille par espèce, dans l'ordre de `HERBACEES`.
+ *
+ * Elle se lit sur la matière sur pied, vivante et morte (`hauteurDuTapisM`) :
+ * l'instantané la calcule sur l'état qu'il porte, comme le couvert au-dessus
+ * du sol, et une fauche en pause se voit aussitôt. Un centimètre suffit au
+ * rendu, et aucune herbacée de l'atlas ne dépasse 255 cm.
+ */
+export function hauteursParEspece(soil: GameState["soil"]): Uint8Array[] {
+  const n = soil.herbeEmprise.length / N_HERBACEES;
+  const grilles = Array.from({ length: N_HERBACEES }, () => new Uint8Array(n));
+  for (let s = 0; s < N_HERBACEES; s++) {
+    const h = HERBACEES[s];
+    const grille = grilles[s];
+    if (!h || !grille) continue;
+    for (let i = 0; i < n; i++) {
+      const k = i * N_HERBACEES + s;
+      const m = hauteurDuTapisM(
+        h,
+        soil.herbeMatiereSecheG[k] ?? 0,
+        soil.herbeMorteG[k] ?? 0,
+        soil.herbeEmprise[k] ?? 0,
+      );
+      grille[i] = Math.min(255, Math.round(100 * m));
+    }
+  }
+  return grilles;
+}
+
+/**
+ * La **part morte** de ce qui est sur pied, par espèce, sur un octet (#370) : le
+ * mort sur la matière sur pied, vivante et morte, en 0-255 pour 0 à 1. C'est
+ * ce qui fait un tapis de paille plutôt qu'un tapis vert, à hauteur égale.
+ * Zéro quand rien n'est sur pied.
+ */
+export function partsMortesParEspece(soil: GameState["soil"]): Uint8Array[] {
+  const n = soil.herbeEmprise.length / N_HERBACEES;
+  const grilles = Array.from({ length: N_HERBACEES }, () => new Uint8Array(n));
+  for (let i = 0; i < n; i++) {
+    for (let s = 0; s < N_HERBACEES; s++) {
+      const k = i * N_HERBACEES + s;
+      const mort = Math.max(0, soil.herbeMorteG[k] ?? 0);
+      const total = mort + Math.max(0, soil.herbeMatiereSecheG[k] ?? 0);
+      const grille = grilles[s];
+      if (grille) grille[i] = total > 0 ? Math.round((255 * mort) / total) : 0;
     }
   }
   return grilles;
@@ -362,6 +413,8 @@ export function construireSnapshot(e: EntreesSnapshot): Snapshot {
     // mémoire-là qui fait griller un tapis — pas la pluie de mardi.
     soilHerbeHumidite: Float32Array.from(state.soil.herbeHumidite),
     soilHerbeEmprises: emprisesParEspece(state.soil.herbeEmprise),
+    soilHerbeHauteursCm: hauteursParEspece(state.soil),
+    soilHerbePartsMortes: partsMortesParEspece(state.soil),
     herbesIds: HERBACEES.map((h) => h.id),
     // Les ravageurs par cellule, pas seulement leur moyenne : c'est la tache
     // de défoliation, et la mort qui la suit, que le rendu doit montrer.
@@ -467,6 +520,8 @@ export function transferablesDuSnapshot(s: Snapshot): Transferable[] {
     s.soilHerbeBiomasse.buffer,
     s.soilHerbeHumidite.buffer,
     ...s.soilHerbeEmprises.map((g) => g.buffer),
+    ...s.soilHerbeHauteursCm.map((g) => g.buffer),
+    ...s.soilHerbePartsMortes.map((g) => g.buffer),
     s.soilRavageurs.buffer,
     s.soilEpaisseurPerdueCm.buffer,
     s.soilNappeCm.buffer,

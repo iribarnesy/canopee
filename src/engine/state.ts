@@ -519,6 +519,20 @@ export interface SoilState {
    */
   herbeAzoteG: GrilleLongue;
   /**
+   * **Matière morte sur pied** de chaque espèce herbacée, g/m², même indexation
+   * (#370) : le foin d'été et la paille d'hiver. Un tissu qui meurt y passe au
+   * lieu de tomber en litière dans la semaine, et en tombe à la vitesse
+   * d'abscission de ModVege (`herbe.ts:chuteDuMortSurPied`). C'est elle, avec la
+   * matière vivante, qui fait la hauteur du tapis (`hauteurDuTapisM`).
+   */
+  herbeMorteG: GrilleLongue;
+  /**
+   * **Azote du mort sur pied**, g/m², même indexation (#370) : ce que la plante
+   * n'a pas résorbé avant la mort de ses tissus. Il tombe en litière avec
+   * eux ; le potassium, lui, est rincé dès la mort (`pk.ts`).
+   */
+  herbeMorteAzoteG: GrilleLongue;
+  /**
    * **ressource florale** vécue par cellule ∈ [0,1] (#70, critère G4) : ce que les
    * pollinisateurs ont trouvé à manger ici, ces dernières semaines.
    *
@@ -955,6 +969,9 @@ export function createGameState(
       // est un feuillage qui repart, et la première saison fabrique sa matière.
       herbeMatiereSecheG: new Float64Array(n * N_HERBACEES),
       herbeAzoteG: new Float64Array(n * N_HERBACEES),
+      // Rien de mort sur pied non plus : le premier automne le fabrique.
+      herbeMorteG: new Float64Array(n * N_HERBACEES),
+      herbeMorteAzoteG: new Float64Array(n * N_HERBACEES),
       // Aucune mémoire florale au premier jour : la première saison la
       // construit. Partir d'un plancher supposerait une année d'avant.
       ressourceFlorale: new Float32Array(n),

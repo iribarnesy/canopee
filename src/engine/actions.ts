@@ -2008,30 +2008,56 @@ function grainDeLaCelluleT(matiereSecheGM2: number, culture: { indiceRecolte: nu
  * qui y est sur pied, toutes espèces confondues, et la retire de la plante
  * (#247). Des tissus **coupés** ou retournés n'ont rien résorbé : leur azote
  * part entier, au C/N de la plante, et leur potassium revient au sol (#222).
+ * Le foin et la paille sur pied partent dans la même proportion, avec leur
+ * azote ; leur potassium est déjà rentré, rincé à la mort des tissus (#370).
  * Rend le carbone versé, g/m², que l'appelant crédite à la production primaire.
  */
+/** La matière herbacée sur pied d'une partie, vivante et morte, copiée pour être modifiée. */
+interface HerbeSurPied {
+  matiere: Float64Array;
+  azote: Float64Array;
+  morte: Float64Array;
+  morteAzote: Float64Array;
+}
+
+function herbeSurPied(state: GameState): HerbeSurPied {
+  return {
+    matiere: state.soil.herbeMatiereSecheG.slice(),
+    azote: state.soil.herbeAzoteG.slice(),
+    morte: state.soil.herbeMorteG.slice(),
+    morteAzote: state.soil.herbeMorteAzoteG.slice(),
+  };
+}
+
 function verserHerbeALaLitiere(
   i: number,
   fraction: number,
-  herbe: { matiere: Float64Array; azote: Float64Array },
+  herbe: HerbeSurPied,
   litiere: { n: Float64Array; c: Float64Array; k: Float32Array | Float64Array },
   potassiumSol: Float32Array | Float64Array,
 ): number {
   if (fraction <= 0) return 0;
   let c = 0;
   let n = 0;
+  let nMort = 0;
   for (let s = 0; s < N_HERBACEES; s++) {
     const k = i * N_HERBACEES + s;
     const dm = (herbe.matiere[k] ?? 0) * fraction;
     const dn = (herbe.azote[k] ?? 0) * fraction;
     herbe.matiere[k] = (herbe.matiere[k] ?? 0) - dm;
     herbe.azote[k] = (herbe.azote[k] ?? 0) - dn;
-    c += dm * CARBON_FRACTION;
+    const dmMort = (herbe.morte[k] ?? 0) * fraction;
+    const dnMort = (herbe.morteAzote[k] ?? 0) * fraction;
+    herbe.morte[k] = (herbe.morte[k] ?? 0) - dmMort;
+    herbe.morteAzote[k] = (herbe.morteAzote[k] ?? 0) - dnMort;
+    c += (dm + dmMort) * CARBON_FRACTION;
     n += dn;
+    nMort += dnMort;
   }
   // Et le potassium qui accompagnait cet azote revient au sol, tout de suite :
   // un ion que la pluie rince des tissus coupés ou enfouis (pk.ts, #222).
   potassiumSol[i] = (potassiumSol[i] ?? 0) + potassiumDeLaStrateG(n);
+  n += nMort;
   if (c > 0 && n > 0) {
     const oldN = litiere.n[i] ?? 0;
     litiere.k[i] = (oldN * (litiere.k[i] ?? 0) + n * litterDecayRate(c / n)) / (oldN + n);
@@ -2160,10 +2186,7 @@ function applyFaucher(
   const herbeCouverture = state.soil.herbeCouverture.slice();
   const herbeFeuillage = state.soil.herbeFeuillage.slice();
   const herbeBiomasse = state.soil.herbeBiomasse.slice();
-  const herbe = {
-    matiere: state.soil.herbeMatiereSecheG.slice(),
-    azote: state.soil.herbeAzoteG.slice(),
-  };
+  const herbe = herbeSurPied(state);
   const litiere = {
     n: state.soil.litterNG.slice(),
     c: state.soil.litterCG.slice(),
@@ -2192,7 +2215,12 @@ function applyFaucher(
       // son prélèvement au fil des semaines, et la coupe n'avait donc rien à
       // verser. Elle porte maintenant sa matière : ce que l'outil coupe, dans
       // la même proportion que le feuillage, reste au sol avec tout son azote,
-      // et son potassium revient au sol (#222).
+      // et son potassium revient au sol (#222). Le foin et la paille sur pied y
+      // passent dans la même proportion (#370) : il reste sur pied le dixième
+      // de la matière, donc le dixième de la hauteur du tapis
+      // (`hauteurDuTapisM`). Une prairie de juin de 30 à 60 cm tombe ainsi à 3
+      // à 6 cm, la hauteur de coupe de ModVege (5 cm) à un ou deux centimètres
+      // près, sans que la fauche ait à la connaître.
       coupeG += verserHerbeALaLitiere(
         i,
         1 - FAUCHE_COUVERTURE_RESIDUELLE / avant,
@@ -2240,6 +2268,8 @@ function applyFaucher(
         herbeBiomasse,
         herbeMatiereSecheG: herbe.matiere,
         herbeAzoteG: herbe.azote,
+        herbeMorteG: herbe.morte,
+        herbeMorteAzoteG: herbe.morteAzote,
         litterNG: litiere.n,
         litterCG: litiere.c,
         litterK: litiere.k,
@@ -2579,10 +2609,7 @@ function applyLabourer(
   const herbeFeuillage = state.soil.herbeFeuillage.slice();
   const herbeBiomasse = state.soil.herbeBiomasse.slice();
   const litiereEnfouieCG = state.soil.litiereEnfouieCG.slice();
-  const herbe = {
-    matiere: state.soil.herbeMatiereSecheG.slice(),
-    azote: state.soil.herbeAzoteG.slice(),
-  };
+  const herbe = herbeSurPied(state);
   const litiere = {
     n: state.soil.litterNG.slice(),
     c: state.soil.litterCG.slice(),
@@ -2672,6 +2699,8 @@ function applyLabourer(
         herbeBiomasse,
         herbeMatiereSecheG: herbe.matiere,
         herbeAzoteG: herbe.azote,
+        herbeMorteG: herbe.morte,
+        herbeMorteAzoteG: herbe.morteAzote,
         litterNG: litiere.n,
         litterCG: litiere.c,
         litterK: litiere.k,

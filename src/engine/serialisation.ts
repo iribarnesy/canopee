@@ -193,16 +193,40 @@ const MAGIE = "CANOPEE\u0000";
  * lot ajoute aux arbres la date du gel de leurs pousses (`gelPousseSemaine`,
  * #371) : un bloc de version 11 n'en porte aucune, et la relire comme « jamais
  * gelé » rendrait son feuillage à un arbre qui le refait encore.
+ *
+ * **13 (issue #370, la matière morte sur pied)** : le sol porte deux grilles de
+ * plus, `herbeMorteG` et `herbeMorteAzoteG`, le foin et la paille de chaque
+ * herbacée avec leur azote. Un bloc de version 12 ne les porte pas.
+ *
+ * C'est la deuxième montée qui **relit** l'ancien bloc, pour la raison de la
+ * neige : sous la version 12, ce qui mourait partait en litière la
+ * semaine même. Le mort qu'aurait porté la partie est donc déjà dans sa
+ * litière, et des grilles vides écrivent l'état qu'elle avait, sans compter ce
+ * mort deux fois. Le carbone et l'azote restent justes. Ce qui manque est
+ * visuel : le tapis se lit plus bas, sur sa seule matière vivante, le temps
+ * que le mort se refasse (quelques semaines en été, la saison en hiver). Un
+ * bloc de version 12 se relit donc avec ces deux grilles à zéro
+ * (`VERSIONS_RELUES`), et seulement lui.
  */
-export const VERSION_FORMAT = 12;
+export const VERSION_FORMAT = 13;
+
+/** Ce qu'il faut ajouter au sol d'un bloc ancien pour en faire un sol de la version courante. */
+interface Relecture {
+  /** les scalaires que la version n'avait pas, et leur valeur connue */
+  sol: Record<string, unknown>;
+  /** les grilles qu'elle n'avait pas, et qui se relisent à zéro */
+  grillesVides: readonly string[];
+}
 
 /**
  * Les versions d'un bloc que ce moteur sait relire, et ce qu'il faut ajouter à
  * leur sol pour en faire un sol de la version courante. Une version absente
  * d'ici est refusée, et le journal reprend la main.
  */
-const VERSIONS_RELUES: Record<number, Record<string, unknown>> = {
-  [VERSION_FORMAT]: {},
+const VERSIONS_RELUES: Record<number, Relecture> = {
+  [VERSION_FORMAT]: { sol: {}, grillesVides: [] },
+  // Le mort sur pied de #370 : sous la version 12, il était déjà en litière.
+  12: { sol: {}, grillesVides: ["herbeMorteAzoteG", "herbeMorteG"] },
 };
 
 /** Une grille de sol, telle que l'en-tête la déclare. */
@@ -373,8 +397,8 @@ export function lireEtat(octets: Uint8Array, station: Station): GameState | unde
     if (octets[i] !== MAGIE.charCodeAt(i)) return undefined;
   }
   const vue = new DataView(octets.buffer, octets.byteOffset, octets.byteLength);
-  const ajoutsAuSol = VERSIONS_RELUES[vue.getUint16(MAGIE.length)];
-  if (!ajoutsAuSol) return undefined;
+  const relecture = VERSIONS_RELUES[vue.getUint16(MAGIE.length)];
+  if (!relecture) return undefined;
 
   const longueurEntete = vue.getUint32(MAGIE.length + 2);
   const debutEntete = MAGIE.length + 6;
@@ -396,10 +420,13 @@ export function lireEtat(octets: Uint8Array, station: Station): GameState | unde
   // `undefined`. Plutôt que de le découvrir en jeu, on compare la liste
   // déclarée à celle qu'un sol **neuf** de cette version produit. Les longueurs
   // aussi : une parcelle de 30 m ne se relit pas sur une station de 100.
+  // Les grilles qu'une version plus ancienne n'avait pas ne sont pas attendues
+  // dans son bloc : elles se relisent à zéro, plus bas.
   const solDeCetteVersion = createGameState(station, rngStateFromSeed(1)).soil;
-  const attendues = grillesDuSol(solDeCetteVersion).map(
-    (g) => `${g.nom}:${g.tableau.length}:${typeDeGrille(g.tableau) ?? "f64"}`,
-  );
+  const grillesNeuves = grillesDuSol(solDeCetteVersion);
+  const attendues = grillesNeuves
+    .filter((g) => !relecture.grillesVides.includes(g.nom))
+    .map((g) => `${g.nom}:${g.tableau.length}:${typeDeGrille(g.tableau) ?? "f64"}`);
   const trouvees = entete.grilles.map((g) => `${g.nom}:${g.n}:${g.type ?? "f64"}`);
   if (attendues.length !== trouvees.length) return undefined;
   for (let i = 0; i < attendues.length; i++) {
@@ -435,6 +462,13 @@ export function lireEtat(octets: Uint8Array, station: Station): GameState | unde
     for (let i = 0; i < g.n; i++) tableau[i] = valeurs[k++] ?? 0;
     lus[g.nom] = tableau;
   }
+  for (const g of grillesNeuves) {
+    if (!relecture.grillesVides.includes(g.nom)) continue;
+    lus[g.nom] =
+      g.tableau instanceof Float32Array
+        ? new Float32Array(g.tableau.length)
+        : new Float64Array(g.tableau.length);
+  }
 
   // On rebâtit le sol **en marchant son squelette** : les clés y sont dans l'ordre
   // qu'elles avaient, et chaque `null` marque la place d'une grille.
@@ -456,8 +490,21 @@ export function lireEtat(octets: Uint8Array, station: Station): GameState | unde
 
   // Ce qu'une version plus ancienne n'avait pas et dont la valeur est connue
   // (`VERSIONS_RELUES`) : posé à la fin du sol, sans écraser ce que le bloc dit.
-  for (const [cle, valeur] of Object.entries(ajoutsAuSol)) {
+  for (const [cle, valeur] of Object.entries(relecture.sol)) {
     if (!(cle in soil)) soil[cle] = valeur;
+  }
+  // Les grilles vides prennent la place qu'elles ont dans un sol neuf : un état
+  // relu se range comme un état de cette version.
+  let solRange = soil;
+  if (relecture.grillesVides.length > 0) {
+    solRange = {};
+    for (const cle of Object.keys(solDeCetteVersion)) {
+      if (cle in soil) solRange[cle] = soil[cle];
+      else if (cle in lus) solRange[cle] = lus[cle];
+    }
+    for (const [cle, valeur] of Object.entries(soil)) {
+      if (!(cle in solRange)) solRange[cle] = valeur;
+    }
   }
 
   // Rebâti dans l'ordre d'origine, pour la même raison que le sol : un état
@@ -466,7 +513,7 @@ export function lireEtat(octets: Uint8Array, station: Station): GameState | unde
   const ordre = Array.isArray(entete.ordre) ? entete.ordre : Object.keys(entete.reste);
   for (const cle of ordre) {
     if (cle === "station") etat[cle] = station;
-    else if (cle === "soil") etat[cle] = soil;
+    else if (cle === "soil") etat[cle] = solRange;
     else etat[cle] = entete.reste[cle];
   }
   return etat as unknown as GameState;

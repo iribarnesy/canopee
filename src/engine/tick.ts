@@ -118,6 +118,7 @@ import {
 } from "./herbacees";
 import {
   azoteCritiqueG,
+  chuteDuMortSurPied,
   DUREE_VIE_TISSUS_DJ,
   herbeDemandeEauL,
   humiditeVecue,
@@ -1002,6 +1003,8 @@ export function tick(state: GameState, weather: WeekWeather): TickResult {
   const herbeEmprise = state.soil.herbeEmprise.slice();
   const herbeMatiereSecheG = state.soil.herbeMatiereSecheG.slice();
   const herbeAzoteG = state.soil.herbeAzoteG.slice();
+  const herbeMorteG = state.soil.herbeMorteG.slice();
+  const herbeMorteAzoteG = state.soil.herbeMorteAzoteG.slice();
   const herbeFeuillage = state.soil.herbeFeuillage.slice();
   const herbeBiomasse = state.soil.herbeBiomasse.slice();
   const herbeHumidite = state.soil.herbeHumidite.slice();
@@ -2240,6 +2243,9 @@ export function tick(state: GameState, weather: WeekWeather): TickResult {
   const vigueurs = HERBACEES.map((h) => vigueurHerbacee(h, pheno));
   const saisonnieres = HERBACEES.map((h) => partSaisonniere(h, pheno));
   const thermiques = HERBACEES.map((h) => facteurThermique(h, weather.tMean));
+  // Ce qui tombe du mort sur pied cette semaine : la même part pour toutes les
+  // espèces et toutes les cellules, puisqu'elle ne lit que la température.
+  const chuteMort = chuteDuMortSurPied(weather.tMean);
   const capacites = new Array<number>(N_HERBACEES).fill(0);
   const facteursEau = new Array<number>(N_HERBACEES).fill(0);
   const feuillagesAvant = new Array<number>(N_HERBACEES).fill(0);
@@ -2274,13 +2280,19 @@ export function tick(state: GameState, weather: WeekWeather): TickResult {
     //
     // Ce qu'elle rend tient à son histoire de vie. **Une pérenne** perd ses tissus
     // à mesure qu'ils vieillissent (`DUREE_VIE_TISSUS_DJ`) et quand son feuillage
-    // recule — fin de saison, sécheresse, ombre ; les tissus morts tombent en
-    // litière avec la moitié de leur azote, l'autre moitié étant résorbée par la
-    // plante avant la chute (`LITTER_RETURN_FRACTION`, le même patron que
+    // recule — fin de saison, sécheresse, ombre. La plante résorbe la moitié de
+    // leur azote avant leur mort (`LITTER_RETURN_FRACTION`, le même patron que
     // l'arbre). Ce qui est résorbé reste dans la plante : une vernale qui se
     // retire garde son azote pour le printemps suivant, sans réserve déclarée.
     // **Une culture** ne perd rien avant la moisson : sa paille et son grain
     // restent debout, et c'est la moisson qui les partage (`actions.ts`).
+    //
+    // **Ce qui meurt reste debout** (#370) : le foin d'été, la paille d'hiver.
+    // Les tissus morts passent sur pied avec l'azote que la plante n'a pas
+    // résorbé, et en tombent en litière à une vitesse qui suit la température
+    // (`chuteDuMortSurPied`, l'abscission de ModVege). La pluie rince leur
+    // potassium dès la mort. La hauteur du tapis se lit sur ce qui est debout,
+    // vivant et mort (`hauteurDuTapisM`).
     //
     // La litière a le C/N de ce qui est mort : le carbone de la matière sèche
     // sur l'azote qui n'a pas été résorbé. Plus de C/N déclaré par espèce.
@@ -2292,10 +2304,22 @@ export function tick(state: GameState, weather: WeekWeather): TickResult {
     const vieillit = Math.min(1, ageSemaineDJ / DUREE_VIE_TISSUS_DJ);
     let litiereNCellule = 0;
     let litiereCCellule = 0;
+    // L'azote qui quitte les tissus vivants cette semaine : c'est lui que suit
+    // le potassium rincé, qu'il tombe tout de suite ou qu'il reste debout.
+    let azoteQuitteCellule = 0;
     for (let s = 0; s < N_HERBACEES; s++) {
       const fiche = HERBACEES[s];
       if (!fiche) continue;
       const k = base + s;
+      // Le mort des semaines d'avant tombe d'abord en litière, à sa vitesse.
+      const morte = herbeMorteG[k] ?? 0;
+      if (morte > 0) {
+        const tombeN = (herbeMorteAzoteG[k] ?? 0) * chuteMort;
+        litiereCCellule += morte * chuteMort * CARBON_FRACTION;
+        litiereNCellule += tombeN;
+        herbeMorteG[k] = morte * (1 - chuteMort);
+        herbeMorteAzoteG[k] = (herbeMorteAzoteG[k] ?? 0) - tombeN;
+      }
       const fondS = partFondPonderee(partFondHerbe[s] ?? 0, i);
       const serviEspece = (1 - fondS) * servi + fondS * (nServedRatioFond[i] ?? 0);
       let azote = (herbeAzoteG[k] ?? 0) + (herbeDemandeEspeceG[k] ?? 0) * serviEspece;
@@ -2314,11 +2338,12 @@ export function tick(state: GameState, weather: WeekWeather): TickResult {
         if (meurt > 0) {
           const matiereMorte = matiere * meurt;
           const azoteMort = azote * meurt;
-          const azoteLitiere = azoteMort * LITTER_RETURN_FRACTION;
+          const azoteQuitte = azoteMort * LITTER_RETURN_FRACTION;
           matiere -= matiereMorte;
-          azote -= azoteLitiere;
-          litiereNCellule += azoteLitiere;
-          litiereCCellule += matiereMorte * CARBON_FRACTION;
+          azote -= azoteQuitte;
+          azoteQuitteCellule += azoteQuitte;
+          herbeMorteG[k] = (herbeMorteG[k] ?? 0) + matiereMorte;
+          herbeMorteAzoteG[k] = (herbeMorteAzoteG[k] ?? 0) + azoteQuitte;
         }
       }
       herbeMatiereSecheG[k] = matiere;
@@ -2328,8 +2353,9 @@ export function tick(state: GameState, weather: WeekWeather): TickResult {
     // prenait avec son azote et ne le rendait jamais : une allée fertilisée
     // perdait ainsi son potassium en dix ans. Il suit l'azote qui quitte la
     // plante (pk.ts), et il revient tout de suite, comme celui des feuilles
-    // d'un arbre plus bas : la pluie le rince des tissus morts.
-    const rendK = potassiumDeLaStrateG(litiereNCellule);
+    // d'un arbre plus bas : la pluie le rince des tissus morts, qu'ils
+    // tiennent encore debout ou non (#370).
+    const rendK = potassiumDeLaStrateG(azoteQuitteCellule);
     potassiumG[i] = (potassiumG[i] ?? 0) + rendK;
     retourKSumG += rendK;
     if (litiereNCellule > 0 && litiereCCellule > 0) {
@@ -3958,18 +3984,25 @@ export function tick(state: GameState, weather: WeekWeather): TickResult {
         // reste en cendres, immédiatement disponible.
         // L'herbe sur pied brûle de même : sa matière part, son azote suit la
         // règle de la litière (#247).
+        // Le foin et la paille sur pied brûlent avec elle (#370) : c'est même le
+        // combustible de la lande en hiver.
         let azoteHerbe = 0;
+        let azoteMortSurPied = 0;
         for (let s = 0; s < N_HERBACEES; s++) {
           azoteHerbe += herbeAzoteG[i * N_HERBACEES + s] ?? 0;
           herbeAzoteG[i * N_HERBACEES + s] = 0;
           herbeMatiereSecheG[i * N_HERBACEES + s] = 0;
+          azoteMortSurPied += herbeMorteAzoteG[i * N_HERBACEES + s] ?? 0;
+          herbeMorteAzoteG[i * N_HERBACEES + s] = 0;
+          herbeMorteG[i * N_HERBACEES + s] = 0;
         }
         // Son potassium, lui, ne part pas en fumée : il reste dans les cendres,
-        // qui en sont riches, et revient au sol (#222).
+        // qui en sont riches, et revient au sol (#222). Celui du mort sur pied
+        // est déjà rentré, rincé à la mort des tissus.
         const cendresK = potassiumDeLaStrateG(azoteHerbe);
         potassiumG[i] = (potassiumG[i] ?? 0) + cendresK;
         retourKSumG += cendresK;
-        const cendresN = ((litterNG[i] ?? 0) + azoteHerbe) * 0.2;
+        const cendresN = ((litterNG[i] ?? 0) + azoteHerbe + azoteMortSurPied) * 0.2;
         mineralNG[i] = (mineralNG[i] ?? 0) + cendresN;
         // L'azote des cendres est ammoniacal (#280) — c'est même la forme sous
         // laquelle un feu le laisse, la nitrification venant après.
@@ -4488,6 +4521,8 @@ export function tick(state: GameState, weather: WeekWeather): TickResult {
         herbeEmprise,
         herbeMatiereSecheG,
         herbeAzoteG,
+        herbeMorteG,
+        herbeMorteAzoteG,
         ressourceFlorale,
         herbeFeuillage,
         herbeBiomasse,
