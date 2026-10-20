@@ -12,7 +12,13 @@ import { rngStateFromSeed } from "../../src/engine/rng";
 import { ruHorizonMm } from "../../src/engine/soil";
 import { createGameState } from "../../src/engine/state";
 import { LANDE_SECHE, LIMON_RICHE, STATIONS_V0 } from "../../src/engine/stations";
-import { eauDuProfilMoyenMm, PART_A_SEC, solPresqueASec } from "../../src/game/avisSecheresse";
+import {
+  compterLaSoif,
+  direLaSecheresse,
+  eauDuProfilMoyenMm,
+  PART_A_SEC,
+  solPresqueASec,
+} from "../../src/game/avisSecheresse";
 
 /** Un état dont chaque horizon est rempli à `part` de sa réserve. */
 function remplieA(station: (typeof STATIONS_V0)[number]["station"], part: number) {
@@ -53,5 +59,55 @@ describe("l'avis Sécheresse", () => {
       const { waterMm, n } = remplieA(station, PART_A_SEC * 0.9);
       expect(solPresqueASec(waterMm, n, station.ruMm)).toBe(true);
     }
+  });
+});
+
+describe("qui a soif, compté contre sa propre essence (#429)", () => {
+  const arbre = (id: number, especeId: string, alive = true) => ({ id, especeId, alive });
+
+  it("un même manque laisse un pin tranquille et met un aulne en détresse", () => {
+    // 0,5 : sous le seuil de stress de l'aulne (0,65), au-dessus de celui du pin.
+    const soif = compterLaSoif(
+      [arbre(1, "alnus_glutinosa"), arbre(2, "pinus_sylvestris")],
+      new Map([
+        [1, 0.5],
+        [2, 0.5],
+      ]),
+    );
+    expect(soif.enDetresse).toEqual(["alnus_glutinosa"]);
+  });
+
+  it("ne compte ni les morts ni les arbres dont la soif n'est pas connue", () => {
+    const soif = compterLaSoif(
+      [arbre(1, "alnus_glutinosa", false), arbre(2, "alnus_glutinosa")],
+      new Map([[1, 0.1]]),
+    );
+    expect(soif).toEqual({ enDetresse: [], ralentis: 0 });
+  });
+
+  it("nomme les essences en détresse, et compte à part ceux qui ralentissent", () => {
+    const phrase = direLaSecheresse({
+      enDetresse: ["betula_pendula", "betula_pendula", "alnus_glutinosa"],
+      ralentis: 40,
+    });
+    expect(phrase).toContain("3 arbres en détresse, qui puisent dans leurs réserves");
+    expect(phrase).toContain("2 bouleaux verruqueux");
+    expect(phrase).toContain("40 autres ralentissent leur croissance");
+    expect(phrase).not.toContain("sensibles");
+  });
+
+  it("s'accorde au singulier", () => {
+    expect(direLaSecheresse({ enDetresse: ["alnus_glutinosa"], ralentis: 1 })).toContain(
+      "1 arbre en détresse, qui puise dans ses réserves",
+    );
+    expect(direLaSecheresse({ enDetresse: [], ralentis: 1 })).toContain(
+      "1 arbre ralentit sa croissance",
+    );
+  });
+
+  it("sans soif, ne promet aucune souffrance", () => {
+    expect(direLaSecheresse({ enDetresse: [], ralentis: 0 })).toContain(
+      "les arbres tiennent encore",
+    );
   });
 });

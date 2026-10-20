@@ -31,7 +31,7 @@
 import { NAPPE_AFFLEURANTE_CM } from "../../engine/crue";
 import { hacher } from "../hachage";
 import { couleurEau } from "../palette";
-import { PLUIE_MUETTE_MM } from "./pluie";
+import { intensiteDeLaPluie } from "./pluie";
 import type { CelluleVoilee } from "./voile";
 
 /** Opacité d'une flaque : on voit le fond, c'est de l'eau peu profonde. */
@@ -41,7 +41,9 @@ export const OPACITE_DES_FLAQUES = 0.6;
  * Les flaques de la semaine, pour la couche des voiles — ou rien.
  *
  * `pluieLiquideMm` est la pluie de la semaine moins sa part de neige ;
- * `enCrue` dit qu'une crue tient déjà ces cellules sous sa lame.
+ * `enCrue` dit qu'une crue tient déjà ces cellules sous sa lame ;
+ * `joursDePluie`, les jours de pluie de la semaine (#405) : une flaque suit la
+ * même semaine pluvieuse que le rideau (#428).
  */
 export function flaquesDeLaSemaine(
   nappeCm: ArrayLike<number>,
@@ -49,8 +51,9 @@ export function flaquesDeLaSemaine(
   enCrue: boolean,
   semaineAnnee: number,
   enEau?: readonly boolean[],
+  joursDePluie?: number,
 ): CelluleVoilee[] {
-  if (enCrue || !(pluieLiquideMm > PLUIE_MUETTE_MM)) return [];
+  if (enCrue || !(intensiteDeLaPluie(pluieLiquideMm, joursDePluie) > 0)) return [];
   const teinte = couleurEau(semaineAnnee);
   const sorties: CelluleVoilee[] = [];
   for (let i = 0; i < nappeCm.length; i++) {
