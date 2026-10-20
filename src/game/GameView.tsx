@@ -70,6 +70,7 @@ import { type Mode, useReglagesDeGeste } from "./panneaux/reglages";
 import { btn, SCENE, VOLET } from "./panneaux/styles";
 import { Angle, BoutonDeVolet, useVolets, Volet } from "./panneaux/Volet";
 import { arbresAPoser, donneesSolDe } from "./parcelle";
+import { poussesGeleesALaSemaine } from "./pousses";
 import {
   chargerProfils,
   enregistrerProfil,
@@ -1536,10 +1537,17 @@ export function GameView({ surPartie }: { surPartie?: (enPartie: boolean) => voi
   const pollinisateurs = usePollinisateurs(snapshot, station?.coteM);
   // Le givre de la semaine et la brume du matin (#130).
   const matin = useMatin(snapshot, station);
+  // Les arbres dont ce gel a grillé les jeunes pousses : l'avis les nomme (#425).
+  const poussesGelees = useMemo(
+    () =>
+      snapshot ? poussesGeleesALaSemaine(snapshot.trees, snapshot.week).map((t) => t.especeId) : [],
+    [snapshot],
+  );
   const avisDuGel = useAvisDuGel(
     snapshot?.week,
     matin.givre !== undefined,
     snapshot?.weather.tMinAbsC,
+    poussesGelees,
   );
   // Le voile de chaleur au-dessus du sol nu, et les flaques dans les creux
   // mouillés hors crue (§5.7).
