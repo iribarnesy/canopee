@@ -94,6 +94,37 @@ ModVege fait tomber le mort à 0,001 par °C·j fois un facteur d'âge de 1, 2 o
 
 Sous la version 13, le mort partait en litière la semaine même. Un bloc de version 13 relu avec le mort sur pied à zéro écrit donc l'état qu'il avait, sans compter ce mort deux fois : c'est la deuxième montée qui relit l'ancien bloc, après la neige. Le format passe à 14 (#410 avait pris le 13 pendant ce lot), et le lecteur sait maintenant relire des grilles absentes.
 
+### Un essai peut mesurer au bord d'une mort
+
+`soif-proportionnelle.test.ts` mesurait un hêtre en semaine 28 qui, sur main, avait déjà un stress de 6,9 pour un seuil de 10. Le foin debout ne paillant plus le sol tout de suite, la première année sèche une semaine plus tôt, et le hêtre mourait en semaine 27. L'essai mesure ce qu'une racine boit, pas la survie : il le prend deux semaines plus tôt, ses deux critères inchangés. Le désherbage du banc a été essayé d'abord : il changeait ce que l'arbre boit sur le profil plein (7,9 % au lieu de 3,4 %) et faisait tomber un critère, il n'est pas resté. **Avant de corriger un essai qui casse, relever où il se tenait sur main.**
+
+### Ce que ça donne
+
+Moteur de la branche, série réelle, quatrième année, taille de la station, déterministe :
+
+| | février | mi-juin | mi-août | décembre |
+|---|---|---|---|---|
+| dactyle du limon riche : hauteur, part morte | 12 cm, 40 % | 30 cm, 43 % | 33 cm, 56 % | 15 cm, 46 % |
+| molinie de la lande : hauteur, part morte | 0,7 cm, 65 % | 4,7 cm, 59 % | 1,5 cm, 71 % | 0,9 cm, 73 % |
+
+Fauche en semaine 24 : 3,8 cm, puis 10 cm huit semaines plus tard. Azote pris par la strate, Park Grass et rapport de fauche de `herbe.test.ts` inchangés à quelques millièmes près.
+
+### Les prédictions fausses
+
+- R2 : dactyle 450 à 750 et 300 à 600 g/m²/an ; 763 et 773.
+- R5 et R6 : sans frein d'azote ×3 à ×7 et ×2 à ×4 ; ×18,6 et ×5,0. L'eau ×1,5 à ×2,5 ; ×1,14.
+- D3a : 70 à 130 g/m² à la mi-juin avec les durées de vie de Cruz ; 67.
+- D4 : la production devait suivre la racine carrée du potentiel (0,65 à 0,78) ; 0,90 à 0,97.
+- C1b : sans le facteur d'âge du mort, 60 à 150 g/m² de mort en juin et 0,08 à 0,15 m en février ; 255 g/m² et 0,36 m.
+- C1d : la hauteur déduite à 2-4 cm après la fauche ; 6 cm.
+
+### Ce qui reste ouvert
+
+- **#433** : la production de la strate (potentiel gonflé, NNI, durée de vie par espèce, azote de la lande). La molinie de la lande reste à 5 cm tant qu'elle n'est pas faite.
+- **#436** (`rendu`) : dessiner le tapis à la hauteur publiée.
+- Le choix entre hauteur déduite et état de hauteur est rapporté au propriétaire ; la sonde de l'état est prête.
+- La fauche garde sa règle du dixième, sans hauteur de coupe ; le chevreuil ne baisse pas la hauteur ; l'évaporation ne lit pas le foin debout ; l'indice `herbeBiomasse` ne voit pas la saison.
+
 ## Ce qu'un lot précédent a appris (les dates d'une parcelle vieillie, #397)
 
 Une issue de maintenance, la suite de #348. À l'arrivée du joueur sur une parcelle vieillie, le compteur de semaines repartait de zéro, et les dates que l'état gardait du vieillissement restaient comptées depuis son début : le moteur et l'écran les lisaient comme des dates à venir. Elles sont maintenant décalées avec le compteur, et les tirages qui reviennent chaque semaine ou chaque année se font sur la semaine continue, comme la rafale. Les prédictions et les mesures sont dans les commits de la branche, avant chaque course.
