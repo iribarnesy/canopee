@@ -97,16 +97,16 @@ avant le tri, ou sur un témoin que le tri n'a pas touché.
 | A. Sol, eau, atmosphère | 30 | 1 | 0 | 31 |
 | B. Lumière et structure | 8 | 3 | 0 | 11 |
 | C. Nutriments et cycles | 18 | 2 | 0 | 20 |
-| D. Climat et phénologie | 9 | 4 | 0 | 13 |
+| D. Climat et phénologie | 9 | 5 | 0 | 14 |
 | E. Interactions entre plantes | 7 | 6 | 0 | 13 |
 | F. Dynamique des peuplements | 17 | 3 | 1 | 21 |
 | G. Faune et santé | 11 | 0 | 0 | 11 |
 | H. Gestion, économie, travail | 16 | 5 | 0 | 21 |
 | I. Carbone | 10 | 0 | 0 | 10 |
 | J. Biodiversité et structure | 9 | 1 | 0 | 10 |
-| **Total** | **135** | **25** | **1** | **161** |
+| **Total** | **135** | **26** | **1** | **162** |
 
-**Score de réalisme : 135 pleins + 25 partiels sur 161 → 92 %** *(un partiel compte 1/2)*.
+**Score de réalisme : 135 pleins + 26 partiels sur 162 → 91 %** *(un partiel compte 1/2)*.
 
 > **La colonne des ❌ se rouvre, et c'est le lot des tempêtes qui la rouvre.**
 > Le référentiel venait d'atteindre zéro absence ; l'avertissement écrit ce
@@ -228,7 +228,7 @@ le même lot. Le point gagné est le petit côté du lot ; le grand est qu'en
 adossant enfin le sanglier à une production réelle, la mesure a démoli le chiffre
 le plus cité de G10 : sa part de 55 % supposait un hectare portant vingt-cinq
 kilos de glands)
-→ **92 % (la strate basse rend au sol ce qu'elle lui prend — et quatre critères
+→ 92 % (la strate basse rend au sol ce qu'elle lui prend — et quatre critères
 verts tombent avec, parce qu'ils mesuraient une comptabilité fausse. On
 cherchait pourquoi une prairie perd son humus ; on a trouvé qu'elle perdait son
 azote, l'herbe n'ayant pas de masse dans ce moteur. Le « +30 % de la fauche »
@@ -296,7 +296,13 @@ entrée nommant les arbres qui attirent. Un critère de plus au référentiel, p
 et rempli **à moitié** par le même lot : les oiseaux se comptent à la lisière,
 comme leurs ancres, et une fruticée qui se ferme en attire moins qu'une haie
 qui s'élargit — la saturation tombe de la géométrie, mais le cœur d'un massif ne
-compte encore pour rien)**.*
+compte encore pour rien) → **91 % (les jeunes pousses gèlent : un critère de
+plus, D14, posé et rempli à moitié par le même lot. La nuit se juge sous le
+couvert, le seuil sort de la précocité et l'arbre refait ses feuilles sur ses
+réserves — mais une année de gel ne lui coûte que le quart de sa croissance,
+quand les cernes du hêtre en perdent un tiers à la moitié. Et le calendrier
+qu'il lit a dû être recalé d'abord : le bouleau des Landes débourrait fin
+février, D7 est réécrit autour d'une loi commune du froid)**.*
 
 *Le score a **baissé** en cours de route — au chantier du plancher racinaire comme
 à celui des hauteurs, et pour la même raison. Le moteur sait faire strictement plus qu'hier ;
@@ -397,6 +403,7 @@ maladie-là, pas une preuve de santé.*
 | D7 | Un hiver doux retarde le débourrement : le besoin de chaleur dépend du froid reçu *(critère réécrit, #419 ; il disait « les espèces ont un besoin de froid hivernal »)* | ✅ | **Une loi commune** (#419). Le froid se compte en unités de Hänninen (1990, reprises par Chuine 1999 : nul sous −3,4 °C et au-dessus de 10,4 °C, plein à 3,5 °C) depuis la mi-septembre ; le cumul de chaque essence (`debourrementDJ`) est lu au froid d'un hiver du nord de la France (12 unités) et multiplié par exp(0,07 × (12 − froid)), la forme exponentielle de Cannell et Smith (1983) et de Chuine (1999). Pente calée sur le rapport du besoin entre les Landes et Abbeville (1,34 pour le bouleau comme pour le charme, pour deux unités de moins), vérifiée sur Dijon et Tours, puis adoucie pour que le chêne reste sur la relation du RENECOFOR les années pauvres en froid *(à calibrer)*. Mesuré, médianes 1997-2013 : chêne et hêtre inchangés, écart bouleau − chêne de −28 / −21 / −28 / −35 jours à −14 / −7 / −7 / −14 (Abbeville, Dijon, Tours, Landes ; PEP725 : −13). **Le trait par essence `besoinFroidSemaines` est retiré** : compté en semaines à 0-10 °C, il ne distinguait pas un hiver landais d'un hiver picard (18 semaines contre 18 à 22). *Pas représenté* : une sensibilité propre à chaque essence (Murray et al. 1989 en mesurent une, le hêtre n'atteignant jamais son minimum), l'asymptote du besoin ; l'écart des Landes reste *(à confirmer)* faute de série phénologique du Sud-Ouest. `phenologie.test.ts` |
 | D12 | Le feuillage a un calendrier par espèce : forçage, photopériode, déploiement progressif | ✅ | `phenologie.ts` ; `phenologie.test.ts` |
 | D13 | L'automne se joue en deux temps : la feuille jaunit et cesse d'assimiler **avant** de tomber | 🟡 | `senescenceFoliaire` existe et se mesure ; elle ne commande pas encore la croissance ni la transpiration — voir ci-dessous |
+| D14 | Un gel tardif grille les jeunes pousses : l'arbre refait ses feuilles, et l'année de croissance en paie le prix | 🟡 | `gelPousses.ts` (#371). Le feuillage **tendre** — du débourrement à 190 °C·j au-delà du besoin — gèle quand la nuit, jugée sous le couvert qui surplombe l'arbre (#407), passe sous un seuil **tiré de la précocité** : une droite entre le hêtre (240 °C·j, −5 °C ; Menzel et al. 2015) et le frêne (310 °C·j, −3,5 °C ; Vitasse et al. 2014), bornée à l'étendue mesurée à l'émergence (−8,3 à −3,5 °C), plus 2,5 °C d'écart air-feuille *(à calibrer, entre Dittmar 2006 et Meyer et al. 2024)*. Les précoces résistent mieux (Vitasse et al. 2014 ; Lenz et al. 2016) ; le noyer hybride suit son calendrier (Charrier et al. 2018). Cinq semaines sans feuilles, trois de reverdissement (Menzel et al. 2015 ; Meyer et al. 2024), payées sur les réserves comme des semaines sans revenu (`reserves.ts`). Mesuré : en plein découvert sur soixante ans, au plus 2 % des années au nord, 3 à 10 % dans les Landes ; dans le moteur sur 2001-2020, le hêtre de Dijon une année, le frêne des Landes deux, le chêne, le hêtre et le noyer des Landes une ; un hêtre sous des charmes échappe à la nuit qui gèle celui du découvert. **Partiel** : une année de gel ne coûte que le quart de l'accroissement (indice de résistance 0,74 à 0,77) quand les cernes du hêtre en perdent 31 à 55 % (Meyer et al. 2024) et les jeunes plants jusqu'à 98 % (Baumgarten et al. 2023) ; les jeunes plants débourrent plus tôt que les adultes et gèlent plus souvent (Vitasse et al. 2014), le moteur leur prête le calendrier de l'essence ; ni flèche gelée ni fourche, ni gel des résineux. `gel-pousses.test.ts` |
 | D8 | Le climat dérive au fil de la partie (trajectoires SSP) | ✅ | `climat.ts` ; `climat.test.ts` — anomalie AR6 superposée aux observations, amplification française plus forte en été, étés qui s'assèchent. Deux conséquences sont épinglées **graine par graine** : la pullulation de ravageurs (1,45 / 1,35 / 1,31 ×) et la **mortalité**, qui se lit sur ce qui reste debout de la cohorte plantée à soixante ans — 88 → 43, 49 → 38, 80 → 38 tiges sur 120, et pour le seul hêtre mésophile 55 → 21, 20 → 4, 56 → 22. **Cet instrument-là est le troisième, et les deux premiers étaient faux de la même manière** : compter les morts par ravageurs seuls (#68), puis les morts « soif + ravageurs » ensemble (#93, #84). Additionner deux causes ne supprime pas le vase communicant, ça le déplace — le feu, les chablis et l'ombre puisent dans le même bassin de victimes, et le rapport composite est tombé à trois lots de mécanisme d'affilée sans que le lien entre chaleur et mortalité ait bougé. Un arbre **debout** est debout quelle que soit la case qui l'aurait tué |
 | D9 | La hausse du CO₂ augmente la production et l'efficience hydrique, en saturant | ✅ | réponse logarithmique sur le potentiel (donc bornée par Liebig) + fermeture stomatique testée |
 | D11 | Les extrêmes s'aggravent plus vite que les moyennes (canicules, sécheresses) | ✅ | écarts chauds et déficits de pluie amplifiés (`normalesHebdo`) ; et la mémoire pluriannuelle existe — non dans le sol (qui se recharge chaque hiver, mesuré à 94-100 %) mais dans l'arbre, par la cavitation (`dommageHydraulique`) |
@@ -3288,6 +3295,17 @@ reste visible tout autour, et ignore celui d'une lisière haute ou d'une trouée
 étroite. Une lisière de futaie relève vraiment le minimum près d'elle, et de
 tous les côtés, pas seulement au sud ; l'ombre portée n'en était
 pas une approximation.
+
+**Le même abri protège maintenant les jeunes pousses** (#371, D14). Une nuit
+de printemps grille le feuillage tendre, entre le débourrement et son
+durcissement ; l'arbre reste cinq semaines sans feuilles, refeuille en trois et
+paie ces semaines sur ses réserves. Le seuil ne vient pas de la fiche de
+l'essence mais de sa précocité : à l'émergence, ce qui débourre tôt résiste
+mieux (de −8,3 °C pour le merisier à −3,5 °C pour le frêne ; Vitasse et al.
+2014). Sous des charmes, un hêtre passe la nuit qui gèle celui du découvert :
+c'est la régénération sous abri des forestiers, et elle tombe de la règle
+de #407. Ce qui manque est dit dans D14 — le coût reste sous celui que lisent
+les cernes, et les jeunes plants n'ont pas leur calendrier à eux.
 
 *Ce qui reste à faire* : le tampon n'agit encore ni sur la phénologie — un
 débourrement retardé sous couvert, ce qui est justement une protection
