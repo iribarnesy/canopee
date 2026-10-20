@@ -581,8 +581,9 @@ export interface GameState {
   /** degrés-jours base 5 °C cumulés depuis le 1er janvier (phénologie, §7.2) */
   ddYearBase5: number;
   /**
-   * Semaines de froid accumulées depuis l'automne, pour la levée de dormance
-   * (phenologie.ts). Un hiver doux en compte peu, et le débourrement recule.
+   * Froid accumulé depuis l'automne, en unités de Hänninen — une semaine à 3,5 °C
+   * en vaut une (phenologie.ts, #419). Un hiver doux en compte peu, et le besoin
+   * de chaleur du débourrement grandit.
    */
   semainesDeFroid: number;
   /**
@@ -875,9 +876,11 @@ export function createGameState(
     carboneDeReferenceTHa: station.initialSoilCTHa,
     carbon: createCarbonState(),
     ddYearBase5: 0,
-    // Une partie démarre au 1ᵉʳ janvier : l'hiver qui précède est supposé
-    // normal, sans quoi la première année débourrerait en retard sans raison.
-    semainesDeFroid: 20,
+    // Une partie démarre au 1ᵉʳ janvier : l'automne qui précède est supposé
+    // normal, celui du nord de la France — 4,8 à 5,5 unités de Hänninen au
+    // 1ᵉʳ janvier à Abbeville, Dijon et Tours (médianes 1964-2023). Sans quoi
+    // la première année débourrerait en retard sans raison.
+    semainesDeFroid: 5,
     banqueGraines: {},
     aBruleDepuisLaLevee: false,
     // Début de partie au 1er janvier : réserve utile rechargée, pas d'eau gravitaire.

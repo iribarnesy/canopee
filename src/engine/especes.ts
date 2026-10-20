@@ -280,9 +280,16 @@ export interface EspeceV0 {
    */
   phenologie: {
     /**
-     * Cumul de degrés-jours base 5 °C depuis le 1ᵉʳ janvier au débourrement.
+     * Cumul de degrés-jours base 5 °C depuis le 1ᵉʳ janvier au débourrement, au
+     * froid d'un hiver du nord de la France (`FROID_REFERENCE`, phenologie.ts) :
+     * un hiver plus doux le gonfle, par la même loi pour toutes les essences.
      * Calé sur les **dates** observées dans le nord de la France, mesurées avec
      * notre propre série météo *(à calibrer espèce par espèce)*.
+     *
+     * Le moteur portait aussi un besoin de froid par essence
+     * (`besoinFroidSemaines`, en semaines à 0-10 °C). Il est retiré (#419) : la
+     * loi commune du froid en tient lieu, et ce compte ne distinguait pas un
+     * hiver landais d'un hiver picard.
      */
     debourrementDJ: number;
     /**
@@ -290,14 +297,12 @@ export interface EspeceV0 {
      * ferait débourrer le Sud-Ouest six semaines avant le Nord — l'écart réel
      * est de deux à trois. Le hêtre, le chêne et l'épicéa y sont notoirement
      * les plus sensibles.
+     *
+     * **0 : aucune porte.** Le débourrement des espèces de début de succession ne
+     * répond pas à la photopériode, seulement à la température (Basler et
+     * Körner 2012, *Agric. For. Meteorol.* 165:73) : les pionnières n'en ont pas.
      */
     seuilJourH: number;
-    /**
-     * Semaines de froid (0-10 °C) nécessaires pour lever la dormance. Le hêtre
-     * et le tilleul en réclament beaucoup, le bouleau et le chêne peu — c'est
-     * ce qui décide de qui souffrira d'un hiver doux *(à calibrer)*.
-     */
-    besoinFroidSemaines: number;
   };
   economie: {
     /** prix d'un jeune plant, € *(à calibrer sur les pépinières forestières)* */
@@ -658,8 +663,13 @@ export const ESPECES_V0: readonly EspeceV0[] = [
     regeneration: { maturiteAns: 12, longeviteAns: 100, dissemination: "vent", semisParAn: 4 },
     // Litière tendre, très riche en N (C/N ~15) : l'aulne améliore son sol (ch2-B).
     litiere: { cnRatio: 15, calciumMgG: 12 },
-    // L'aulne est des premiers, avec le bouleau : début avril.
-    phenologie: { debourrementDJ: 90, seuilJourH: 11.0, besoinFroidSemaines: 9 },
+    // L'aulne est des premiers, avec le bouleau : sur 107 sites allemands de
+    // PEP725 (1980-2009), ses premières feuilles s'ouvrent au même jour que
+    // celles du bouleau, le 107ᵉ de l'année (Vitasse et Basler 2013, *Eur. J.
+    // For. Res.* 132:1, tableau 1, relu dans une copie de l'article *(à
+    // confirmer sur l'original)*). Il prend donc le cumul du bouleau (#419). Pas
+    // de porte : c'est une pionnière.
+    phenologie: { debourrementDJ: 150, seuilJourH: 0 },
     economie: { prixPlantEur: 2 },
     // Infradensité : IGN/Dupouey, « Grands aulnes ».
     bois: { densite: 0.42, prixOeuvreEurM3: 90, rejetteDeSouche: true },
@@ -713,7 +723,7 @@ export const ESPECES_V0: readonly EspeceV0[] = [
     // Litière coriace, lente (C/N ~50) — la voie fongique (ch2-B).
     litiere: { cnRatio: 50, calciumMgG: 7.5 },
     // Le hêtre attend : dix à vingt jours après le chêne dans l'ouest, et il est parmi les plus photopériodiques.
-    phenologie: { debourrementDJ: 240, seuilJourH: 13.0, besoinFroidSemaines: 16 },
+    phenologie: { debourrementDJ: 240, seuilJourH: 13.0 },
     economie: { prixPlantEur: 3 },
     // Infradensité : IGN/Dupouey, « Hêtre ». C'est l'essence par laquelle le
     // défaut s'est vu : 0,68 était la densité à 12 % d'humidité (#68).
@@ -767,7 +777,7 @@ export const ESPECES_V0: readonly EspeceV0[] = [
     regeneration: { maturiteAns: 30, longeviteAns: 400, dissemination: "geai", semisParAn: 2 },
     litiere: { cnRatio: 40, calciumMgG: 6 },
     // Le chêne débourre fin avril, et il est photopériodique.
-    phenologie: { debourrementDJ: 190, seuilJourH: 12.5, besoinFroidSemaines: 9 },
+    phenologie: { debourrementDJ: 190, seuilJourH: 12.5 },
     economie: { prixPlantEur: 3 },
     // Infradensité : IGN/Dupouey, « Chêne pubescent ».
     bois: { densite: 0.65, prixOeuvreEurM3: 220, rejetteDeSouche: true },
@@ -869,7 +879,7 @@ export const ESPECES_V0: readonly EspeceV0[] = [
     // Aiguilles à C/N ~60 : minéralisation lente et acidifiante (ch2-B).
     litiere: { cnRatio: 60, calciumMgG: 3.8 },
     // Sempervirent : ces valeurs ne servent pas, mais le champ reste renseigné.
-    phenologie: { debourrementDJ: 150, seuilJourH: 11.0, besoinFroidSemaines: 10 },
+    phenologie: { debourrementDJ: 150, seuilJourH: 11.0 },
     economie: { prixPlantEur: 1.5 },
     // Infradensité : GWDD, moyenne de cinq mesures (0,370 à 0,422). La table
     // française ne liste que des feuillus de taillis.
@@ -924,8 +934,15 @@ export const ESPECES_V0: readonly EspeceV0[] = [
     azote: { demandeRelative: 0.35, fixateur: false },
     regeneration: { maturiteAns: 10, longeviteAns: 90, dissemination: "vent", semisParAn: 6 },
     litiere: { cnRatio: 25, calciumMgG: 9 },
-    // Le bouleau ouvre le bal, début avril — c'est le pionnier jusque dans son calendrier.
-    phenologie: { debourrementDJ: 85, seuilJourH: 10.8, besoinFroidSemaines: 8 },
+    // Le bouleau ouvre le bal, début avril — c'est le pionnier jusque dans son
+    // calendrier. **Il l'ouvrait trop tôt** (#419) : 85 °C·j le faisaient partir trois
+    // à quatre semaines avant le chêne au nord et cinq dans les Landes. Or sur
+    // PEP725 il le précède de 13 jours environ (début de saison vers les jours
+    // 110 et 123, Mo et al. 2023, *Front. Plant Sci.* 14:1266801 ; 107 et 122
+    // sur 107 sites allemands, Vitasse et Basler 2013). 150 °C·j le remettent à
+    // une ou deux semaines du chêne sur les quatre séries. Pas de porte : sa
+    // feuillaison ne répond pas à la photopériode (Basler et Körner 2012).
+    phenologie: { debourrementDJ: 150, seuilJourH: 0 },
     economie: { prixPlantEur: 1.5 },
     // Infradensité : GWDD, moyenne de deux mesures (0,500 et 0,525).
     bois: { densite: 0.51, prixOeuvreEurM3: 120, rejetteDeSouche: true },
@@ -985,7 +1002,7 @@ export const ESPECES_V0: readonly EspeceV0[] = [
     // **Le** plus tardif de l'atlas, et ce n'est pas un détail : c'est ce qui lui
     // permet d'échapper aux gels d'avril, et ce qui rend l'agroforesterie au
     // noyer possible — la culture intercalaire pousse avant que l'ombre arrive.
-    phenologie: { debourrementDJ: 290, seuilJourH: 13.5, besoinFroidSemaines: 14 },
+    phenologie: { debourrementDJ: 290, seuilJourH: 13.5 },
     economie: { prixPlantEur: 15 },
     // Bois précieux : le noyer se vend à la bille, plusieurs fois le chêne.
     // Infradensité : GWDD, moyenne de trois mesures (0,533 à 0,591).
@@ -1086,7 +1103,7 @@ export const ESPECES_V0: readonly EspeceV0[] = [
     regeneration: { maturiteAns: 6, longeviteAns: 80, dissemination: "gravite", semisParAn: 0 },
     litiere: { cnRatio: 30, calciumMgG: 13 },
     // Fruitier de plaine : feuillaison après la floraison, mi-avril.
-    phenologie: { debourrementDJ: 150, seuilJourH: 11.5, besoinFroidSemaines: 13 },
+    phenologie: { debourrementDJ: 150, seuilJourH: 11.5 },
     economie: { prixPlantEur: 12 },
     // Infradensité **non sourcée** : le pommier cultivé est absent des deux sources,
     // et le pommier sauvage (Malus sylvestris, 0,60 au GWDD) est une **autre** espèce.
@@ -1137,7 +1154,10 @@ export const ESPECES_V0: readonly EspeceV0[] = [
     regeneration: { maturiteAns: 4, longeviteAns: 60, dissemination: "gravite", semisParAn: 0 },
     litiere: { cnRatio: 30, calciumMgG: 13 },
     // L'abricotier part très tôt, et c'est bien là son problème : le gel le rattrape.
-    phenologie: { debourrementDJ: 110, seuilJourH: 11.2, besoinFroidSemaines: 10 },
+    // Son cumul n'a pas de date de feuillaison observée dans le dépôt : il est
+    // gardé, devant le bouleau recalé (#419) *(à confirmer)*. Sa floraison, elle,
+    // a son propre calendrier (`floraison`).
+    phenologie: { debourrementDJ: 110, seuilJourH: 11.2 },
     economie: { prixPlantEur: 14 },
     // Infradensité : GWDD, mesure **unique** (0,675, Asie du Sud-Est) — sourcée, mais
     // sur un seul échantillon, et hors d'Europe.
@@ -1193,8 +1213,12 @@ export const ESPECES_V0: readonly EspeceV0[] = [
     // graine→semis, et cet entonnoir est ici très étroit *(à calibrer)*.
     regeneration: { maturiteAns: 5, longeviteAns: 80, dissemination: "geai", semisParAn: 0.4 },
     litiere: { cnRatio: 25, calciumMgG: 13 },
-    // Le noisetier est précoce — il fleurit même en plein hiver.
-    phenologie: { debourrementDJ: 95, seuilJourH: 11.0, besoinFroidSemaines: 8 },
+    // Le noisetier est précoce — il fleurit même en plein hiver. Son cumul n'a pas
+    // de date observée dans le dépôt (#419) : il est gardé, à deux ou trois
+    // semaines devant le bouleau recalé *(à confirmer sur PEP725)*. Pas de
+    // porte : espèce de début de succession (Basler et Körner 2012), dont la
+    // présence dans leur échantillon est *(à confirmer)*.
+    phenologie: { debourrementDJ: 95, seuilJourH: 0 },
     economie: { prixPlantEur: 8 },
     // Infradensité : IGN/Dupouey, « Noisetier ».
     bois: { densite: 0.52, prixOeuvreEurM3: 70, rejetteDeSouche: true },
@@ -1267,7 +1291,7 @@ export const ESPECES_V0: readonly EspeceV0[] = [
     },
     litiere: { cnRatio: 28, calciumMgG: 11 },
     // L'épine noire fleurit avant de feuiller, dès mars.
-    phenologie: { debourrementDJ: 115, seuilJourH: 11.3, besoinFroidSemaines: 10 },
+    phenologie: { debourrementDJ: 115, seuilJourH: 11.3 },
     economie: { prixPlantEur: 4 },
     // Infradensité **non sourcée** : absente des deux sources. Valeur d'avant #68,
     // donc vraisemblablement une densité à 12 % d'humidité, donc surestimée.
@@ -1326,7 +1350,7 @@ export const ESPECES_V0: readonly EspeceV0[] = [
     regeneration: { maturiteAns: 8, longeviteAns: 200, dissemination: "oiseaux", semisParAn: 0.9 },
     litiere: { cnRatio: 26, calciumMgG: 13 },
     // L'aubépine suit l'épine noire de quelques semaines.
-    phenologie: { debourrementDJ: 135, seuilJourH: 11.5, besoinFroidSemaines: 12 },
+    phenologie: { debourrementDJ: 135, seuilJourH: 11.5 },
     economie: { prixPlantEur: 4 },
     // Infradensité **non sourcée** : le GWDD ne porte que « Crataegus oxyacantha »,
     // nom historiquement ambigu entre C. laevigata et C. monogyna — on ne s'en
@@ -1396,7 +1420,7 @@ export const ESPECES_V0: readonly EspeceV0[] = [
     },
     litiere: { cnRatio: 24, calciumMgG: 10 },
     // La ronce ne perd qu'une partie de son feuillage : elle repart tôt.
-    phenologie: { debourrementDJ: 120, seuilJourH: 11.3, besoinFroidSemaines: 8 },
+    phenologie: { debourrementDJ: 120, seuilJourH: 11.3 },
     economie: { prixPlantEur: 2 },
     // Infradensité **non sourcée** : absente des deux sources, comme tous les
     // sous-arbrisseaux. Valeur d'avant #68.
@@ -1448,7 +1472,7 @@ export const ESPECES_V0: readonly EspeceV0[] = [
     regeneration: { maturiteAns: 4, longeviteAns: 40, dissemination: "oiseaux", semisParAn: 1.5 },
     litiere: { cnRatio: 20, calciumMgG: 15 },
     // Le sureau est l'un des tout premiers à verdir dans les haies.
-    phenologie: { debourrementDJ: 105, seuilJourH: 11.2, besoinFroidSemaines: 8 }, // litière tendre, azotée : elle se minéralise vite
+    phenologie: { debourrementDJ: 105, seuilJourH: 11.2 }, // litière tendre, azotée : elle se minéralise vite
     economie: { prixPlantEur: 5 },
     // Infradensité **non sourcée** : le GWDD n'a que des sureaux d'Amérique (0,43 à
     // 0,46) ; on ne prête pas leur valeur au nôtre. Valeur d'avant #68.
@@ -1524,8 +1548,12 @@ export const ESPECES_V0: readonly EspeceV0[] = [
     azote: { demandeRelative: 0.6, fixateur: false },
     regeneration: { maturiteAns: 20, longeviteAns: 150, dissemination: "vent", semisParAn: 2 },
     litiere: { cnRatio: 28, calciumMgG: 11 },
-    // Le charme débourre tôt, avant le hêtre et le chêne.
-    phenologie: { debourrementDJ: 130, seuilJourH: 11.5, besoinFroidSemaines: 12 },
+    // Le charme débourre tôt, avant le hêtre et le chêne : dix jours avant le chêne
+    // dans le réseau RENECOFOR (sous-étage, jour 90 contre 100 au pédonculé,
+    // 1997-2013 ; Lebourgeois et al., colloque Phéno 2015). Il partait quatorze
+    // jours avant au nord et vingt et un dans les Landes avec 130 °C·j ; 150 le
+    // remettent à une ou deux semaines (#419).
+    phenologie: { debourrementDJ: 150, seuilJourH: 11.5 },
     economie: { prixPlantEur: 3 },
     // Bois très dur : c'est **le** bois de chauffage, et le taillis de charme
     // repart indéfiniment — d'où sa place dans toutes les haies plessées.
@@ -1575,7 +1603,7 @@ export const ESPECES_V0: readonly EspeceV0[] = [
     azote: { demandeRelative: 0.4, fixateur: false },
     regeneration: { maturiteAns: 15, longeviteAns: 200, dissemination: "oiseaux", semisParAn: 1.5 },
     litiere: { cnRatio: 35, calciumMgG: 7 }, // feuille coriace et cireuse : elle met des années
-    phenologie: { debourrementDJ: 200, seuilJourH: 11.5, besoinFroidSemaines: 8 },
+    phenologie: { debourrementDJ: 200, seuilJourH: 11.5 },
     economie: { prixPlantEur: 7 },
     // Infradensité : GWDD, mesure unique (0,65).
     bois: { densite: 0.65, prixOeuvreEurM3: 0, rejetteDeSouche: true },
@@ -1626,8 +1654,12 @@ export const ESPECES_V0: readonly EspeceV0[] = [
     // sur limon frais et nu, ce que le moteur traduit par sa soif.
     regeneration: { maturiteAns: 5, longeviteAns: 60, dissemination: "vent", semisParAn: 4 },
     litiere: { cnRatio: 22, calciumMgG: 12 },
-    // Il débourre parmi les tout premiers, avec le bouleau.
-    phenologie: { debourrementDJ: 80, seuilJourH: 10.8, besoinFroidSemaines: 7 },
+    // Il débourre parmi les tout premiers, avec le bouleau. Son cumul n'a pas de
+    // date observée dans le dépôt (#419) : il est gardé, à deux ou trois semaines
+    // devant le bouleau recalé *(à confirmer sur PEP725)*. Pas de porte :
+    // pionnière (Basler et Körner 2012, présence dans leur échantillon *(à
+    // confirmer)*).
+    phenologie: { debourrementDJ: 80, seuilJourH: 0 },
     economie: { prixPlantEur: 3 }, // une bouture suffit
     // Infradensité : GWDD, mesure **unique** (0,284, Europe) — la plus basse du
     // référentiel, et basse même pour un saule (les autres Salix du GWDD vont de
@@ -1685,7 +1717,7 @@ export const ESPECES_V0: readonly EspeceV0[] = [
     azote: { demandeRelative: 0.5, fixateur: false },
     regeneration: { maturiteAns: 6, longeviteAns: 100, dissemination: "oiseaux", semisParAn: 1 },
     litiere: { cnRatio: 25, calciumMgG: 14 },
-    phenologie: { debourrementDJ: 110, seuilJourH: 11.3, besoinFroidSemaines: 11 },
+    phenologie: { debourrementDJ: 110, seuilJourH: 11.3 },
     economie: { prixPlantEur: 6 },
     // Infradensité **non sourcée** : le cornouiller mâle est absent des deux sources
     // (le GWDD n'a que le sanguin, 0,68). Valeur d'avant #68, et c'est désormais
@@ -1740,7 +1772,7 @@ export const ESPECES_V0: readonly EspeceV0[] = [
     azote: { demandeRelative: 0.5, fixateur: false },
     regeneration: { maturiteAns: 6, longeviteAns: 80, dissemination: "oiseaux", semisParAn: 1 },
     litiere: { cnRatio: 26, calciumMgG: 14 },
-    phenologie: { debourrementDJ: 125, seuilJourH: 11.4, besoinFroidSemaines: 10 },
+    phenologie: { debourrementDJ: 125, seuilJourH: 11.4 },
     economie: { prixPlantEur: 5 },
     // Infradensité : GWDD, mesure unique (0,603, Europe).
     bois: { densite: 0.6, prixOeuvreEurM3: 0, rejetteDeSouche: true },
@@ -1789,7 +1821,7 @@ export const ESPECES_V0: readonly EspeceV0[] = [
     azote: { demandeRelative: 0.5, fixateur: false },
     regeneration: { maturiteAns: 5, longeviteAns: 70, dissemination: "oiseaux", semisParAn: 1.5 },
     litiere: { cnRatio: 27, calciumMgG: 12 },
-    phenologie: { debourrementDJ: 120, seuilJourH: 11.4, besoinFroidSemaines: 9 },
+    phenologie: { debourrementDJ: 120, seuilJourH: 11.4 },
     economie: { prixPlantEur: 4 },
     // Infradensité : GWDD, mesure unique (0,805, Europe). Elle **monte** — preuve
     // qu'un facteur global appliqué aux anciennes valeurs aurait eu tort ici.
@@ -1870,7 +1902,7 @@ export const ESPECES_V0: readonly EspeceV0[] = [
     },
     litiere: { cnRatio: 25, calciumMgG: 4.5 },
     // Sempervirent : valeurs sans effet.
-    phenologie: { debourrementDJ: 100, seuilJourH: 11.0, besoinFroidSemaines: 6 },
+    phenologie: { debourrementDJ: 100, seuilJourH: 11.0 },
     economie: { prixPlantEur: 3 },
     // Infradensité **non sourcée** : aucun Ulex au GWDD, et la table française ne
     // descend pas jusqu'à la lande. Valeur d'avant #68.
@@ -1930,7 +1962,7 @@ export const ESPECES_V0: readonly EspeceV0[] = [
     },
     litiere: { cnRatio: 22, calciumMgG: 5 },
     // Sempervirent : valeurs sans effet.
-    phenologie: { debourrementDJ: 100, seuilJourH: 11.0, besoinFroidSemaines: 6 },
+    phenologie: { debourrementDJ: 100, seuilJourH: 11.0 },
     economie: { prixPlantEur: 2.5 },
     // Infradensité **non sourcée** : aucun Cytisus au GWDD. Valeur d'avant #68.
     bois: { densite: 0.55, prixOeuvreEurM3: 40, rejetteDeSouche: true },
@@ -1993,7 +2025,7 @@ export const ESPECES_V0: readonly EspeceV0[] = [
     // Litière éricacée : lente et acidifiante (voie fongique, ch2-B).
     litiere: { cnRatio: 45, calciumMgG: 3.5 },
     // Sempervirent : valeurs sans effet.
-    phenologie: { debourrementDJ: 100, seuilJourH: 11.0, besoinFroidSemaines: 6 },
+    phenologie: { debourrementDJ: 100, seuilJourH: 11.0 },
     economie: { prixPlantEur: 2 },
     // Infradensité **non sourcée** : ni Calluna ni Erica au GWDD. Valeur d'avant #68.
     bois: { densite: 0.6, prixOeuvreEurM3: 30, rejetteDeSouche: true },
@@ -2033,7 +2065,7 @@ export const ESPECES_V0: readonly EspeceV0[] = [
     regeneration: { maturiteAns: 20, longeviteAns: 300, dissemination: "geai", semisParAn: 2 },
     litiere: { cnRatio: 45, calciumMgG: 6 },
     // Le châtaignier est tardif : mi-mai. *(Des observations de terrain le donnent parfois plus précoce que le chêne ; on suit ici la vue forestière courante.)*
-    phenologie: { debourrementDJ: 300, seuilJourH: 12.5, besoinFroidSemaines: 12 },
+    phenologie: { debourrementDJ: 300, seuilJourH: 12.5 },
     economie: { prixPlantEur: 4 },
     // Infradensité : IGN/Dupouey, « Châtaignier » — l'essence de taillis par
     // excellence, et la table est faite pour les taillis.
@@ -2106,7 +2138,7 @@ export const ESPECES_V0: readonly EspeceV0[] = [
     regeneration: { maturiteAns: 25, longeviteAns: 250, dissemination: "geai", semisParAn: 2 },
     litiere: { cnRatio: 50, calciumMgG: 6 },
     // Sempervirent : valeurs sans effet.
-    phenologie: { debourrementDJ: 150, seuilJourH: 11.5, besoinFroidSemaines: 6 },
+    phenologie: { debourrementDJ: 150, seuilJourH: 11.5 },
     economie: { prixPlantEur: 5 },
     // Infradensité : IGN/Dupouey, « Chêne-liège ». La valeur ne bouge pas — elle
     // était juste par chance, elle est maintenant sourcée.
@@ -2165,7 +2197,7 @@ export const ESPECES_V0: readonly EspeceV0[] = [
     // des raisons de sa place dans les haies.
     litiere: { cnRatio: 25, calciumMgG: 16 },
     // Le frêne est le dernier des grands feuillus à sortir, mi-mai passée.
-    phenologie: { debourrementDJ: 310, seuilJourH: 12.5, besoinFroidSemaines: 12 },
+    phenologie: { debourrementDJ: 310, seuilJourH: 12.5 },
     economie: { prixPlantEur: 3 },
     // Bois d'œuvre de premier ordre (manches, sport, ébénisterie) et rejet
     // vigoureux : c'est l'arbre à trogne par excellence.
@@ -2213,7 +2245,7 @@ export const ESPECES_V0: readonly EspeceV0[] = [
     regeneration: { maturiteAns: 5, longeviteAns: 100, dissemination: "oiseaux", semisParAn: 2 },
     litiere: { cnRatio: 45, calciumMgG: 5.5 },
     // Sempervirent : valeurs sans effet.
-    phenologie: { debourrementDJ: 120, seuilJourH: 11.0, besoinFroidSemaines: 5 },
+    phenologie: { debourrementDJ: 120, seuilJourH: 11.0 },
     economie: { prixPlantEur: 9 },
     // Infradensité : GWDD, mesure unique (0,65).
     bois: { densite: 0.65, prixOeuvreEurM3: 90, rejetteDeSouche: true },
@@ -2376,7 +2408,7 @@ export const ESPECES_V0: readonly EspeceV0[] = [
     // tardif (« serait moins sensible que les deux espèces parents », fichier
     // wallon) n'a pas de champ où s'écrire : le moteur ne gèle que les fleurs
     // (#371).
-    phenologie: { debourrementDJ: 290, seuilJourH: 13.5, besoinFroidSemaines: 14 },
+    phenologie: { debourrementDJ: 290, seuilJourH: 13.5 },
     // Prix du commun repris *(à calibrer)*.
     economie: { prixPlantEur: 15 },
     // Infradensité : **aucune mesure de l'hybride**, ni de *J. major*, au GWDD ;

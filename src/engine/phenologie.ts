@@ -52,17 +52,26 @@
  * calibration actuelle. Voir docs/realisme.md, « le houppier doré produit
  * encore ».
  *
- * Enfin, le **besoin de froid**. Un bourgeon n'est pas une graine qu'on chauffe :
- * il sort de dormance en accumulant d'abord des semaines fraîches, et ce n'est
- * qu'ensuite que la chaleur le fait partir. C'est le paradoxe bien documenté du
- * réchauffement sur la phénologie de printemps.
+ * Enfin, le **froid de l'hiver**. Un bourgeon n'est pas une graine qu'on chauffe :
+ * plus il a eu froid, moins il lui faut de chaleur pour partir. C'est la relation
+ * des modèles « alternés » : le besoin de forçage décroît exponentiellement avec
+ * le froid reçu (Cannell et Smith 1983, 92 % de la variance du débourrement ;
+ * Murray, Cannell et Smith 1989 ; Chuine 1999, F* = a·exp(b·froid) dans tous
+ * ses modèles). Et c'est le paradoxe bien documenté du réchauffement : un
+ * hiver trop doux **retarde** le printemps qu'il devrait avancer.
  *
- * Mesuré sur le limon du Nord, hêtre : onze semaines de froid à climat figé
- * contre quatre sous SSP5-8.5 en 2090, ce qui porte son exigence de 315 à
- * 420 °C·j. L'effet **amortit** l'avance sans la renverser à ces latitudes — le
- * hêtre débourre quand même plus tôt, simplement moins tôt qu'il ne l'aurait
- * fait sans dormance. Le renversement complet ne s'observe que là où l'hiver
- * est déjà doux.
+ * **Une règle commune, sans trait par essence** (#419). Chaque essence garde son
+ * cumul (`debourrementDJ`), lu au froid d'un hiver du nord de la France, et la
+ * même loi le gonfle quand l'hiver a été plus doux. Le moteur portait avant un
+ * besoin de froid par essence, compté en semaines à 0-10 °C : il ne
+ * distinguait pas les Landes du Nord (18 semaines contre 18 à 22), et le
+ * bouleau des Landes débourrait fin février. Le froid se compte maintenant en
+ * **unités de Hänninen** (1990, reprises par Chuine 1999) : nul sous −3,4 °C
+ * et au-dessus de 10,4 °C, plein à 3,5 °C. Les Landes en reçoivent 9,5 quand
+ * le Nord en reçoit 11 à 13 au débourrement : leurs précoces demandent un
+ * cinquième de chaleur de plus, et l'écart du bouleau au chêne n'y grandit plus
+ * (deux semaines dans les Landes comme à Abbeville, contre cinq et quatre
+ * avant ; médianes 1997-2013, #419).
  *
  * Enfin la **marcescence**, qui oblige à distinguer deux feuillages là où le moteur
  * n'en comptait qu'un. Le charme garde tout l'hiver ses feuilles **mortes**,
@@ -129,35 +138,58 @@ export const ETALEMENT_SENESCENCE_SEMAINES = 2;
 export const LARGEUR_PORTE_H = 1.2;
 
 /**
- * Températures entre lesquelles une semaine compte comme du froid utile. En
- * dessous de zéro le bourgeon est gelé et rien ne progresse ; au-dessus de dix
- * degrés il ne s'agit plus de froid *(à calibrer)*.
+ * Les bornes du froid utile, °C — la fonction de Hänninen (1990), reprise telle
+ * quelle par Chuine (1999, son hypothèse B2) : sous le plancher le bourgeon est
+ * gelé et rien ne progresse, au-dessus du plafond il ne s'agit plus de froid,
+ * et l'unité est pleine à l'optimum.
  */
-export const FROID_MIN_C = 0;
-export const FROID_MAX_C = 10;
+export const FROID_PLANCHER_C = -3.4;
+export const FROID_OPTIMUM_C = 3.5;
+export const FROID_PLAFOND_C = 10.4;
 
 /**
- * De combien le besoin de forçage enfle quand le froid n'a pas été satisfait.
- * Un doublement : un hiver sans froid demande deux fois plus de chaleur pour
- * débourrer, ce qui décale de plusieurs semaines *(à calibrer)*.
+ * Froid de référence, unités de Hänninen : celui qu'un hiver du nord de la France
+ * a donné au débourrement — 11,2 à 12,8 à Abbeville, Dijon et Tours, médianes
+ * 1997-2013 des séries Météo-France. Les cumuls de l'atlas sont lus à ce froid :
+ * moins de froid les gonfle, davantage les allège.
+ *
+ * *(Limite : la loi n'a pas d'asymptote. Les courbes de Cannell et Smith tendent
+ * vers un besoin minimal quand le froid s'accumule, et Murray et al. (1989)
+ * voient le hêtre ne jamais l'atteindre ; ici, un hiver très froid allège le
+ * besoin sans plancher. Sur les séries du dépôt, le froid reçu à la mi-avril
+ * va de 3 unités (Maures) à 19 (Dijon, l'hiver le plus froid) : un besoin
+ * multiplié par 1,9 au plus, réduit de 40 % au plus.)*
  */
-export const PENALITE_SANS_FROID = 1;
+export const FROID_REFERENCE = 12;
 
-/** Une semaine compte-t-elle comme du froid utile à la levée de dormance ? */
-export function semaineDeFroid(tMeanC: number): boolean {
-  return tMeanC >= FROID_MIN_C && tMeanC <= FROID_MAX_C;
+/**
+ * Pente de la loi, par unité de froid manquante : le besoin de chaleur est
+ * multiplié par exp(pente × manque). Calée sur le rapport du besoin observé
+ * entre les Landes et Abbeville — 1,34 pour le bouleau comme pour le charme,
+ * pour deux unités de froid en moins —, puis adoucie pour que le chêne reste
+ * à sa date les années pauvres en froid ; vérifiée sur Dijon et Tours, que le
+ * calage n'a pas lus (#419) *(à calibrer)*.
+ */
+export const PENTE_FROID_FORCAGE = 0.07;
+
+/** Le froid utile d'une semaine, en unités de Hänninen ∈ [0,1] (une semaine pleine à 3,5 °C). */
+export function uniteDeFroid(tMeanC: number): number {
+  if (tMeanC <= FROID_PLANCHER_C || tMeanC >= FROID_PLAFOND_C) return 0;
+  return tMeanC <= FROID_OPTIMUM_C
+    ? (tMeanC - FROID_PLANCHER_C) / (FROID_OPTIMUM_C - FROID_PLANCHER_C)
+    : (FROID_PLAFOND_C - tMeanC) / (FROID_PLAFOND_C - FROID_OPTIMUM_C);
 }
 
 /**
- * Cumul de forçage réellement exigé, une fois le froid pris en compte.
- * Satisfait, le besoin nominal suffit ; pas du tout satisfait, il double.
+ * Cumul de forçage réellement exigé, une fois le froid pris en compte : le cumul
+ * de l'essence au froid de référence, multiplié par exp(pente × (référence −
+ * froid)) : gonflé quand le froid manque, allégé quand il abonde. La même loi
+ * pour toutes les essences.
  */
-export function debourrementExigeDJ(espece: EspeceV0, semainesDeFroid: number): number {
-  const satisfait = Math.min(
-    1,
-    semainesDeFroid / Math.max(1, espece.phenologie.besoinFroidSemaines),
+export function debourrementExigeDJ(espece: EspeceV0, froid: number): number {
+  return (
+    espece.phenologie.debourrementDJ * Math.exp(PENTE_FROID_FORCAGE * (FROID_REFERENCE - froid))
   );
-  return espece.phenologie.debourrementDJ * (1 + PENALITE_SANS_FROID * (1 - satisfait));
 }
 
 /**
@@ -176,7 +208,7 @@ export function partFoliaireActive(
   dureeJourH: number,
   automne: boolean,
   semainesDepuisSenescence: number,
-  semainesDeFroid = Number.POSITIVE_INFINITY,
+  semainesDeFroid = FROID_REFERENCE,
 ): number {
   // Les sempervirents gardent leur feuillage : ni débourrement ni chute.
   if (!espece.lumiere.caduc) return 1;
@@ -223,7 +255,7 @@ export function partFoliaireOmbrageante(
   dureeJourH: number,
   automne: boolean,
   semainesDepuisSenescence: number,
-  semainesDeFroid = Number.POSITIVE_INFINITY,
+  semainesDeFroid = FROID_REFERENCE,
 ): number {
   const active = partFoliaireActive(
     espece,
@@ -296,7 +328,7 @@ export function partFoliaireAssimilante(
   dureeJourH: number,
   automne: boolean,
   semainesDepuisSenescence: number,
-  semainesDeFroid = Number.POSITIVE_INFINITY,
+  semainesDeFroid = FROID_REFERENCE,
 ): number {
   const vivante = partFoliaireActive(
     espece,
@@ -347,7 +379,7 @@ export interface ContextePhenologique {
   automne: boolean;
   /** semaines écoulées depuis le début du compteur de chute */
   semainesDepuisSenescence: number;
-  /** semaines de froid utile accumulées pour lever la dormance (GameState) */
+  /** froid utile accumulé depuis l'automne, unités de Hänninen (GameState) */
   semainesDeFroid: number;
 }
 
@@ -369,7 +401,12 @@ export function contextePhenologique(
   return {
     latitudeDeg,
     semaineAnnee,
-    ddYearBase5,
+    // **En semaine 0, le cumul de l'année n'a pas commencé** (#419). L'état porte
+    // encore celui de l'année finie — le tick ne le remet à zéro qu'en
+    // simulant la semaine —, et tant que toutes les essences avaient une porte
+    // photopériodique, le jour court de janvier le masquait. Les pionnières n'en
+    // ont plus : un bouleau se serait feuillé une semaine chaque 1ᵉʳ janvier.
+    ddYearBase5: semaineAnnee < 1 ? 0 : ddYearBase5,
     jourH: dureeDuJourH(latitudeDeg, midWeekDayOfYear(semaineAnnee)),
     automne,
     semainesDepuisSenescence: automne ? Math.max(0, semaineAnnee - SENESCENCE_DEBUT_SEMAINE) : 0,
@@ -430,9 +467,16 @@ export function contextePhenologiqueFractionnaire(
     jourH: dureeDuJourH(debut.latitudeDeg, midWeekDayOfYear(debut.semaineAnnee) + 7 * u),
     automne,
     semainesDepuisSenescence: automne ? Math.max(0, semaineAnnee - SENESCENCE_DEBUT_SEMAINE) : 0,
-    // Compteur de semaines **entières** : il ne bouge pas dans la semaine, et il ne
-    // sert qu'à gonfler le besoin de froid, pas à doser un feuillage.
-    semainesDeFroid: debut.semainesDeFroid,
+    // Le froid s'accumule comme les degrés-jours, par un apport hebdomadaire
+    // unique (une unité de Hänninen tirée de la moyenne de la semaine) : il
+    // s'interpole donc exactement de la même façon. Il module maintenant le
+    // besoin de chaleur sans palier (#419), et le tenir fixe dans la semaine
+    // faisait diverger l'instant 1 de la semaine suivante. La remise à zéro de
+    // septembre ne se traverse pas.
+    semainesDeFroid:
+      fin.semainesDeFroid >= debut.semainesDeFroid
+        ? debut.semainesDeFroid + (fin.semainesDeFroid - debut.semainesDeFroid) * u
+        : debut.semainesDeFroid,
   };
 }
 
