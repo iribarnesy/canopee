@@ -119,6 +119,39 @@ Une rose des vents par station reste à faire : les quatre stations partagent
 aujourd'hui le même régime, faute de données (`SyntheticClimate.ventDominantVersRad`
 est là pour qu'une station le déclare quand on l'aura).
 
+**Combien de jours il a plu** voyage aussi dans `weather` (#405) :
+
+| Champ | Ce qu'il porte |
+|---|---|
+| `joursDePluie` | nombre de jours de la semaine où il est tombé **au moins 1 mm**, ramené à sept jours : un réel de 0 à 7, jamais plus que `rainMm` en millimètres ; absent si la météo ne le connaît pas |
+
+C'est ce que le cumul ne dit pas : 15 mm, ce peut être un orage et six jours
+secs, ou une bruine tous les jours. Quatre choses à savoir avant de le dessiner :
+
+1. **Le seuil est celui de Météo-France** (« jours avec précipitations ≥ 1 mm »,
+   l'indice R1mm de l'ETCCDI). Une semaine de bruine sous le millimètre par
+   jour a donc zéro jour de pluie et un `rainMm` non nul : c'est 9 à 11 % des
+   semaines des séries tempérées, 16 % au Luc. La neige compte dedans, comme
+   dans `rainMm` : un jour de neige est un jour de précipitations.
+2. **Ce que ça change à l'écran, mesuré sur les séries de 1964-2023** : parmi
+   les semaines de 10 à 20 mm, 8 à 13 % ont au plus un jour de pluie sur les
+   stations tempérées, et 35 % au Luc, où la pluie tombe en peu de jours (65
+   par an contre 111 à 128 ailleurs). Un seuil sur le cumul les montrerait
+   toutes pluvieuses.
+3. **Dans l'année synthétique, il est lisse**, comme la pluie : chaque semaine
+   reçoit la part du nombre annuel de jours de pluie de la station qui suit la
+   saison de la pluie (2,2 à 2,7 jours par semaine sur le limon, 0,7 à 1,8 au
+   Luc). Il n'y a pas de semaine d'orage dans une année synthétique, il
+   n'y en a pas non plus de semaine sans pluie.
+4. **Le scénario climatique ne le déplace pas** : il assèche les étés en
+   millimètres, pas en jours, faute de chiffre sourcé. Seule la définition le
+   rabat — une semaine asséchée à 2 mm ne garde pas trois jours de pluie.
+
+Le moteur, lui, ne le lit pas : l'eau entre dans le sol à la semaine, quelle que
+soit sa répartition. C'est une grandeur **pour** le rendu, et c'est pour cela
+qu'elle peut être absente — une série ou un climat qui ne la déclarent pas ne la
+fabriquent pas.
+
 **Par cellule**, en `Float32Array`/`Uint8Array` transférés :
 
 | Grille | Ce qu'elle porte |
@@ -148,7 +181,40 @@ est là pour qu'une station le déclare quand on l'aura).
 `diametreTeteCm`, `caviteTeteL`, `vigueur`,
 `dommageHydraulique`, `mortSemaine`, `brulEeSemaine`, `causeMort`,
 `derniereLeveeSemaine`, `floraison`, `fruitProgress`, `bloomFrosted`,
-`pousseTendreM`, `frotteSemaine`, `brouteSemaine`, `renverseSemaine`, `chuteRad`.
+`pousseTendreM`, `frotteSemaine`, `brouteSemaine`, `renverseSemaine`, `chuteRad`,
+`satisfactionEau`.
+
+`satisfactionEau` est **la soif de l'arbre** la dernière semaine simulée (#372) :
+l'eau qu'il a obtenue sur celle qu'un arbre intact demanderait, ∈ [0,1]. C'est la
+valeur même que la croissance et la survie lisent dans le moteur, pas une
+mémoire : `stress` et `stressLent` en gardent la trace amortie, mêlée à la
+faim, aux ravageurs et à la maladie. Trois choses à savoir :
+
+1. **Avoir soif se lit sur la fiche de l'espèce**, pas sur un seuil commun :
+   `getEspece(especeId).eau.seuilConfortSecheresse` (en dessous, la croissance
+   ralentit) et `seuilStressSecheresse` (en dessous, l'arbre puise dans ses
+   réserves et risque la mort). Le second va de 0,08 (ajonc, callune) à 0,65
+   (aulne) : un même 0,4 laisse un pin sylvestre tranquille et met un aulne en
+   danger. Un avis « 40 % des jeunes plants ont soif » se compte donc arbre par
+   arbre, chacun contre sa fiche — c'est une fonction pure de l'instantané et
+   des fiches, le rendu n'a rien à demander de plus.
+2. **Un caduc nu vaut 1** : sans feuilles, il ne demande rien. La soif est une
+   affaire de saison de végétation, et l'hiver ne la montre pas.
+3. **Elle est absente** sur une chandelle, sur un semis levé dans la semaine et
+   sur un plant mis en terre en pause : le dernier tick ne les a pas vus. Elle
+   se garde d'un instantané à l'autre comme la lumière au sol — une action en
+   pause ne la recalcule pas —, suit la relecture et revient avec la
+   sauvegarde. Pour un arbre à la cime sèche (`dommageHydraulique`), elle reste
+   basse même sous un sol plein : le moteur la rapporte au besoin d'un arbre
+   intact, et c'est voulu.
+
+La **hauteur du tapis herbacé**, elle, ne voyage pas encore (#370) : le moteur
+ne la connaît pas. Il tient la matière **vivante** de chaque herbacée, en
+grammes, et l'envoie en litière dès qu'elle meurt — le foin sur pied n'y est
+pas — et cette matière est loin de ce que le terrain mesure (41 g/m² de molinie
+à la mi-juin sur la lande sèche). Une hauteur tirée de là serait fausse : la
+donner est un mécanisme à ajouter, pas un champ à exposer, et la convention de
+25 cm reste celle du rendu d'ici là.
 
 `baseHouppierM` mérite un mot : c'est la hauteur en dessous de laquelle il n'y a
 plus de branches vivantes, donc du fût nu à dessiner. Elle ne se déduit de rien

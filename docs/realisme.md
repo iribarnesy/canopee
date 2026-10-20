@@ -388,7 +388,7 @@ maladie-là, pas une preuve de santé.*
 
 | # | Critère de réalité | État | Porté par / manque |
 |---|---|---|---|
-| D1 | Le climat est réel, variable d'une année à l'autre, avec vraies sécheresses | ✅ | séries Météo-France ; `meteo-reelle.test.ts` |
+| D1 | Le climat est réel, variable d'une année à l'autre, avec vraies sécheresses | ✅ | séries Météo-France ; `meteo-reelle.test.ts`. Elles portent aussi, depuis #405, le nombre de jours de chaque semaine où il est tombé au moins 1 mm, compté dans les relevés quotidiens : 122, 111, 128, 113 et 65 par an à Mont-de-Marsan, Tours, Abbeville, Dijon et au Luc (1964-2023). Il voyage pour le rendu et n'entre pas dans le bilan hydrique, qui reste hebdomadaire ; l'année synthétique le répartit comme sa pluie, sans tirage (`jours-de-pluie.test.ts`) |
 | D2 | L'ETP suit le rayonnement, la latitude et l'amplitude thermique | ✅ | Hargreaves/FAO-56 ; `etp.test.ts` |
 | D3 | La floraison suit un cumul de degrés-jours | ✅ | `ddYearBase5` ; `fruits.test.ts` |
 | D4 | Un gel tardif détruit les fleurs ouvertes : les précoces sont un pari | ✅ | `tMinAbsC` ; `fruits.test.ts` |
