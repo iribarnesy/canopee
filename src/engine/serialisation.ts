@@ -180,8 +180,18 @@ const MAGIE = "CANOPEE\u0000";
  * mort pourrirait sans rien rendre, alors que l'azote qu'il portait est parti à
  * la litière le jour de sa mort sous l'ancienne règle, et ne reviendrait plus.
  * On refuse, et le journal reprend la main.
+ *
+ * **12 (issue #419, le froid de l'hiver)** : le compteur `semainesDeFroid` change
+ * d'unité. Il comptait les semaines dont la moyenne tombait entre 0 et 10 °C ; il
+ * cumule maintenant des unités de Hänninen (phenologie.ts), et une semaine douce
+ * n'en vaut qu'une fraction. La forme du bloc ne bouge pas — un nombre reste un
+ * nombre —, et c'est justement le piège : un bloc de version 11 pris en plein
+ * hiver se relirait sans erreur avec un compte une fois et demie trop grand, et
+ * le printemps qui suit partirait sur un froid qu'il n'a pas reçu. Aucune
+ * conversion n'est exacte, puisque le compte ancien a jeté les températures. On
+ * refuse, et le rejeu du journal recompte le froid semaine par semaine.
  */
-export const VERSION_FORMAT = 11;
+export const VERSION_FORMAT = 12;
 
 /**
  * Les versions d'un bloc que ce moteur sait relire, et ce qu'il faut ajouter à

@@ -15,6 +15,10 @@ import {
   ETALEMENT_CHUTE_SEMAINES,
   ETALEMENT_SENESCENCE_SEMAINES,
   FLORAISON_DUREE_DJ,
+  FROID_OPTIMUM_C,
+  FROID_PLAFOND_C,
+  FROID_PLANCHER_C,
+  FROID_REFERENCE,
   partFloraison,
   partFoliaireActive,
   partFoliaireActiveDans,
@@ -22,9 +26,9 @@ import {
   partFoliaireOmbrageanteDans,
   SENESCENCE_DEBUT_SEMAINE,
   SOLSTICE_ETE_SEMAINE,
-  semaineDeFroid,
   senescenceEnCoursDans,
   senescenceFoliaire,
+  uniteDeFroid,
 } from "../../src/engine/phenologie";
 import { rngStateFromSeed } from "../../src/engine/rng";
 import { createGameState, plantAt } from "../../src/engine/state";
@@ -44,11 +48,16 @@ describe("l'ordre de débourrement", () => {
     expect(dj("fagus_sylvatica")).toBeLessThan(dj("fraxinus_excelsior"));
   });
 
-  it("à cumul égal, le bouleau est feuillé quand le frêne est encore nu", () => {
+  it("à cumul égal, le bouleau a débourré quand le frêne est encore nu", () => {
+    // **Réécrit** (#419) : l'essai demandait un bouleau feuillé à plus de 90 %
+    // dès 200 °C·j, seuil qu'aucune source ne portait. Recalé sur PEP725, le
+    // bouleau part à 150 °C·j, treize jours environ avant le chêne (Mo et al.
+    // 2023) : à 200 °C·j il est en pleine sortie, le frêne n'a pas commencé.
+    // Le fait de terrain que l'essai garde est l'ordre, pas un taux.
     const bouleau = getEspece("betula_pendula");
     const frene = getEspece("fraxinus_excelsior");
     // 200 °C·j : mi-avril dans le nord de la France.
-    expect(partFoliaireActive(bouleau, 200, AVRIL_NORD, false, 0)).toBeGreaterThan(0.9);
+    expect(partFoliaireActive(bouleau, 200, AVRIL_NORD, false, 0)).toBeGreaterThan(0.4);
     expect(partFoliaireActive(frene, 200, AVRIL_NORD, false, 0)).toBe(0);
   });
 });
@@ -109,7 +118,7 @@ describe("le déploiement et la chute sont progressifs", () => {
   });
 });
 
-describe("le besoin de froid : un hiver doux RETARDE le printemps", () => {
+describe("le froid de l'hiver : un hiver doux RETARDE le printemps", () => {
   it("sans froid, il faut bien plus de chaleur pour débourrer", () => {
     // C'est le paradoxe documenté du réchauffement sur la phénologie de
     // printemps : le bourgeon ne sort pas de dormance sans avoir eu froid, et
@@ -121,22 +130,41 @@ describe("le besoin de froid : un hiver doux RETARDE le printemps", () => {
     expect(hiverDoux).toBeGreaterThan(1.5 * hiverNormal);
   });
 
-  it("le hêtre en souffre plus que le bouleau : il en réclame davantage", () => {
-    // La littérature est nette sur l'ordre : le besoin de froid du bouleau et
-    // du chêne est bien moindre que celui du hêtre.
-    const froid = (id: string) => getEspece(id).phenologie.besoinFroidSemaines;
-    expect(froid("fagus_sylvatica")).toBeGreaterThan(froid("betula_pendula"));
-    expect(froid("fagus_sylvatica")).toBeGreaterThan(froid("quercus_pubescens"));
-    // À hiver également doux, le hêtre est le plus pénalisé des deux.
-    const penalite = (id: string) =>
-      debourrementExigeDJ(getEspece(id), 5) / getEspece(id).phenologie.debourrementDJ;
-    expect(penalite("fagus_sylvatica")).toBeGreaterThan(penalite("betula_pendula"));
+  it("une seule loi pour toutes les essences, lue au froid de référence", () => {
+    // **Réécrit** (#419). L'essai disait « le hêtre en souffre plus que le
+    // bouleau : il en réclame davantage », sur un besoin de froid par essence
+    // compté en semaines à 0-10 °C. Ce trait est retiré : il ne distinguait pas
+    // un hiver landais d'un hiver picard, et le bouleau des Landes débourrait
+    // fin février. La loi est maintenant commune — le besoin de chaleur décroît
+    // exponentiellement avec le froid reçu (Cannell et Smith 1983 ; Chuine
+    // 1999) — et chaque essence garde son cumul, lu au froid de référence.
+    // Murray et al. (1989) voient les essences différer ; le moteur ne le
+    // représente plus, et docs/realisme.md (D7) le dit.
+    const facteur = (id: string, froid: number) =>
+      debourrementExigeDJ(getEspece(id), froid) / getEspece(id).phenologie.debourrementDJ;
+    for (const froid of [0, 4, 8]) {
+      expect(facteur("fagus_sylvatica", froid)).toBeCloseTo(facteur("betula_pendula", froid), 12);
+    }
+    // Moins de froid, plus de chaleur exigée, et l'inverse ; au froid de
+    // référence, le cumul de l'essence, ni plus ni moins.
+    expect(facteur("fagus_sylvatica", 4)).toBeGreaterThan(facteur("fagus_sylvatica", 8));
+    expect(facteur("fagus_sylvatica", FROID_REFERENCE)).toBe(1);
+    expect(facteur("fagus_sylvatica", FROID_REFERENCE + 4)).toBeLessThan(1);
   });
 
   it("seul le froid UTILE compte : ni le gel profond ni la douceur", () => {
-    expect(semaineDeFroid(5)).toBe(true);
-    expect(semaineDeFroid(-3)).toBe(false);
-    expect(semaineDeFroid(14)).toBe(false);
+    // La fonction de Hänninen (1990), reprise par Chuine (1999) : nulle sous
+    // −3,4 °C et au-dessus de 10,4 °C, pleine à 3,5 °C, en rampes entre deux.
+    expect(uniteDeFroid(FROID_OPTIMUM_C)).toBe(1);
+    expect(uniteDeFroid(FROID_PLANCHER_C)).toBe(0);
+    expect(uniteDeFroid(FROID_PLAFOND_C)).toBe(0);
+    expect(uniteDeFroid(-10)).toBe(0);
+    expect(uniteDeFroid(14)).toBe(0);
+    // Une semaine douce compte, mais moins qu'une semaine franchement froide :
+    // c'est ce qui distingue un hiver landais d'un hiver picard.
+    expect(uniteDeFroid(8)).toBeGreaterThan(0);
+    expect(uniteDeFroid(8)).toBeLessThan(uniteDeFroid(5));
+    expect(uniteDeFroid(5)).toBeLessThan(uniteDeFroid(FROID_OPTIMUM_C));
   });
 
   it("un hiver doux retarde le feuillage à date égale", () => {
@@ -261,10 +289,10 @@ describe("rien ne tombe hors sénescence", () => {
   const hetre = getEspece("fagus_sylvatica");
 
   it("au printemps, un froid insatisfait ne fait pas tomber de feuilles", () => {
-    // Le cas exact : hêtre, 500 °C·j, trois semaines de froid pour un besoin
-    // bien supérieur — la dormance n'est pas levée, le débourrement est
-    // retardé, et rien ne doit tomber pour autant.
-    expect(hetre.phenologie.besoinFroidSemaines).toBeGreaterThan(3);
+    // Le cas exact : hêtre, 500 °C·j, trois unités de froid quand le froid de
+    // référence en compte douze — le besoin de chaleur est gonflé, le
+    // débourrement retardé, et rien ne doit tomber pour autant.
+    expect(FROID_REFERENCE).toBeGreaterThan(3);
     const printemps = contextePhenologique(49.5, 16, 500, 3);
     expect(senescenceEnCoursDans(printemps)).toBe(false);
 

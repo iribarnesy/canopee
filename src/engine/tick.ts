@@ -172,8 +172,8 @@ import {
   partFloraison,
   partFoliaireActiveDans,
   partFoliaireOmbrageanteDans,
-  semaineDeFroid,
   senescenceEnCoursDans,
+  uniteDeFroid,
 } from "./phenologie";
 import {
   alterationPhosphoreG,
@@ -2748,9 +2748,10 @@ export function tick(state: GameState, weather: WeekWeather): TickResult {
   const ddYearBase5 = ddPrev + Math.max(0, weather.tMean - 5) * 7;
   // Le froid se compte à partir de l'automne et sert au printemps suivant : on
   // remet le compteur à zéro en entrant dans l'automne, pas au 1ᵉʳ janvier.
+  // Il se compte en unités de Hänninen : une semaine à 3,5 °C en vaut une, une
+  // semaine douce de 8 °C un tiers, un redoux ou un gel profond rien (#419).
   const semainesDeFroid =
-    (week === DEBUT_COMPTAGE_FROID ? 0 : state.semainesDeFroid) +
-    (semaineDeFroid(weather.tMean) ? 1 : 0);
+    (week === DEBUT_COMPTAGE_FROID ? 0 : state.semainesDeFroid) + uniteDeFroid(weather.tMean);
   // ── 5 bis A. La **ressource florale**, et c'est une mémoire (#70, G4/J6) ──────
   // Ce qui est ouvert cette semaine, dans le rayon où un insecte travaille :
   // les houppiers en fleur épandus sur leur disque — le même patron que la
