@@ -327,3 +327,17 @@ describe("les pousses grillées par le gel (#425)", () => {
     expect(valeur(fiche({ gelPousseSemaine: 52 * 31 - 20 }), "Pousses")).toBeUndefined();
   });
 });
+
+describe("la soif d'un arbre (#429)", () => {
+  // La soif voyage à côté de l'état, mesurée par le dernier tick (#372).
+  const assoiffe = (satisfactionEau: number) =>
+    ficheDeLArbre(arbreDuSnapshot(ARBRE, 1400, satisfactionEau), {
+      semaine: 52 * 31,
+      pheno: ETE,
+    });
+
+  it("se dit contre les seuils de son essence, et seulement quand il en manque", () => {
+    expect(valeur(assoiffe(1), "Soif")).toBeUndefined();
+    expect(valeur(assoiffe(0.01), "Soif")).toBe("en détresse — il puise dans ses réserves");
+  });
+});

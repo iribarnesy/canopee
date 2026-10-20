@@ -64,6 +64,8 @@ export interface EntreeDuSon {
   lumiereAuSol: ArrayLike<number>;
   /** pluie de la semaine, mm */
   pluieMm: number;
+  /** jours de pluie de la semaine (#405) ; absent = repli sur le cumul */
+  joursDePluie?: number;
   /** l'eau libre de la station */
   eau: "ruisseau" | "mare" | "aucune";
   /** part des cellules que la crue noie cette semaine ∈ [0,1] */
@@ -132,7 +134,7 @@ export function niveauxDuSon(e: EntreeDuSon): Niveaux {
   // Le vent seul siffle un peu ; c'est le feuillage qui fait le bruissement.
   const bruissement = vent * (0.35 + 0.65 * couvert(e.lumiereAuSol));
   // La même courbe que le rideau de gouttes : on entend l'averse qu'on voit.
-  const pluie = intensiteDeLaPluie(e.pluieMm);
+  const pluie = intensiteDeLaPluie(e.pluieMm, e.joursDePluie);
   const crue = borne(e.partNoyee * 4);
   const ruisseau = e.eau === "ruisseau" ? borne(0.45 + 0.55 * crue) : crue;
   const feu = borne(e.particulesDeFeu / FEU_PLEIN) ** 0.6;

@@ -162,6 +162,7 @@ export function entreeDuSon(
     lumiereAuSol: s.soilLumiere,
     // La neige ne crépite pas : on n'entend que la pluie liquide (#303).
     pluieMm: Math.max(0, s.weather.rainMm - s.neigeMm),
+    ...(s.weather.joursDePluie !== undefined ? { joursDePluie: s.weather.joursDePluie } : {}),
     eau,
     partNoyee,
     particulesDeFeu: feu.particules.length,

@@ -38,7 +38,33 @@ import { blancheurDuSol } from "./neige";
 
 const borne = (v: number) => Math.min(1, Math.max(0, v));
 
-/** Pluie de la semaine qui fait une averse franche, mm. Le son suit la même. */
+/**
+ * **Jours de pluie à partir desquels la semaine se dessine pluvieuse** (#428).
+ *
+ * Le moteur dit maintenant combien de jours il a plu (`joursDePluie`, jours
+ * d'au moins 1 mm, #405). C'est la question que le joueur posait : « quand il
+ * fait beau toute la semaine mais qu'il y a une averse, l'animation ne devrait
+ * pas montrer de pluie ». Un ou deux jours d'averse sur sept, c'est une semaine
+ * surtout belle ; trois et plus, une semaine qu'on dit pluvieuse. Mesuré sur
+ * les séries du jeu : 38 à 45 % des semaines aux stations tempérées, 18 % aux
+ * Maures. Choisi, non déduit.
+ */
+export const JOURS_D_UNE_SEMAINE_DE_PLUIE = 3;
+/**
+ * Pluie **par jour de pluie** qui fait une averse franche, mm : dix millimètres
+ * dans la journée, le seuil des jours de forte pluie des normales (indice
+ * R10mm de l'ETCCDI), un peu au-delà pour que le plein soit rare.
+ */
+export const PLUIE_FRANCHE_PAR_JOUR_MM = 12;
+/** La force de la plus fine des pluies qu'on dessine : une bruine se voit. */
+export const BRUINE = 0.15;
+/** Jours de pluie auxquels le ciel est tout à fait couvert. */
+export const JOURS_QUI_COUVRENT = 5;
+
+/**
+ * Pluie de la semaine qui fait une averse franche, mm — le repli d'une météo
+ * qui ne dit pas ses jours de pluie. Le son suit la même.
+ */
 export const PLUIE_PLEINE_MM = 45;
 /**
  * **Pluie de la semaine en deçà de laquelle rien ne tombe à l'écran, mm** (#404).
@@ -55,7 +81,10 @@ export const PLUIE_PLEINE_MM = 45;
  * donc ce qu'une semaine **résume** : à 15 mm, deux ou trois jours de pluie à
  * six ou sept millimètres le jour (l'ordre de grandeur des normales en France
  * tempérée), une semaine qu'on dit pluvieuse. Il pleut alors à l'écran une semaine sur trois (29 à 43 % selon la
- * station). Choisi, non déduit ; à reprendre quand le moteur dira les jours.
+ * station). Choisi, non déduit.
+ *
+ * Il ne sert plus qu'en **repli**, quand la météo ne dit pas ses jours de pluie
+ * (#428) : la série réelle et l'année synthétique les disent depuis #413.
  */
 export const PLUIE_MUETTE_MM = 15;
 /** Pluie de la semaine à partir de laquelle le ciel se charge, mm : un temps gris sans averse. */
@@ -73,9 +102,17 @@ export const PLUIE_QUI_COUVRE_MM = 25;
  * Elle part de zéro **au seuil** et non de l'origine : la première semaine
  * pluvieuse est une pluie fine, pas un rideau qui tombe d'un coup.
  */
-export function intensiteDeLaPluie(pluieMm: number): number {
-  if (!(pluieMm > PLUIE_MUETTE_MM)) return 0;
-  return borne((pluieMm - PLUIE_MUETTE_MM) / (PLUIE_PLEINE_MM - PLUIE_MUETTE_MM)) ** 0.7;
+export function intensiteDeLaPluie(pluieMm: number, joursDePluie?: number): number {
+  if (joursDePluie === undefined) {
+    if (!(pluieMm > PLUIE_MUETTE_MM)) return 0;
+    return borne((pluieMm - PLUIE_MUETTE_MM) / (PLUIE_PLEINE_MM - PLUIE_MUETTE_MM)) ** 0.7;
+  }
+  // **Avec les jours** (#428) : une semaine surtout belle ne pleut pas, et la
+  // force se lit à ce qui tombe un jour de pluie — bruine ou averse franche —,
+  // pas au cumul, qui mêlait sept jours de bruine et un orage.
+  if (!(joursDePluie >= JOURS_D_UNE_SEMAINE_DE_PLUIE) || !(pluieMm > 0)) return 0;
+  const parJour = pluieMm / joursDePluie;
+  return BRUINE + (1 - BRUINE) * borne((parJour - 1) / (PLUIE_FRANCHE_PAR_JOUR_MM - 1)) ** 0.7;
 }
 
 /**
@@ -84,7 +121,13 @@ export function intensiteDeLaPluie(pluieMm: number): number {
  * Il se charge avant que la pluie tombe à l'écran : une semaine de dix
  * millimètres est un temps gris, sans être une semaine de pluie.
  */
-export function couvertDuCiel(pluieMm: number): number {
+export function couvertDuCiel(pluieMm: number, joursDePluie?: number): number {
+  if (joursDePluie !== undefined) {
+    // Le ciel suit les jours de pluie : un jour d'orage dans une semaine de
+    // soleil ne grise pas la semaine ; cinq jours, si (#428).
+    if (!(pluieMm > 0)) return 0;
+    return borne((joursDePluie - 1) / (JOURS_QUI_COUVRENT - 1)) ** 0.6;
+  }
   if (!(pluieMm > PLUIE_QUI_GRISE_MM)) return 0;
   return borne((pluieMm - PLUIE_QUI_GRISE_MM) / (PLUIE_QUI_COUVRE_MM - PLUIE_QUI_GRISE_MM)) ** 0.6;
 }
@@ -98,6 +141,8 @@ export interface TempsQuIlFait {
   /** `Snapshot.manteauNeigeMm` : le manteau au sol, mm d'équivalent en eau */
   manteauNeigeMm: number;
   vent: VentAPencher;
+  /** `weather.joursDePluie` : jours d'au moins 1 mm sur sept (#405) ; absent = repli sur le cumul */
+  joursDePluie?: number;
 }
 
 /**
@@ -121,8 +166,8 @@ export interface CielDeLaSemaine {
 
 export function cielDeLaSemaine(t: TempsQuIlFait): CielDeLaSemaine {
   return {
-    couvert: couvertDuCiel(t.pluieMm),
-    mouille: intensiteDeLaPluie(pluieLiquide(t)),
+    couvert: couvertDuCiel(t.pluieMm, t.joursDePluie),
+    mouille: intensiteDeLaPluie(pluieLiquide(t), t.joursDePluie),
     blanc: blancheurDuSol(t.manteauNeigeMm),
   };
 }
@@ -177,7 +222,7 @@ export function inclinaisonDuRideau(vent: VentAPencher, vue: Vue): number {
  * devant la parcelle, pas des objets du monde.
  */
 export function gouttesDeLaPluie(t: TempsQuIlFait, vue: Vue, maintenantMs: number): Goutte[] {
-  const force = intensiteDeLaPluie(pluieLiquide(t));
+  const force = intensiteDeLaPluie(pluieLiquide(t), t.joursDePluie);
   if (force <= 0) return [];
   const { largeurPx: l, hauteurPx: h } = vue;
   const n = Math.min(GOUTTES_MAX, Math.round(force * GOUTTES_PAR_1E5_PX * ((l * h) / 1e5)));
