@@ -8,7 +8,7 @@
  */
 
 import { describe, expect, it } from "vitest";
-import { fermetureDuCouvert, tMinimumSousCouvert } from "../../src/engine/microclimat";
+import { tMinimumSousCouvert } from "../../src/engine/microclimat";
 import { degresDuGel, phraseDuGel } from "../../src/game/useAvisDuGel";
 import {
   brumeEnCours,
@@ -27,27 +27,35 @@ import { CIEL_D_ETE, CIEL_D_HIVER, fondDuCiel, GRIS_DE_PLUIE } from "../../src/r
 
 describe("le givre", () => {
   it("ne blanchit rien quand la nuit n'a pas gelé", () => {
-    expect(cellulesGelees(2, new Float32Array(16).fill(1))).toEqual([]);
+    expect(cellulesGelees(2, new Float32Array(16).fill(0))).toEqual([]);
   });
 
   it("blanchit le découvert et épargne ce que la futaie protège", () => {
     // −0,5 °C à découvert : sous un couvert fermé, le moteur remonte le
     // minimum au-dessus de zéro.
-    const lumiere = Float32Array.from([1, 1, 0.05, 0.05]);
-    expect(tMinimumSousCouvert(-0.5, fermetureDuCouvert(0.05))).toBeGreaterThan(0);
-    expect(cellulesGelees(-0.5, lumiere).map((g) => g.cellule)).toEqual([0, 1]);
+    const couvert = Float32Array.from([0, 0, 0.95, 0.95]);
+    expect(tMinimumSousCouvert(-0.5, 0.95)).toBeGreaterThan(0);
+    expect(cellulesGelees(-0.5, couvert).map((g) => g.cellule)).toEqual([0, 1]);
+  });
+
+  it("lit le couvert au-dessus, pas l'ombre : la bande que le paysage ombrage gèle (#421)", () => {
+    // Le cadre du retour de jeu : lumière à 0,98 sur les bords d'une parcelle
+    // nue, sans un houppier au-dessus. Le couvert y vaut zéro, et la nuit à
+    // −0,1 °C y gèle comme au milieu.
+    const gelees = cellulesGelees(-0.1, Float32Array.from([0, 0, 0, 0]));
+    expect(gelees.map((g) => g.cellule)).toEqual([0, 1, 2, 3]);
   });
 
   it("suit le froid : une nuit à −6 °C blanchit plus qu'une à −1 °C", () => {
-    const [leger] = cellulesGelees(-1, [1]);
-    const [franc] = cellulesGelees(-6, [1]);
+    const [leger] = cellulesGelees(-1, [0]);
+    const [franc] = cellulesGelees(-6, [0]);
     expect(franc?.force ?? 0).toBeGreaterThan(leger?.force ?? 0);
     expect(franc?.force).toBe(1);
   });
 
   it("est un état de la semaine : un calque, une opacité, sur les cellules gelées", () => {
     // −0,5 °C à découvert : sous un couvert fermé, le moteur remonte le minimum.
-    const gelees = cellulesGelees(-0.5, Float32Array.from([1, 1, 0.05, 1]));
+    const gelees = cellulesGelees(-0.5, Float32Array.from([0, 0, 0.95, 0]));
     const givre = givreDeLaSemaine(gelees);
     expect(givre?.cellules).toEqual([0, 1, 3]);
     expect(givre?.opacite).toBeGreaterThan(0);
@@ -56,20 +64,20 @@ describe("le givre", () => {
   });
 
   it("une nuit franche blanchit plus qu'une gelée légère", () => {
-    const leger = givreDeLaSemaine(cellulesGelees(-0.5, [1, 1]));
-    const franc = givreDeLaSemaine(cellulesGelees(-6, [1, 1]));
+    const leger = givreDeLaSemaine(cellulesGelees(-0.5, [0, 0]));
+    const franc = givreDeLaSemaine(cellulesGelees(-6, [0, 0]));
     expect(franc?.opacite ?? 0).toBeGreaterThan(leger?.opacite ?? 0);
   });
 
   it("pose ses brins givrés sur l'herbe, et un simple voile sur la terre nue", () => {
-    const gelees = cellulesGelees(-3, [1, 1, 1]);
+    const gelees = cellulesGelees(-3, [0, 0, 0]);
     const givre = givreDeLaSemaine(gelees, [0.8, HERBE_QUI_GIVRE / 2, HERBE_QUI_GIVRE]);
     expect(givre?.cellules).toEqual([0, 1, 2]);
     expect(givre?.brins).toEqual([0, 2]);
   });
 
   it("une semaine sans gel n'a pas de givre", () => {
-    expect(givreDeLaSemaine(cellulesGelees(3, [1, 1]))).toBeUndefined();
+    expect(givreDeLaSemaine(cellulesGelees(3, [0, 0]))).toBeUndefined();
   });
 });
 
@@ -151,8 +159,8 @@ describe("le givre à l'échelle des arbres (#357) et dit en clair (#355)", () =
 
 describe("le givre d'une gelée à peine (#406)", () => {
   it("part de zéro : une nuit à −0,1 °C ne voile presque rien, et la limite ne se voit pas", () => {
-    const juste = givreDeLaSemaine(cellulesGelees(-0.1, [1, 1]));
-    const franc = givreDeLaSemaine(cellulesGelees(-1, [1, 1]));
+    const juste = givreDeLaSemaine(cellulesGelees(-0.1, [0, 0]));
+    const franc = givreDeLaSemaine(cellulesGelees(-1, [0, 0]));
     expect(juste?.opacite ?? 1).toBeLessThan(0.2 * OPACITE_DU_GIVRE);
     // Une gelée d'un degré reste lisible : la moitié du plein.
     expect(franc?.opacite ?? 0).toBeCloseTo(0.5 * OPACITE_DU_GIVRE, 5);
