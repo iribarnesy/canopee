@@ -93,6 +93,10 @@ L'option 2 demandait d'instruire la loi de soif : un plant n'est pas freiné tan
 
 L'option 6 prévoyait de passer les bancs de tables sur sol dégagé s'ils descendaient. Ils ne descendent pas (-3 % à +1 % de main à quarante ans) : huit arbres au large, enracinés profond, partagent surtout l'azote avec l'herbe, et l'herbe en prenait déjà. Le banc dégagé a été mesuré quand même, prédit au-dessus de l'enherbé : le hêtre et le frêne sortent de leur bande par le haut (+16 et +21 %), et sur le sable profond le pin s'effondre entre vingt et quarante ans (10 morts sur 16, cause à relever). **Une correction conditionnelle se mesure avant de s'appliquer** : appliquée d'office, celle-ci aurait recalé trois essences sur un sol qu'aucune table ne décrit.
 
+### L'année synthétique ne sèche plus la lande en été, la série réelle si
+
+Trois propriétés de conservation sont tombées, toutes faute de feu : leur feu part quand la surface de la lande est sèche (remplissage sous 0,12) et qu'il fait chaud (plus de 24 °C). Dans l'année synthétique, la pluie lissée tombe chaque semaine ; un sol découvert qui n'évapore plus que son eau évaporable ne vide plus son horizon de surface entre deux pluies, et la surface reste au-dessus du seuil en juillet et en août (0,12 à 0,25, contre 0,00 à 0,05 sur main) : la moitié des semaines à risque (57 à 61 en vingt ans, contre 117 à 125). Sur la série réelle de Mont-de-Marsan, avec ses semaines sèches, c'est l'inverse : 222 à 287 semaines à risque en trente ans contre 214 à 237, et sept graines sur treize du décor d'ajoncs de `feu.test.ts` brûlent en vingt-cinq ans, contre six. Les deux scénarios de `carbon-conservation` passent sur la série réelle, et `potassium-conservation` reprend la graine la plus précoce du même balayage, comme son commentaire le prévoyait. **Une pluie lissée n'a pas de semaine sèche** : un mécanisme qui vit des intervalles entre les pluies se juge sur la série réelle (c'est la leçon de #312 sur l'été synthétique, vue de l'autre côté).
+
 ### Ce que ça donne
 
 Banc de #210 (25 plants de 0,30 m protégés, une espèce par parcelle de 30 m, cinq ans, météo réelle, graine g = fenêtre 1964 + 20 (g − 1) ; déterministe à graine donnée), désherbé sur enherbé, graines 1 / 2 / 3 :
@@ -131,6 +135,10 @@ Les tables de production ne bougent pas de plus de 3 % à quarante ans (pin -3 %
 - T3 : le banc dégagé devait rester à 3 % de main ; le hêtre et le frêne montent de 11 à 26 %, le pin s'effondre.
 - O1 : la loi sans plateau devait relever le rapport de la friche de 0,02 à 0,10 ; il baisse pour le frêne et le hêtre.
 - O2 : sans soif, le frêne de la friche devait retomber sous 1,12 ; sa graine 1 reste à 1,44 (ses morts ne viennent pas du facteur eau).
+- F1 : la lande de main devait brûler au moins trois fois par graine en vingt ans synthétiques ; elle ne brûle pas, à 50 m.
+- G1 : l'année synthétique devait garder moins d'une semaine à risque par an ; elle en garde trois.
+- Le décor d'ajoncs devait brûler sur deux à six graines sur treize ; sept.
+- `chandelle-tombee` allongé à dix ans devait voir 12 à 25 chutes ; 66.
 
 ### Ce qui reste ouvert
 

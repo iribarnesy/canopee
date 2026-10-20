@@ -96,15 +96,21 @@ describe("le pool échangeable se referme chaque semaine", () => {
     //
     // **La graine est choisie, et c'est dit** : il faut un incendie pour éprouver
     // ce chemin, et ils sont rares. Sur les treize graines de `feu.test.ts`, six
-    // brûlent en vingt-cinq ans, la 21 dès la semaine 237 ; les autres demandent
-    // vingt ans de tick, trop pour un essai rapide. Ce n'est pas une mesure de
-    // la fréquence des feux. Si le moteur change au point qu'elle ne brûle plus,
-    // la dernière assertion tombe et le dit : il faudra en reprendre une.
+    // brûlaient en vingt-cinq ans, la 21 dès la semaine 237 ; les autres
+    // demandent vingt ans de tick, trop pour un essai rapide. Ce n'est pas une
+    // mesure de la fréquence des feux. Si le moteur change au point qu'elle ne
+    // brûle plus, la dernière assertion tombe et le dit : il faudra en reprendre
+    // une.
+    //
+    // **C'est arrivé avec #391** (l'eau du tapis en deux phases) : la 21 ne brûle
+    // plus en vingt-cinq ans. Sur le même balayage, sept graines sur treize
+    // brûlent, et la plus précoce est la 37, à la semaine 391 : c'est elle qu'on
+    // reprend, par la même règle.
     const station: Station = { ...LANDE_SECHE.station, coteM: 30, voisinage: [] };
     const serie = serieMeteoPour("lande-seche");
     if (!serie) throw new Error("série manquante");
     const meteo = serieToWeeks(serie);
-    let state = createGameState(station, rngStateFromSeed(21));
+    let state = createGameState(station, rngStateFromSeed(37));
     for (let i = 0; i < 36; i++) {
       state = plantAt(state, "ulex_europaeus", 2 + (i % 6) * 5, 2 + Math.floor(i / 6) * 5, 1.2);
     }
