@@ -10,6 +10,7 @@
 
 import { describe, expect, it } from "vitest";
 import { applyAction, estGesteSurArbres } from "../../src/engine/actions";
+import { HERBACEES, hauteurDuTapisM, N_HERBACEES } from "../../src/engine/herbacees";
 import { syntheticYear } from "../../src/engine/meteo";
 import { contextePhenologique } from "../../src/engine/phenologie";
 import { rngStateFromSeed } from "../../src/engine/rng";
@@ -524,6 +525,51 @@ describe("l'emprise de chaque herbacée par cellule", () => {
     const s = construireSnapshot(entrees(etatNeuf()));
     const buffers = transferablesDuSnapshot(s);
     for (const grille of s.soilHerbeEmprises) expect(buffers).toContain(grille.buffer);
+  });
+});
+
+describe("la hauteur du tapis et sa part morte, par espèce (#370)", () => {
+  it("une grille par espèce, en centimètres, celle que le moteur lit sur la matière", () => {
+    // Une saison de croissance : il y a du vivant et du mort sur pied.
+    let etat = etatNeuf();
+    for (let w = 0; w < 30; w++) {
+      const m = WEATHER[w];
+      if (!m) throw new Error("météo manquante");
+      etat = tick(etat, m).state;
+    }
+    const e = entrees(etat);
+    const s = construireSnapshot(e);
+    const sol = e.state.soil;
+    const cellules = STATION.coteM * STATION.coteM;
+    expect(s.soilHerbeHauteursCm).toHaveLength(s.herbesIds.length);
+    expect(s.soilHerbePartsMortes).toHaveLength(s.herbesIds.length);
+    let haut = 0;
+    for (let n = 0; n < s.herbesIds.length; n++) {
+      const h = HERBACEES[n];
+      const grille = s.soilHerbeHauteursCm[n];
+      if (!h || !grille) throw new Error("grille manquante");
+      expect(grille).toHaveLength(cellules);
+      for (let i = 0; i < cellules; i++) {
+        const k = i * N_HERBACEES + n;
+        const attendu = hauteurDuTapisM(
+          h,
+          sol.herbeMatiereSecheG[k] ?? 0,
+          sol.herbeMorteG[k] ?? 0,
+          sol.herbeEmprise[k] ?? 0,
+        );
+        expect(grille[i]).toBe(Math.min(255, Math.round(100 * attendu)));
+        haut = Math.max(haut, grille[i] ?? 0);
+      }
+    }
+    // Il y a quelque chose à dessiner : une prairie de juillet n'est pas rase.
+    expect(haut).toBeGreaterThan(10);
+  });
+
+  it("elles partent avec les autres tampons, sans être recopiées", () => {
+    const s = construireSnapshot(entrees(etatNeuf()));
+    const buffers = transferablesDuSnapshot(s);
+    for (const grille of s.soilHerbeHauteursCm) expect(buffers).toContain(grille.buffer);
+    for (const grille of s.soilHerbePartsMortes) expect(buffers).toContain(grille.buffer);
   });
 });
 

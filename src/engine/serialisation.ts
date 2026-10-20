@@ -493,18 +493,9 @@ export function lireEtat(octets: Uint8Array, station: Station): GameState | unde
   for (const [cle, valeur] of Object.entries(relecture.sol)) {
     if (!(cle in soil)) soil[cle] = valeur;
   }
-  // Les grilles vides prennent la place qu'elles ont dans un sol neuf : un état
-  // relu se range comme un état de cette version.
-  let solRange = soil;
-  if (relecture.grillesVides.length > 0) {
-    solRange = {};
-    for (const cle of Object.keys(solDeCetteVersion)) {
-      if (cle in soil) solRange[cle] = soil[cle];
-      else if (cle in lus) solRange[cle] = lus[cle];
-    }
-    for (const [cle, valeur] of Object.entries(soil)) {
-      if (!(cle in solRange)) solRange[cle] = valeur;
-    }
+  // Les grilles qu'elle n'avait pas, vides, posées à la fin du sol de même.
+  for (const nom of relecture.grillesVides) {
+    if (!(nom in soil)) soil[nom] = lus[nom];
   }
 
   // Rebâti dans l'ordre d'origine, pour la même raison que le sol : un état
@@ -513,7 +504,7 @@ export function lireEtat(octets: Uint8Array, station: Station): GameState | unde
   const ordre = Array.isArray(entete.ordre) ? entete.ordre : Object.keys(entete.reste);
   for (const cle of ordre) {
     if (cle === "station") etat[cle] = station;
-    else if (cle === "soil") etat[cle] = solRange;
+    else if (cle === "soil") etat[cle] = soil;
     else etat[cle] = entete.reste[cle];
   }
   return etat as unknown as GameState;

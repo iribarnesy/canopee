@@ -163,6 +163,8 @@ fabriquent pas.
 | `soilHerbeBiomasse` | herbe **sur pied** — elle reste quand l'herbe jaunit |
 | `soilHerbeHumidite` | humidité **vécue** du tapis ∈ [0,1] : la surface, lissée sur ~6 semaines — la pelouse grillée |
 | `soilHerbeEmprises` + `herbesIds` | l'emprise de **chaque** herbacée, une grille `Uint8Array` par espèce (0-255 pour 0 à 1), dans l'ordre d'`herbesIds` — qui tient la cellule, et dans quelle proportion (#86) |
+| `soilHerbeHauteursCm` | la **hauteur du tapis** de chaque herbacée, en centimètres (0-255), une grille `Uint8Array` par espèce dans l'ordre d'`herbesIds` : la hauteur des touffes de l'espèce là où elle se tient, à pondérer par son emprise (#370, voir plus bas) |
+| `soilHerbePartsMortes` | la **part morte** de ce qui est sur pied, par espèce, 0-255 pour 0 à 1 : le foin d'été, la paille d'hiver (#370) |
 | `soilLitiereCG` | litière, gC/m² : le tapis de novembre, le paillage, les cendres |
 | `soilBoisAuSol` | bois mort **couché**, gC/m² : où poser des troncs |
 | `soilBoisEnTravers` | part de ce bois qui **barre** l'eau ∈ [0,1] : le tronc en travers de la pente |
@@ -226,13 +228,34 @@ faim, aux ravageurs et à la maladie. Trois choses à savoir :
    basse même sous un sol plein : le moteur la rapporte au besoin d'un arbre
    intact, et c'est voulu.
 
-La **hauteur du tapis herbacé**, elle, ne voyage pas encore (#370) : le moteur
-ne la connaît pas. Il tient la matière **vivante** de chaque herbacée, en
-grammes, et l'envoie en litière dès qu'elle meurt — le foin sur pied n'y est
-pas — et cette matière est loin de ce que le terrain mesure (41 g/m² de molinie
-à la mi-juin sur la lande sèche). Une hauteur tirée de là serait fausse : la
-donner est un mécanisme à ajouter, pas un champ à exposer, et la convention de
-25 cm reste celle du rendu d'ici là.
+La **hauteur du tapis herbacé** voyage depuis #370, par espèce
+(`soilHerbeHauteursCm`), avec la part morte de ce qui est sur pied
+(`soilHerbePartsMortes`). Elle remplace la convention de 25 cm. Quatre choses
+à savoir :
+
+1. **Elle se lit sur la matière sur pied**, vivante et morte. Un tissu qui meurt
+   reste debout (le foin d'été, la paille d'hiver) et tombe en litière à une
+   vitesse qui suit la température. La hauteur est celle que cette matière
+   occupe au-dessus de la place que l'espèce tient, à sa densité apparente
+   (ModVege), sous sa hauteur de canopée (LEDA : anémone 0,175 m, dactyle
+   0,775, molinie 0,525, blé 0,78). Elle se calcule dans l'instantané sur
+   l'état qu'il porte : une fauche en pause se voit aussitôt.
+2. **Ce qu'elle donne** (série réelle, quatrième année, moyenne pondérée par
+   l'emprise) : le dactyle du limon riche fait 12 cm en février, 30 cm à la
+   mi-juin, 36 cm en juillet, 20 cm en novembre, à moitié mort en été ; celui de
+   la friche, 33 cm à la mi-juin. Une fauche laisse le dixième de la matière,
+   donc le dixième de la hauteur : 3 à 6 cm après un pré de juin.
+3. **Elle hérite de la production du moteur.** La molinie de la lande sèche ne
+   fait que 5 cm à la mi-juin et 1 cm en hiver, quand LEDA lui donne 0,35 à
+   0,7 m : le moteur en fait une herbe deux à quatre fois trop maigre, et
+   dix fois trop maigre en matière de pointe (#370, #433). Ce n'est pas la
+   hauteur qui est fausse, c'est la matière qu'elle lit ; elle montera quand
+   #433 l'aura corrigée.
+4. **Le broutage du chevreuil ne la baisse pas** : il ne prend que la
+   couverture verte (`soilHerbe`), pas la matière, et aucune hauteur de
+   broutage sourcée n'a été trouvée pour lui. La couverture, l'humidité vécue
+   et la biomasse indicielle gardent leur sens : la hauteur ne les remplace
+   pas, elle s'y ajoute.
 
 `baseHouppierM` mérite un mot : c'est la hauteur en dessous de laquelle il n'y a
 plus de branches vivantes, donc du fût nu à dessiner. Elle ne se déduit de rien

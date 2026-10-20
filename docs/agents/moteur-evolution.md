@@ -61,7 +61,40 @@ qu'un rapport (voir la note de maintenance).
 Séparer calibration et validation : caler un paramètre sur un âge, garder
 l'autre âge pour vérifier.
 
-## Ce que le dernier lot a appris (publier pour le rendu : la soif des arbres, #372, les jours de pluie, #405, et la hauteur du tapis, #370)
+## Ce que le dernier lot a appris (la production de la strate, puis la hauteur du tapis et le mort sur pied, #370)
+
+Décision du propriétaire sur l'instruction de #413 : instruire d'abord la production de la strate (D), puis donner au moteur une hauteur de tapis et une matière morte sur pied (C). Le rapport D est sur #370 ; les prédictions et les mesures sont dans les commits de la branche, avant chaque course.
+
+### L'azote tient la production, et il cache ce qu'il tient
+
+Sur une parcelle sans arbre, la production de la strate ne bouge presque pas quand on lui retire l'eau (×1,00 sur le limon), qu'on triple la durée de vie de ses tissus ou qu'on divise son potentiel lumineux par deux (−3 à −10 %). Sans frein d'azote, elle passe ×5 sur le limon et ×18,6 sur la lande. Le potentiel lumineux (34 à 50 t/ha/an) est trois fois celui des meilleures prairies de fauche, et c'est le frein d'azote qui le rend invisible : divisé par deux, la strate prend plus d'azote (66 kg/ha/an au lieu de 40) et son NNI monte de 0,27 à 0,45. **Une production juste peut venir de deux erreurs qui se compensent** : regarder le NNI, pas seulement la production. La prédiction écrite (la production suit la racine carrée du potentiel) supposait un flux d'azote fixe ; il ne l'est pas.
+
+### Le phosphore ne freine que ce qui le lit
+
+#395 a montré que le phosphore limite le pin de la lande ; l'instruction demandait s'il limite aussi la strate. Il ne peut pas : sa croissance ne lit pas le phosphore, elle en prélève au prorata de l'azote qu'elle prend. **Avant de chercher un facteur dans une mesure, vérifier que le code le lit.**
+
+### Une durée de vie commune vide la plante
+
+Toutes les herbacées vivaient 460 °C·j base 4 (Lemaire et Agnusdei 2000). Cruz et al. 2010 mesurent 1 030 °C·j base 0 pour le dactyle et 1 684 pour la molinie, et ModVege prend 500 à 1 400 selon le type fonctionnel. La matière vivante ne garde ainsi que cinq à six semaines de production. Corrigée par espèce (D3), elle passe de 40 à 67 g/m² pour la molinie à la mi-juin, sans que la production bouge, et l'azote de la strate baisse de 16 à 40 %. Non gardée : elle ne touche pas sa cible (500 à 670 g/m² de pointe chez Taylor et al. 2001) et déplace l'azote de tous les bancs plantés dans l'herbe. Elle est dans #433.
+
+### Une hauteur se lit sur la matière, ou elle se tient dans l'état : les deux ont été mesurés
+
+La consigne proposait un état de hauteur, ou une hauteur déduite de la matière si la production était juste. Les deux ont été écrits en sonde, sur dix ans :
+
+- **l'état** qui suit la croissance existante monte de (plafond − hauteur) × croissance relative. Il donne une molinie de 0,44 m à la mi-juin. Mais à matière nulle, la croissance relative vaut 1 et la hauteur saute à son plafond : il lui faut une graine (le chaume de ModVege), et il monte encore à 0,62 m en mars de la première année. Il se tient à jour à six endroits (tick, fauche, feu, labour, moisson, semis) ;
+- **la hauteur déduite** ne s'écrit nulle part : la matière sur pied, vivante et morte, à la densité de ModVege, sous la hauteur de LEDA. Le feu, le labour, la moisson et la fauche la rabattent parce qu'ils emportent la matière. Elle donne un dactyle juste (12 cm en février, 30 cm en juin) et une molinie de 5 cm, parce que la molinie est trop maigre.
+
+**Les deux ne se valent pas.** L'état donne des hauteurs de terrain en se détachant de la matière, la déduite hérite de l'erreur de production au lieu de la cacher. La déduite est prise : aucune règle ni aucun état de plus, et elle montera avec #433.
+
+### Un taux sans l'âge : prendre le facteur où le compartiment se tient
+
+ModVege fait tomber le mort à 0,001 par °C·j fois un facteur d'âge de 1, 2 ou 3. Sans le facteur (C1), le dactyle de juin est à 58 % mort et fait 0,36 m en février. Le moteur ne suit pas l'âge du mort. Le facteur 2 n'a pas été choisi sur ce résultat : c'est celui où se tient un compartiment que la mort remplit et que la chute vide à ce rythme. Il y séjourne 500 °C·j, entre le tiers et les deux tiers des durées de vie de ModVege pour les types B et D. **Quand une loi dépend d'un état qu'on ne tient pas, chercher la valeur où la loi se tient d'elle-même** plutôt que celle qui donne le résultat voulu.
+
+### Relire un ancien bloc quand l'ancien état est le nouveau à zéro près
+
+Sous la version 12, le mort partait en litière la semaine même. Un bloc de version 12 relu avec le mort sur pied à zéro écrit donc l'état qu'il avait, sans compter ce mort deux fois : c'est la deuxième montée qui relit l'ancien bloc, après la neige. Le lecteur sait maintenant relire des grilles absentes, et les range à leur place dans le sol.
+
+## Ce qu'un lot précédent a appris (publier pour le rendu : la soif des arbres, #372, les jours de pluie, #405, et la hauteur du tapis, #370)
 
 Un lot de publication : trois grandeurs que le rendu attendait. Deux voyagent, la troisième ne se déduit pas de ce que le moteur sait. Aucune partie ne bouge : l'empreinte de l'état sérialisé et `stateHash` sont identiques à l'octet, cinq ans, trois graines, deux séries réelles et une année synthétique (M1). Les prédictions et les mesures sont dans les commits de la branche, avant chaque course.
 
