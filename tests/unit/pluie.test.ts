@@ -19,6 +19,7 @@ import {
   INCLINAISON_MAX_RAD,
   inclinaisonDuRideau,
   intensiteDeLaPluie,
+  JOURS_D_UNE_SEMAINE_DE_PLUIE,
   PLUIE_MUETTE_MM,
   type TempsQuIlFait,
 } from "../../src/render/temps/pluie";
@@ -162,6 +163,52 @@ describe("ce qu'on voit et ce qu'on entend", () => {
     };
     for (const mm of [0, 1, 4, 12, 35, 80]) {
       expect(niveauxDuSon({ ...calme, pluieMm: mm }).ambiances.pluie).toBe(intensiteDeLaPluie(mm));
+    }
+  });
+});
+
+describe("la pluie suit les jours de pluie (#428)", () => {
+  it("un orage dans une semaine de soleil ne fait pas pleuvoir l'ellipse, ni ne grise le ciel", () => {
+    expect(intensiteDeLaPluie(25, 1)).toBe(0);
+    expect(intensiteDeLaPluie(25, 2)).toBe(0);
+    expect(couvertDuCiel(25, 1)).toBe(0);
+  });
+
+  it("une semaine de bruine quotidienne pleut, finement", () => {
+    const bruine = intensiteDeLaPluie(8, 6);
+    expect(bruine).toBeGreaterThan(0);
+    expect(bruine).toBeLessThan(0.4);
+  });
+
+  it("la force se lit à la pluie d'un jour de pluie, pas au cumul", () => {
+    // Le même cumul : trois jours d'averse franche contre sept jours de bruine.
+    expect(intensiteDeLaPluie(42, 3)).toBeGreaterThan(intensiteDeLaPluie(42, 7));
+    expect(intensiteDeLaPluie(60, 4)).toBe(1);
+  });
+
+  it("le ciel se couvre avec les jours de pluie", () => {
+    expect(couvertDuCiel(10, 2)).toBeGreaterThan(0);
+    expect(couvertDuCiel(10, 3)).toBeGreaterThan(couvertDuCiel(10, 2));
+    expect(couvertDuCiel(30, 6)).toBe(1);
+  });
+
+  it("sur chaque série du jeu : jamais de pluie à l'écran pour une semaine de moins de trois jours", () => {
+    const dossier = join(__dirname, "../../data/meteo");
+    for (const fichier of readdirSync(dossier).filter((f) => f.endsWith(".json"))) {
+      const serie = JSON.parse(readFileSync(join(dossier, fichier), "utf8")) as {
+        colonnes: string[];
+        semaines: number[][];
+      };
+      const k = serie.colonnes.indexOf("joursPluie");
+      if (k < 0) continue;
+      let pluvieuses = 0;
+      for (const sem of serie.semaines) {
+        const jours = sem[k] ?? 0;
+        const force = intensiteDeLaPluie(sem[3] ?? 0, jours);
+        if (jours < JOURS_D_UNE_SEMAINE_DE_PLUIE) expect(force, fichier).toBe(0);
+        if (force > 0) pluvieuses++;
+      }
+      expect(pluvieuses / serie.semaines.length, fichier).toBeLessThan(0.5);
     }
   });
 });
