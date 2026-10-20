@@ -197,7 +197,12 @@ faim, aux ravageurs et à la maladie. Trois choses à savoir :
    (aulne) : un même 0,4 laisse un pin sylvestre tranquille et met un aulne en
    danger. Un avis « 40 % des jeunes plants ont soif » se compte donc arbre par
    arbre, chacun contre sa fiche — c'est une fonction pure de l'instantané et
-   des fiches, le rendu n'a rien à demander de plus.
+   des fiches, le rendu n'a rien à demander de plus. **Lequel des deux seuils
+   compter n'est pas un détail** : sur la lande sèche, fin juillet de la
+   troisième année, 97 à 100 % des jeunes pins et bouleaux sont sous leur
+   seuil de confort (trois graines) — un avis compté là dirait « tous » chaque
+   été. Sous le seuil de stress, aucun pin et cinq à six bouleaux sur huit à
+   onze : c'est celui-là qui sépare l'essence qui tient de celle qui meurt.
 2. **Un caduc nu vaut 1** : sans feuilles, il ne demande rien. La soif est une
    affaire de saison de végétation, et l'hiver ne la montre pas.
 3. **Elle est absente** sur une chandelle, sur un semis levé dans la semaine et
