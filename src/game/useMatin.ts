@@ -34,7 +34,9 @@ export function useMatin(
     if (!snapshot || !station) return undefined;
     const w = snapshot.weather;
     return {
-      gelees: cellulesGelees(w.tMinAbsC, snapshot.soilLumiere),
+      // Le couvert **au-dessus**, pas la lumière au sol (#421) : la nuit ne
+      // voit pas l'ombre que le soleil projette.
+      gelees: cellulesGelees(w.tMinAbsC, snapshot.soilCouvertAuDessus),
       affleurantes: cellulesAffleurantes(snapshot.soilNappeCm),
       coteM: station.coteM,
       ventRecuMs:
