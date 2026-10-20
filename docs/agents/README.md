@@ -111,9 +111,10 @@ que si le jeu l'affiche porte son label moteur **et** `rendu`.
 
 ## Où en est le projet
 
-Le **moteur** est largement en avance sur ce que le jeu sait montrer : 109
-critères de réalisme sur 140 sont acquis, et les issues ouvertes portent des
-mécanismes de plus en plus fins.
+Le **moteur** est largement en avance sur ce que le jeu sait montrer : 135
+critères de réalisme sur 162 sont acquis et 26 partiels (le score fait foi dans
+`docs/realisme.md`, recompté par `npm run check:realisme`), et les issues
+ouvertes portent des mécanismes de plus en plus fins.
 
 Le **jeu**, lui, est un bac à sable sans jeu : une vingtaine de gestes jouables,
 un HUD, une sauvegarde, une économie qui peut mener à la faillite — et aucune

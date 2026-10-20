@@ -289,6 +289,13 @@ export interface SnapshotTree {
    * basse peinte en « brouté » couvrirait surtout des arbres en hiver.
    */
   brouteSemaine?: number;
+  /**
+   * Semaine du dernier gel des jeunes pousses ; absent = jamais gelé (#371). Le
+   * feuillage tendre a grillé cette semaine-là : rien pendant cinq semaines,
+   * puis il repousse en trois (gelPousses.ts, `refeuillaison`). Un arbre dont
+   * cette semaine est la dernière simulée est un arbre qui vient de roussir.
+   */
+  gelPousseSemaine?: number;
 }
 
 /** Événement de jeu pour le fil d'actualité (morts, gels, récoltes, ventes…). */
