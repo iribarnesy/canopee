@@ -101,6 +101,24 @@ Trois propriétés de conservation sont tombées, toutes faute de feu : leur feu
 
 Sept assertions écologiques cassent, et aucune ne porte sur la prairie. Le fond de vallée s'inondait chaque hiver parce que sa prairie, posée sur la nappe, ne rendait à l'air que 374 mm par an à Tours, 0,43 fois l'ETP de Penman ; elle en rend 611, et la vallée ne s'inonde plus que les hivers humides (quatre sur dix de 1964 à 1973, contre neuf). L'aulnaie pure du limon riche passait 1976 en perdant 23 de ses 144 plants ; sous des aulnes de douze ans qui laissent passer 55 % de la lumière l'été, l'herbe transpire maintenant dès mars, le profil entre en juin à 60 mm au lieu de 99, et 136 aulnes meurent de soif la même année, sur les trois graines. Après la fusion de #419, la frênaie pure de `maladies.test.ts` perd de même 62 frênes sur 144 à la soif, en 1973 et en 1976, avant que la chalarose ne les trouve : elle meurt moins de maladie que le mélange, et l'essai casse à son tour. Ces équilibres n'avaient pas de source : c'étaient des relevés du moteur, posés sur un tapis qui ne buvait pas. **Quand une grandeur devient juste, relever d'abord ce qui reposait sur son erreur**, et le rapporter avant de recaler quoi que ce soit : les assertions cassées sont instruites, aucune n'est touchée.
 
+Quatre ont ensuite été réécrites sur décision de l'utilisateur, chacune sur son critère et signalée dans son commentaire : la crue de la vallée passe sur l'hiver 1965-66, le maillon 1 de `incendie-nappe` porte sur l'évapotranspiration et le sens de la remontée, `nurse` ne compare que les paires que le feu épargne, et la seconde assertion de `sol-vivant` est retirée. Les deux autres, `ravageurs` et `maladies`, sont instruites ci-dessous et laissées cassées.
+
+### Un peuplement qui meurt d'un coup était déjà au bord du précipice
+
+L'aulnaie de `ravageurs.test.ts` perd 136 plants sur 144 en 1976 sur la branche, 18 à 24 sur `main`. Semaine par semaine, `main` n'en est pas loin : la semaine 33, le stress médian des aulnes vaut 8,5 et le neuvième décile 9,4 pour un seuil de 10, et c'est la pluie de la semaine 34 qui les sauve. La loi de soif ne connaît pas l'individu : l'eau d'un horizon est servie au même taux à toutes les racines qui y puisent, les plants d'un peuplement pur ont la même satisfaction (premier et neuvième déciles 0,10 et 0,15), et le compteur les mène ensemble au seuil, en sept semaines à une satisfaction de 0,1 pour un aulne. L'herbe sous le couvert n'a fait qu'avancer l'échéance de trois semaines, en vidant l'horizon de surface avant la feuillaison (61 → 28 mm de la semaine 12 à la semaine 17, contre 66 → 51). **Avant d'accuser le changement qui fait basculer un résultat, mesurer à quelle distance du bord l'ancien se tenait.**
+
+### Une canopée qui se touche n'est pas une canopée fermée
+
+À douze ans, les houppiers des aulnes couvrent 146 % du sol, presque sans élagage (part gardée 0,90), et 54 % de la lumière arrive au sol : un indice foliaire effectif de 1,2, quand une aulnaie adulte en porte 4,8 (Eschenbach et Kappen 1996). Le trait `lai` est défini comme le LAI de peuplement divisé par le chevauchement typique, « un point sous deux ou trois couronnes retrouve le LAI de peuplement » ; mais la pénombre (1 − d²/r²) divise en moyenne par deux l'extinction de chaque couronne traversée, et une plantation qui vient de fermer n'empile pas deux ou trois couronnes. Le dactyle, saturé à 0,47 de lumière, garde donc toute sa couverture sous un peuplement fermé. Une sonde qui double l'extinction ramène la lumière à 0,41 (0,29 pour la seule lumière au sol), et l'hécatombe de 1976 à 61-90 aulnes : **la fermeture porte une part de l'écart, pas l'écart**. Recaler la lumière touche tout le moteur, et ce n'est pas ce lot.
+
+### L'étalement individuel ne sauve pas d'un été trop long
+
+Une autre sonde lit la soif de survie à travers la vigueur individuelle (±20 %). Elle prédisait 50 à 110 morts ; il en meurt 127 à 130. Quand la satisfaction reste à 0,1 onze semaines, seule la queue de la distribution passe. **La synchronie est un symptôme** : c'est la durée qu'un arbre installé tient sans eau qui est en cause, et toutes les constantes de cette loi sont *à calibrer*.
+
+### Le dernier coup n'est pas la cause, et la règle de #103 ne vaut que dans un sens
+
+Dans la frênaie pure de `maladies.test.ts`, le stress médian des frênes vaut déjà 8,8 sur 10 au printemps 1973, par la chalarose ; l'été sec les achève, et 44 des 62 morts inscrites « de sécheresse » ont une majorité de stress de maladie. Depuis #103, un coup rapide qui achève un arbre presque tué par une cause lente rend la mort à la cause lente ; l'inverse n'est pas traité, et un frêne que la chalarose a tué meurt « de sécheresse ». La symétrie, mesurée sur une copie, ne change aucune trajectoire et remonte la frênaie de 0,375 à 0,674 ; mais le mélange reste à 0,389 (0,278 sur `main`), parce que la soif ajoute son stress au compteur des frênes mélangés et que la chalarose les achève plus tôt. L'essai reste cassé : **une correction juste qui ne touche pas sa cible ne s'applique pas**, et la règle de #103, choisie dans un seul sens, est rapportée comme option.
+
 ### Ce que ça donne
 
 Banc de #210 (25 plants de 0,30 m protégés, une espèce par parcelle de 30 m, cinq ans, météo réelle, graine g = fenêtre 1964 + 20 (g − 1) ; déterministe à graine donnée), désherbé sur enherbé, graines 1 / 2 / 3 :
@@ -150,6 +168,13 @@ Les tables de production ne bougent pas de plus de 3 % à quarante ans (pin -3 %
 - E6 : la part pionnière de la canopée de soixante ans devait baisser faute de pionniers ; elle baisse par quatre dryades de plus.
 - La fusion de #419 devait laisser les sept assertions cassées ; `succession` passe (0,5125 ; 0,5526 sur main), et la part de main sort de la fourchette prédite (0,45 à 0,55).
 - M1 : les frênes du mélange de `maladies` devaient mourir de maladie moins de la moitié autant que ceux de la frênaie pure ; 13 sur 36 contre 53 sur 144, parce que la frênaie pure perd 62 frênes à la soif. L'excès devait venir d'autres espèces ou de semis ; il vient de là. Le mélange de main devait rester sous 0,19 ; 0,278.
+- F1 : la couverture des houppiers de l'aulnaie de douze ans devait valoir 0,9 à 1,4 ; 1,46 à 1,50. La part de houppier gardée devait valoir 0,4 à 0,8 ; 0,90 à 0,91.
+- F3 : la frênaie devait laisser passer 0,45 à 0,65 de la lumière de neuf à douze ans ; 0,69 à 0,72 à huit et neuf ans.
+- F4 : sur `main`, la satisfaction médiane des aulnes devait passer moins de trois semaines sous 0,29 en 1976 ; dix.
+- V1 : la pénombre doublée devait ramener la lumière au sol à 0,25-0,35 ; 0,41 à 0,42.
+- V2 : la seule lumière au sol doublée devait tuer à vingt près autant que V1 ; 83 à 90 contre 61 à 64.
+- V3 : la vigueur dans la soif de survie devait laisser mourir 50 à 110 aulnes ; 127 à 130.
+- I2 : l'imputation symétrique devait remonter la frênaie à 0,70-0,95 et faire passer l'essai ; 0,674, et le mélange reste à 0,389.
 
 ### Ce qui reste ouvert
 
@@ -158,8 +183,10 @@ Les tables de production ne bougent pas de plus de 3 % à quarante ans (pin -3 %
 - **Le haut du sol nu** (56 à 65 % de la pluie, l'excès de janvier à avril sur Rothamsted) : ce n'est pas l'ETP, à 2 % de celle de Penman de Météo-France sur 2001-2020 ; le climat de Harpenden ou le plafond d'un sol mouillé, à instruire.
 - **Le phosphore de la strate** fait le gros du désherbage et de la fauche sur la lande (#395).
 - **Le pin du banc dégagé** meurt sur le sable profond quand plus rien ne pousse sous lui : cause à relever.
-- **Sept assertions écologiques attendent une décision**, instruites et non touchées (mesures, options et recommandations dans #391 et la PR #411) : la crue d'hiver de la vallée (`eau-surface`, deux assertions), le facteur 3 de la transpiration après le feu (`incendie-nappe`), l'aulnaie de 1976 (`ravageurs`), la frênaie pure morte de soif avant la chalarose (`maladies`), le feu dans la comparaison nurse (`nurse`), un écart de 0,07 % (`sol-vivant`). `succession` passe depuis la fusion de #419.
-- **La fermeture du couvert d'un jeune peuplement, et la mort de soif synchrone** : sous des aulnes de douze ans plantés à 3 m, 55 % de la lumière atteint encore le sol l'été, l'herbe y transpire à plein, et un peuplement entier meurt de soif la même année.
+- **Deux assertions écologiques attendent une décision**, instruites et non touchées : l'aulnaie de 1976 (`ravageurs`) et la frênaie pure (`maladies`). Les quatre autres sont réécrites sur décision, et `succession` passe depuis la fusion de #419.
+- **La mort de soif d'un arbre installé** : un aulne de douze ans meurt en sept semaines à une satisfaction de 0,1, comme un plant de l'année, tous ensemble, sans que l'individu compte ; le terrain de 1976 voit mourir les plantations de l'année, beaucoup moins les peuplements de cinq à dix ans (Aussenac 1978). Options et recommandation dans #391.
+- **La fermeture du couvert** : indice foliaire effectif de 1,2 sous des aulnes de douze ans qui couvrent 146 % du sol (4,8 sous une aulnaie adulte), 0,28 de lumière au sol sous la hêtraie de quarante ans (E9). Le recalage de l'extinction des houppiers touche tout le moteur.
+- **La règle d'imputation de #103**, à sens unique : un frêne que la chalarose a mené à neuf dixièmes du seuil meurt « de sécheresse » si l'été l'achève.
 
 ## Ce qu'un lot précédent a appris (publier pour le rendu : la soif des arbres, #372, les jours de pluie, #405, et la hauteur du tapis, #370)
 
