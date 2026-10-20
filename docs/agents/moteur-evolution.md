@@ -67,7 +67,7 @@ Le lot v0.6 issu de l'instruction de #210 (ses options 1, 2 et 6). Le partage de
 
 ### Un nombre calé sur le moteur peut porter deux erreurs qui s'annulent
 
-La demi-ETP du sol nu rendait les jauges de Rothamsted à deux points près : 47 % de la pluie évaporée, 49 % aux jauges (*Rothamsted Report for 1936*, p. 176). C'était une coïncidence. Elle coupait l'évaporation d'un sol mouillé de 2,4 fois par rapport à FAO-56, et l'ETP de Hargreaves du moteur est haute de janvier à avril (81 mm en avril à Abbeville ; la formule surestime en climat humide, Trajkovic 2007). Le plafond FAO-56 à sa place, le sol nu évapore 56 à 65 % de la pluie : au haut des lysimètres français (Châlons 57 %, Ballif et al. 1983), au-dessus de Rothamsted. **Retirer un réglage calé en montre parfois un autre** : ici, l'ETP, qui reste à instruire.
+La demi-ETP du sol nu rendait les jauges de Rothamsted à deux points près : 47 % de la pluie évaporée, 49 % aux jauges (*Rothamsted Report for 1936*, p. 176). C'était une coïncidence. Elle coupait l'évaporation d'un sol mouillé de 2,4 fois par rapport à FAO-56. Le plafond FAO-56 à sa place, le sol nu évapore 56 à 65 % de la pluie : au haut des lysimètres français (Châlons 57 %, Ballif et al. 1983), au-dessus de Rothamsted. J'ai d'abord mis l'écart sur le compte de l'ETP de Hargreaves, réputée haute en climat humide (Trajkovic 2007), et je l'ai écrit. Les fiches climatologiques de Météo-France la démentent : 738 mm contre 753 de Penman à Abbeville, 887 contre 873 à Tours, sur 2001-2020. **La réputation d'une formule n'est pas une mesure sur la série** : la vérifier avant d'écrire la cause. L'excès de janvier à avril sur Rothamsted reste à instruire.
 
 ### Un facteur de saison posé sur un feuillage vert vide l'hiver du bilan
 
@@ -144,7 +144,7 @@ Les tables de production ne bougent pas de plus de 3 % à quarante ans (pin -3 %
 
 - **L'azote du limon riche** : c'est lui qui sépare encore désherbé et enherbé pour le frêne et le noyer, et l'écart au terrain (1,5 à 3) y reste entier. Le partage de l'azote rare entre la strate et le plant se fait à la capacité racinaire (#247) ; c'est là qu'il faudrait regarder, pas dans la loi de soif.
 - **La fauche rapporte encore** (1,02 à 1,14 sur les limons ; Löf 2000 : rien) : une coupe retire au tapis son feuillage, donc sa transpiration et sa demande d'azote, le temps qu'il repousse (`REPOUSSE_PAR_SEMAINE`, *à calibrer*).
-- **L'ETP de Hargreaves** porte le haut du sol nu (56 à 65 % de la pluie) ; une ETP de Penman sur les séries trancherait.
+- **Le haut du sol nu** (56 à 65 % de la pluie, l'excès de janvier à avril sur Rothamsted) : ce n'est pas l'ETP, à 2 % de celle de Penman de Météo-France sur 2001-2020 ; le climat de Harpenden ou le plafond d'un sol mouillé, à instruire.
 - **Le phosphore de la strate** fait le gros du désherbage et de la fauche sur la lande (#395).
 - **Le pin du banc dégagé** meurt sur le sable profond quand plus rien ne pousse sous lui : cause à relever.
 
