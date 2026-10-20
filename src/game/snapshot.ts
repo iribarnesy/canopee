@@ -41,6 +41,7 @@ import type {
 } from "../engine/tick";
 import type { TreeState } from "../engine/trees";
 import { diametreTeteCm, volumeCaviteL } from "../engine/trogne";
+import { feuillageRevenu } from "./pousses";
 import type { GameEvent, Snapshot, SnapshotTree } from "./protocol";
 
 /**
@@ -378,9 +379,17 @@ export function construireSnapshot(e: EntreesSnapshot): Snapshot {
     // (`couvertAuDessusDuSol`) : un arbre abattu en pause cesse aussitôt de
     // couvrir, et le givre de la semaine qui s'ouvre se juge sous les houppiers
     // qu'on voit.
+    //
+    // Avec le feuillage **revenu** après un gel des pousses (#425), comme le tick
+    // le compte : un arbre aux pousses grillées ne couvre plus ce qu'il a perdu.
     soilCouvertAuDessus: Float32Array.from(
-      couvertAuDessusDuSol(state.trees, dims.widthM, dims.heightM, (t) =>
-        partFoliaireOmbrageanteDans(getEspece(t.especeId), pheno),
+      couvertAuDessusDuSol(
+        state.trees,
+        dims.widthM,
+        dims.heightM,
+        (t) =>
+          partFoliaireOmbrageanteDans(getEspece(t.especeId), pheno) *
+          feuillageRevenu(t.gelPousseSemaine, state.week),
       ),
     ),
     // Au premier instantané, aucun tick n'a tourné : l'habitat n'est pas de
