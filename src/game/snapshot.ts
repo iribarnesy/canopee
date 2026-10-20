@@ -17,14 +17,19 @@ import { CO2_ACTUEL_PPM } from "../engine/climat";
 import { getEspece } from "../engine/especes";
 import type { DepartFaune, InstallationFaune } from "../engine/faune";
 import { HERBACEES, N_HERBACEES } from "../engine/herbacees";
+import { couvertAuDessusDuSol } from "../engine/light";
 import type { WeekWeather } from "../engine/meteo";
 import { profondeurPourStock } from "../engine/nappe";
 import { neigeDeLaSemaine } from "../engine/neige";
 import type { FrequentationDeGuilde } from "../engine/oiseaux";
-import { contextePhenologique, partFloraison } from "../engine/phenologie";
+import {
+  contextePhenologique,
+  partFloraison,
+  partFoliaireOmbrageanteDans,
+} from "../engine/phenologie";
 import { porositeDrainageMm } from "../engine/soil";
 import type { GameState, TickFluxes } from "../engine/state";
-import { weekOfYear } from "../engine/state";
+import { gridDims, weekOfYear } from "../engine/state";
 import type {
   ChuteDeChandelle,
   CrueResult,
@@ -285,6 +290,15 @@ export function construireSnapshot(e: EntreesSnapshot): Snapshot {
   const nH = Math.max(1, station.profil.length);
   const nCells = state.soil.mineralNG.length;
   const areaHa = (station.coteM * station.coteM) / 10_000;
+  const dims = gridDims(station);
+  // Le calendrier foliaire se **recalcule** à l'identique : mêmes entrées que
+  // celles du tick, donc mêmes couleurs de saison de part et d'autre.
+  const pheno = contextePhenologique(
+    station.latitudeDeg,
+    weekOfYear(state),
+    state.ddYearBase5,
+    state.semainesDeFroid,
+  );
   return {
     week: state.week,
     weather: e.weather,
@@ -321,14 +335,7 @@ export function construireSnapshot(e: EntreesSnapshot): Snapshot {
       empriseHerbaceeMoyenne(state),
     ),
     fluxes: e.fluxes,
-    // Le calendrier foliaire se **recalcule** à l'identique : mêmes entrées que
-    // celles du tick, donc mêmes couleurs de saison de part et d'autre.
-    pheno: contextePhenologique(
-      station.latitudeDeg,
-      weekOfYear(state),
-      state.ddYearBase5,
-      state.semainesDeFroid,
-    ),
+    pheno,
     // Aucun filtre : les chandelles sont des arbres, elles ont juste cessé de
     // vivre. Les compter comme vivants est l'affaire de l'UI, pas la nôtre.
     trees: state.trees.map((t) =>
@@ -380,6 +387,17 @@ export function construireSnapshot(e: EntreesSnapshot): Snapshot {
     soilLumiere: e.lumiereAuSol
       ? Float32Array.from(e.lumiereAuSol)
       : new Float32Array(nCells).fill(1),
+    // **Le couvert au-dessus**, et non l'ombre (#407) : ce qui surplombe chaque
+    // cellule et la garde du gel radiatif. Il se calcule ici, sur les arbres de
+    // l'instantané et le feuillage de sa semaine, par la loi du moteur
+    // (`couvertAuDessusDuSol`) : un arbre abattu en pause cesse aussitôt de
+    // couvrir, et le givre de la semaine qui s'ouvre se juge sous les houppiers
+    // qu'on voit.
+    soilCouvertAuDessus: Float32Array.from(
+      couvertAuDessusDuSol(state.trees, dims.widthM, dims.heightM, (t) =>
+        partFoliaireOmbrageanteDans(getEspece(t.especeId), pheno),
+      ),
+    ),
     // Au premier instantané, aucun tick n'a tourné : l'habitat n'est pas de
     // l'état, la carte n'existe pas encore. On la montre vide plutôt que de
     // refaire ici le minimum du moteur (#299) — elle arrive à la semaine suivante.
@@ -446,6 +464,7 @@ export function transferablesDuSnapshot(s: Snapshot): Transferable[] {
     s.soilCloture.buffer,
     s.soilDebordementMm.buffer,
     s.soilLumiere.buffer,
+    s.soilCouvertAuDessus.buffer,
     s.soilPollinisateurs.buffer,
     s.soilLitiereCG.buffer,
   ];
