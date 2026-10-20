@@ -649,6 +649,25 @@ export interface TickResult {
   /** chandelles abattues cette semaine, avec où et comment elles sont tombées */
   chutes: ChuteDeChandelle[];
   /**
+   * **La soif de chaque arbre cette semaine** (#372) : l'eau obtenue sur l'eau
+   * qu'un arbre **intact** demanderait, ∈ [0,1], par identifiant d'arbre.
+   * C'est la grandeur même que la croissance et la survie lisent (`tickTree`,
+   * `prochainDommageHydraulique`), calculée une seule fois par le tick et
+   * jusqu'ici jetée avec lui.
+   *
+   * Un arbre vivant au moment du partage de l'eau y est, même s'il meurt plus
+   * loin dans la semaine — de soif, justement ; une chandelle et un semis levé
+   * dans la semaine n'y sont pas, ils n'ont rien demandé. Un arbre
+   * sans feuilles n'a pas de demande, et vaut 1 : en janvier, un caduc n'a pas
+   * soif. Rapportée au besoin d'un arbre intact, elle reste basse sous un sol
+   * plein pour un arbre à la cime sèche (`dommageHydraulique`) : c'est voulu,
+   * il manque bel et bien d'eau.
+   *
+   * Ce n'est pas `stress` : celui-ci est amorti sur des semaines et mêle la
+   * faim, les ravageurs et la maladie à la sécheresse.
+   */
+  satisfactionEau: ReadonlyMap<number, number>;
+  /**
    * Aides publiques versées cette semaine, s'il y en a eu. Une fois l'an, et
    * seulement si l'économie compte dans cette partie (aides.ts).
    */
@@ -2353,6 +2372,9 @@ export function tick(state: GameState, weather: WeekWeather): TickResult {
   }
 
   const waterSatisfaction = new Array<number>(nTrees).fill(1);
+  // La même, par identifiant, pour qui veut la lire après le tick (#372) : les
+  // arbres morts dans la semaine et les semis levés décaleraient les indices.
+  const satisfactionEau = new Map<number, number>();
   const nSatisfaction = new Array<number>(nTrees).fill(1);
   const acquiredNG = new Array<number>(nTrees).fill(0);
   for (let t = 0; t < nTrees; t++) {
@@ -2390,6 +2412,7 @@ export function tick(state: GameState, weather: WeekWeather): TickResult {
     // souvent à la sécheresse **suivante**, pas à celle qui l'a abîmé.
     const besoinIntact = wd / Math.max(0.15, 1 - tree.dommageHydraulique);
     waterSatisfaction[t] = besoinIntact > 0 ? Math.min(1, gotW / besoinIntact) : 1;
+    satisfactionEau.set(tree.id, waterSatisfaction[t] ?? 1);
     const tirage = tirageReserveG[t] ?? 0;
     nSatisfaction[t] = nd > 0 ? Math.min(1, (gotN + tirage) / nd) : 1;
     // Un fixateur tire aussi sur sa réserve, et l'air fournit le reste.
@@ -4531,6 +4554,7 @@ export function tick(state: GameState, weather: WeekWeather): TickResult {
     // Le rendu la reçoit en simple, comme les autres grilles — l'écart est sous
     // le millionième.
     pollinisateurs: Float32Array.from(pollinisateurs),
+    satisfactionEau,
     fluxes: {
       rainMm: weather.rainMm,
       neigeMm: neige.neigeMm,

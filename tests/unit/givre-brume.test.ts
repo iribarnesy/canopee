@@ -142,9 +142,10 @@ describe("le givre à l'échelle des arbres (#357) et dit en clair (#355)", () =
     const phrase = phraseDuGel(-5.6);
     expect(phrase).toContain("−6 °C");
     expect(phrase).not.toContain("-6");
-    // Le moteur ne gèle que les fleurs ouvertes : l'avis ne promet rien d'autre.
+    // Le moteur ne gèle que les fleurs ouvertes et les feuilles à peine sorties
+    // (#420) : l'avis ne promet rien d'autre.
     expect(phrase).toContain("fleurs ouvertes");
-    expect(phrase).not.toMatch(/pousse/);
+    expect(phrase).toContain("feuilles à peine sorties");
   });
 
   it("une nuit à −0,1 °C ne se dit pas « -0 °C » (#406)", () => {

@@ -372,6 +372,7 @@ interface GrandeursDuTick {
   lumiereAuSol: Float32Array | undefined;
   pollinisateurs: Float32Array | undefined;
   oiseauxDePassage: readonly FrequentationDeGuilde[] | undefined;
+  satisfactionEau: ReadonlyMap<number, number> | undefined;
 }
 
 /** Les grandeurs du dernier tick telles qu'elles sont, prises ensemble. */
@@ -382,6 +383,7 @@ function grandeursDuTick(): GrandeursDuTick {
     lumiereAuSol: lastLumiereAuSol,
     pollinisateurs: lastPollinisateurs,
     oiseauxDePassage: lastOiseauxDePassage,
+    satisfactionEau: lastSatisfactionEau,
   };
 }
 
@@ -392,6 +394,7 @@ function remettreLesGrandeurs(g: GrandeursDuTick): void {
   lastLumiereAuSol = g.lumiereAuSol;
   lastPollinisateurs = g.pollinisateurs;
   lastOiseauxDePassage = g.oiseauxDePassage;
+  lastSatisfactionEau = g.satisfactionEau;
 }
 
 /** Retenir ce qu'une semaine simulée vient de mesurer. */
@@ -401,12 +404,14 @@ function retenirLeTick(t: {
   lumiereAuSol: Float32Array;
   pollinisateurs: Float32Array;
   oiseauxDePassage: readonly FrequentationDeGuilde[];
+  satisfactionEau: ReadonlyMap<number, number>;
 }): void {
   lastFluxes = t.fluxes;
   lastDebordement = t.debordementParCellule;
   lastLumiereAuSol = t.lumiereAuSol;
   lastPollinisateurs = t.pollinisateurs;
   lastOiseauxDePassage = t.oiseauxDePassage;
+  lastSatisfactionEau = t.satisfactionEau;
 }
 
 /**
@@ -737,6 +742,9 @@ let lastPollinisateurs: Float32Array | undefined;
 // Les oiseaux de passage de la dernière semaine (#296) : une fréquentation, pas
 // un événement — on garde la dernière, on n'accumule pas.
 let lastOiseauxDePassage: readonly FrequentationDeGuilde[] | undefined;
+// La soif de chaque arbre la dernière semaine (#372), par identifiant : une
+// coupe en pause retire l'arbre de l'état, et l'instantané ne le cherche plus.
+let lastSatisfactionEau: ReadonlyMap<number, number> | undefined;
 let droughtYearFlagged = -1;
 // Terre perdue depuis le début de l'année civile de jeu, kg/m².
 let erosionAnnee = 0;
@@ -1239,6 +1247,7 @@ function postSnapshot() {
     lumiereAuSol: lastLumiereAuSol,
     pollinisateurs: lastPollinisateurs,
     oiseauxDePassage: lastOiseauxDePassage,
+    satisfactionEau: lastSatisfactionEau,
     refusals: pendingRefusals,
     events: pendingEvents,
     morts: pendingMorts,
@@ -1505,6 +1514,7 @@ function stepWeeks(n: number) {
     lastLumiereAuSol = ticked.lumiereAuSol;
     lastPollinisateurs = ticked.pollinisateurs;
     lastOiseauxDePassage = ticked.oiseauxDePassage;
+    lastSatisfactionEau = ticked.satisfactionEau;
     pendingMorts.push(...ticked.morts);
     pendingNaissances.push(...ticked.naissances);
     pendingFranchissements.push(...ticked.franchissements);
@@ -2148,6 +2158,7 @@ function init(
   lastLumiereAuSol = undefined;
   lastPollinisateurs = undefined;
   lastOiseauxDePassage = undefined;
+  lastSatisfactionEau = undefined;
   weeksPerSecond = 0;
   bankruptcyAnnounced = false;
   droughtYearFlagged = -1;
@@ -2195,6 +2206,7 @@ function blocDeReprise(save: SaveGame): Uint8Array | undefined {
         lumiereAuSol: lastLumiereAuSol,
         pollinisateurs: lastPollinisateurs,
         oiseauxDePassage: lastOiseauxDePassage,
+        satisfactionEau: lastSatisfactionEau,
       },
       empreinteDeLaPartie(save, state.week),
     );
@@ -2227,6 +2239,7 @@ function repartirDuBloc(octets: Uint8Array, save: SaveGame): GameState | undefin
   lastLumiereAuSol = annexes.lumiereAuSol;
   lastPollinisateurs = annexes.pollinisateurs;
   lastOiseauxDePassage = annexes.oiseauxDePassage;
+  lastSatisfactionEau = annexes.satisfactionEau;
   return lu.etat;
 }
 
@@ -2280,6 +2293,7 @@ function rejouerLeJournal(save: SaveGame): GameState {
     lastLumiereAuSol = ticked.lumiereAuSol;
     lastPollinisateurs = ticked.pollinisateurs;
     lastOiseauxDePassage = ticked.oiseauxDePassage;
+    lastSatisfactionEau = ticked.satisfactionEau;
     if (i % 104 === 0) post({ type: "progress", done: i, total: save.weeks, phase: "rejeu" });
   }
   return replayed;

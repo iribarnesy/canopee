@@ -111,6 +111,8 @@ export function advanceWeek(
   lumiereAuSol: Float32Array;
   /** où sont les insectes pollinisateurs, par cellule ∈ [0,1], sans le plancher (tick.ts) */
   pollinisateurs: Float32Array;
+  /** satisfaction hydrique de la semaine, par identifiant d'arbre ∈ [0,1] (tick.ts) */
+  satisfactionEau: ReadonlyMap<number, number>;
 } {
   let s = beginWeek(state);
   const refusals: ActionRefusal[] = [];
@@ -142,6 +144,7 @@ export function advanceWeek(
     debordementParCellule: ticked.debordementParCellule,
     lumiereAuSol: ticked.lumiereAuSol,
     pollinisateurs: ticked.pollinisateurs,
+    satisfactionEau: ticked.satisfactionEau,
   };
 }
 
