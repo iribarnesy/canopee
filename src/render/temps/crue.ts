@@ -35,6 +35,7 @@
 
 import type { CrueResult } from "../../engine/crue";
 import { ordreDeDescente } from "../../engine/relief";
+import { hacher } from "../hachage";
 import type { Teinte } from "../palette";
 import { couleurEau, DEBORDEMENT_PLEIN_MM, estInondee, melange } from "../palette";
 import type { CelluleVoilee } from "./voile";
@@ -84,6 +85,24 @@ export const DENIVELE_SANS_SENS_M = 0.05;
  * donc la dernière cellule est retombée à zéro quand l'acte se termine.
  */
 export const LARGEUR_DU_FRONT = 0.34;
+
+/**
+ * **De combien le front se désordonne**, en part de l'acte (#418).
+ *
+ * Le rang d'une cellule est celui de la descente : sur un versant régulier,
+ * toutes les cellules d'une même courbe de niveau ont le même, et le front
+ * passait comme une règle — deux bords droits et parallèles qui balayaient la
+ * parcelle (« quand l'eau s'écoule, ça fait des traits parallèles très peu
+ * naturels », retour de jeu du 2026-10-16). Une lame qui ruisselle n'a pas ce
+ * bord : elle avance en langues, un peu plus vite ici, un peu moins là.
+ *
+ * Chaque cellule décale donc son rang d'une part fixe, tirée de son numéro et
+ * non du hasard — la même onde rejoue pareil. Les rangs sont **resserrés**
+ * d'autant plutôt que décalés : ils restent dans [0,1], et l'onde a toujours
+ * fini de passer à la fin de l'acte. Moins de la moitié d'un front : le haut
+ * passe toujours avant le bas, ce que le moteur dit de la descente.
+ */
+export const DESORDRE_DU_FRONT = 0.16;
 
 /** Opacité au passage de l'onde, sur une cellule au débordement plein. */
 export const OPACITE_DE_LONDE = 0.62;
@@ -243,26 +262,37 @@ export function ondeDeLaCrue(
   const teinte = retrait
     ? couleurEau(semaineAnnee)
     : melange(couleurEau(semaineAnnee), REFLET, ECLAT_DE_LONDE);
+  // Plate, la parcelle n'a pas de sens, et le désordre en inventerait un.
+  const aUnSens = crue.rangs.some((r) => r > 0);
   const sorties: CelluleVoilee[] = [];
   for (let k = 0; k < crue.cellules.length; k++) {
-    const rang = crue.rangs[k] ?? 0;
+    const cellule = crue.cellules[k];
+    if (cellule === undefined) continue;
+    const rangDuMoteur = crue.rangs[k] ?? 0;
+    const rang = aUnSens
+      ? rangDuMoteur * (1 - DESORDRE_DU_FRONT) + DESORDRE_DU_FRONT * hacher(cellule, 0, 0xc4e1)
+      : rangDuMoteur;
+    // Un profil adouci et non un triangle : la pointe d'un triangle, au milieu
+    // du front, se lisait comme un trait de plus.
+    const doux = (d: number) => Math.cos((Math.PI / 2) * Math.min(1, d / LARGEUR_DU_FRONT)) ** 2;
     let part: number;
     if (retrait) {
       // Pleine avant le front, nulle une largeur après : à la fin de l'acte,
       // le front a dépassé la dernière cellule d'une largeur, tout est sec.
-      part = front <= rang ? 1 : 1 - (front - rang) / LARGEUR_DU_FRONT;
+      part = front <= rang ? 1 : doux(front - rang);
     } else {
-      part = 1 - Math.abs(front - rang) / LARGEUR_DU_FRONT;
+      part = doux(Math.abs(front - rang));
     }
-    if (part <= 0) continue;
+    if (part <= 0.001) continue;
     // Une cellule qui reçoit un torrent brille plus qu'une flaque : la force de
     // l'onde suit l'eau, sur l'échelle que le terrain emploie déjà.
     const force = Math.min(1, (crue.lamesMm[k] ?? 0) / DEBORDEMENT_PLEIN_MM);
     const opacite = (retrait ? OPACITE_DU_RETRAIT : OPACITE_DE_LONDE) * part * (0.4 + 0.6 * force);
     if (opacite <= 0) continue;
-    const cellule = crue.cellules[k];
-    if (cellule === undefined) continue;
-    sorties.push({ cellule, teinte, opacite });
+    // **Une tache et non un carreau** (#418), comme les flaques et la brûlure :
+    // des losanges semi-transparents qui se touchent s'additionnent sur leurs
+    // bords, et l'eau courante sortait quadrillée cellule par cellule.
+    sorties.push({ cellule, teinte, opacite, brulure: Math.floor(hacher(cellule, 1, 0xc4e2) * 4) });
   }
   return sorties;
 }
