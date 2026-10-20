@@ -157,6 +157,80 @@ Les tables de production ne bougent pas de plus de 3 % à quarante ans (pin -3 %
 - **Sept assertions écologiques attendent une décision**, instruites et non touchées (mesures, options et recommandations dans #391 et la PR #411) : la crue d'hiver de la vallée (`eau-surface`, deux assertions), le facteur 3 de la transpiration après le feu (`incendie-nappe`), l'aulnaie de 1976 (`ravageurs`), le feu dans la comparaison nurse (`nurse`), un écart de 0,07 % (`sol-vivant`), la canopée de soixante ans à un arbre du seuil (`succession`).
 - **La fermeture du couvert d'un jeune peuplement** : sous des aulnes de douze ans plantés à 3 m, 55 % de la lumière atteint encore le sol l'été, et l'herbe y transpire à plein.
 
+## Ce qu'un lot précédent a appris (le froid de l'hiver, #419, puis le gel des pousses, #371)
+
+Deux décisions de l'utilisateur, prises sur instruction : recaler le débourrement par une loi commune du froid (#419, option O3), puis bâtir dessus le gel des jeunes pousses (#371, option A2). Les prédictions et les mesures sont dans les commits de la branche `claude/v06-gel-pousses`, avant chaque course.
+
+### Confronter un calendrier avant de bâtir dessus
+
+Le gel des pousses se juge sur la date de débourrement. Avant d'écrire une ligne, cette date a été confrontée aux observations : la relation du RENECOFOR entre le débourrement des chênes et la température de mars, et l'écart bouleau − chêne de PEP725. Les chênes et le hêtre tenaient à quelques jours près. Les précoces partaient une à trois semaines trop tôt, et le bouleau des Landes fin février. Sous un seuil unique de gel, il aurait perdu son feuillage 93 années sur 100. **Un mécanisme hérite des erreurs du calendrier qu'il lit** : on vérifie le calendrier d'abord.
+
+### Séparer ce qu'une loi peut corriger de ce qu'un trait doit porter
+
+La consigne voulait une règle commune du froid, sans toucher aux traits, et un écart bouleau − chêne ramené à treize jours. Une seule mesure a montré que les deux étaient incompatibles. Elle relève, pour chaque essence, le multiplicateur de besoin qu'il faudrait à sa date cible et le froid reçu à cette date. À la même quantité de froid, le bouleau demandait 1,6 à 1,9 fois son cumul, le chêne 1,0 : aucune loi du froid ne retarde l'un sans l'autre. Le rapport Landes/nord, lui, valait 1,34 pour le bouleau comme pour le charme, et une exponentielle commune le rendait, vérifiée sur deux séries non utilisées. **Avant de choisir une règle, mesurer ce qu'elle devrait produire essence par essence** : la part commune et la part propre se lisent dans le même tableau.
+
+### Ôter un garde, c'est relire ce qu'il cachait
+
+Les pionnières ont perdu leur porte photopériodique, puisque leur débourrement n'y répond pas. Deux défauts sont aussitôt sortis, qu'elle masquait depuis toujours. En semaine 0, le contexte phénologique lisait encore le cumul de l'année finie : avec un jour de janvier sous la porte, rien ne partait ; sans porte, un bouleau se feuillait une semaine chaque 1er janvier. Et l'instant fractionnaire divergeait de la semaine suivante, parce que le froid y restait figé alors qu'il module maintenant le besoin sans palier. La CI a pris le second ; le diagnostic du second a montré le premier. **Un garde qui ne s'ouvre jamais dans une situation peut couvrir un état faux dans cette situation-là.**
+
+### Le défaut d'une fonction n'est pas une raison de changer sa loi
+
+La loi décidée était une exponentielle sans plafond. Une première version l'avait plafonnée au froid de référence, pour que le défaut « froid infini » des fonctions garde son sens de « besoin nominal ». Mesuré, ce plafond retardait le chêne d'Abbeville d'une semaine : la moitié des années n'y atteignent pas le froid de référence, et le plafond ne leur rendait jamais l'allègement des années froides. Le défaut est devenu le froid de référence, et la loi celle qui avait été mesurée et décidée.
+
+### Le moteur avance à la semaine
+
+« Le chêne à ±4 jours » n'est pas une prédiction que le moteur peut tenir ou démentir : une médiane de départ saute de sept jours d'un coup. Les écarts se prédisent et se lisent par semaines entières.
+
+### Ce que ça donne
+
+#419, médianes 1997-2013 du jour de départ, déterministe :
+
+| | Abbeville | Dijon | Tours | Landes |
+|---|---|---|---|---|
+| chêne (RENECOFOR : 102 / 102 + l'est / 98 / 93) | 103 → 103 | 110 → 110 | 96 → 96 | 96 → 96 |
+| hêtre | 117 → 117 | 117 → 117 | 103 → 110 | 103 → 103 |
+| bouleau − chêne (PEP725 : −13) | −28 → **−14** | −21 → **−7** | −28 → **−7** | −35 → **−14** |
+| charme − chêne (RENECOFOR : −10) | −14 → −14 | −14 → −7 | −14 → −7 | −21 → −14 |
+
+Hauteurs (banc de `hauteurs.test.ts`) : bouleau −2,7 % à 20 ans et −1,5 % à 40, aulne −2,4 % et −1,5 %, charme et hêtre à 1 % près, tous dans leur bande.
+
+#371, dans le moteur, sur les séries réelles de 2001 à 2020, huit plants par essence, trois graines
+identiques :
+
+| | Abbeville | Dijon | Tours | Landes |
+|---|---|---|---|---|
+| années où un plant gèle, sur vingt | aucune | hêtre 1 | aucune | frêne 2, chêne, hêtre, noyer 1 ; bouleau, aulne, charme 0 |
+| hauteur à vingt ans | inchangée | hêtre −1,0 % | inchangée | frêne −3,5 %, hêtre −1,3 %, noyer −1,0 %, chêne −0,8 % |
+
+Une année de gel coûte un quart de l'accroissement (indice de résistance 0,74 à
+0,77 pour le hêtre, le frêne et le bouleau), quand les cernes du hêtre en perdent
+31 à 55 % (Meyer et al. 2024). Exposition en plein découvert sur soixante ans :
+au plus 2 % des années au nord, 3 à 10 % dans les Landes — sous l'ancien
+calendrier et un seuil unique de −1,65 °C, le bouleau landais gelait 93 années
+sur 100.
+
+### Les prédictions fausses
+
+- Q1 : le chêne des Landes devait partir une à deux semaines après la relation du RENECOFOR ; trois jours.
+- R3 : les unités de Hänninen devaient être 1,7 à 2,5 fois moindres dans les Landes ; 1,2 à 1,3.
+- α0 : avec la pente raide, le chêne devait rester à ±4 jours et les Landes passer à −28 ; le chêne bouge d'une semaine et les Landes restent à −35. Et « ±4 jours » était sous la résolution du moteur.
+- O3 : le chêne devait rester à une semaine de la relation du RENECOFOR partout ; 8 jours à Dijon.
+- S1 : seul Dijon devait bouger avec le plafond de la loi ; c'est Abbeville qui a pris une semaine.
+- S2 : bouleau et aulne devaient perdre 3 à 10 % de hauteur, le charme 2 à 6 % ; trois fois moins.
+- T2 : châtaignier des Landes 10 à 25 % des années ; 7 %.
+- U2 : moins de 1 % de hauteur au nord ; le hêtre de Dijon perd 1,0 à 1,1 %. Le chêne des Landes devait perdre au moins 1 % ; 0,8.
+- Un message de commit a dit que le saule des Landes « meurt de sécheresse » : c'était une supposition, corrigée dans le commit suivant.
+
+### Ce qui reste ouvert
+
+- **Le saule, le noisetier et l'abricotier** gardent leur cumul faute de date observée *(à confirmer sur PEP725)* : ils partent deux à trois semaines devant le bouleau recalé.
+- **Une sensibilité au froid propre à chaque essence** (Murray et al. 1989) n'est plus représentée, et la loi n'a pas d'asymptote.
+- **L'écart des Landes** reste *(à confirmer)* faute de série phénologique du Sud-Ouest.
+- **Les chiffres du hêtre sous SSP5-8.5** dans `docs/realisme.md` étaient ceux de l'ancien compte, *à remesurer*.
+- **Le gel des pousses coûte moins que sur le terrain** : 25 % de l'accroissement contre 31 à 55 % dans les cernes du hêtre. Le carbone des feuilles refaites n'est pas compté en plus des semaines perdues.
+- **Les jeunes plants débourrent plus tôt que les adultes** (Vitasse et al. 2014) : le moteur leur prête le calendrier de l'essence. Ni flèche gelée, ni fourche, ni gel des résineux.
+- **Le rendu** : `gelPousseSemaine` voyage, et l'avis « Gel » dit encore qu'il « ne détruit que les fleurs ouvertes ».
+
 ## Ce qu'un lot précédent a appris (le gel : le couvert au-dessus, #407 ; le gel des pousses instruit, #371)
 
 Deux issues du lot B de la v0.6. #407 était un défaut : la fermeture qui tamponne le gel nocturne se lisait sur la lumière reçue. Elle se lit maintenant sur la projection verticale des houppiers, et l'instantané la publie (`soilCouvertAuDessus`). #371 demande un mécanisme nouveau : il est instruit, avec des options et une mesure d'exposition, et rien n'en est codé. Les prédictions et les mesures sont dans les commits de la branche, avant chaque course.

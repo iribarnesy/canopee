@@ -91,6 +91,7 @@ describe("les arbres de l'instantané", () => {
     protege: false,
     derniereLeveeSemaine: 44,
     frotteSemaine: 12,
+    gelPousseSemaine: 66,
   };
 
   it("porte les chandelles, et les dit chandelles", () => {
@@ -118,6 +119,8 @@ describe("les arbres de l'instantané", () => {
     expect(t.pousseTendreM).toBe(0.3);
     expect(t.frotteSemaine).toBe(12);
     expect(t.derniereLeveeSemaine).toBe(44);
+    // Les pousses gelées : le houppier roussi, puis nu, puis la seconde pousse (#371).
+    expect(t.gelPousseSemaine).toBe(66);
   });
 
   it("dit quels arbres sont EN FLEUR — ce que fruitProgress ne dit pas", () => {

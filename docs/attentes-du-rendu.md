@@ -149,7 +149,18 @@ est là pour qu'une station le déclare quand on l'aura).
 `diametreTeteCm`, `caviteTeteL`, `vigueur`,
 `dommageHydraulique`, `mortSemaine`, `brulEeSemaine`, `causeMort`,
 `derniereLeveeSemaine`, `floraison`, `fruitProgress`, `bloomFrosted`,
-`pousseTendreM`, `frotteSemaine`, `brouteSemaine`, `renverseSemaine`, `chuteRad`.
+`pousseTendreM`, `frotteSemaine`, `brouteSemaine`, `renverseSemaine`, `chuteRad`,
+`gelPousseSemaine`.
+
+`gelPousseSemaine` est **le gel des jeunes pousses** (#371, `gelPousses.ts`) : la
+semaine où une nuit de printemps a grillé le feuillage qui venait de sortir.
+L'arbre reste alors **sans feuilles cinq semaines**, puis refeuille en trois
+(`refeuillaison(semaines)`) — un houppier roussi, puis nu, puis la seconde
+pousse. Les arbres qui viennent de geler sont ceux dont cette date est la
+dernière semaine simulée ; à ×64, la date reste lisible le temps de la
+refeuillaison. Une fois l'an au plus. **L'avis « Gel »** (`useAvisDuGel.ts`) dit
+encore que le gel « ne détruit que les fleurs ouvertes » : ce n'est plus vrai,
+il peut dire maintenant « les jeunes pousses de N arbres ont gelé ».
 
 `baseHouppierM` mérite un mot : c'est la hauteur en dessous de laquelle il n'y a
 plus de branches vivantes, donc du fût nu à dessiner. Elle ne se déduit de rien
