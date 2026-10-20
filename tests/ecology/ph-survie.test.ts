@@ -66,6 +66,7 @@ const ACIDE = stationDepuisProfil({
     horizon(65, { sable: 15, limon: 70, argile: 15 }, { moPct: 0.8, ph: PH_ACIDE + 0.2 }),
   ],
   initialMineralNKgHa: 60,
+  potassiumEchangeableMgKg: LIMON_RICHE.station.potassiumEchangeableMgKg,
   profondeurNappeEquilibreCm: 630,
   remonteeNappeMmSemaine: 0,
   drainageExterneMmSemaine: Number.POSITIVE_INFINITY,

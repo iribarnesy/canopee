@@ -24,6 +24,7 @@ import { empriseInitiale, N_HERBACEES } from "./herbacees";
 import { stockEquilibreMm, stocksEquilibreParCellule } from "./nappe";
 import { KG_PER_HA_TO_G_PER_M2 } from "./nitrogen";
 import type { Bordures } from "./paysage";
+import { RESERVE_K_SUR_ECHANGEABLE } from "./pk";
 import type { Relief } from "./relief";
 import { altitudeParCellule } from "./relief";
 import type { RngState } from "./rng";
@@ -165,7 +166,17 @@ export interface Station {
   sanglierParHa: number;
   /** phosphore assimilable au départ, g/m² (dérivé du profil) */
   phosphoreInitialGM2: number;
-  /** potassium échangeable au départ, g/m² (dérivé du profil) */
+  /**
+   * Potassium échangeable de l'horizon de surface, mg K/kg : la teneur d'une
+   * analyse de terre, déclarée et sourcée station par station comme l'azote
+   * minéral de départ (#395, stations.ts).
+   */
+  potassiumEchangeableMgKg: number;
+  /**
+   * Potassium échangeable au départ, g/m² : la teneur déclarée, rapportée à la
+   * masse de l'horizon de surface (`potassiumEchangeableGM2`, pk.ts). C'est
+   * aussi le niveau vers lequel la réserve ramène l'échangeable.
+   */
   potassiumInitialGM2: number;
 }
 
@@ -940,7 +951,11 @@ export function createGameState(
       // habituel entre phosphore total et phosphore assimilable.
       phosphoreFixeG: new Float64Array(n).fill(station.phosphoreInitialGM2 * 10),
       potassiumG: new Float32Array(n).fill(station.potassiumInitialGM2),
-      potassiumReserveG: new Float64Array(n).fill(station.potassiumInitialGM2 * 10),
+      // La réserve non échangeable, au rapport des sols cultivés de Balík et
+      // al. 2020 (pk.ts).
+      potassiumReserveG: new Float64Array(n).fill(
+        station.potassiumInitialGM2 * RESERVE_K_SUR_ECHANGEABLE,
+      ),
       // Une parcelle nue au départ : la strate s'installe d'elle-même. Qui la
       // compose au premier jour, c'est l'atlas qui le dit, d'après le pH de la
       // station et la vitesse d'installation de chacune (herbacees.ts).
