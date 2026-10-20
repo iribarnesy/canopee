@@ -1966,7 +1966,6 @@ export function tick(state: GameState, weather: WeekWeather): TickResult {
   // La saison de l'herbe ne règle plus sa soif (herbe.ts) : elle ne sert qu'au
   // gibier, plus bas.
   const saisonHerbe = Math.min(1, Math.max(0, (weather.tMean - 4) / 8));
-  const herbeDemandeL = new Array<number>(nCells).fill(0);
   /** Azote voulu par le tapis, rangé pour que le service relise la demande. */
   const herbeDemandeNG = new Array<number>(nCells).fill(0);
   /** Et ce qu'il demande au sous-sol (lot B). */
@@ -1979,7 +1978,6 @@ export function tick(state: GameState, weather: WeekWeather): TickResult {
     const couverture = herbeCouverture[i] ?? 0;
     if (couverture <= 0) continue;
     const demandeEau = herbeDemandeEauL(couverture, etpMm, groundLight[i] ?? 1);
-    herbeDemandeL[i] = demandeEau;
     // L'eau de la strate se prend là où sont ses racines (lot B) : chaque espèce
     // au prorata de son feuillage, sur ses fractions racinaires. Une anémone
     // puise en surface, un blé descend jusqu'au fond.
@@ -2087,7 +2085,6 @@ export function tick(state: GameState, weather: WeekWeather): TickResult {
     for (let h = 0; h < nH; h++) {
       cellWaterDemand[base + h] = (cellWaterDemand[base + h] ?? 0) * facteur;
     }
-    herbeDemandeL[i] = (herbeDemandeL[i] ?? 0) * facteur;
   }
 
   const waterServedRatio = new Array<number>(nCells * nH).fill(0);
