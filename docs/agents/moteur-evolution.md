@@ -61,7 +61,58 @@ qu'un rapport (voir la note de maintenance).
 Séparer calibration et validation : caler un paramètre sur un âge, garder
 l'autre âge pour vérifier.
 
-## Ce que le dernier lot a appris (publier pour le rendu : la soif des arbres, #372, les jours de pluie, #405, et la hauteur du tapis, #370)
+## Ce que le dernier lot a appris (les dates d'une parcelle vieillie, #397)
+
+Une issue de maintenance, la suite de #348. À l'arrivée du joueur sur une parcelle vieillie, le compteur de semaines repartait de zéro, et les dates que l'état gardait du vieillissement restaient comptées depuis son début : le moteur et l'écran les lisaient comme des dates à venir. Elles sont maintenant décalées avec le compteur, et les tirages qui reviennent chaque semaine ou chaque année se font sur la semaine continue, comme la rafale. Les prédictions et les mesures sont dans les commits de la branche, avant chaque course.
+
+### Un changement d'origine se fait d'un seul geste, et un essai en tient l'inventaire
+
+Remettre le compteur à zéro change l'origine du temps : tout ce qui est daté doit suivre, ou mentir. Le geste est une seule fonction (`remettreLeCompteurAZero`, state.ts), et le risque n'est pas de mal décaler, c'est d'oublier une date, aujourd'hui ou au prochain lot. `dates-de-l-etat.test.ts` lit les noms des champs dans les interfaces de l'état et exige que tout champ nommé d'après une semaine soit décalé, ou déclaré dans l'essai comme n'étant pas une date, avec sa raison. À sa première course, il a refusé `ageWeeks` : une durée, pas une date, et c'est ce qu'il doit faire. Et à la fusion de `main`, il a refusé `gelPousseSemaine`, la date du gel des pousses que #371 venait d'ajouter pendant ce lot : la première date neuve après lui, et elle aurait été oubliée. #371 contournait le défaut à sa façon (une date « future » ne comptait pas) ; décalée, elle n'a plus besoin de garde, et les deux gardes sont retirées. **Sa limite est écrite dans l'essai** : l'identifiant d'une crue est une date que son nom ne dit pas, et il est vérifié à part.
+
+### Un nombre qui change de sens est un changement de format
+
+La forme de l'état ne change pas : une date reste un nombre. Mais un bloc écrit avant ce lot par une partie vieillie porte ses dates dans l'ancien compte, que le moteur lirait comme des dates à venir. #419 venait de trancher le même cas pour `semainesDeFroid` (« la forme du bloc ne bouge pas, et c'est justement le piège ») et de monter le format à 12. Ce lot le monte à 13, pour la même raison : le bloc ne dit pas si la partie a vieilli, et une date du vieillissement ne se distingue plus d'une date du joueur dès que le compteur l'a dépassée. Le rejeu du journal refait le vieillissement avec ses dates justes.
+
+### Une date et un tirage n'ont pas la même origine
+
+Les dates restent dans le compte du joueur, parce que `week − date` est ce que lisent le moteur (la chandelle qui tient, le chablis récupérable, le répit du frottis) et l'écran ; celles d'avant l'arrivée sont négatives. Les tirages, eux, suivent le temps qu'il fait. Le critère qui les sépare n'est pas « tout ce qui lit la semaine » : c'est **un tirage qui revient sur le même objet**. Le chablis d'un arbre, le boutis d'une cellule, la glandée d'une espèce, la tentative d'un habitant se rejouaient un à un sur le compteur du joueur : 66 à 86 % des boutis du joueur retombaient sur une cellule déjà retournée la même semaine du vieillissement, aucun ne le fait plus. La chute d'une chandelle, elle, ne se tire qu'une fois par arbre : rien à rejouer, elle reste sur le compte du joueur. Le marché aussi : le vieillissement ne vend rien, le joueur n'en revit aucune année.
+
+### Un banc qui ne produit pas l'événement ne mesure pas sa correction
+
+Le répit du frottis était l'effet le plus fort attendu sur le moteur : une tige frottée à la semaine 2 000 d'un vieillissement de quarante ans échappait au brocard pendant quarante ans. Sur la friche du limon en bocage, il n'y a eu **aucun frottis**, ni au vieillissement ni en jeu, en 10 à 45 ans simulés : la prédiction n'était pas fausse, elle était sans objet. Un banc en massif forestier l'a mesurée (le brocard revient sur une tige frottée avant l'arrivée dans les trois parties, jamais sur main). Et l'absence elle-même était un défaut : la décimale du budget de frottis ne tombe sur aucune semaine de brame quand l'espérance passe sous une demi-tige par an (#415). **Avant de prédire un effet, vérifier que le banc produit l'événement qui le porte.**
+
+### Ce que ça donne
+
+Vrai worker sous Node, friche du limon (50 m), série réelle, ssp245, faune allumée, cinq ans de jeu ; déterministe à graine donnée.
+
+| | main | branche |
+|---|---|---|
+| dates à l'arrivée (douze parties vieillies) | toutes positives | toutes dans [−52 N, −1] |
+| état à l'arrivée, dates ramenées au compte continu | | même empreinte, douze sur douze |
+| chandelles du vieillissement tombées en cinq ans, bocage 5 ans (graines 1 / 2 / 3) | 0 / 0 / 0 sur 9 / 11 / 6 | 1 / 1 / 1 |
+| bocage 20 ans | 0 / 0 / 0 sur 186 / 194 / 89 | 102 / 100 / 14 |
+| bocage 40 ans | 0 / 0 / 0 sur 136 / 325 / 215 | 41 / 144 / 93 |
+| massif 20 ans | 0 / 0 / 0 sur 225 / 205 / 210 | 133 / 125 / 122 |
+| écart entre la durée sur pied et celle que le moteur donne | | 0 semaine, toutes |
+| massif 20 ans, frottis du joueur sur une tige frottée au vieillissement | 0 / 0 / 0 sur 5 | 2 / 3 / 1 sur 5 |
+| boutis du joueur sur une cellule retournée la même semaine du vieillissement (bocage, neuf parties) | 118 à 147 sur 161 à 176 | 0 |
+| arbres brûlés du vieillissement récupérables à l'arrivée (bocage 20 ans graine 3, 40 ans graine 1) | 6 et 15, pour 17 et 35 ans | 0 et 0 |
+| non vieillies, empreinte du bloc de reprise après trois ans (quatre parties) | | identique à l'octet |
+
+### Les prédictions fausses
+
+- M1 : 40 à 150 chandelles prédites à l'arrivée après vingt ans, 100 à 250 après quarante ; mesuré 89 à 194 et 136 à 325.
+- B3 : 30 à 80 % des chandelles du vieillissement devaient tomber en cinq ans ; 9 à 61 %. Après cinq ans de vieillissement, elles sont toutes jeunes.
+- B4 : moins de chandelles debout au bout de cinq ans sur les neuf parties ; fausse pour trois. Le total dépend aussi de la partie jouée, qui change après l'arrivée : à quarante ans graine 3, l'incendie qui consumait 198 chandelles sur main n'a pas lieu sur la branche.
+- M3 et B5 (le frottis en bocage) étaient sans objet : aucun frottis sur ce banc.
+
+### Ce qui reste ouvert
+
+- **#414** (`rendu`) : les gardes de `fiche.ts` et `chevreuils.ts` deviennent du code mort, `PanneauHabitants.tsx` reçoit enfin ses dates négatives. Le texte retenu par le rendu : « il y a 3 ans, avant votre arrivée ».
+- **#415** (`moteur:maintenance`) : le frottis n'a jamais lieu sur une petite parcelle peu giboyeuse.
+- La série fait soixante ans, le vieillissement peut en faire cent vingt (inchangé depuis #348).
+
+## Ce qu'un lot précédent a appris (publier pour le rendu : la soif des arbres, #372, les jours de pluie, #405, et la hauteur du tapis, #370)
 
 Un lot de publication : trois grandeurs que le rendu attendait. Deux voyagent, la troisième ne se déduit pas de ce que le moteur sait. Aucune partie ne bouge : l'empreinte de l'état sérialisé et `stateHash` sont identiques à l'octet, cinq ans, trois graines, deux séries réelles et une année synthétique (M1). Les prédictions et les mesures sont dans les commits de la branche, avant chaque course.
 
