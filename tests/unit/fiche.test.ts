@@ -318,3 +318,12 @@ describe("les fruits d'un arbre mort (#416)", () => {
     ).toBeUndefined();
   });
 });
+
+describe("les pousses grillées par le gel (#425)", () => {
+  it("la fiche dit pourquoi l'arbre est nu, le temps que le feuillage revienne", () => {
+    expect(valeur(fiche({ gelPousseSemaine: 52 * 31 - 2 }), "Pousses")).toBe(
+      "grillées par le gel il y a 2 semaines",
+    );
+    expect(valeur(fiche({ gelPousseSemaine: 52 * 31 - 20 }), "Pousses")).toBeUndefined();
+  });
+});
