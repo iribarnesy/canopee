@@ -1,10 +1,10 @@
 import { describe, expect, it } from "vitest";
 import { serieMeteoPour } from "../../src/data/meteo";
-import { applyAction, type GameAction } from "../../src/engine/actions";
+import { applyAction, FUMIER_K_SUR_N, type GameAction } from "../../src/engine/actions";
 import { advanceWeek } from "../../src/engine/game";
 import { HERBACEES, N_HERBACEES } from "../../src/engine/herbacees";
 import { serieToWeeks, syntheticYear } from "../../src/engine/meteo";
-import { potassiumDeLaStrateG } from "../../src/engine/pk";
+import { K_SUR_K2O, potassiumDeLaStrateG } from "../../src/engine/pk";
 import { RELIEF_PLAT } from "../../src/engine/relief";
 import { rngStateFromSeed } from "../../src/engine/rng";
 import { createGameState, type GameState, plantAt, type Station } from "../../src/engine/state";
@@ -66,6 +66,17 @@ function strateKgHa(s: GameState): number {
     t += potassiumDeLaStrateG(s.soil.herbeAzoteG[k] ?? 0);
   }
   return (t / nCells) * 10;
+}
+
+/**
+ * Ce qu'un geste apporte de potassium, kg/ha : la potasse, et le fumier avec son
+ * azote (#395). Les zones de ces essais couvrent toute la parcelle.
+ */
+function apportKKgHa(g: GameAction): number {
+  if (g.type !== "fertiliser") return 0;
+  if (g.forme === "potasse") return g.doseKgK2OHa * K_SUR_K2O;
+  if (g.forme === "fumier") return g.doseKgNHa * FUMIER_K_SUR_N;
+  return 0;
 }
 
 /** Ce que la moisson emportera, kg/ha : le grain, au plus ce que la plante porte. */
@@ -149,6 +160,7 @@ describe("la parcelle sans arbre se referme, sol et plantes ensemble", () => {
     let s = createGameState(station, rngStateFromSeed(5));
     const total = (e: GameState) => solKgHa(e) + strateKgHa(e);
     let exporte = 0;
+    let apporte = 0;
     let rendu = 0;
     let reserveMinimum = Number.POSITIVE_INFINITY;
     for (let an = 0; an < ans; an++) {
@@ -156,10 +168,13 @@ describe("la parcelle sans arbre se referme, sol et plantes ensemble", () => {
         for (const geste of gestes(an, w, centre)) {
           const avant = total(s);
           const grain = geste.type === "moissonner" ? grainKKgHa(s) : 0;
+          const apport = apportKKgHa(geste);
           s = applyAction(s, { ...geste, week: an * 52 + w }).state;
-          // Un geste ne crée ni ne détruit : seul le grain sort.
-          expect(total(s) - avant).toBeCloseTo(-grain, PRECISION);
+          // Un geste ne crée ni ne détruit : seul le grain sort, seuls la
+          // potasse et le fumier entrent.
+          expect(total(s) - avant).toBeCloseTo(apport - grain, PRECISION);
           exporte += grain;
+          apporte += apport;
         }
         const avant = total(s);
         const m = meteo[w];
@@ -184,6 +199,7 @@ describe("la parcelle sans arbre se referme, sol et plantes ensemble", () => {
     }
     return {
       exporte,
+      apporte,
       rendu,
       reserveMinimum,
       potassiumKgHa: moyenne(s.soil.potassiumG) * 10,
@@ -205,6 +221,26 @@ describe("la parcelle sans arbre se referme, sol et plantes ensemble", () => {
     // (Comifer) : une centaine de kilos en tout, pas trois cents.
     expect(r.exporte).toBeGreaterThan(50);
     expect(r.exporte).toBeLessThan(150);
+  }, 300_000);
+
+  it("un blé fumé et potassé : le fumier et la potasse entrent, le grain sort (#395)", () => {
+    const r = mener(4, (an, w, c) => {
+      const zone = { x: c, y: c, rayonM: 30 };
+      const g: GameAction[] = [];
+      // Le fumier avant le labour, au plafond de la directive nitrates ; la
+      // potasse au printemps, à la dose moyenne des blés qui en reçoivent
+      // (Agreste 2017).
+      if (w === 39)
+        g.push({ type: "fertiliser", week: 0, ...zone, forme: "fumier", doseKgNHa: 170 });
+      if (w === 40) g.push({ type: "labourer", week: 0, ...zone });
+      if (w === 41) g.push({ type: "semer", week: 0, ...zone, cultureId: "triticum_aestivum" });
+      if (w === 10 && an > 0)
+        g.push({ type: "fertiliser", week: 0, ...zone, forme: "potasse", doseKgK2OHa: 48 });
+      if (w === 28 && an > 0) g.push({ type: "moissonner", week: 0, ...zone });
+      return g;
+    });
+    expect(r.apporte).toBeCloseTo(4 * 170 * FUMIER_K_SUR_N + 3 * 48 * K_SUR_K2O, 6);
+    expect(r.exporte).toBeGreaterThan(0);
   }, 300_000);
 
   it("une prairie fauchée chaque été : rien ne sort, tout revient", () => {
