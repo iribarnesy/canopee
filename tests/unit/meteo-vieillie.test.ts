@@ -191,6 +191,7 @@ describe("les dates du vieillissement sont comptées dans le compte du joueur (#
       "frotteSemaine",
       "brouteSemaine",
       "derniereLeveeSemaine",
+      "gelPousseSemaine",
     ] as const;
     const trouvees = arbresALArrivee.flatMap((a) =>
       dates.flatMap((champ) => (a[champ] === undefined ? [] : [{ champ, semaine: a[champ] }])),

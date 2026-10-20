@@ -164,8 +164,8 @@ il peut dire maintenant « les jeunes pousses de N arbres ont gelé ».
 
 **Les dates sont des semaines du compte du joueur**, celui de `Snapshot.week`
 (#397) : `mortSemaine`, `brulEeSemaine`, `renverseSemaine`, `frotteSemaine`,
-`brouteSemaine`, `derniereLeveeSemaine`, le `depuisSemaine` d'un habitant et
-l'`id` d'une crue. Trois conséquences, qui valent pour tous les écrans :
+`brouteSemaine`, `derniereLeveeSemaine`, `gelPousseSemaine`, le `depuisSemaine`
+d'un habitant et l'`id` d'une crue. Trois conséquences, qui valent pour tous les écrans :
 
 - **`week − date` est le temps écoulé**, toujours positif ou nul : une
   soustraction suffit, sans garde. Ce que le moteur date dans un tick vaut au

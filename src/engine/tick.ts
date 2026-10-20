@@ -805,8 +805,7 @@ export function tick(state: GameState, weather: WeekWeather): TickResult {
   // croissance, ni transpiration pour ce qui manque.
   const feuillageRevenu = (tree: TreeState): number => {
     if (tree.gelPousseSemaine === undefined) return 1;
-    const semaines = state.week - tree.gelPousseSemaine;
-    return semaines <= 0 ? 1 : refeuillaison(semaines);
+    return refeuillaison(state.week - tree.gelPousseSemaine);
   };
   const partOmbrageanteDe: PartOmbrageante = (tree) =>
     partFoliaireOmbrageanteDans(getEspece(tree.especeId), pheno) * feuillageRevenu(tree);
@@ -2992,11 +2991,9 @@ export function tick(state: GameState, weather: WeekWeather): TickResult {
   nextTrees = nextTrees.map((tree, t) => {
     if (!tree.alive) return tree;
     // Une fois l'an : le feuillage qui repousse vient de bourgeons dormants, et
-    // la saison est alors trop avancée pour qu'il regèle. Une date **future** est
-    // celle d'une parcelle vieillie, dont le compteur est reparti de zéro à
-    // l'arrivée du joueur (#397) : elle ne compte pas pour cette année.
+    // la saison est alors trop avancée pour qu'il regèle.
     const gel = tree.gelPousseSemaine;
-    if (gel !== undefined && gel >= debutDeLAnnee && gel <= state.week) return tree;
+    if (gel !== undefined && gel >= debutDeLAnnee) return tree;
     const espece = getEspece(tree.especeId);
     if (!feuillageTendre(espece, pheno, partFoliaireActiveDans(espece, pheno))) return tree;
     if (tMinimumSousCouvert(weather.tMinAbsC, couvertAuDessusDe(t)) > seuilAirGelPousses(espece)) {

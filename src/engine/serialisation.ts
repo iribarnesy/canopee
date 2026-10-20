@@ -193,8 +193,20 @@ const MAGIE = "CANOPEE\u0000";
  * lot ajoute aux arbres la date du gel de leurs pousses (`gelPousseSemaine`,
  * #371) : un bloc de version 11 n'en porte aucune, et la relire comme « jamais
  * gelé » rendrait son feuillage à un arbre qui le refait encore.
+ *
+ * **13 (issue #397, les dates d'une parcelle vieillie)** : à l'arrivée du
+ * joueur, les dates que l'état garde du vieillissement sont décalées avec le
+ * compteur (`remettreLeCompteurAZero`, state.ts) ; celles d'avant l'arrivée sont
+ * négatives. Même piège qu'à la version 12 : la forme ne bouge pas, le sens si.
+ * Un bloc de version 12 d'une partie vieillie porte ses dates comptées depuis le
+ * début du vieillissement, que le moteur lirait maintenant comme des dates à
+ * venir — ses chandelles tiendraient N ans de trop. Le bloc ne dit pas si la
+ * partie a vieilli, et une date du vieillissement ne se distingue pas d'une
+ * date du joueur dès que le compteur l'a dépassée : aucune conversion n'est
+ * sûre. On refuse, et le rejeu du journal refait le vieillissement avec ses
+ * dates justes.
  */
-export const VERSION_FORMAT = 12;
+export const VERSION_FORMAT = 13;
 
 /**
  * Les versions d'un bloc que ce moteur sait relire, et ce qu'il faut ajouter à
