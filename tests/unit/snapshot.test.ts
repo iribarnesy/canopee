@@ -179,6 +179,25 @@ describe("les grilles de l'instantané", () => {
     expect(snapshot.soilLumiere[0] ?? 0).toBeLessThan(1);
   });
 
+  it("porte le couvert AU-DESSUS, qui n'est pas l'ombre : le gel le lit (#407)", () => {
+    // Sans arbre, la bande que l'entourage ombrage n'a rien au-dessus d'elle :
+    // lue comme un couvert, elle dessinait un cadre sans givre sur trois côtés.
+    const nu = construireSnapshot(entrees(etatNeuf()));
+    expect(nu.soilLumiere[0] ?? 1).toBeLessThan(1);
+    expect([...nu.soilCouvertAuDessus].every((v) => v === 0)).toBe(true);
+    // Un sempervirent couvre la cellule de son tronc, quelle que soit la saison ;
+    // son ombre de midi, elle, tombe plus au nord.
+    const pin = plantAt(etatNeuf(), "pinus_sylvestris", 6.5, 3.5, 8);
+    const s = construireSnapshot({ ...entrees(pin), state: pin });
+    const aLAplomb = 3 * STATION.coteM + 6;
+    expect(s.soilCouvertAuDessus[aLAplomb] ?? 0).toBeGreaterThan(0.3);
+    // Il se lit sur les arbres **de l'instantané** : abattu en pause, le pin cesse
+    // aussitôt de couvrir, sans attendre le tick suivant.
+    const abattu = { ...pin, trees: [] };
+    const apres = construireSnapshot({ ...entrees(pin), state: abattu });
+    expect(apres.soilCouvertAuDessus[aLAplomb]).toBe(0);
+  });
+
   it("porte l'herbe sur pied, les ravageurs et l'érosion, cellule par cellule", () => {
     const state = etatNeuf();
     const nCells = STATION.coteM * STATION.coteM;

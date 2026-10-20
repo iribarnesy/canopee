@@ -33,12 +33,26 @@
  * du point considéré — pas de seuil, pas de cas particulier : un arbre en plein
  * découvert ne gagne rien, un semis sous futaie fermée gagne tout.
  *
+ * **La nuit et le jour ne lisent pas la même fermeture** (#407). Le minimum
+ * nocturne est tenu par ce qui **surplombe** le point : la nuit claire, le sol
+ * rayonne vers le ciel, et un houppier au-dessus de lui le lui cache. Il se lit
+ * donc sur la projection verticale des houppiers (`couvertAuDessusDuSol`,
+ * `couvertAuDessusDesArbres`, light.ts). Il se lisait sur la lumière reçue, qui
+ * suit le soleil : l'ombre d'un arbre tombe au nord de son tronc, et celle des
+ * champs ou du bois voisins borde la parcelle au sud, à l'est et à l'ouest. Un
+ * fruitier de bordure se croyait abrité par le champ d'à côté, et le givre
+ * laissait un cadre vert au cordeau sur trois côtés. Le maximum diurne, lui,
+ * dépend bien de l'ombre : `fermetureDuCouvert(lumière)` reste son entrée.
+ *
  * *(Limite assumée : les chiffres de De Frenne portent sur des moyennes de
  * maxima et de minima, pas sur les extrêmes absolus. Pour un gel radiatif — la
  * nuit claire et calme où le couvert compte le plus — le tampon réel est
  * probablement **plus** grand que 1,1 °C, puisque c'est précisément le rayonnement
- * nocturne vers le ciel que le couvert intercepte. On reste sur la valeur
- * publiée plutôt que d'extrapoler.)*
+ * nocturne vers le ciel que le couvert intercepte : Groot et Carlson (1996,
+ * *Can. J. For. Res.* 26:1531) mesurent près de 3 °C d'écart moyen des minima
+ * entre la forêt et une coupe rase de printemps, près de 6 °C par nuit claire,
+ * un peu plus de 1 °C par nuit couverte. On reste sur la valeur publiée de la
+ * méta-analyse plutôt que d'extrapoler.)*
  */
 
 /** Ce que le couvert fermé retire au maximum journalier, °C. */
@@ -48,7 +62,11 @@ export const TAMPON_MOYENNE_C = 1.7;
 /** Ce qu'il **ajoute** au minimum, °C : la nuit, la forêt est plus douce. */
 export const TAMPON_MINIMUM_C = 1.1;
 
-/** Fermeture du couvert au-dessus d'un point, d'après la lumière qu'il reçoit. */
+/**
+ * Fermeture **vue du soleil**, d'après la lumière qu'un point reçoit : celle qui
+ * rabote le maximum du jour. Pour la nuit et le gel, ce n'est pas elle — c'est
+ * le couvert qui surplombe le point (`couvertAuDessusDuSol`, light.ts).
+ */
 export function fermetureDuCouvert(lumiereRecue: number): number {
   return borne(1 - lumiereRecue);
 }

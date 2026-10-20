@@ -138,7 +138,8 @@ est là pour qu'une station le déclare quand on l'aura).
 | `soilNappeCm` | profondeur de la nappe, cm |
 | `soilEngorgement` | engorgement du profil ∈ [0,1] |
 | `soilDebordementMm` | l'eau passée en surface sur la cellule cette semaine sans y entrer, mm — **un débit, pas une lame** : le long d'un talweg elle cumule tout l'amont (#288). La base du courant ; la hauteur d'eau est dans `crues[].lamesMm` |
-| `soilLumiere` | lumière arrivant au sol ∈ [0,1] |
+| `soilLumiere` | lumière arrivant au sol ∈ [0,1] — l'**ombre**, qui suit le soleil : le sous-bois sombre, la chaleur du jour |
+| `soilCouvertAuDessus` | couvert qui **surplombe** la cellule ∈ [0,1], projection verticale des houppiers : la fermeture qui tamponne le **gel** nocturne (#407). La nuit vécue au sol vaut `tMinimumSousCouvert(weather.tMinAbsC, soilCouvertAuDessus[i])` — la même règle que celle qui gèle les fleurs. **Ce n'est pas `1 − soilLumiere`** : l'ombre tombe au nord du tronc et le paysage voisin en borde la parcelle, et lue comme un couvert elle dessinait un cadre sans givre au cordeau sur trois côtés. Calculé dans l'instantané sur ses arbres et le feuillage de sa semaine : un arbre abattu en pause cesse aussitôt de couvrir |
 | `soilPollinisateurs` | où sont les insectes pollinisateurs ∈ [0,1] : `min(habitat, ressourceFlorale)`, la grandeur même du service de pollinisation, **sans** son plancher (vent, abeilles domestiques) — presque nulle dans un verger nu en fleur ; mesurée à quelques centièmes au pied d'une jeune haie, 0,6 en été au pied d'une haie de dix ans (#299) |
 | `soilCloture` | cellules closes (1) |
 

@@ -162,6 +162,12 @@ import {
 } from "../temps/pluie";
 import type { CelluleVoilee } from "../temps/voile";
 
+/**
+ * De combien une tache de voile (eau qui court, flaque, brûlure) peut quitter
+ * le centre de sa cellule, en mètres d'un bord à l'autre (#418).
+ */
+const DERIVE_DE_LA_TACHE = 0.6;
+
 /** Budget de cuisson par image, en morceaux de terrain. */
 export const BUDGET_TERRAIN = 4;
 /**
@@ -1021,17 +1027,23 @@ export class SceneParcelle {
     const hauteur = TUILE_HAUTEUR_PX * vue.cam.zoom + 0.5;
     let n = 0;
     for (const c of this.voiles) {
-      const x = (c.cellule % cote) + 0.5;
-      const y = Math.floor(c.cellule / cote) + 0.5;
-      const z = etat.sol.altitudesM[c.cellule] ?? 0;
-      const p = versEcranVue({ x, y, z }, vue);
       // **Un carreau pour un geste, une tache étalée pour une brûlure**, et
       // c'est la cellule qui le dit. Le bord franc d'un chaulage veut dire « ce
       // mètre-là a été travaillé » ; une brûlure, elle, bave sur ses voisines,
       // et dessinée au carreau elle donne un damier.
       const tache = c.brulure === undefined ? undefined : brulures[c.brulure % brulures.length];
-      const sprite = SceneParcelle.sprite(this.couches.voiles, n, tache ?? this.textureVoile);
       const etale = tache !== undefined;
+      // **Une tache ne se pose pas au centre de sa cellule** (#418). Posées
+      // toutes au centre, des taches pareilles font un treillis à un mètre de
+      // pas, et une eau qui court sur un sol nu se lisait encore quadrillée.
+      // Un décalage fixe par cellule, tiré de son numéro, rompt le pas sans
+      // rien déplacer de plus d'un tiers de mètre.
+      const derive = etale ? DERIVE_DE_LA_TACHE : 0;
+      const x = (c.cellule % cote) + 0.5 + derive * (hacher(c.cellule, 7, 0x70a1) - 0.5);
+      const y = Math.floor(c.cellule / cote) + 0.5 + derive * (hacher(c.cellule, 8, 0x70a2) - 0.5);
+      const z = etat.sol.altitudesM[c.cellule] ?? 0;
+      const p = versEcranVue({ x, y, z }, vue);
+      const sprite = SceneParcelle.sprite(this.couches.voiles, n, tache ?? this.textureVoile);
       sprite.anchor.set(0.5, 0.5);
       sprite.width = etale ? largeur * ETALEMENT_DE_LA_BRULURE : largeur;
       sprite.height = etale ? hauteur * ETALEMENT_DE_LA_BRULURE : hauteur;

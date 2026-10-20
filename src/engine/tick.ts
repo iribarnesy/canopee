@@ -128,6 +128,7 @@ import {
   baseHouppierCible,
   computeGroundLight,
   computeLight,
+  couvertAuDessusDesArbres,
   crownRadiusM,
   indexerAbriVent,
   type PartOmbrageante,
@@ -136,7 +137,7 @@ import { lumiereApresBordures } from "./lisiere";
 import { maladiesActives, pressionMaladie, RAYON_INOCULUM_M } from "./maladies";
 import type { WeekWeather } from "./meteo";
 import { rayonnementGlobalSemaineMJ, weeklyEtpHargreaves } from "./meteo";
-import { fermetureDuCouvert, tMinimumSousCouvert } from "./microclimat";
+import { tMinimumSousCouvert } from "./microclimat";
 import {
   cibleReseau,
   facteurAbsorption,
@@ -2746,7 +2747,8 @@ export function tick(state: GameState, weather: WeekWeather): TickResult {
 
   // ── 5 bis. Phénologie fruitière (docs/regles.md §7.2) ─────────────────────
   // Degrés-jours base 5 °C depuis le 1er janvier ; floraison quand le cumul
-  // franchit le seuil de l'espèce, gel tardif fatal aux fleurs ouvertes,
+  // franchit le seuil de l'espèce, gel tardif fatal aux fleurs ouvertes — jugé
+  // sous le couvert qui surplombe l'arbre, pas sous l'ombre qu'il reçoit —,
   // croissance du fruit au rythme de la loi du minimum, récolte à la semaine
   // de l'espèce — non récoltée, elle est perdue (§10).
   const ddPrev = week === 0 ? 0 : state.ddYearBase5;
@@ -2850,6 +2852,13 @@ export function tick(state: GameState, weather: WeekWeather): TickResult {
   // une seule règle, deux lecteurs.
   const pollinisateurs = pollinisateursParCellule(habitat, ressourceFlorale);
 
+  // Le couvert au-dessus de chaque arbre, pour le gel des fleurs : calculé à la
+  // demande, la plupart des semaines aucun arbre n'est en fleur.
+  let couvertAuDessus: number[] | undefined;
+  const couvertAuDessusDe = (t: number): number => {
+    couvertAuDessus ??= couvertAuDessusDesArbres(trees, partOmbrageanteDe);
+    return couvertAuDessus[t] ?? 0;
+  };
   nextTrees = nextTrees.map((tree, t) => {
     const espece = getEspece(tree.especeId);
     const fruits = espece.fruits;
@@ -2875,8 +2884,14 @@ export function tick(state: GameState, weather: WeekWeather): TickResult {
         // parcelle : la nuit, un couvert renvoie vers le sol le rayonnement que
         // le ciel clair emporterait, et la floraison qu'il abrite y échappe
         // (microclimat.ts). C'est l'argument agroforestier pour mettre les
-        // fruitiers à l'abri d'une haie plutôt qu'en plein découvert.
-        tMinimumSousCouvert(weather.tMinAbsC, fermetureDuCouvert(light[t] ?? 1)) <= fruits.gelFatalC
+        // fruitiers sous de plus grands arbres plutôt qu'en plein découvert.
+        //
+        // Le couvert qui **surplombe** l'arbre, et non la lumière qu'il reçoit
+        // (#407) : celle-ci suit le soleil, mêle l'ombre portée d'un bois voisin
+        // et tombe au nord de ceux qui la font. Un pommier de bordure se
+        // croyait abrité par le champ d'à côté. Calculé à la première floraison
+        // de la semaine, et seulement s'il y en a une.
+        tMinimumSousCouvert(weather.tMinAbsC, couvertAuDessusDe(t)) <= fruits.gelFatalC
       ) {
         bloomFrosted = true;
       }
