@@ -99,26 +99,28 @@ Trois propriétés de conservation sont tombées, toutes faute de feu : leur feu
 
 ### Une prairie qui boit sa part déplace ce qui reposait sur sa sobriété
 
-Sept assertions écologiques cassent, et aucune ne porte sur la prairie. Le fond de vallée s'inondait chaque hiver parce que sa prairie, posée sur la nappe, ne rendait à l'air que 374 mm par an à Tours, 0,43 fois l'ETP de Penman ; elle en rend 611, et la vallée ne s'inonde plus que les hivers humides (quatre sur dix de 1964 à 1973, contre neuf). L'aulnaie pure du limon riche passait 1976 en perdant 23 de ses 144 plants ; sous des aulnes de douze ans qui laissent passer 55 % de la lumière l'été, l'herbe transpire maintenant dès mars, le profil entre en juin à 60 mm au lieu de 99, et 136 aulnes meurent de soif la même année, sur les trois graines. Ces équilibres n'avaient pas de source : c'étaient des relevés du moteur, posés sur un tapis qui ne buvait pas. **Quand une grandeur devient juste, relever d'abord ce qui reposait sur son erreur**, et le rapporter avant de recaler quoi que ce soit : les sept assertions sont instruites, aucune n'est touchée.
+Sept assertions écologiques cassent, et aucune ne porte sur la prairie. Le fond de vallée s'inondait chaque hiver parce que sa prairie, posée sur la nappe, ne rendait à l'air que 374 mm par an à Tours, 0,43 fois l'ETP de Penman ; elle en rend 611, et la vallée ne s'inonde plus que les hivers humides (quatre sur dix de 1964 à 1973, contre neuf). L'aulnaie pure du limon riche passait 1976 en perdant 23 de ses 144 plants ; sous des aulnes de douze ans qui laissent passer 55 % de la lumière l'été, l'herbe transpire maintenant dès mars, le profil entre en juin à 60 mm au lieu de 99, et 136 aulnes meurent de soif la même année, sur les trois graines. Après la fusion de #419, la frênaie pure de `maladies.test.ts` perd de même 62 frênes sur 144 à la soif, en 1973 et en 1976, avant que la chalarose ne les trouve : elle meurt moins de maladie que le mélange, et l'essai casse à son tour. Ces équilibres n'avaient pas de source : c'étaient des relevés du moteur, posés sur un tapis qui ne buvait pas. **Quand une grandeur devient juste, relever d'abord ce qui reposait sur son erreur**, et le rapporter avant de recaler quoi que ce soit : les assertions cassées sont instruites, aucune n'est touchée.
 
 ### Ce que ça donne
 
 Banc de #210 (25 plants de 0,30 m protégés, une espèce par parcelle de 30 m, cinq ans, météo réelle, graine g = fenêtre 1964 + 20 (g − 1) ; déterministe à graine donnée), désherbé sur enherbé, graines 1 / 2 / 3 :
 
-| | main | partage FAO-56 (447a04a) | et la strate boit l'hiver (2a1fea7) |
+Les témoins sont remesurés sur main be54fbd (le débourrement de #419), et la branche après sa fusion (a4489df). La colonne du milieu, mesurée avant #419, garde l'étape du partage seul.
+
+| | main be54fbd | partage FAO-56 seul (447a04a) | branche (a4489df) |
 |---|---|---|---|
-| limon riche, hêtre | 0,98 / 0,97 / 0,97 | 1,05 / 1,08 / 1,04 | 1,05 / 1,08 / 1,05 |
-| limon riche, frêne | 1,06 / 1,04 / 1,04 | 1,13 / 1,13 / 1,10 | 1,13 / 1,14 / 1,11 |
-| limon riche, noyer hybride | 1,12 / 1,10 / 1,10 | 1,14 / 1,14 / 1,11 | 1,14 / 1,14 / 1,12 |
+| limon riche, hêtre | 0,99 / 0,97 / 0,97 | 1,05 / 1,08 / 1,04 | 1,05 / 1,08 / 1,05 |
+| limon riche, frêne | 1,07 / 1,04 / 1,04 | 1,13 / 1,13 / 1,10 | 1,14 / 1,15 / 1,11 |
+| limon riche, noyer hybride | 1,13 / 1,10 / 1,10 | 1,14 / 1,14 / 1,11 | 1,15 / 1,14 / 1,12 |
 | friche, hêtre | 0,91 / 0,89 / 0,91 | 1,17 / 1,15 / 1,13 | 1,17 / 1,15 / 1,13 |
-| friche, frêne | 0,96 / 0,93 / 0,96 | 1,42 / 1,24 / 1,18 | 1,44 / 1,24 / 1,18 |
-| friche, noyer hybride | 1,13 / 1,12 / 1,11 | 1,28 / 1,23 / 1,18 | 1,28 / 1,23 / 1,18 |
-| lande, pin / bouleau / châtaignier | 1,16 à 1,18 / 1,11 à 1,13 / 1,16 à 1,18 | 1,35 / 1,29 à 1,31 / 1,43 à 1,46 | 1,35 / 1,29 à 1,31 / 1,43 à 1,46 |
+| friche, frêne | 0,96 / 0,94 / 0,97 | 1,42 / 1,24 / 1,18 | 1,42 / 1,24 / 1,18 |
+| friche, noyer hybride | 1,13 / 1,13 / 1,11 | 1,28 / 1,23 / 1,18 | 1,27 / 1,23 / 1,18 |
+| lande, pin / bouleau / châtaignier | 1,16 à 1,18 / 1,11 à 1,14 / 1,15 à 1,18 | 1,35 / 1,29 à 1,31 / 1,43 à 1,46 | 1,35 / 1,31 à 1,33 / 1,43 à 1,46 |
 | fauche, limons | 1,01 à 1,14 | 1,02 à 1,14 | 1,02 à 1,14 |
 
 Bilan d'eau sans arbre, bilan vertical (sans bassin amont), dix ans après un an d'amorce, fenêtres 1964 / 1984 / 2004, mm/an :
 
-| | main | 2a1fea7 |
+| | main be54fbd | branche (a4489df) |
 |---|---|---|
 | limon riche, prairie | 327 / 319 / 352 | 534 / 521 / 556 |
 | limon riche, sol nu | 328 / 313 / 341 | 426 / 429 / 455 |
@@ -146,6 +148,8 @@ Les tables de production ne bougent pas de plus de 3 % à quarante ans (pin -3 %
 - E3 : la minéralisation de la zone labourée devait passer devant celle de la friche par l'été d'un sol nu ; la zone est réenherbée dès l'été (0,94), l'écart est de 0,07 %.
 - E4 : la baisse des morts par ravageurs de l'aulnaie devait venir des semis ; elle vient des plants, tués par la soif en 1976.
 - E6 : la part pionnière de la canopée de soixante ans devait baisser faute de pionniers ; elle baisse par quatre dryades de plus.
+- La fusion de #419 devait laisser les sept assertions cassées ; `succession` passe (0,5125 ; 0,5526 sur main), et la part de main sort de la fourchette prédite (0,45 à 0,55).
+- M1 : les frênes du mélange de `maladies` devaient mourir de maladie moins de la moitié autant que ceux de la frênaie pure ; 13 sur 36 contre 53 sur 144, parce que la frênaie pure perd 62 frênes à la soif. L'excès devait venir d'autres espèces ou de semis ; il vient de là. Le mélange de main devait rester sous 0,19 ; 0,278.
 
 ### Ce qui reste ouvert
 
@@ -154,8 +158,8 @@ Les tables de production ne bougent pas de plus de 3 % à quarante ans (pin -3 %
 - **Le haut du sol nu** (56 à 65 % de la pluie, l'excès de janvier à avril sur Rothamsted) : ce n'est pas l'ETP, à 2 % de celle de Penman de Météo-France sur 2001-2020 ; le climat de Harpenden ou le plafond d'un sol mouillé, à instruire.
 - **Le phosphore de la strate** fait le gros du désherbage et de la fauche sur la lande (#395).
 - **Le pin du banc dégagé** meurt sur le sable profond quand plus rien ne pousse sous lui : cause à relever.
-- **Sept assertions écologiques attendent une décision**, instruites et non touchées (mesures, options et recommandations dans #391 et la PR #411) : la crue d'hiver de la vallée (`eau-surface`, deux assertions), le facteur 3 de la transpiration après le feu (`incendie-nappe`), l'aulnaie de 1976 (`ravageurs`), le feu dans la comparaison nurse (`nurse`), un écart de 0,07 % (`sol-vivant`), la canopée de soixante ans à un arbre du seuil (`succession`).
-- **La fermeture du couvert d'un jeune peuplement** : sous des aulnes de douze ans plantés à 3 m, 55 % de la lumière atteint encore le sol l'été, et l'herbe y transpire à plein.
+- **Sept assertions écologiques attendent une décision**, instruites et non touchées (mesures, options et recommandations dans #391 et la PR #411) : la crue d'hiver de la vallée (`eau-surface`, deux assertions), le facteur 3 de la transpiration après le feu (`incendie-nappe`), l'aulnaie de 1976 (`ravageurs`), la frênaie pure morte de soif avant la chalarose (`maladies`), le feu dans la comparaison nurse (`nurse`), un écart de 0,07 % (`sol-vivant`). `succession` passe depuis la fusion de #419.
+- **La fermeture du couvert d'un jeune peuplement, et la mort de soif synchrone** : sous des aulnes de douze ans plantés à 3 m, 55 % de la lumière atteint encore le sol l'été, l'herbe y transpire à plein, et un peuplement entier meurt de soif la même année.
 
 ## Ce qu'un lot précédent a appris (le froid de l'hiver, #419, puis le gel des pousses, #371)
 
