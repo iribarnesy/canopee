@@ -10,6 +10,7 @@
 
 import { describe, expect, it } from "vitest";
 import { getEspece } from "../../src/engine/especes";
+import { computeGroundLight, couvertAuDessusDuSol } from "../../src/engine/light";
 import { syntheticYear } from "../../src/engine/meteo";
 import {
   fermetureDuCouvert,
@@ -113,5 +114,74 @@ describe("un fruitier abrité échappe au gel tardif", () => {
   it("à découvert la floraison gèle, à l'abri d'une haie elle passe", () => {
     expect(floraisonGelee(false)).toBe(true);
     expect(floraisonGelee(true)).toBe(false);
+  });
+});
+
+describe("la nuit lit le couvert qui surplombe, pas l'ombre (#407)", () => {
+  /**
+   * Contre le gel radiatif, ce qui compte est ce qui cache le ciel **au-dessus** du
+   * point. L'ombre suit le soleil : elle tombe au nord du tronc, et le paysage
+   * voisin en borde la parcelle au sud, à l'est et à l'ouest (lisiere.ts). Lue
+   * comme un couvert, elle protégeait un fruitier de bordure par le bois d'à
+   * côté, et laissait un cadre sans givre au cordeau.
+   */
+  const MASSIF = {
+    nord: "massif-forestier",
+    est: "massif-forestier",
+    sud: "massif-forestier",
+    ouest: "massif-forestier",
+  };
+  const STATION = {
+    ...LIMON_RICHE.station,
+    coteM: 30,
+    gibierParHa: 0,
+    voisinage: [],
+    bordures: MASSIF,
+    paysageId: "massif-forestier",
+  };
+
+  it("un abricotier au ras d'un massif gèle comme celui du centre", () => {
+    let state = createGameState(STATION, rngStateFromSeed(4));
+    state = plantAt(state, "prunus_armeniaca", 15, 0.5, 5);
+    const bord = state.nextTreeId - 1;
+    state = plantAt(state, "prunus_armeniaca", 15, 15, 5);
+    const centre = state.nextTreeId - 1;
+    // −2 °C là où l'abricotier fleurit : sous le seuil de ses fleurs (−1,5), mais
+    // pas sous ce seuil moins le tampon qu'une fermeture de 0,63 — l'ombre du
+    // massif au ras de la limite — lui aurait prêté (+0,69 °C).
+    const meteo = syntheticYear(LIMON_RICHE.climat).map((w, i) => ({
+      ...w,
+      tMinAbsC: i >= 2 && i <= 26 ? -2 : w.tMinAbsC,
+    }));
+    let geleBord = false;
+    let geleCentre = false;
+    let ombreDuBord = 1;
+    for (let i = 0; i < 52 * 8; i++) {
+      const r = tick(state, meteo[i % 52] as never);
+      state = r.state;
+      ombreDuBord = Math.min(ombreDuBord, r.lumiereAuSol[15] ?? 1);
+      if (state.trees.find((t) => t.id === bord)?.bloomFrosted) geleBord = true;
+      if (state.trees.find((t) => t.id === centre)?.bloomFrosted) geleCentre = true;
+    }
+    // Le bord est bien à l'ombre du massif — sans quoi l'essai ne mesurerait rien.
+    expect(ombreDuBord).toBeLessThan(0.5);
+    expect(geleCentre).toBe(true);
+    expect(geleBord).toBe(true);
+  });
+
+  it("le couvert est à l'aplomb du houppier, l'ombre quatre dixièmes de hauteur au nord", () => {
+    // Un pin de dix mètres, seul : son ombre de midi tombe à quatre mètres au
+    // nord de son tronc, hors de son houppier (2,5 m de rayon).
+    let state = createGameState(STATION, rngStateFromSeed(1));
+    state = plantAt(state, "pinus_sylvestris", 15, 10, 10);
+    const toutVisible = () => 1;
+    const ombre = computeGroundLight(state.trees, 30, 30, toutVisible);
+    const couvert = couvertAuDessusDuSol(state.trees, 30, 30, toutVisible);
+    const tronc = 10 * 30 + 15;
+    const auNord = 14 * 30 + 15;
+    expect(couvert[tronc] ?? 0).toBeGreaterThan(0.3);
+    expect(1 - (ombre[tronc] ?? 1)).toBeLessThan(0.05);
+    expect(1 - (ombre[auNord] ?? 1)).toBeGreaterThan(0.3);
+    expect(couvert[auNord]).toBe(0);
   });
 });

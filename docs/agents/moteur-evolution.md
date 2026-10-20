@@ -140,6 +140,57 @@ Les tables de production ne bougent pas de plus de 3 % à quarante ans (pin -3 %
 - **Le phosphore de la strate** fait le gros du désherbage et de la fauche sur la lande (#395).
 - **Le pin du banc dégagé** meurt sur le sable profond quand plus rien ne pousse sous lui : cause à relever.
 
+## Ce qu'un lot précédent a appris (le gel : le couvert au-dessus, #407 ; le gel des pousses instruit, #371)
+
+Deux issues du lot B de la v0.6. #407 était un défaut : la fermeture qui tamponne le gel nocturne se lisait sur la lumière reçue. Elle se lit maintenant sur la projection verticale des houppiers, et l'instantané la publie (`soilCouvertAuDessus`). #371 demande un mécanisme nouveau : il est instruit, avec des options et une mesure d'exposition, et rien n'en est codé. Les prédictions et les mesures sont dans les commits de la branche, avant chaque course.
+
+### Une grandeur calculée pour le jour ne se relit pas la nuit
+
+La lumière au sol est celle du soleil moyen. L'ombre d'un arbre tombe à 0,4 fois sa hauteur au nord de son tronc, et l'entourage en ajoute une bande sur trois côtés, pondérée comme le soleil (sud plein, est et ouest un tiers, nord rien). `fermetureDuCouvert(lumière)` la relisait comme le couvert qui protège du gel radiatif, où il n'y a pas de soleil : ce qui compte, c'est ce qui cache le ciel **au-dessus** du point.
+
+L'issue voyait le cadre du givre, et c'était la moitié visible. L'autre moitié ne dessinait rien : à l'aplomb d'un pin de dix mètres, la cellule de son tronc comptait un couvert de 0,003 et celle de quatre mètres plus au nord 0,426. C'est l'inverse exact de la nuit (après : 0,424 et 0). Un défaut qui déplace sans border ne se voit pas à l'écran. **Avant de corriger le symptôme qu'une issue décrit, lister tout ce que le proxy mêle** ; il en mêlait deux, et l'issue n'en nommait qu'un.
+
+La correction n'ajoute pas de règle : c'est la loi de l'ombre (Beer-Lambert, feuillage de saison, pénombre), prise à la verticale, sans décalage et sans entourage. Le jour garde l'ombre (`chaleur.ts` lit toujours `soilLumiere`).
+
+### Un zéro peut être une mort
+
+La première mesure du gel des fleurs comptait les années gelées de sept abricotiers, aux bords et au centre. Ceux des bords nord, est et ouest donnaient zéro partout, ce qui ressemblait à une protection. Ils étaient morts d'engorgement avant de fleurir : la pente de 4 à 6 % et le bassin amont des stations mouillent ces bords, et sur la vallée engorgée tous meurent. **Un compte d'événements doit porter le compte des vivants**, sinon un zéro se lit comme un résultat. Le dispositif corrigé (relief du verger, sol du limon riche, quatre séries) ne perd aucun arbre en vingt ans.
+
+### Un seuil unique fait geler les précoces, et c'est le contraire du terrain
+
+L'exposition au gel des pousses se mesure sans moteur de croissance : le calendrier du moteur et la nuit la plus froide de chaque semaine suffisent. Elle tient en une passe, et elle a tranché une option avant qu'on la code. À −1,65 °C pour toutes les essences (le seuil de LPJ-GUESS-FROST), le bouleau des Landes perdrait son feuillage 93 années sur 100, le hêtre d'Abbeville 2. Or les essences précoces sont les plus résistantes à l'émergence (Vitasse et al. 2014). **Mesurer l'exposition avant de choisir un seuil** : ce qu'on prend pour un détail de calibration peut renverser le sens d'une conclusion.
+
+Elle a aussi montré une dépendance : le bouleau débourre en semaine 8 dans les Landes, en semaine 11 à Abbeville. Une règle de gel des pousses héritera du calendrier du Sud.
+
+### Ce que ça donne
+
+#407, déterministe à graine donnée (les trois graines rendent les mêmes comptes) :
+
+| | main | branche |
+|---|---|---|
+| parcelle nue, cellules non gelées par une nuit à −0,05 °C : bocage / lisière / massif / lande | 692 / 480 / 1 816 / 494 | **0 / 0 / 0 / 0** |
+| le verger (plaine céréalière), non gelées à −0,01 °C | 104 | **0** |
+| pin de 10 m : couvert à l'aplomb du tronc / 4 m au nord | 0,003 / 0,426 | **0,424 / 0** |
+| abricotier à 0,5 m du bord sud, massif, floraisons gelées sur 16 : Dijon / Tours / Abbeville / Landes | 4 / 5 / 6 / 14 | **6 / 8 / 8 / 15** |
+| témoin du centre | 6 / 8 / 8 / 15 | 6 / 8 / 8 / 15 |
+| carte du couvert au-dessus, 2 500 arbres sur 100 m | | 4,6 ms (l'ombre : 5,0) |
+
+### Les prédictions fausses
+
+- P1 : bande de la plaine O1 E1 prédite, mesurée O2 E2 (j'avais compté les cellules qui ne gèlent pas, pas celles qui sont fermées) ; maximum 0,017 prédit, 0,023 (le coin cumule deux côtés).
+- P2 : centroïde du couvert 33,5 à 35 prédit, 30,29 ; la métrique était polluée par les bandes est et ouest.
+- P3 : bordure sud du bocage F à F−1 prédite, F−2 à Dijon ; « nord = F » et « est-ouest = F à F−1 » ne mesuraient rien (arbres morts).
+- P3' : Landes 2 à 8 floraisons gelées sur 16 prédites, 15. Bords est et ouest de la plaine et du bocage = F prédits ; à Tours, 7 pour F = 8 : une nuit à −1,5 °C tout juste, que 0,006 °C de tampon suffisait à sauver. Un seuil franc fait d'un rien une année.
+- E1 : précoces gelés 50 à 80 % des années au nord à −1,65 °C prédits, 25 à 40 % ; hêtre 10 à 30 %, 2 à 5 % ; noyers 5 à 20 %, 0 à 2 %.
+- E4 : débourrement du bouleau à Abbeville en s13 à s15 prédit, s11.
+
+### Ce qui reste ouvert
+
+- **#371** : options A (défoliation et refeuillaison) à E dans l'issue, recommandation A2 (un seuil tiré de la précocité, sans trait nouveau). Rien n'est codé ; c'est à trancher par le propriétaire.
+- **Le facteur de vue du ciel** : une lisière haute ou une trouée étroite relèvent vraiment le minimum (Groot et Carlson 1996), de tous les côtés. Le moteur ne le calcule pas, et la projection verticale exagère le couvert d'un houppier isolé.
+- **D'autres lecteurs prennent l'ombre pour un couvert** : l'abri du gibier (`couvertArbore`), l'attrait du sanglier, les racines qui réparent le tassement, la part couverte des aides. Chacun reçoit la bande que l'entourage ombrage. Pas instruit ici.
+- **Le rendu** lit encore `soilLumiere` pour le givre (`useMatin.ts`) : il doit passer à `soilCouvertAuDessus`, avec `tMinimumSousCouvert(tMinAbsC, couvert)` sans `fermetureDuCouvert`.
+
 ## Ce qu'un lot précédent a appris (la météo d'une parcelle vieillie, #348, et la marge de `prevoir.test.ts`, #394)
 
 Deux issues de maintenance. Une parcelle vieillie de N ans relisait la série observée depuis son début et retirait les rafales de ses N premières années : le joueur revivait le temps que la parcelle venait de traverser. Elle le continue maintenant. Et le crochet de `prevoir.test.ts` prenait 117,7 s pour un délai de 120 : il en prend 60,5. Les prédictions et les mesures sont dans les commits de la branche, avant chaque course.
