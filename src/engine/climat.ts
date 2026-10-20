@@ -21,7 +21,7 @@
  * La variabilité vient donc entièrement des observations réelles, décalées.
  */
 
-import type { WeekWeather } from "./meteo";
+import { joursDePluieBornes, type WeekWeather } from "./meteo";
 
 export type ScenarioId = "ssp126" | "ssp245" | "ssp585" | "stable";
 
@@ -371,12 +371,22 @@ export function meteoDerivee(
   // L'altitude refroidit toute l'année, de 0,6 °C par 100 m (relief.ts) : à
   // mille mètres, la saison de végétation dure deux mois de moins.
   const dTotal = dT + anomalieAltitude;
+  const rainMm = Math.max(0, pluie);
   return {
     tMean: base.tMean + dTotal + supplement,
     tMin: base.tMin + dTotal,
     tMax: base.tMax + dTotal + supplement,
     tMinAbsC: base.tMinAbsC + dTotal,
-    rainMm: Math.max(0, pluie),
+    rainMm,
+    // Les **jours de pluie** traversent le scénario comme le vent moyen : la
+    // tendance des projections est à des pluies plus rares et plus fortes,
+    // mais combien de jours en moins, saison par saison et en France, je ne
+    // sais pas le sourcer *(à instruire)*. Seule la définition les rabat :
+    // une semaine que le scénario assèche à 2 mm ne compte pas trois jours
+    // d'au moins 1 mm (`joursDePluieBornes`).
+    ...(base.joursDePluie !== undefined
+      ? { joursDePluie: joursDePluieBornes(base.joursDePluie, rainMm) }
+      : {}),
     co2Ppm: co2Ppm(scenario, annee),
     annee,
     // Le vent **moyen** traverse le scénario inchangé. Le réchauffement modifie

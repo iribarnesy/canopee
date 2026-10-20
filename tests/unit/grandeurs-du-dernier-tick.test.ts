@@ -64,6 +64,11 @@ const grandeurs = (s: Snapshot) => ({
   pollinisateurs: empreinte(s.soilPollinisateurs),
   oiseaux: structuredClone(s.oiseauxDePassage),
   fluxes: structuredClone(s.fluxes),
+  // La soif de chaque arbre (#372) : une grandeur du tick comme les autres, qui
+  // doit suivre le présent après une relecture et revenir avec la sauvegarde.
+  soif: s.trees.flatMap((t) =>
+    t.satisfactionEau === undefined ? [] : [`${t.id}:${t.satisfactionEau}`],
+  ),
 });
 
 beforeAll(async () => {
@@ -140,6 +145,8 @@ describe("les grandeurs du dernier tick (#387)", () => {
     const present = dernierInstantane();
     expect(present.week).toBeGreaterThanOrEqual(36);
     const duPresent = grandeurs(present);
+    // Des arbres qui ont une soif mesurée : sans eux, la comparaison ne dirait rien.
+    expect(duPresent.soif.length).toBeGreaterThan(10);
 
     // Revoir depuis une vingtaine de semaines, et revenir en route.
     envoyer({ type: "relire", deSemaine: present.week - 20, weeksPerSecond: 10 });
