@@ -371,10 +371,12 @@ function voilesDuMatin(scene: Scene, ecouleMs: number) {
   if (!q.has("gel") && !q.has("brume")) return { givre: undefined, brume: [] };
   if (!matinDuBanc) {
     const n = scene.coteM * scene.coteM;
-    const lumiere = scene.sol.lumiere ?? new Array<number>(n).fill(1);
+    // Les scènes cuites ne portent pas le couvert au-dessus : plein découvert,
+    // plutôt que la lumière au sol, que la nuit ne voit pas (#421).
+    const decouvert = new Array<number>(n).fill(0);
     const altitudes = scene.sol.altitudesM;
     const seuil = [...altitudes].sort((a, b) => a - b)[Math.floor(altitudes.length * 0.1)] ?? 0;
-    const gelees = q.has("gel") ? cellulesGelees(Number(q.get("gel")), lumiere) : [];
+    const gelees = q.has("gel") ? cellulesGelees(Number(q.get("gel")), decouvert) : [];
     const givre = givreDeLaSemaine(gelees, scene.sol.herbeCouverture);
     matinDuBanc = {
       gelees,
