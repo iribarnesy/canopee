@@ -98,8 +98,8 @@ describe("l'eau du tapis : ce qu'une prairie boit, et ce qu'un sol nu garde", ()
 
   it("la prairie boit davantage que le sol nu sur l'année", () => {
     // Châlons : 112 mm d'écart (483 contre 371). Prédit avant la mesure, sur ce
-    // banc : de 60 à 160 mm. L'essai garde la moitié de l'écart de Châlons, pas
-    // un chiffre du moteur.
+    // banc : de 60 à 160 mm ; mesuré 93 (524 contre 431). L'essai garde la
+    // moitié de l'écart de Châlons, pas un chiffre du moteur.
     expect(prairie.et - nu.et).toBeGreaterThan(56);
   });
 
