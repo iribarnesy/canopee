@@ -3802,8 +3802,14 @@ export function tick(state: GameState, weather: WeekWeather): TickResult {
     const charge = chargeCombustible(
       nextTrees,
       herbeBiomasse,
-      // Ce qui brûle est ce qui est au sol, pas ce que la charrue a enfoui.
-      litterCG.map((c, i) => Math.max(0, c - (litiereEnfouieCG[i] ?? 0))),
+      // Ce qui brûle est ce qui est au sol, pas ce que la charrue a enfoui, et
+      // le foin et la paille encore debout (#370) : c'est la même matière morte,
+      // qui tombait en litière la semaine même avant de tenir sur pied.
+      litterCG.map((c, i) => {
+        let debout = 0;
+        for (let s = 0; s < N_HERBACEES; s++) debout += herbeMorteG[i * N_HERBACEES + s] ?? 0;
+        return Math.max(0, c - (litiereEnfouieCG[i] ?? 0)) + debout * CARBON_FRACTION;
+      }),
       station.coteM,
       groundLight,
       boisAuSolCG,

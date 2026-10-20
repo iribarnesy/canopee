@@ -448,7 +448,16 @@ describe("une chandelle tombe dans le sens du coup de vent, pas seulement vers l
     // des trois parties sont **cumulées** ; aucune borne n'a bougé. La graine
     // d'origine et les deux suivantes ne sont pas choisies : cumulées sur 5-7 ou
     // sur 5-10, les trois assertions passent sur les deux moteurs.
-    for (const graine of [5, 6, 7]) {
+    //
+    // **Six parties depuis #370**, les six que ce commentaire relevait déjà. Le
+    // mort sur pied de l'herbe a dévié les trajectoires sans toucher aux saules,
+    // et le cumul 5-7 est tombé à 0,0994 (313 chutes ventées). Par graine, avant
+    // et après : 0,125 → 0,057, 0,067 → 0,107, 0,127 → 0,134, 0,055 → 0,127,
+    // 0,137 → 0,187, 0,066 → 0,136 ; des écarts de 0,07, l'erreur type d'une
+    // partie. Cumulé sur 5-10 : 0,100 avant (588 chutes), **0,125** après (575) ;
+    // les calmes à 0,009 et −0,001. Le seuil est resté où il était ; le doublement
+    // des parties divise l'erreur type du cumul par 1,4, et le délai suit.
+    for (const graine of [5, 6, 7, 8, 9, 10]) {
       let state = plantScattered(
         createGameState(station, rngStateFromSeed(graine)),
         "salix_alba",
@@ -494,7 +503,7 @@ describe("une chandelle tombe dans le sens du coup de vent, pas seulement vers l
     // l'accord de l'auteur ; les deux seuils qui disent le mécanisme restent.
     expect(conc(ventees)).toBeGreaterThan(0.1);
     expect(Math.abs(conc(calmes))).toBeLessThan(0.1);
-  }, 400_000);
+  }, 900_000);
 
   it("mais elles ne resserrent PAS au-delà du plancher de hasard", () => {
     // L'essai qui a démenti une phrase que j'avais écrite dans le module. Deux
