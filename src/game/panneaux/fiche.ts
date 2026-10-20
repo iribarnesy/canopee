@@ -372,7 +372,10 @@ export function ficheDeLArbre(
     });
   }
   if (arbre.bloomFrosted) dire("❄️", "Fleurs", "grillées par le gel");
-  if (arbre.fruitsKg > 0.05) dire("🍎", "Fruits mûrs", `${arbre.fruitsKg.toFixed(1)} kg`);
+  // Un mort garde ses fruits jusqu'au 1er janvier, mais le moteur refuse de
+  // les cueillir : la fiche ne les annonce pas, comme le volet (#416).
+  if (!arbre.chandelle && arbre.fruitsKg > 0.05)
+    dire("🍎", "Fruits mûrs", `${arbre.fruitsKg.toFixed(1)} kg`);
   else if (arbre.fruitProgress > 0) {
     dire("🍏", "Fruits", `${pourcent(arbre.fruitProgress)} formés`, {
       part: arbre.fruitProgress,
