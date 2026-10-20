@@ -81,7 +81,7 @@ L'année synthétique ne tire rien : ce sont des sinusoïdes. Le nombre de jours
 
 ### La hauteur du tapis ne se déduit pas : rapportée avant de coder (#370)
 
-Le moteur tient la matière **vivante** de chaque herbacée, en grammes, et l'envoie en litière dès qu'elle meurt : le foin sur pied et la paille de la molinie n'y sont pas, seul l'indice sans dimension `herbeBiomasse` les garde. Et cette matière est basse : 205 g/m² de dactyle à la mi-juin sur le limon riche, 41 de molinie sur la lande (prédit 150 à 500 : faux). Une hauteur tirée d'une densité apparente sourcée serait de quelques centimètres sur la lande et nulle en hiver ; calée sur ces grammes, elle ne serait plus sourcée. Rien n'est publié. Les options sont dans la PR #413 : la recommandée est un mécanisme (une hauteur de tapis par espèce et un compartiment de matière morte sur pied, ce qui ajoute de l'état), après une instruction de la production de la strate.
+Le moteur tient la matière **vivante** de chaque herbacée, en grammes, et l'envoie en litière dès qu'elle meurt : le foin sur pied et la paille de la molinie n'y sont pas, seul l'indice sans dimension `herbeBiomasse` les garde. Et cette matière est basse : 205 g/m² de dactyle à la mi-juin sur le limon riche, 41 de molinie sur la lande (prédit 150 à 500 : faux). Une hauteur tirée d'une densité apparente sourcée serait de quelques centimètres sur la lande et nulle en hiver ; calée sur ces grammes, elle ne serait plus sourcée. Rien n'est publié. Les options sont dans #370 (commentaire du 20 octobre) : la recommandée est un mécanisme (une hauteur de tapis par espèce et un compartiment de matière morte sur pied, ce qui ajoute de l'état), après une instruction de la production de la strate.
 
 ### Ce que ça donne
 
@@ -102,7 +102,7 @@ Le moteur tient la matière **vivante** de chaque herbacée, en grammes, et l'en
 
 ### Ce qui reste ouvert
 
-- **#370** : la hauteur du tapis, à trancher (options dans la PR #413).
+- **#370** : la hauteur du tapis, à trancher (options A à D dans l'issue ; recommandation D puis C).
 - **Les jours de pluie sous le scénario** : ils traversent la trajectoire climatique inchangés, faute de chiffre sourcé sur la baisse du nombre de jours de pluie en France *(à instruire)* ; seule la définition les rabat.
 - **La reconstruction complète des séries** ne redonne plus les cinq colonnes à l'octet (sept semaines 51 à 0,01 mm près) : une régénération future devra garder l'option `--ajouter-jours-de-pluie` ou accepter de déplacer les parties sur série réelle.
 
