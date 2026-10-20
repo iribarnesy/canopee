@@ -61,7 +61,86 @@ qu'un rapport (voir la note de maintenance).
 Séparer calibration et validation : caler un paramètre sur un âge, garder
 l'autre âge pour vérifier.
 
-## Ce que le dernier lot a appris (la météo d'une parcelle vieillie, #348, et la marge de `prevoir.test.ts`, #394)
+## Ce que le dernier lot a appris (l'eau du tapis et la soif des jeunes plants, #391)
+
+Le lot v0.6 issu de l'instruction de #210 (ses options 1, 2 et 6). Le partage de l'eau entre le sol et le tapis suit maintenant FAO-56 (Allen et al. 1998) : la strate transpire au Kcb d'un tapis fermé (0,90) sur ce qu'elle couvre de vert, le sol n'évapore que sur ce qu'elle laisse découvert, au plafond Kc max = 1,20, en deux phases (REW, TEW). Trois réglages *à calibrer* tombent (`HERBE_TRANSPIRATION_COEFF`, `SOIL_EVAP_FRACTION`, `PLAFOND_ENERGIE`), avec la quadratique `soilEvapFactor` et un facteur de saison sans source posé sur la soif de l'herbe. Le format de sauvegarde ne change pas : l'eau évaporable se lit sur le déficit de l'horizon de surface, pas sur un état nouveau. Les prédictions et les mesures sont dans les commits de la branche, avant chaque course.
+
+### Un nombre calé sur le moteur peut porter deux erreurs qui s'annulent
+
+La demi-ETP du sol nu rendait les jauges de Rothamsted à deux points près : 47 % de la pluie évaporée, 49 % aux jauges (*Rothamsted Report for 1936*, p. 176). C'était une coïncidence. Elle coupait l'évaporation d'un sol mouillé de 2,4 fois par rapport à FAO-56, et l'ETP de Hargreaves du moteur est haute de janvier à avril (81 mm en avril à Abbeville ; la formule surestime en climat humide, Trajkovic 2007). Le plafond FAO-56 à sa place, le sol nu évapore 56 à 65 % de la pluie : au haut des lysimètres français (Châlons 57 %, Ballif et al. 1983), au-dessus de Rothamsted. **Retirer un réglage calé en montre parfois un autre** : ici, l'ETP, qui reste à instruire.
+
+### Un facteur de saison posé sur un feuillage vert vide l'hiver du bilan
+
+Le partage FAO-56 seul laissait la prairie boire à peine plus que le sol nu (7 à 34 mm/an d'écart, 112 à Châlons). De novembre à mars, sous le tapis, rien ne s'évaporait (le sol est couvert) et rien ne se transpirait : un facteur nul sous 4 °C coupait la soif d'un dactyle qui passe l'hiver vert. Un gazon d'hiver rend pourtant 0,6 fois l'évaporation d'une eau libre (Penman 1948). Retiré, la prairie boit 92 à 108 mm de plus que le sol nu et draine 21 à 29 % de la pluie (Châlons 26 %). **Une saison qui est déjà dans le feuillage ne se remet pas par-dessus.** Il servait aussi au gibier, qui le garde.
+
+### Un plafond compté deux fois ne mord qu'une fois ce qu'il borne monté
+
+Le plafond d'énergie d'une cellule ajoutait la demande de la strate à celle des horizons, qui la contenait déjà, et relisait l'exposition du versant que l'ETP portait déjà. À 0,3 ETP, la strate ne l'atteignait jamais : le défaut était latent. À 0,9, il l'aurait rabotée d'un tiers sur toute prairie. **Avant de monter une grandeur, relire ce qui la borne.**
+
+### Comparer au lysimètre le plus proche, pas seulement au plus célèbre
+
+Rothamsted donnait un sol nu, sans prairie à côté. Châlons-sur-Marne donne les deux sur le même sol et les mêmes années (sol nu 371 mm, gazon 483, drainage 42 et 26 % de la pluie), et Versailles et Quimper encadrent le sol nu (379 et 435). C'est cette paire qui a montré que la prairie du premier partage buvait trop peu, et que le sol nu, lui, restait dans les mesures françaises.
+
+### Un plant que l'herbe affaiblit meurt d'autre chose que de soif
+
+Sur la friche, fenêtre 1964, six frênes sur vingt-cinq meurent sous l'herbe, aucun dans les autres bras. Aucun de soif : trois de maladie et trois de ravageurs, au printemps de leur deuxième année, après un premier été sec passé sous un tapis qui buvait. C'est la chaîne que le moteur tient déjà (la vigueur basse attire les ravageurs). **Compter les morts par cause avant de dire qu'un facteur ne tue pas.**
+
+### Un seuil qui ne mord pas ne se corrige pas pour toucher la cible
+
+L'option 2 demandait d'instruire la loi de soif : un plant n'est pas freiné tant que sa satisfaction hydrique reste au-dessus du seuil de confort de l'espèce. La loi sans plateau (la croissance suit la transpiration) a été mesurée sur une copie : le rapport désherbé sur enherbé bouge de -0,04 à +0,06, parce qu'elle freine aussi le désherbé, qui n'est pas à 1 ; et elle coûte 2 à 13 % aux arbres installés du banc des tables (châtaignier -13 %, pin -8 %). Les bornes, elles, disent où est l'écart : sur la friche, la strate privée d'eau ramène le rapport à 0,97-1,04, tout le gain y est de l'eau ; sur le limon riche, le plant privé de faim d'azote le ramène à 1,01-1,06 pour le frêne et le noyer. **Avant de changer une loi commune, borner chaque canal** : c'est l'azote du limon riche qui reste loin du terrain, pas la soif. C'est la leçon du premier essai de #312, vue une seconde fois.
+
+### Une table ne se protège pas d'un défaut qu'elle n'a pas
+
+L'option 6 prévoyait de passer les bancs de tables sur sol dégagé s'ils descendaient. Ils ne descendent pas (-3 % à +1 % de main à quarante ans) : huit arbres au large, enracinés profond, partagent surtout l'azote avec l'herbe, et l'herbe en prenait déjà. Le banc dégagé a été mesuré quand même, prédit au-dessus de l'enherbé : le hêtre et le frêne sortent de leur bande par le haut (+16 et +21 %), et sur le sable profond le pin s'effondre entre vingt et quarante ans (10 morts sur 16, cause à relever). **Une correction conditionnelle se mesure avant de s'appliquer** : appliquée d'office, celle-ci aurait recalé trois essences sur un sol qu'aucune table ne décrit.
+
+### Ce que ça donne
+
+Banc de #210 (25 plants de 0,30 m protégés, une espèce par parcelle de 30 m, cinq ans, météo réelle, graine g = fenêtre 1964 + 20 (g − 1) ; déterministe à graine donnée), désherbé sur enherbé, graines 1 / 2 / 3 :
+
+| | main | partage FAO-56 (447a04a) | et la strate boit l'hiver (2a1fea7) |
+|---|---|---|---|
+| limon riche, hêtre | 0,98 / 0,97 / 0,97 | 1,05 / 1,08 / 1,04 | 1,05 / 1,08 / 1,05 |
+| limon riche, frêne | 1,06 / 1,04 / 1,04 | 1,13 / 1,13 / 1,10 | 1,13 / 1,14 / 1,11 |
+| limon riche, noyer hybride | 1,12 / 1,10 / 1,10 | 1,14 / 1,14 / 1,11 | 1,14 / 1,14 / 1,12 |
+| friche, hêtre | 0,91 / 0,89 / 0,91 | 1,17 / 1,15 / 1,13 | 1,17 / 1,15 / 1,13 |
+| friche, frêne | 0,96 / 0,93 / 0,96 | 1,42 / 1,24 / 1,18 | 1,44 / 1,24 / 1,18 |
+| friche, noyer hybride | 1,13 / 1,12 / 1,11 | 1,28 / 1,23 / 1,18 | 1,28 / 1,23 / 1,18 |
+| lande, pin / bouleau / châtaignier | 1,16 à 1,18 / 1,11 à 1,13 / 1,16 à 1,18 | 1,35 / 1,29 à 1,31 / 1,43 à 1,46 | 1,35 / 1,29 à 1,31 / 1,43 à 1,46 |
+| fauche, limons | 1,01 à 1,14 | 1,02 à 1,14 | 1,02 à 1,14 |
+
+Bilan d'eau sans arbre, bilan vertical (sans bassin amont), dix ans après un an d'amorce, fenêtres 1964 / 1984 / 2004, mm/an :
+
+| | main | 2a1fea7 |
+|---|---|---|
+| limon riche, prairie | 327 / 319 / 352 | 534 / 521 / 556 |
+| limon riche, sol nu | 328 / 313 / 341 | 426 / 429 / 455 |
+| friche, prairie / sol nu | 379-409 / 359-390 | 538-596 / 461-503 |
+| lande, telle quelle / sol nu | 354-364 / 340-349 | 492-501 / 356-370 |
+| vallée, prairie / sol nu | 332-352 / 317-332 | 544-568 / 426-439 |
+
+Les tables de production ne bougent pas de plus de 3 % à quarante ans (pin -3 %, frêne +1 %).
+
+### Les prédictions fausses
+
+- P5 : le sol nu de la lande devait évaporer 180 à 300 mm/an sur main ; 340 à 349.
+- P2 : la fauche devait rester à 0,04 du désherbé sur les deux limons ; sur la friche, 0,11 d'écart pour le frêne et le hêtre.
+- Q1 : la prairie du partage FAO-56 devait boire 60 à 200 mm de plus que le sol nu ; 7 à 34. Le sol nu devait évaporer 40 à 52 % de la pluie ; 56 à 60. C'est le facteur de saison.
+- Q2 : même chose sur les quatre autres stations.
+- Q3 : sur la friche et la lande, le désherbage devait rendre 1,00 à 1,15 (feuillus de la friche) et rester sous 1,45 ; il rend jusqu'à 1,42 et 1,46.
+- Q6 : le paillé devait rester devant le désherbé ; des pins paillés de la lande se noient sur l'alios.
+- T3 : le banc dégagé devait rester à 3 % de main ; le hêtre et le frêne montent de 11 à 26 %, le pin s'effondre.
+- O1 : la loi sans plateau devait relever le rapport de la friche de 0,02 à 0,10 ; il baisse pour le frêne et le hêtre.
+- O2 : sans soif, le frêne de la friche devait retomber sous 1,12 ; sa graine 1 reste à 1,44 (ses morts ne viennent pas du facteur eau).
+
+### Ce qui reste ouvert
+
+- **L'azote du limon riche** : c'est lui qui sépare encore désherbé et enherbé pour le frêne et le noyer, et l'écart au terrain (1,5 à 3) y reste entier. Le partage de l'azote rare entre la strate et le plant se fait à la capacité racinaire (#247) ; c'est là qu'il faudrait regarder, pas dans la loi de soif.
+- **La fauche rapporte encore** (1,02 à 1,14 sur les limons ; Löf 2000 : rien) : une coupe retire au tapis son feuillage, donc sa transpiration et sa demande d'azote, le temps qu'il repousse (`REPOUSSE_PAR_SEMAINE`, *à calibrer*).
+- **L'ETP de Hargreaves** porte le haut du sol nu (56 à 65 % de la pluie) ; une ETP de Penman sur les séries trancherait.
+- **Le phosphore de la strate** fait le gros du désherbage et de la fauche sur la lande (#395).
+- **Le pin du banc dégagé** meurt sur le sable profond quand plus rien ne pousse sous lui : cause à relever.
+
+## Ce qu'un lot précédent a appris (la météo d'une parcelle vieillie, #348, et la marge de `prevoir.test.ts`, #394)
 
 Deux issues de maintenance. Une parcelle vieillie de N ans relisait la série observée depuis son début et retirait les rafales de ses N premières années : le joueur revivait le temps que la parcelle venait de traverser. Elle le continue maintenant. Et le crochet de `prevoir.test.ts` prenait 117,7 s pour un délai de 120 : il en prend 60,5. Les prédictions et les mesures sont dans les commits de la branche, avant chaque course.
 
