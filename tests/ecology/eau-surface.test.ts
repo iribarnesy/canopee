@@ -165,17 +165,18 @@ describe("la crue", () => {
 
 describe("la crue comme événement (#288)", () => {
   /**
-   * Deux ans de météo réelle sur une station : chaque semaine, la crue s'il y
-   * en a une, le plus fort débordement, et si l'état garde une mémoire.
+   * Deux ans de météo réelle sur une station, à partir de l'année `debutAn` de
+   * la série (0 pour la première) : chaque semaine, la crue s'il y en a une, le
+   * plus fort débordement, et si l'état garde une mémoire.
    */
-  function deuxAns(sc: StationClimat, coteM: number) {
+  function deuxAns(sc: StationClimat, coteM: number, debutAn = 0) {
     const st: Station = { ...sc.station, coteM, voisinage: [], gibierParHa: 0 };
     const serie = serieMeteoPour(sc.station.id);
     const meteo: WeekWeather[] = serie ? serieToWeeks(serie, sc.climat) : syntheticYear(sc.climat);
     let state = createGameState(st, rngStateFromSeed(5));
     const semaines: { crue?: CrueResult; debordementMax: number; memoire: boolean }[] = [];
     for (let i = 0; i < 2 * 52; i++) {
-      const w = meteo[i % meteo.length];
+      const w = meteo[(52 * debutAn + i) % meteo.length];
       if (!w) throw new Error("météo manquante");
       const r = tick(state, w);
       state = r.state;
@@ -195,13 +196,24 @@ describe("la crue comme événement (#288)", () => {
   // crue) ; sur un hectare elle pèse 1 %. C'est une limite de la définition par
   // part de parcelle, écrite dans crue.ts.
   //
-  // Relevé (graine 5, 1964-1965) : la première semaine sort d'un état initial
-  // à l'équilibre et s'inonde une semaine, puis l'hiver 1964-65 fait une crue de
-  // plusieurs mois. Le talweg y porte plus de 100 000 mm de débit pendant que
-  // les lames restent à quelques dizaines de millimètres.
+  // **L'essai porte sur l'hiver 1965-66, et non plus 1964-65** (#391). La
+  // prairie du fond de vallée, posée sur la nappe, rendait à l'air 374 mm par an
+  // à Tours, 0,43 fois l'ETP de Penman, parce que la strate ne transpirait que
+  // 0,3 fois l'ETP *(à calibrer)*. Elle transpire maintenant au coefficient
+  // d'un tapis fermé (FAO-56, Kcb 0,90) et rend 611 mm : la nappe d'hiver
+  // descend, et sur 1964-1973 la vallée n'a plus de crue d'au moins quatre
+  // semaines que quatre hivers sur dix, contre neuf, et aucune en 1964-65.
+  // L'essai passe donc sur un hiver qui en a une, celui de 1965-66, l'année la
+  // plus humide de la décennie à Tours (924 mm). La cible ne change pas : un
+  // fond de vallée a sa crue d'hiver, qui commence, dure et se ferme.
+  //
+  // Relevé (graine 5, 1965-1966) : la première semaine sort d'un état initial
+  // à l'équilibre et s'inonde une semaine, puis la crue de l'hiver 1965-66 part
+  // la deuxième semaine de janvier et dure vingt semaines, jusqu'en mai. Le
+  // talweg y porte 542 000 mm de débit pendant que la lame plafonne à 70 mm.
   let memo: ReturnType<typeof deuxAns> | undefined;
   const valleeDeuxAns = () => {
-    memo ??= deuxAns(VALLEE_ENGORGEE, 100);
+    memo ??= deuxAns(VALLEE_ENGORGEE, 100, 1);
     return memo;
   };
 

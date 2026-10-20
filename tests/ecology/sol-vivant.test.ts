@@ -37,14 +37,12 @@ const STATION: Station = {
 function partie(actions: GameAction[], semaines: number) {
   let state = createGameState(STATION, rngStateFromSeed(2));
   let mineralisationCum = 0;
-  const serieN: number[] = [];
   for (let i = 0; i < semaines; i++) {
     const w = WEATHER[i % WEATHER.length];
     if (!w) throw new Error("météo manquante");
     const r = advanceWeek(state, w, actions);
     state = r.state;
     mineralisationCum += r.fluxes.mineralizationKgHa;
-    serieN.push(r.fluxes.mineralizationKgHa);
   }
   const moyenne = (a: ArrayLike<number>) => {
     let t = 0;
@@ -54,7 +52,6 @@ function partie(actions: GameAction[], semaines: number) {
   return {
     state,
     mineralisationCum,
-    serieN,
     humusTHa: moyenne(state.soil.humusCG) / T_HA_TO_G_M2,
     azoteMineralGM2: moyenne(state.soil.mineralNG),
   };
@@ -151,7 +148,7 @@ describe("le labour : un gain immédiat payé par le capital", () => {
     expect(r.refusals[0]?.reason).toMatch(/manœuvrer/);
   });
 
-  it("labourer tous les ans épuise le sol, et l'azote finit par manquer", () => {
+  it("labourer tous les ans entame le capital d'humus", () => {
     const chaque: GameAction[] = [];
     for (let an = 0; an < 25; an++) {
       chaque.push({ type: "labourer", week: an * 52 + 10, ...zone });
@@ -159,18 +156,21 @@ describe("le labour : un gain immédiat payé par le capital", () => {
     const laboure = partie(chaque, 25 * 52);
     const tranquille = partie([], 25 * 52);
     // Un quart de siècle de charrue : le stock d'humus finit sous celui du sol
-    // laissé vivre — 52,0 t C/ha contre 56,5, 8 % de moins. Avec la perte de
-    // 5 % par passage d'avant, sans source, il « s'effondrait d'un bon quart » ;
-    // West et Post (2002) mesurent de l'ordre de 57 g C m⁻² an⁻¹ d'écart entre
-    // labour et semis direct, soit une dizaine de tonnes en vingt-cinq ans
-    // **sous la même culture**. Ce dispositif-ci oppose un sol nu labouré à une
-    // friche qui se recolonise, pas deux conduites d'un même blé : il garde la
-    // direction, pas la taille.
+    // laissé vivre. West et Post (2002) mesurent de l'ordre de 57 g C m⁻² an⁻¹
+    // d'écart entre labour et semis direct, soit une dizaine de tonnes en
+    // vingt-cinq ans **sous la même culture**. Ce dispositif-ci oppose une zone
+    // labourée chaque printemps (35 % de la parcelle) à une friche qui se
+    // recolonise, pas deux conduites d'un même blé : il garde la direction, pas
+    // la taille. Relevé sur la branche de #391 : 75,55 t/ha contre 75,64, un
+    // écart de 0,12 % depuis que le labour ne brûle plus que 1 % de l'humus.
+    //
+    // **Une seconde assertion a été retirée** (#391) : « à la fin, le sol labouré
+    // rend moins d'azote qu'un sol laissé vivre ». Elle n'avait pas de source, et
+    // elle mesurait du bruit : la zone labourée est réenherbée à 0,94 dès l'été,
+    // son eau de surface est celle de la friche, et l'écart de minéralisation
+    // des cinq dernières années valait −0,8 % sur `main` et +0,07 % sur la
+    // branche.
     expect(laboure.humusTHa).toBeLessThan(tranquille.humusTHa);
-    // …et à la fin, le sol rend moins d'azote qu'un sol qu'on a laissé vivre,
-    // alors même que chaque labour en libérait beaucoup sur le moment.
-    const cinqDerniers = (s: readonly number[]) => s.slice(-5 * 52).reduce((a, b) => a + b, 0) / 5;
-    expect(cinqDerniers(laboure.serieN)).toBeLessThan(cinqDerniers(tranquille.serieN));
   });
 });
 
