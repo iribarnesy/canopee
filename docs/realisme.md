@@ -3249,11 +3249,12 @@ ce côté.
 *Limite de cette lecture* : le rayonnement nocturne dépend du **facteur de vue
 du ciel**, qui voit aussi de côté. Groot et Carlson (1996) mesurent un minimum
 qui baisse linéairement avec la part de ciel vue d'une trouée : une bande de
-0,6 hauteur d'arbre de large reste aussi douce que la forêt. La projection
+9 m reste proche des minima de la forêt, et l'abri tient tant que la largeur ne
+dépasse pas 0,6 hauteur d'arbre. La projection
 verticale exagère donc le couvert d'un houppier isolé, sous lequel le ciel
 reste visible tout autour, et ignore celui d'une lisière haute ou d'une trouée
-étroite. Une lisière de futaie relève vraiment le minimum sur une hauteur
-d'arbre, et de tous les côtés, pas seulement au sud ; l'ombre portée n'en était
+étroite. Une lisière de futaie relève vraiment le minimum près d'elle, et de
+tous les côtés, pas seulement au sud ; l'ombre portée n'en était
 pas une approximation.
 
 *Ce qui reste à faire* : le tampon n'agit encore ni sur la phénologie — un
