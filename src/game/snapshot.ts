@@ -126,6 +126,7 @@ export function arbreDuSnapshot(
     pousseTendreM: t.pousseTendreM,
     frotteSemaine: t.frotteSemaine,
     brouteSemaine: t.brouteSemaine,
+    gelPousseSemaine: t.gelPousseSemaine,
     // Une chandelle n'a plus soif : la valeur que le tick a mesurée la semaine
     // où l'arbre est mort ne dit plus rien de lui.
     ...(t.alive && satisfactionEau !== undefined ? { satisfactionEau } : {}),

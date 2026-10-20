@@ -5,10 +5,16 @@
  *
  * - **la nuit la plus froide de la semaine**, `weather.tMinAbsC` ;
  * - **ce que le couvert en retient** : le moteur tamponne ce minimum sous les
- *   houppiers (`tMinimumSousCouvert`, `microclimat.ts`), à la mesure de la
- *   fermeture que la lumière au sol trahit (`fermetureDuCouvert`). C'est la
- *   même fonction qui décide, dans le tick, si les fleurs d'un fruitier ont
- *   gelé. Le rendu l'**appelle**, il ne la refait pas.
+ *   houppiers (`tMinimumSousCouvert`, `microclimat.ts`), à la mesure du couvert
+ *   **au-dessus** de la cellule (`Snapshot.soilCouvertAuDessus`). C'est la
+ *   même règle qui décide, dans le tick, si les fleurs d'un fruitier ont gelé.
+ *   Le rendu l'**appelle**, il ne la refait pas.
+ *
+ * Il lisait la **lumière au sol** (`fermetureDuCouvert(soilLumiere)`) et c'était
+ * faux (#407, #421) : la lumière suit le soleil, l'ombre d'un arbre tombe au nord
+ * de son tronc, et la bande que le paysage voisin ombrage sur les bords n'a
+ * rien au-dessus d'elle. Une nuit à −0,1 °C laissait ainsi un cadre de sol nu,
+ * au cordeau, sur trois côtés de la parcelle.
  *
  * Une cellule blanchit donc quand la nuit y est passée sous zéro, et c'est la
  * définition d'une gelée. Sous une futaie fermée, le même froid ne blanchit
@@ -32,7 +38,7 @@
  * règle l'opacité du calque entier (`givrer`).
  */
 
-import { fermetureDuCouvert, tMinimumSousCouvert } from "../../engine/microclimat";
+import { tMinimumSousCouvert } from "../../engine/microclimat";
 import type { Teinte } from "../palette";
 
 /** La teinte du givre : un blanc un peu bleu, celui d'une gelée blanche. */
@@ -84,10 +90,13 @@ export interface CelluleGelee {
  * Une fois par instantané : c'est un balayage de la grille, pas un calcul par
  * image.
  */
-export function cellulesGelees(tMinAbsC: number, lumiereAuSol: ArrayLike<number>): CelluleGelee[] {
+export function cellulesGelees(
+  tMinAbsC: number,
+  couvertAuDessus: ArrayLike<number>,
+): CelluleGelee[] {
   const sorties: CelluleGelee[] = [];
-  for (let i = 0; i < lumiereAuSol.length; i++) {
-    const t = tMinimumSousCouvert(tMinAbsC, fermetureDuCouvert(lumiereAuSol[i] ?? 1));
+  for (let i = 0; i < couvertAuDessus.length; i++) {
+    const t = tMinimumSousCouvert(tMinAbsC, couvertAuDessus[i] ?? 0);
     if (t >= 0) continue;
     sorties.push({ cellule: i, force: Math.min(1, -t / GEL_FRANC_C) });
   }

@@ -183,7 +183,17 @@ fabriquent pas.
 `dommageHydraulique`, `mortSemaine`, `brulEeSemaine`, `causeMort`,
 `derniereLeveeSemaine`, `floraison`, `fruitProgress`, `bloomFrosted`,
 `pousseTendreM`, `frotteSemaine`, `brouteSemaine`, `renverseSemaine`, `chuteRad`,
-`satisfactionEau`.
+`gelPousseSemaine`, `satisfactionEau`.
+
+`gelPousseSemaine` est **le gel des jeunes pousses** (#371, `gelPousses.ts`) : la
+semaine où une nuit de printemps a grillé le feuillage qui venait de sortir.
+L'arbre reste alors **sans feuilles cinq semaines**, puis refeuille en trois
+(`refeuillaison(semaines)`) — un houppier roussi, puis nu, puis la seconde
+pousse. Les arbres qui viennent de geler sont ceux dont cette date est la
+dernière semaine simulée ; à ×64, la date reste lisible le temps de la
+refeuillaison. Une fois l'an au plus. **L'avis « Gel »** (`useAvisDuGel.ts`) dit
+encore que le gel « ne détruit que les fleurs ouvertes » : ce n'est plus vrai,
+il peut dire maintenant « les jeunes pousses de N arbres ont gelé ».
 
 `satisfactionEau` est **la soif de l'arbre** la dernière semaine simulée (#372) :
 l'eau qu'il a obtenue sur celle qu'un arbre intact demanderait, ∈ [0,1]. C'est la
