@@ -90,6 +90,7 @@ import {
   survitAuFeu,
   ventRecuParLeSite,
 } from "./feu";
+import { feuillageTendre, refeuillaison, seuilAirGelPousses } from "./gelPousses";
 import {
   brouter,
   DIGESTIBILITE,
@@ -788,8 +789,17 @@ export function tick(state: GameState, weather: WeekWeather): TickResult {
   // L'ombre porte sur le feuillage qui **intercepte**, feuilles mortes des
   // marcescents comprises ; la croissance et la litière suivront la part
   // vivante (phenologie.ts).
+  //
+  // Un arbre dont les jeunes pousses ont gelé n'a plus ce feuillage-là, et il ne
+  // revient qu'en quelques semaines (gelPousses.ts, #371) : ni ombre, ni
+  // croissance, ni transpiration pour ce qui manque.
+  const feuillageRevenu = (tree: TreeState): number => {
+    if (tree.gelPousseSemaine === undefined) return 1;
+    const semaines = state.week - tree.gelPousseSemaine;
+    return semaines <= 0 ? 1 : refeuillaison(semaines);
+  };
   const partOmbrageanteDe: PartOmbrageante = (tree) =>
-    partFoliaireOmbrageanteDans(getEspece(tree.especeId), pheno);
+    partFoliaireOmbrageanteDans(getEspece(tree.especeId), pheno) * feuillageRevenu(tree);
   const groundLight = computeGroundLight(trees, dims.widthM, dims.heightM, partOmbrageanteDe);
   /**
    * Ce que les émetteurs d'allélopathie déversent en un point (allelopathie.ts).
@@ -1834,7 +1844,10 @@ export function tick(state: GameState, weather: WeekWeather): TickResult {
     const espece = getEspece(tree.especeId);
     // Même règle que pour la croissance : un arbre sans feuilles ne transpire
     // pas, aussi doux que soit l'hiver (trees.ts, phenologie.ts).
-    const season = seasonFactor(espece, weather.tMean) * partFoliaireActiveDans(espece, pheno);
+    const season =
+      seasonFactor(espece, weather.tMean) *
+      partFoliaireActiveDans(espece, pheno) *
+      feuillageRevenu(tree);
     // Le mycélium compatible prolonge les racines : à racines égales, un
     // arbre connecté prospecte un volume de terre plus grand (§7.5). C'est de
     // l'exploration, pas de la création — le bilan reste conservatif.
@@ -2620,7 +2633,10 @@ export function tick(state: GameState, weather: WeekWeather): TickResult {
       tMean: weather.tMean,
       // Le feuillage **actif**, pas l'ombrageant : des feuilles mortes de
       // marcescence font de l'ombre mais ne travaillent pas (phenologie.ts).
-      partFoliaire: partFoliaireActiveDans(getEspece(tree.especeId), pheno),
+      // Et ce que le gel des pousses a emporté manque, et se paie (#371).
+      partFoliaire: partFoliaireActiveDans(getEspece(tree.especeId), pheno) * feuillageRevenu(tree),
+      feuillageGele:
+        partFoliaireActiveDans(getEspece(tree.especeId), pheno) * (1 - feuillageRevenu(tree)),
       facteurCo2,
     });
     const next = result.tree;
@@ -2953,6 +2969,30 @@ export function tick(state: GameState, weather: WeekWeather): TickResult {
       return tree;
     }
     return { ...tree, fruitsKg, fruitProgress, bloomFrosted };
+  });
+
+  // ── 5 bis B. Le gel des jeunes pousses (#371) ─────────────────────────────
+  // Une nuit de printemps grille le feuillage qui vient de sortir. Le bourgeon
+  // dormant ne craint rien, la feuille durcie non plus : seul le feuillage
+  // **tendre** gèle, entre le débourrement et quelques semaines après. Le seuil
+  // ne se lit pas dans la fiche de l'essence mais dans sa précocité — ce qui
+  // débourre tôt résiste mieux, ce qui débourre tard gèle à peine sous zéro —,
+  // et la nuit se juge sous le couvert qui surplombe l'arbre : le semis du
+  // milieu d'une coupe gèle, celui qui pousse sous un houppier non. L'arbre
+  // perd le feuillage sorti, le refait en huit semaines environ sur ses
+  // réserves, et l'année de croissance en paie le prix (gelPousses.ts).
+  const debutDeLAnnee = state.week - week;
+  nextTrees = nextTrees.map((tree, t) => {
+    if (!tree.alive) return tree;
+    // Une fois l'an : le feuillage qui repousse vient de bourgeons dormants, et
+    // la saison est alors trop avancée pour qu'il regèle.
+    if ((tree.gelPousseSemaine ?? Number.NEGATIVE_INFINITY) >= debutDeLAnnee) return tree;
+    const espece = getEspece(tree.especeId);
+    if (!feuillageTendre(espece, pheno, partFoliaireActiveDans(espece, pheno))) return tree;
+    if (tMinimumSousCouvert(weather.tMinAbsC, couvertAuDessusDe(t)) > seuilAirGelPousses(espece)) {
+      return tree;
+    }
+    return { ...tree, gelPousseSemaine: state.week };
   });
 
   // ── 5 ter. Le gibier (§7.4, ch4-C) ────────────────────────────────────────
@@ -3975,7 +4015,7 @@ export function tick(state: GameState, weather: WeekWeather): TickResult {
         // l'arbre debout, et c'est un sol saturé qui les lâche.
         engorgement: waterlogging[cellule * nH] ?? 0,
         toleranceEngorgement: espece.eau.toleranceEngorgement,
-        partFoliaire: partFoliaireOmbrageanteDans(espece, pheno),
+        partFoliaire: partFoliaireOmbrageanteDans(espece, pheno) * feuillageRevenu(tree),
         // La profondeur que **cet** arbre a explorée, pas celle que sa fiche vise :
         // un sujet jamais assoiffé garde un chevelu superficiel (trees.ts).
         profondeurEffectiveCm: tree.rootDepthCm,

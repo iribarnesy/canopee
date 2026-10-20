@@ -256,6 +256,13 @@ export interface TreeState {
    * protéger, clôturer, réguler), et sans trace elle est aveugle.
    */
   brouteSemaine?: number;
+  /**
+   * Semaine du dernier gel des jeunes pousses ; absente = jamais gelé (#371,
+   * gelPousses.ts). Le feuillage sorti est perdu cette semaine-là et repousse en
+   * huit semaines environ : la date suffit à dire où en est la refeuillaison,
+   * et au rendu quels arbres viennent de roussir.
+   */
+  gelPousseSemaine?: number;
   /** semaine de la dernière levée d'écorce (liège) ; absent = jamais démasclé */
   derniereLeveeSemaine?: number;
   /**
@@ -433,6 +440,13 @@ export interface TreeEnvironment {
    * n'étudient pas la phénologie.
    */
   partFoliaire?: number;
+  /**
+   * Part du feuillage que le gel des pousses a emportée et qui n'a pas encore
+   * repoussé ∈ [0,1] (gelPousses.ts, #371). L'arbre l'entretient sans en rien
+   * tirer : chaque semaine de feuillage perdu se paie sur les réserves comme
+   * une semaine sans revenu. Absente, rien n'est perdu.
+   */
+  feuillageGele?: number;
   /**
    * Effet fertilisant du CO₂ sur le potentiel de croissance (climat.ts).
    * 1 = concentration d'aujourd'hui. Il agit sur le **potentiel**, donc la loi du
@@ -1606,7 +1620,14 @@ export function tickTree(tree: TreeState, env: TreeEnvironment): TreeTickResult 
   // les autres (#153).
   let stressRavageurs = tree.stressRavageurs ?? 0;
   let stressMaladie = tree.stressMaladie ?? 0;
-  const usure = puisementDesReserves * season * USURE_PAR_SEMAINE;
+  // Le feuillage que le gel a emporté se paie aussi (#371) : l'arbre le refait sur
+  // ses réserves, et tant qu'il n'a pas repoussé il n'en tire rien. C'est le cas
+  // même dont `reserves.ts` tire son ancre, la défoliation — compté à la chaleur
+  // de la semaine, sans le feuillage, puisque c'est justement lui qui manque.
+  const perteAuGel = Math.min(1, Math.max(0, env.feuillageGele ?? 0));
+  const usure =
+    (puisementDesReserves * season + perteAuGel * seasonFactor(espece, env.tMean)) *
+    USURE_PAR_SEMAINE;
   const parLeManqueSemaine =
     survivalFactor < STRESS_ONSET ? (STRESS_ONSET - survivalFactor) * 5 : 0;
   stress += parLeManqueSemaine + usure;

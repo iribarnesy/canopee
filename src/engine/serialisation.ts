@@ -189,7 +189,10 @@ const MAGIE = "CANOPEE\u0000";
  * hiver se relirait sans erreur avec un compte une fois et demie trop grand, et
  * le printemps qui suit partirait sur un froid qu'il n'a pas reçu. Aucune
  * conversion n'est exacte, puisque le compte ancien a jeté les températures. On
- * refuse, et le rejeu du journal recompte le froid semaine par semaine.
+ * refuse, et le rejeu du journal recompte le froid semaine par semaine. Le même
+ * lot ajoute aux arbres la date du gel de leurs pousses (`gelPousseSemaine`,
+ * #371) : un bloc de version 11 n'en porte aucune, et la relire comme « jamais
+ * gelé » rendrait son feuillage à un arbre qui le refait encore.
  */
 export const VERSION_FORMAT = 12;
 

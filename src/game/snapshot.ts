@@ -117,6 +117,7 @@ export function arbreDuSnapshot(t: TreeState, ddYearBase5: number): SnapshotTree
     pousseTendreM: t.pousseTendreM,
     frotteSemaine: t.frotteSemaine,
     brouteSemaine: t.brouteSemaine,
+    gelPousseSemaine: t.gelPousseSemaine,
   };
 }
 
