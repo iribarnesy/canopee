@@ -194,21 +194,34 @@ const MAGIE = "CANOPEE\u0000";
  * #371) : un bloc de version 11 n'en porte aucune, et la relire comme « jamais
  * gelé » rendrait son feuillage à un arbre qui le refait encore.
  *
- * **13 (issue #370, la matière morte sur pied)** : le sol porte deux grilles de
+ * **13 (issue #397, les dates d'une parcelle vieillie)** : à l'arrivée du
+ * joueur, les dates que l'état garde du vieillissement sont décalées avec le
+ * compteur (`remettreLeCompteurAZero`, state.ts) ; celles d'avant l'arrivée sont
+ * négatives. Même piège qu'à la version 12 : la forme ne bouge pas, le sens si.
+ * Un bloc de version 12 d'une partie vieillie porte ses dates comptées depuis le
+ * début du vieillissement, que le moteur lirait maintenant comme des dates à
+ * venir — ses chandelles tiendraient N ans de trop. Le bloc ne dit pas si la
+ * partie a vieilli, et une date du vieillissement ne se distingue pas d'une
+ * date du joueur dès que le compteur l'a dépassée : aucune conversion n'est
+ * sûre. On refuse, et le rejeu du journal refait le vieillissement avec ses
+ * dates justes.
+ *
+ * **14 (issue #370, la matière morte sur pied)** : le sol porte deux grilles de
  * plus, `herbeMorteG` et `herbeMorteAzoteG`, le foin et la paille de chaque
- * herbacée avec leur azote. Un bloc de version 12 ne les porte pas.
+ * herbacée avec leur azote. Un bloc de version 13 ne les porte pas.
  *
  * C'est la deuxième montée qui **relit** l'ancien bloc, pour la raison de la
- * neige : sous la version 12, ce qui mourait partait en litière la
+ * neige : sous la version 13, ce qui mourait partait en litière la
  * semaine même. Le mort qu'aurait porté la partie est donc déjà dans sa
  * litière, et des grilles vides écrivent l'état qu'elle avait, sans compter ce
  * mort deux fois. Le carbone et l'azote restent justes. Ce qui manque est
  * visuel : le tapis se lit plus bas, sur sa seule matière vivante, le temps
  * que le mort se refasse (quelques semaines en été, la saison en hiver). Un
- * bloc de version 12 se relit donc avec ces deux grilles à zéro
- * (`VERSIONS_RELUES`), et seulement lui.
+ * bloc de version 13 se relit donc avec ces deux grilles à zéro
+ * (`VERSIONS_RELUES`), et seulement lui : celui de version 12 reste refusé
+ * pour ses dates.
  */
-export const VERSION_FORMAT = 13;
+export const VERSION_FORMAT = 14;
 
 /** Ce qu'il faut ajouter au sol d'un bloc ancien pour en faire un sol de la version courante. */
 interface Relecture {
@@ -225,8 +238,8 @@ interface Relecture {
  */
 const VERSIONS_RELUES: Record<number, Relecture> = {
   [VERSION_FORMAT]: { sol: {}, grillesVides: [] },
-  // Le mort sur pied de #370 : sous la version 12, il était déjà en litière.
-  12: { sol: {}, grillesVides: ["herbeMorteAzoteG", "herbeMorteG"] },
+  // Le mort sur pied de #370 : sous la version 13, il était déjà en litière.
+  13: { sol: {}, grillesVides: ["herbeMorteAzoteG", "herbeMorteG"] },
 };
 
 /** Une grille de sol, telle que l'en-tête la déclare. */

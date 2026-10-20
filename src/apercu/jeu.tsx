@@ -353,6 +353,9 @@ function tempsDuBanc(): TempsQuIlFait | undefined {
       versRad: (Number(q.get("vent-vers") ?? "0") * Math.PI) / 180,
       recuMs: Number(q.get("vent") ?? "0"),
     },
+    // `?jours=2` : les jours de pluie de la semaine (#428) ; absent, le repli
+    // sur le cumul.
+    ...(q.has("jours") ? { joursDePluie: Number(q.get("jours")) } : {}),
   };
 }
 const TEMPS_DU_BANC = tempsDuBanc();
@@ -479,6 +482,7 @@ function flaquesDeLaScene(scene: Scene): CelluleVoilee[] {
       false,
       scene.week % 52,
       scene.sol.enEau,
+      TEMPS_DU_BANC?.joursDePluie,
     );
   }
   return flaquesDuBanc;

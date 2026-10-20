@@ -19,3 +19,7 @@ apercu/scenes/
 
 # Originaux téléchargés par `scripts/sourcer-sons.py` : régénérables, jamais versionnés.
 .cache/
+
+# Caches de Python : régénérés à chaque lancement des scripts.
+__pycache__/
+*.pyc

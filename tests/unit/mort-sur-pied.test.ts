@@ -9,7 +9,7 @@
  * Ces essais tiennent quatre choses : les deux fonctions, le bilan de la
  * plante (ce qu'elle a pris vaut ce qu'elle a rendu, plus ce qu'elle garde
  * vivant **et mort**), ce que fait la fauche, et la relecture d'un bloc de
- * version 12, qui n'avait pas de mort sur pied.
+ * version 13, qui n'avait pas de mort sur pied.
  */
 
 import { describe, expect, it } from "vitest";
@@ -146,23 +146,23 @@ describe("la fauche emporte le foin avec l'herbe", () => {
   }, 120_000);
 });
 
-describe("un bloc de version 12 se relit, le mort sur pied à zéro", () => {
+describe("un bloc de version 13 se relit, le mort sur pied à zéro", () => {
   it("les deux grilles arrivent vides, à leur place, et la partie continue", () => {
-    // Le bloc qu'un moteur de version 12 aurait écrit : le même état sans les
-    // deux grilles, sous l'ancien numéro. Sous la version 12, ce mort était
+    // Le bloc qu'un moteur de version 13 aurait écrit : le même état sans les
+    // deux grilles, sous l'ancien numéro. Sous la version 13, ce mort était
     // déjà en litière : des grilles vides écrivent l'état qu'elle avait.
     const partie = avancer(createGameState(STATION, rngStateFromSeed(3)), 40).s;
-    const { herbeMorteG: _m, herbeMorteAzoteG: _n, ...solV12 } = partie.soil;
-    const b = ecrireEtat({ ...partie, soil: solV12 as GameState["soil"] });
-    new DataView(b.buffer).setUint16(8, 12);
+    const { herbeMorteG: _m, herbeMorteAzoteG: _n, ...solV13 } = partie.soil;
+    const b = ecrireEtat({ ...partie, soil: solV13 as GameState["soil"] });
+    new DataView(b.buffer).setUint16(8, 13);
     const relu = lireEtat(b, STATION);
-    if (!relu) throw new Error("le bloc de version 12 aurait dû se relire");
+    if (!relu) throw new Error("le bloc de version 13 aurait dû se relire");
     expect(relu.soil.herbeMorteG).toBeInstanceOf(Float64Array);
     expect(relu.soil.herbeMorteG).toHaveLength(COTE * COTE * N_HERBACEES);
     expect(somme(relu.soil.herbeMorteG)).toBe(0);
     expect(somme(relu.soil.herbeMorteAzoteG)).toBe(0);
-    // Rangé comme un sol de cette version : mêmes clés, même ordre.
-    expect(Object.keys(relu.soil)).toEqual(Object.keys(partie.soil));
+    // Les mêmes champs qu'un sol de cette version, les deux grilles posées à la fin.
+    expect(Object.keys(relu.soil).sort()).toEqual(Object.keys(partie.soil).sort());
     // Le reste est relu à l'identique.
     expect(Array.from(relu.soil.herbeMatiereSecheG)).toEqual(
       Array.from(partie.soil.herbeMatiereSecheG),
@@ -172,11 +172,16 @@ describe("un bloc de version 12 se relit, le mort sur pied à zéro", () => {
     expect(() => stateHash(tick(relu, w).state)).not.toThrow();
   }, 120_000);
 
-  it("un bloc de version 12 qui porterait déjà les grilles est refusé", () => {
-    // Ce n'est pas un bloc qu'un moteur de version 12 a pu écrire : on ne
-    // devine pas, on refuse.
-    const b = ecrireEtat(avancer(createGameState(STATION, rngStateFromSeed(3)), 4).s);
-    new DataView(b.buffer).setUint16(8, 12);
+  it("un bloc de version 13 qui porterait déjà les grilles est refusé, et la version 12 aussi", () => {
+    // Ce n'est pas un bloc qu'un moteur de version 13 a pu écrire : on ne
+    // devine pas, on refuse. La version 12 reste refusée pour ses dates (#397).
+    const partie = avancer(createGameState(STATION, rngStateFromSeed(3)), 4).s;
+    const b = ecrireEtat(partie);
+    new DataView(b.buffer).setUint16(8, 13);
     expect(lireEtat(b, STATION)).toBeUndefined();
+    const { herbeMorteG: _m, herbeMorteAzoteG: _n, ...solV12 } = partie.soil;
+    const v12 = ecrireEtat({ ...partie, soil: solV12 as GameState["soil"] });
+    new DataView(v12.buffer).setUint16(8, 12);
+    expect(lireEtat(v12, STATION)).toBeUndefined();
   }, 120_000);
 });

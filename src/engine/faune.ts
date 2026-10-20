@@ -1082,6 +1082,12 @@ export function bilanDeTable(
  * cinquante-deux. Les arbres sont parcourus dans l'ordre de la parcelle, et
  * chaque installation est prise en compte pour la suivante : le premier arrivé
  * prend le territoire, ce qui est exactement ce qui se passe.
+ *
+ * `semaine` est celle du compte de la partie, et date l'installation.
+ * `semaineDuTemps` est celle sur laquelle la tentative se tire : la même, sauf
+ * sur une parcelle vieillie, où le compte du joueur repart de zéro et où la
+ * même tige aurait rejoué chaque année la chance qu'elle avait eue l'année
+ * correspondante du vieillissement (#397).
  */
 export function installations(
   individus: readonly IndividuFaune[],
@@ -1091,6 +1097,7 @@ export function installations(
   aireParcelleM2: number,
   dims: GridDims,
   table: TableDeLaParcelle,
+  semaineDuTemps = semaine,
 ): InstallationFaune[] {
   const semaineDeLAnnee = semaine % 52;
   const especes = FAUNE.filter((e) => e.semaineInstallation === semaineDeLAnnee);
@@ -1128,7 +1135,7 @@ export function installations(
       );
       const chance =
         espece.colonisationParAn * partDuTerritoire(espece, aireParcelleM2) * nourriture;
-      const tirage = tirageLocal(graineInstallation(arbre.id, espece.id, semaine));
+      const tirage = tirageLocal(graineInstallation(arbre.id, espece.id, semaineDuTemps));
       if (tirage >= chance) continue;
       const individu: IndividuFaune = {
         id: prochainId++,

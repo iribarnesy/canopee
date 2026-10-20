@@ -19,6 +19,11 @@
  *    démarrée en 2025 voit un an plus tard ;
  *  - la rafale, en relevant la semaine sur laquelle `tick` la tire : un
  *    enrobage de `rafaleDeLaSemaine` qui rend ce qu'elle rend.
+ *
+ * Et les dates que l'état garde du vieillissement : elles se comptent dans le
+ * compte du joueur, négatives puisqu'elles précèdent son arrivée (#397). Les
+ * autres tirages qui suivent la rafale sont éprouvés au tick
+ * (`tirages-du-temps.test.ts`), les dates une à une dans `dates-de-l-etat.test.ts`.
  */
 
 import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
@@ -26,7 +31,7 @@ import { SANS_EAU } from "../../src/engine/eau_surface";
 import type { WeekWeather } from "../../src/engine/meteo";
 import { bordersUniformes } from "../../src/engine/paysage";
 import { FRICHE_LIMON } from "../../src/engine/stations";
-import type { FromWorker, Snapshot } from "../../src/game/protocol";
+import type { FromWorker, Snapshot, SnapshotTree } from "../../src/game/protocol";
 
 /** Les semaines sur lesquelles la rafale a été tirée, dans l'ordre. */
 const semainesDeRafale: number[] = [];
@@ -100,6 +105,8 @@ const SEMAINES = 8;
 let vieillie: Map<number, WeekWeather>;
 let rafaleDuVieillissement: number[];
 let rafaleDeLaVieillie: number[];
+/** Les arbres de la vieillie à l'arrivée du joueur, semaine 0. */
+let arbresALArrivee: SnapshotTree[];
 /** Parcelle neuve démarrée en 2025 : son an 2 est l'an 1 de la vieillie. */
 let neuveDeLaVeille: Map<number, WeekWeather>;
 /** Parcelle neuve démarrée en 2026 : ce que la vieillie relisait avant #348. */
@@ -120,6 +127,7 @@ beforeAll(async () => {
   semainesDeRafale.length = 0;
   partie(1, 2026);
   rafaleDuVieillissement = semainesDeRafale.splice(0);
+  arbresALArrivee = structuredClone(instantanes()[0]?.trees ?? []);
   avancerJusqua(SEMAINES);
   vieillie = tempsParSemaine();
   rafaleDeLaVieillie = semainesDeRafale.splice(0);
@@ -170,6 +178,32 @@ describe("la partie continue le temps du vieillissement (#348)", () => {
     for (let w = 0; w < SEMAINES; w++) {
       expect(neuve.get(w)?.semaineContinue, `semaine ${w}`).toBe(w);
       expect(vieillie.get(w)?.semaineContinue, `semaine ${w}`).toBe(52 + w);
+    }
+  });
+});
+
+describe("les dates du vieillissement sont comptées dans le compte du joueur (#397)", () => {
+  it("toutes précèdent son arrivée, et aucune n'est plus vieille que le vieillissement", () => {
+    const dates = [
+      "mortSemaine",
+      "renverseSemaine",
+      "brulEeSemaine",
+      "frotteSemaine",
+      "brouteSemaine",
+      "derniereLeveeSemaine",
+      "gelPousseSemaine",
+    ] as const;
+    const trouvees = arbresALArrivee.flatMap((a) =>
+      dates.flatMap((champ) => (a[champ] === undefined ? [] : [{ champ, semaine: a[champ] }])),
+    );
+    // La prémisse : un an de friche laisse des marques — des semis broutés au moins.
+    expect(trouvees.length).toBeGreaterThan(0);
+    // Le vieillissement d'un an a duré les semaines −52 à −1 du compte du
+    // joueur. Une date positive dirait qu'elle est encore à venir : c'était le
+    // défaut, une chandelle du vieillissement y tenait debout un an de trop.
+    for (const { champ, semaine } of trouvees) {
+      expect(semaine, champ).toBeGreaterThanOrEqual(-52);
+      expect(semaine, champ).toBeLessThan(0);
     }
   });
 });

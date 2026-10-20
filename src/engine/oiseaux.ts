@@ -454,8 +454,10 @@ function couvrir(
  * « ce n'est pas la saison ». Les guildes absentes du calendrier n'ont pas
  * d'entrée.
  *
- * `semaine` est la semaine **absolue** de la partie : elle sert entière à la
- * graine locale, et réduite à l'année au calendrier. `graineParcelle` est la
+ * `semaine` est la semaine **du temps qu'il fait** (`WeekWeather.semaineContinue`,
+ * #397) : elle sert entière à la graine locale, et réduite à l'année au
+ * calendrier. Sur une parcelle vieillie, le compteur du joueur repart de zéro,
+ * et les arrondis du vieillissement se seraient rejoués. `graineParcelle` est la
  * graine de la partie (`GameState.graineMarche`), pour que deux parties
  * n'arrondissent pas de la même façon.
  */
