@@ -344,7 +344,10 @@ export function ficheDeLArbre(
     });
   }
 
-  const feuillage = partFoliaireOmbrageanteDans(espece, ctx.pheno);
+  // Moins ce que le gel des pousses a grillé et qui n'a pas repoussé (#425).
+  const feuillage =
+    partFoliaireOmbrageanteDans(espece, ctx.pheno) *
+    feuillageRevenu(arbre.gelPousseSemaine, ctx.semaine);
   const jaunit = senescenceDans(espece, ctx.pheno);
   dire(
     "🍃",
@@ -358,6 +361,24 @@ export function ficheDeLArbre(
   );
 
   direLeStress();
+  // **La soif de la dernière semaine** (#429), contre les seuils de son
+  // essence : dite seulement quand il en manque.
+  if (arbre.satisfactionEau !== undefined) {
+    const { seuilConfortSecheresse: confort, seuilStressSecheresse: detresse } = espece.eau;
+    const sat = arbre.satisfactionEau;
+    if (sat < confort) {
+      dire(
+        "💧",
+        "Soif",
+        sat < detresse ? "en détresse — il puise dans ses réserves" : "il ralentit sa croissance",
+        {
+          aide: `L'eau obtenue la dernière semaine sur celle qu'il demanderait : ${pourcent(sat)}. Sous ${pourcent(confort)}, la croissance de son essence ralentit ; sous ${pourcent(detresse)}, l'arbre puise dans ses réserves et risque la mort. Les deux seuils sont ceux de son essence : un même manque laisse un pin tranquille et met un aulne en danger.`,
+          part: 1 - sat,
+          sens: "hautMauvais",
+        },
+      );
+    }
+  }
   if (arbre.dommageHydraulique > 0.01) {
     dire("🥀", "Cime sèche", pourcent(arbre.dommageHydraulique), {
       aide: "La mémoire des sécheresses passées. Elle ne se répare pas.",

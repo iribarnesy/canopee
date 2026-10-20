@@ -1561,6 +1561,7 @@ export function GameView({ surPartie }: { surPartie?: (enPartie: boolean) => voi
             crue.lameMm !== undefined,
             snapshot.week % 52,
             station.enEau,
+            snapshot.weather.joursDePluie,
           )
         : [],
     [snapshot, station, crue.lameMm],
@@ -1583,6 +1584,9 @@ export function GameView({ surPartie }: { surPartie?: (enPartie: boolean) => voi
             neigeMm: snapshot.neigeMm,
             manteauNeigeMm: snapshot.manteauNeigeMm,
             vent: ventDuSite(snapshot, station),
+            ...(snapshot.weather.joursDePluie !== undefined
+              ? { joursDePluie: snapshot.weather.joursDePluie }
+              : {}),
           }
         : undefined,
     [snapshot, station],

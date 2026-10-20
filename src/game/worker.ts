@@ -66,7 +66,7 @@ import type {
 } from "../engine/tick";
 import { tick } from "../engine/tick";
 import type { CauseMort, TreeState } from "../engine/trees";
-import { solPresqueASec } from "./avisSecheresse";
+import { compterLaSoif, direLaSecheresse, solPresqueASec } from "./avisSecheresse";
 import { agreger, BILAN_VIDE, type Bilan } from "./bilan";
 import {
   ajouterAuCompte,
@@ -1660,7 +1660,9 @@ function stepWeeks(n: number) {
       const nCellules = state.station.coteM * state.station.coteM;
       if (solPresqueASec(state.soil.waterMm, nCellules, sc.station.ruMm)) {
         droughtYearFlagged = year;
-        event("🔥", "Sécheresse : la réserve du sol est presque à sec — les sensibles souffrent");
+        // Qui a soif, compté contre sa propre essence (#429) : la ligne disait
+        // « les sensibles souffrent » sans le savoir.
+        event("🔥", direLaSecheresse(compterLaSoif(state.trees, ticked.satisfactionEau)));
       }
     }
     // Érosion : on ne la raconte pas semaine par semaine — elle est
