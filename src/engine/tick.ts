@@ -2985,8 +2985,11 @@ export function tick(state: GameState, weather: WeekWeather): TickResult {
   nextTrees = nextTrees.map((tree, t) => {
     if (!tree.alive) return tree;
     // Une fois l'an : le feuillage qui repousse vient de bourgeons dormants, et
-    // la saison est alors trop avancée pour qu'il regèle.
-    if ((tree.gelPousseSemaine ?? Number.NEGATIVE_INFINITY) >= debutDeLAnnee) return tree;
+    // la saison est alors trop avancée pour qu'il regèle. Une date **future** est
+    // celle d'une parcelle vieillie, dont le compteur est reparti de zéro à
+    // l'arrivée du joueur (#397) : elle ne compte pas pour cette année.
+    const gel = tree.gelPousseSemaine;
+    if (gel !== undefined && gel >= debutDeLAnnee && gel <= state.week) return tree;
     const espece = getEspece(tree.especeId);
     if (!feuillageTendre(espece, pheno, partFoliaireActiveDans(espece, pheno))) return tree;
     if (tMinimumSousCouvert(weather.tMinAbsC, couvertAuDessusDe(t)) > seuilAirGelPousses(espece)) {
