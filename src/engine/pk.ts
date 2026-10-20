@@ -234,7 +234,7 @@ export function alterationPotassiumG(profil: readonly Horizon[]): number {
  * stocks forestiers : dès que le limon cultivé a porté le potassium d'une terre
  * cultivée, il en lessivait 40 kg/ha/an, dix fois le terrain.
  */
-export const RETENTION_K = 0.02;
+export const RETENTION_K = 0.015;
 
 /**
  * Lessivage du potassium : comme l'azote, il part avec l'eau qui draine — mais
