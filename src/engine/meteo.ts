@@ -18,6 +18,20 @@ export interface WeekWeather {
    */
   tMinAbsC: number;
   /**
+   * Combien de jours il a plu dans la semaine (#405) : les jours où il est
+   * tombé au moins 1 mm, le seuil des normales de Météo-France et de l'indice
+   * R1mm de l'ETCCDI. Ramené à sept jours, comme `rainMm` : c'est un réel de
+   * 0 à 7, et jamais plus que `rainMm` en millimètres, puisque chaque jour
+   * compté en apporte au moins un.
+   *
+   * C'est ce que le cumul ne dit pas : 15 mm, ce peut être un orage et six
+   * jours secs, ou une bruine tous les jours. Le moteur ne le lit pas — l'eau
+   * entre dans le sol à la semaine, quelle que soit sa répartition — et il
+   * voyage pour le rendu. Absent quand la météo ne le connaît pas : une série
+   * sans la colonne, une année synthétique dont le climat ne le déclare pas.
+   */
+  joursDePluie?: number;
+  /**
    * Concentration de CO₂ de l'année, ppm (climat.ts). Optionnelle : sans
    * trajectoire climatique, on prend la valeur d'aujourd'hui.
    */
@@ -189,8 +203,22 @@ export interface SerieMeteoHebdo {
   periode: [number, number];
   source: string;
   colonnes: string[];
-  /** [tMoy °C, tMin °C, tMax °C, pluie mm] × 52 semaines × n années */
+  /**
+   * [tMoy °C, tMin °C, tMax °C, pluie mm, nuit la plus froide °C, jours de
+   * pluie] × 52 semaines × n années. Les deux dernières colonnes peuvent
+   * manquer : la nuit se déduit alors de la minimale, les jours ne se déduisent
+   * de rien et restent absents.
+   */
   semaines: number[][];
+}
+
+/**
+ * Ce qu'un nombre de jours de pluie peut valoir, au plus, dans une semaine de
+ * `rainMm` : sept jours, et pas plus de jours que de millimètres — un jour de
+ * pluie en apporte au moins un. Ce n'est pas un réglage, c'est la définition.
+ */
+export function joursDePluieBornes(jours: number, rainMm: number): number {
+  return Math.max(0, Math.min(7, rainMm, jours));
 }
 
 /** Convertit une série réelle en semaines de simulation. */
@@ -201,6 +229,9 @@ export function serieToWeeks(serie: SerieMeteoHebdo, climat?: SyntheticClimate):
     tMax: s[2] ?? 0,
     rainMm: s[3] ?? 0,
     tMinAbsC: s[4] ?? (s[1] ?? 0) - 3,
+    // Les jours de pluie sont comptés dans les relevés quotidiens
+    // (`scripts/build_meteo.py`) ; une série sans la colonne n'en dit rien.
+    ...(s[5] !== undefined ? { joursDePluie: s[5] } : {}),
     // La série mesure la température et la pluie, jamais le vent : ses colonnes
     // n'en portent pas. Le vent vient donc de la même loi saisonnière que dans
     // une année synthétique, même quand le reste est mesuré — exactement le
@@ -249,6 +280,15 @@ export interface SyntheticClimate {
   /** part de la pluie tombant sur le semestre d'hiver, 0.5 = uniforme */
   rainWinterShare: number;
   /**
+   * Nombre moyen de jours de pluie par an, au moins 1 mm (#405). Optionnel :
+   * sans lui, l'année synthétique ne dit pas combien de jours il pleut.
+   *
+   * Chaque climat le prend dans les relevés quotidiens de la station dont il
+   * porte la série (Météo-France, 1964-2023, `scripts/build_meteo.py`), et non
+   * dans un ordre de grandeur : c'est un compte, pas un réglage.
+   */
+  joursDePluieAnnuels?: number;
+  /**
    * Régime de vent de la station. Optionnels, et c'est délibéré : je n'ai
    * qu'**un** régime sourcé (le flux d'ouest à sud-ouest océanique), pas une rose
    * des vents par station. Quatre valeurs inventées par station mentiraient
@@ -282,6 +322,19 @@ export function syntheticYear(c: SyntheticClimate): WeekWeather[] {
       rainMm,
       // nuit la plus froide de la semaine : ~3 °C sous la moyenne des minimales
       tMinAbsC: tMean - c.tDiurnalRange / 2 - 3,
+      // Les jours de pluie suivent la saison de la pluie : une semaine qui
+      // reçoit le double de la moyenne compte le double de jours. C'est
+      // supposer que la pluie d'un jour de pluie ne change pas avec la saison,
+      // et les relevés quotidiens des cinq séries le disent à quelques points
+      // près : les jours de pluie sont un peu **plus** groupés sur le semestre
+      // d'hiver que la pluie elle-même (Mont-de-Marsan 58 % contre 57 %,
+      // Abbeville 55 contre 52, Tours 58 contre 55, Le Luc 62 contre 61,
+      // Dijon 55 contre 48), parce que les averses d'été sont plus fortes.
+      // Aucun tirage : l'année synthétique n'en fait pas, et le flux aléatoire
+      // de la partie n'en voit rien.
+      ...(c.joursDePluieAnnuels !== undefined
+        ? { joursDePluie: joursDePluieBornes((c.joursDePluieAnnuels / 52) * winterWeight, rainMm) }
+        : {}),
       ...ventDeLaSemaine(week, c),
     });
   }

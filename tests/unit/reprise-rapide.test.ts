@@ -230,6 +230,10 @@ describe("reprendre depuis le bloc", () => {
     // d'avant les gestes. La partie vécue ne l'écrit pas.
     expect(rejouee.annexes.histoires).toEqual(quitteeRelue.annexes.histoires);
     expect(rejouee.annexes.memoire).toEqual(quitteeRelue.annexes.memoire);
+    // La soif des arbres au dernier tick (#372) : le bloc l'emporte, et le rejeu
+    // la retrouve à l'identique.
+    expect(quitteeRelue.annexes.satisfactionEau?.size).toBeGreaterThan(0);
+    expect(rejouee.annexes.satisfactionEau).toEqual(quitteeRelue.annexes.satisfactionEau);
     for (const id of abattues) {
       const lignes = quitteeRelue.annexes.histoires.get(id) ?? [];
       expect(lignes.at(-1)?.texte).toBe("abattu");

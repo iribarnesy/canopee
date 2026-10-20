@@ -51,6 +51,7 @@ function entrees(state: ReturnType<typeof etatNeuf>): EntreesSnapshot {
     lumiereAuSol: ticked.lumiereAuSol,
     pollinisateurs: ticked.pollinisateurs,
     oiseauxDePassage: ticked.oiseauxDePassage,
+    satisfactionEau: ticked.satisfactionEau,
     refusals: [],
     events: [],
     morts: ticked.morts,
@@ -571,6 +572,62 @@ describe("les oiseaux de passage (#296)", () => {
         arbres: g.arbres.filter((id) => id !== a && id !== b),
       })),
     );
+  });
+});
+
+describe("la soif de chaque arbre (#372)", () => {
+  /** Une rangée de charmes et de pommiers, à la semaine voulue. */
+  function rangee(semaine: number) {
+    let state = etatNeuf();
+    for (let x = 1; x < STATION.coteM; x += 2) {
+      state = plantAt(state, x % 4 === 1 ? "carpinus_betulus" : "malus_domestica", x, 6, 2);
+    }
+    return { ...state, week: semaine };
+  }
+
+  it("chaque arbre vivant porte la satisfaction que le tick a mesurée, et elle seule", () => {
+    const e = entrees(rangee(30));
+    const snapshot = construireSnapshot(e);
+    const vivants = snapshot.trees.filter((t) => !t.chandelle);
+    expect(vivants.length).toBeGreaterThan(0);
+    for (const t of vivants) {
+      // La valeur du moteur, recopiée : le jeu n'a rien à recalculer.
+      expect(t.satisfactionEau, `arbre ${t.id}`).toBe(e.satisfactionEau?.get(t.id));
+      expect(t.satisfactionEau).toBeGreaterThanOrEqual(0);
+      expect(t.satisfactionEau).toBeLessThanOrEqual(1);
+    }
+  });
+
+  it("un caduc nu en hiver ne demande rien, donc n'a pas soif", () => {
+    const e = entrees(rangee(3));
+    const charmes = e.state.trees.filter((t) => t.especeId === "carpinus_betulus" && t.alive);
+    expect(charmes.length).toBeGreaterThan(0);
+    for (const t of charmes) expect(e.satisfactionEau?.get(t.id)).toBe(1);
+  });
+
+  it("ni une chandelle, ni un arbre que le tick n'a pas vu ne portent de soif", () => {
+    const e = entrees(rangee(30));
+    const [premier, ...autres] = e.state.trees;
+    if (!premier) throw new Error("pas d'arbre");
+    // Le premier est mort depuis le tick, et un plant vient d'être mis en terre
+    // en pause : le tick n'a rien mesuré sur lui.
+    const mort = { ...premier, alive: false, mortSemaine: e.state.week };
+    const neuf = plantAt(e.state, "malus_domestica", 11, 11, 1).trees.at(-1);
+    if (!neuf) throw new Error("pas de plant");
+    expect(e.satisfactionEau?.has(mort.id)).toBe(true);
+    expect(e.satisfactionEau?.has(neuf.id)).toBe(false);
+    const state = { ...e.state, trees: [mort, ...autres, neuf] };
+    const snapshot = construireSnapshot({ ...e, state });
+    const parId = new Map(snapshot.trees.map((t) => [t.id, t]));
+    expect(parId.get(mort.id)?.chandelle).toBe(true);
+    expect(parId.get(mort.id)).not.toHaveProperty("satisfactionEau");
+    expect(parId.get(neuf.id)).not.toHaveProperty("satisfactionEau");
+  });
+
+  it("sans grandeur de tick, aucun arbre n'en porte", () => {
+    const state = rangee(30);
+    const snapshot = construireSnapshot({ ...entrees(state), state, satisfactionEau: undefined });
+    for (const t of snapshot.trees) expect(t).not.toHaveProperty("satisfactionEau");
   });
 });
 
