@@ -38,6 +38,7 @@ import { dureeChandelleSemaines } from "../engine/trees";
 import type { ArbreAPoser } from "../render/couches/arbres";
 import type { CoteDecor, DecorBordures } from "../render/couches/decor";
 import type { DonneesSol } from "../render/couches/terrain";
+import { feuillageRevenu } from "./pousses";
 
 /**
  * Ce qu'il faut d'un instantané pour poser le **sol**.
@@ -160,6 +161,8 @@ export interface ArbreSource {
   derniereLeveeSemaine?: number;
   diametreTeteCm?: number;
   caviteTeteL?: number;
+  /** présent = ses jeunes pousses ont gelé cette semaine-là (#371, #425) */
+  gelPousseSemaine?: number;
 }
 
 /** Ce que la parcelle sait, et que l'arbre seul ne dit pas. */
@@ -210,7 +213,13 @@ export function arbresAPoser(arbres: readonly ArbreSource[], ctx: ContexteDePose
     if (t.heightM <= 0) continue;
     const espece = getEspece(t.especeId);
     const torche = ctx.seTorche?.(t.id) ?? false;
-    const part = espece && ctx.pheno ? partFoliaireOmbrageanteDans(espece, ctx.pheno) : 1;
+    // Le feuillage de l'essence à la saison, moins ce que le gel des pousses a
+    // grillé et qui n'a pas encore repoussé (#425) : la même part que le tick
+    // donne à l'ombre de cet arbre. Sans elle, un frêne aux pousses grillées
+    // restait vert les cinq semaines où il est nu.
+    const part =
+      (espece && ctx.pheno ? partFoliaireOmbrageanteDans(espece, ctx.pheno) : 1) *
+      feuillageRevenu(t.gelPousseSemaine, ctx.week);
     poses.push({
       id: t.id,
       especeId: t.especeId,

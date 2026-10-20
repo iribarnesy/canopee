@@ -158,9 +158,11 @@ L'arbre reste alors **sans feuilles cinq semaines**, puis refeuille en trois
 (`refeuillaison(semaines)`) — un houppier roussi, puis nu, puis la seconde
 pousse. Les arbres qui viennent de geler sont ceux dont cette date est la
 dernière semaine simulée ; à ×64, la date reste lisible le temps de la
-refeuillaison. Une fois l'an au plus. **L'avis « Gel »** (`useAvisDuGel.ts`) dit
-encore que le gel « ne détruit que les fleurs ouvertes » : ce n'est plus vrai,
-il peut dire maintenant « les jeunes pousses de N arbres ont gelé ».
+refeuillaison. Une fois l'an au plus. Le rendu le lit depuis #425 : l'arbre
+se dessine nu puis refeuille (`feuillageRevenu`, `src/game/pousses.ts`, la
+composition même du tick), le couvert au-dessus de l'instantané compte ce
+feuillage revenu, l'avis « Gel » nomme les arbres dont les pousses ont grillé,
+et la fiche dit « Pousses grillées par le gel » le temps de la refeuillaison.
 
 `baseHouppierM` mérite un mot : c'est la hauteur en dessous de laquelle il n'y a
 plus de branches vivantes, donc du fût nu à dessiner. Elle ne se déduit de rien

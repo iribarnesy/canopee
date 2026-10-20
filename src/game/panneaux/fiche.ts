@@ -27,6 +27,7 @@ import {
 import { stadeDe } from "../../engine/stades";
 import { elancement, elancementLimite, hauteurStableM } from "../../engine/trees";
 import { causeDite, ilOuElle, laFaune } from "../mots";
+import { feuillageRevenu } from "../pousses";
 import type { SnapshotTree } from "../protocol";
 
 /**
@@ -372,6 +373,15 @@ export function ficheDeLArbre(
     });
   }
   if (arbre.bloomFrosted) dire("❄️", "Fleurs", "grillées par le gel");
+  // **Pourquoi cet arbre est nu en mai** (#425) : ses jeunes pousses ont gelé.
+  // Dite le temps que le feuillage revienne, la courbe du moteur à l'appui.
+  if (
+    !arbre.chandelle &&
+    arbre.gelPousseSemaine !== undefined &&
+    feuillageRevenu(arbre.gelPousseSemaine, ctx.semaine) < 1
+  ) {
+    dire("❄️", "Pousses", `grillées par le gel ${ilYA(ctx.semaine - arbre.gelPousseSemaine)}`);
+  }
   // Un mort garde ses fruits jusqu'au 1er janvier, mais le moteur refuse de
   // les cueillir : la fiche ne les annonce pas, comme le volet (#416).
   if (!arbre.chandelle && arbre.fruitsKg > 0.05)
