@@ -34,6 +34,24 @@ function dejaEnBoisMort(t: SnapshotTree): boolean {
   return t.mortSemaine !== undefined;
 }
 
+/**
+ * **Ce qui se cueille** dans une sélection : les arbres vivants qui portent des
+ * fruits (#416).
+ *
+ * La question du moteur, encore : `recolter` (`actions.ts`) écarte tout arbre
+ * qui n'est pas `alive` — « introuvable ou mort » —, et `chandelle` est
+ * exactement `!alive`. Un arbre mort garde pourtant ses fruits jusqu'au
+ * 1er janvier : sélectionner les morts d'une sécheresse d'octobre annonçait
+ * « 82 kg mûrs » et un « Récolter » qui ne rendait que des refus. C'est la règle
+ * de #158 — ce qui n'a pas de sens sur du bois mort disparaît —, appliquée à
+ * la récolte.
+ */
+export function recoltables<T extends Pick<SnapshotTree, "chandelle" | "fruitsKg">>(
+  arbres: readonly T[],
+): T[] {
+  return arbres.filter((t) => !t.chandelle && t.fruitsKg > 0);
+}
+
 export function PanneauSelection({
   game,
   vivants,
@@ -85,7 +103,8 @@ export function PanneauSelection({
       selectedTrees.filter((t) => t.especeId === a).length,
   );
   const essencesMontrees = selEspeces.slice(0, ESSENCES_LISTEES);
-  const selFruitsKg = selectedTrees.reduce((s, t) => s + t.fruitsKg, 0);
+  const selRecoltables = recoltables(selectedTrees);
+  const selFruitsKg = selRecoltables.reduce((s, t) => s + t.fruitsKg, 0);
   const selBoisMort = selectedTrees.filter(dejaEnBoisMort);
   const selVivants = selectedTrees.length - selBoisMort.length;
   /**
@@ -218,7 +237,7 @@ export function PanneauSelection({
           type="button"
           style={btn(true)}
           onClick={() =>
-            game.dispatch({ type: "recolter", treeIds: selectedTrees.map((t) => t.id) })
+            game.dispatch({ type: "recolter", treeIds: selRecoltables.map((t) => t.id) })
           }
         >
           🧺 Récolter

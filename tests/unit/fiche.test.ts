@@ -309,3 +309,12 @@ describe("les durées", () => {
     expect(ilYA(129)).toBe("il y a 2 ans");
   });
 });
+
+describe("les fruits d'un arbre mort (#416)", () => {
+  it("la fiche d'un vivant les annonce, celle d'un mort non : le moteur refuse de les cueillir", () => {
+    expect(valeur(fiche({ fruitsKg: 12 }), "Fruits mûrs")).toBe("12.0 kg");
+    expect(
+      valeur(fiche({ fruitsKg: 12, alive: false, causeMort: "secheresse" }), "Fruits mûrs"),
+    ).toBeUndefined();
+  });
+});
