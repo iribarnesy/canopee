@@ -50,6 +50,7 @@ import {
   createGameState,
   type GameState,
   gridDims,
+  remettreLeCompteurAZero,
   type Station,
   type TickFluxes,
 } from "../engine/state";
@@ -1084,9 +1085,11 @@ function faireVieillir(depart: GameState, annees: number): GameState {
       post({ type: "progress", done: k, total: semaines, phase: "vieillissement" });
   }
   // Le compteur de semaines repart de zéro : l'an 1 du joueur, c'est son
-  // arrivée, pas la naissance du terrain. Le temps qu'il fait, lui, ne repart
-  // pas de zéro (`meteoDeLaPartie`).
-  return { ...etat, week: 0 };
+  // arrivée, pas la naissance du terrain. Les dates que l'état garde de ces
+  // années repartent avec lui, et celles d'avant l'arrivée deviennent
+  // négatives, comme celles de l'histoire des arbres (#397). Le temps qu'il
+  // fait, lui, ne repart pas de zéro (`meteoDeLaPartie`).
+  return remettreLeCompteurAZero(etat);
 }
 
 const post = (msg: FromWorker, transfer: Transferable[] = []) =>

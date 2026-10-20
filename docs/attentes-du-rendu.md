@@ -234,6 +234,25 @@ pas — et cette matière est loin de ce que le terrain mesure (41 g/m² de moli
 donner est un mécanisme à ajouter, pas un champ à exposer, et la convention de
 25 cm reste celle du rendu d'ici là.
 
+**Les dates sont des semaines du compte du joueur**, celui de `Snapshot.week`
+(#397) : `mortSemaine`, `brulEeSemaine`, `renverseSemaine`, `frotteSemaine`,
+`brouteSemaine`, `derniereLeveeSemaine`, `gelPousseSemaine`, le `depuisSemaine`
+d'un habitant et l'`id` d'une crue. Trois conséquences, qui valent pour tous les écrans :
+
+- **`week − date` est le temps écoulé**, toujours positif ou nul : une
+  soustraction suffit, sans garde. Ce que le moteur date dans un tick vaut au
+  plus `week − 1` ; un geste du joueur dans la semaine ouverte vaut `week`.
+- **Une date négative veut dire « avant votre arrivée »**, et c'est la seule
+  chose qui le dise. Elle n'existe que sur une parcelle vieillie : entre
+  `−52 N` et `−1` pour un vieillissement de N ans. Une parcelle neuve n'en a
+  jamais. C'est la convention de l'histoire des arbres (`histoire`, #225).
+- **Une date plus grande que `week` n'existe pas.** C'était la forme des dates
+  du vieillissement avant #397 : comptées depuis son début, elles se lisaient
+  comme des dates à venir. `fiche.ts` et `chevreuils.ts` les contournaient en
+  supposant une date positive, `PanneauHabitants.tsx` en attendait une négative
+  qu'il ne recevait jamais. Ce que chaque écran peut maintenant lire, et retirer,
+  est dans #414.
+
 `baseHouppierM` mérite un mot : c'est la hauteur en dessous de laquelle il n'y a
 plus de branches vivantes, donc du fût nu à dessiner. Elle ne se déduit de rien
 — ni de l'espèce (le même chêne est branchu en pré et nu sur quinze mètres en
