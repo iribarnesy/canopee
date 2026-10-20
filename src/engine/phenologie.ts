@@ -401,7 +401,12 @@ export function contextePhenologique(
   return {
     latitudeDeg,
     semaineAnnee,
-    ddYearBase5,
+    // **En semaine 0, le cumul de l'année n'a pas commencé** (#419). L'état porte
+    // encore celui de l'année finie — le tick ne le remet à zéro qu'en
+    // simulant la semaine —, et tant que toutes les essences avaient une porte
+    // photopériodique, le jour court de janvier le masquait. Les pionnières n'en
+    // ont plus : un bouleau se serait feuillé une semaine chaque 1ᵉʳ janvier.
+    ddYearBase5: semaineAnnee < 1 ? 0 : ddYearBase5,
     jourH: dureeDuJourH(latitudeDeg, midWeekDayOfYear(semaineAnnee)),
     automne,
     semainesDepuisSenescence: automne ? Math.max(0, semaineAnnee - SENESCENCE_DEBUT_SEMAINE) : 0,
@@ -462,9 +467,16 @@ export function contextePhenologiqueFractionnaire(
     jourH: dureeDuJourH(debut.latitudeDeg, midWeekDayOfYear(debut.semaineAnnee) + 7 * u),
     automne,
     semainesDepuisSenescence: automne ? Math.max(0, semaineAnnee - SENESCENCE_DEBUT_SEMAINE) : 0,
-    // Le froid de la semaine ne bouge pas dans la semaine : il ne sert qu'à
-    // gonfler le besoin de chaleur, pas à doser un feuillage.
-    semainesDeFroid: debut.semainesDeFroid,
+    // Le froid s'accumule comme les degrés-jours, par un apport hebdomadaire
+    // unique (une unité de Hänninen tirée de la moyenne de la semaine) : il
+    // s'interpole donc exactement de la même façon. Il module maintenant le
+    // besoin de chaleur sans palier (#419), et le tenir fixe dans la semaine
+    // faisait diverger l'instant 1 de la semaine suivante. La remise à zéro de
+    // septembre ne se traverse pas.
+    semainesDeFroid:
+      fin.semainesDeFroid >= debut.semainesDeFroid
+        ? debut.semainesDeFroid + (fin.semainesDeFroid - debut.semainesDeFroid) * u
+        : debut.semainesDeFroid,
   };
 }
 
