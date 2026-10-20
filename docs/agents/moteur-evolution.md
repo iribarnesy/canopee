@@ -112,6 +112,51 @@ Déterministe à graine donnée ; sans arbre, les graines rendent le même bilan
 - **Lus dans le code, non mesurés** : le phosphore des feuilles d'arbre rendu deux fois ; l'humification d'une paille pauvre puise dans l'azote de l'engrais, qui rend plus tard du phosphore par l'humus.
 - **Le pin landais** gagnait 20 à 30 % quand la strate rendait son phosphore (#222) : chiffre à remesurer sans la double comptabilité de l'humus.
 
+## Ce qu'un lot précédent a appris (publier pour le rendu : la soif des arbres, #372, les jours de pluie, #405, et la hauteur du tapis, #370)
+
+Un lot de publication : trois grandeurs que le rendu attendait. Deux voyagent, la troisième ne se déduit pas de ce que le moteur sait. Aucune partie ne bouge : l'empreinte de l'état sérialisé et `stateHash` sont identiques à l'octet, cinq ans, trois graines, deux séries réelles et une année synthétique (M1). Les prédictions et les mesures sont dans les commits de la branche, avant chaque course.
+
+### Une grandeur du tick se publie par identifiant, pas par indice
+
+La satisfaction hydrique se calcule sur le tableau des arbres du début du partage de l'eau. Entre ce moment et l'instantané, des arbres meurent dans le tick, des semis lèvent, et le joueur coupe ou plante en pause : un tableau aligné sur les indices désigne alors un autre arbre. Elle sort donc du tick dans une table par identifiant, et l'instantané la cherche pour chaque arbre qu'il porte. La chandelle et le plant mis en terre depuis n'y trouvent rien, et c'est le bon résultat — ce que la jointure par indice aurait inventé.
+
+**Une grandeur du tick suit le chemin des autres jusqu'au bout** : le worker, la relecture, les points de retour et le bloc de reprise. Le bloc l'emporte dans deux sections que les anciens lecteurs ignorent : aucun format ne monte, ni le moteur (12 depuis #420) ni le conteneur (1), parce que ce n'est pas de l'état.
+
+### Reconstruire une donnée publiée ne la redonne pas forcément à l'octet
+
+La série réelle est journalière à l'origine, et le compte des jours de pluie était à portée. Mais la série reconstruite depuis le fichier republié par Météo-France ne redonne pas celle du dépôt : sept cumuls de semaine 51 bougent de 0,01 mm. Ce sont des semaines de huit jours dont le cumul ramené à sept tombe pile sur un demi-centième, et l'arrondi suit alors l'ordre de la somme flottante ; aucun ordre simple ne rend les sept. Chaque partie sur série réelle en aurait été déplacée. Le script ajoute donc la colonne sans toucher aux cinq autres, après avoir vérifié qu'elles ne s'écartent nulle part de plus de 0,01. **Avant de régénérer une donnée publiée, la régénérer à côté et la comparer.**
+
+### Le flux aléatoire n'était pas en jeu
+
+L'année synthétique ne tire rien : ce sont des sinusoïdes. Le nombre de jours de pluie y suit la saison de la pluie, à partir du nombre annuel compté dans la série de la station ; les relevés disent que les jours de pluie sont un peu plus groupés en hiver que la pluie elle-même (1 à 7 points), écart écrit dans le code. **Vérifier qu'un générateur tire avant de lui chercher une graine locale.**
+
+### La hauteur du tapis ne se déduit pas : rapportée avant de coder (#370)
+
+Le moteur tient la matière **vivante** de chaque herbacée, en grammes, et l'envoie en litière dès qu'elle meurt : le foin sur pied et la paille de la molinie n'y sont pas, seul l'indice sans dimension `herbeBiomasse` les garde. Et cette matière est basse : 205 g/m² de dactyle à la mi-juin sur le limon riche, 41 de molinie sur la lande (prédit 150 à 500 : faux). Une hauteur tirée d'une densité apparente sourcée serait de quelques centimètres sur la lande et nulle en hiver ; calée sur ces grammes, elle ne serait plus sourcée. Rien n'est publié. Les options sont dans #370 (commentaire du 20 octobre) : la recommandée est un mécanisme (une hauteur de tapis par espèce et un compartiment de matière morte sur pied, ce qui ajoute de l'état), après une instruction de la production de la strate.
+
+### Ce que ça donne
+
+| | mesuré |
+|---|---|
+| empreintes (état sérialisé, `stateHash`), 45 fins d'année | identiques à l'octet (prédit : identiques) |
+| jours de pluie par an publiés, Mont-de-Marsan / Tours / Abbeville / Dijon / Le Luc | 121,9 / 110,4 / 127,0 / 113,0 / 65,1 (bruts : 122,4 / 111,0 / 127,5 / 113,4 / 65,3) |
+| semaines de 10 à 20 mm avec au plus un jour de pluie | 13 / 10 / 8 / 13 / 35 % |
+| semaines avec de la pluie mais aucun jour d'au moins 1 mm | 9,8 / 10,8 / 10,9 / 8,6 / 15,5 % |
+| lande sèche, fin juillet de l'an 3 : jeunes plants sous le confort hydrique (graines 1/2/3) | 97 / 100 / 97 % |
+| idem, sous le seuil de stress | pins 0 ; bouleaux 6 sur 9, 6 sur 11, 5 sur 8 |
+| fin janvier, bouleaux à 1 | tous |
+
+### Les prédictions fausses
+
+- P2 : la molinie de la lande devait porter 150 à 500 g/m² de matière vivante à la mi-août ; 11 (41 à la mi-juin).
+- M3 : parmi les semaines de 10 à 20 mm, 15 à 35 % devaient avoir au plus un jour de pluie ; 8 à 13 % sur les stations tempérées, 35 % au Luc seulement.
+
+### Ce qui reste ouvert
+
+- **#370** : la hauteur du tapis, à trancher (options A à D dans l'issue ; recommandation D puis C).
+- **Les jours de pluie sous le scénario** : ils traversent la trajectoire climatique inchangés, faute de chiffre sourcé sur la baisse du nombre de jours de pluie en France *(à instruire)* ; seule la définition les rabat.
+- **La reconstruction complète des séries** ne redonne plus les cinq colonnes à l'octet (sept semaines 51 à 0,01 mm près) : une régénération future devra garder l'option `--ajouter-jours-de-pluie` ou accepter de déplacer les parties sur série réelle.
+
 ## Ce qu'un lot précédent a appris (le froid de l'hiver, #419, puis le gel des pousses, #371)
 
 Deux décisions de l'utilisateur, prises sur instruction : recaler le débourrement par une loi commune du froid (#419, option O3), puis bâtir dessus le gel des jeunes pousses (#371, option A2). Les prédictions et les mesures sont dans les commits de la branche `claude/v06-gel-pousses`, avant chaque course.
