@@ -94,11 +94,14 @@ export function potassiumDeLaStrateG(azoteG: number): number {
  * `vouluG` : d'abord l'échangeable, puis, s'il ne suffit plus, la réserve non
  * échangeable (#222).
  *
- * **Une culture vide l'échangeable, et elle continue de prélever.** Un blé
- * fertilisé prend chaque saison de l'ordre de ce que le limon porte de
- * potassium échangeable. Au printemps, le pool tombe à presque rien, et la
- * plante prenait alors son azote sans le potassium qui va avec. Sur le
- * terrain, ce potassium vient de la réserve. Ce que les sols des essais de
+ * **Une culture peut vider l'échangeable, et elle continue de prélever.** Un
+ * blé fertilisé prend chaque saison 150 kg K/ha. Sur l'ancien stock du limon
+ * riche, forestier (107 kg/ha d'échangeable), le pool tombait à presque rien
+ * chaque printemps, et la plante prenait alors son azote sans le potassium qui
+ * va avec. Depuis que la station déclare la teneur d'une terre cultivée (#395),
+ * il ne descend plus qu'à 436 kg/ha sur 544 ; un sol pauvre, une culture plus
+ * exigeante ou une allée sans potasse peuvent encore le vider. Sur le terrain,
+ * ce potassium vient de la réserve. Ce que les sols des essais de
  * Rothamsted et de Woburn libèrent sous culture ne suit pas leur potassium
  * échangeable de départ (Johnston et Addiscott 1971, *J. Agric. Sci.* 76 :
  * 539-552). Un ray-grass cultivé en continu sous serre
@@ -111,8 +114,9 @@ export function potassiumDeLaStrateG(azoteG: number): number {
  * `echangeReserveK`. Le moteur n'a pas d'état de plus pour cela, et le bilan
  * de la parcelle reste exact tant que la réserve n'est pas vide
  * (`potassium-conservation.test.ts`). Une fois vide, la plante prend de nouveau
- * son azote sans son potassium. La culture ne lit pas le potassium : elle ne
- * pousse pas moins faute de lui.
+ * son azote sans son potassium. Sur les stocks déclarés, elle ne se vide plus
+ * en soixante ans de blé continu : 3 500 kg/ha restent sur 5 400 (#395). La
+ * culture ne lit pas le potassium : elle ne pousse pas moins faute de lui.
  */
 export function prelevementPotassium(
   echangeableG: number,
