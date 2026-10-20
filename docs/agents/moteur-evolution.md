@@ -61,7 +61,58 @@ qu'un rapport (voir la note de maintenance).
 Séparer calibration et validation : caler un paramètre sur un âge, garder
 l'autre âge pour vérifier.
 
-## Ce que le dernier lot a appris (le froid de l'hiver, #419, puis le gel des pousses, #371)
+## Ce que le dernier lot a appris (le phosphore et le potassium des cultures, #395, instruction)
+
+Un lot d'instruction, sans une ligne de moteur. Les mesures, le terrain et les options sont dans #395 (commentaire du 20 octobre) ; les prédictions et les mesures, dans les commits de la branche `claude/v06-phosphore`, avant chaque course. Rien n'est tranché. La recommandation attend le propriétaire : le potassium par ses stocks, puis la potasse ; le phosphore dans un lot à part, avec un pool dans la plante.
+
+### Rapporter un stock à la masse avant de le comparer
+
+Les stocks de phosphore et de potassium sont en g/m². Ils sortent de deux formules sans source qui ne lisent que l'horizon de surface, sans son épaisseur. Rapportés à la masse de cet horizon, ils se lisent comme une analyse de terre, et la comparaison se fait d'un coup d'œil. Le limon riche porte 2,3 mg P/kg : l'Olsen d'un sol de Rothamsted privé de phosphore depuis 1848 (Syers et al. 2008). Son potassium échangeable, 24,5 mg K/kg, est sous le seuil de pauvreté d'un horizon minéral forestier (Bonneau 1995). Par kilo, il a même moins de phosphore que la lande landaise du moteur. **Avant de chercher une règle, convertir le stock dans l'unité où le terrain le mesure.**
+
+### Un stock aligné révèle les calages faits sur l'ancien
+
+La variante V1 donne au limon riche les stocks d'un limon cultivé : 20 mg P/kg Olsen et 120 mg K/kg échangeable. Pour le potassium, la réserve ne se vide plus sous le blé en soixante ans. Mais le lessivage, proportionnel au stock et calé sur le stock bas, passe de 7 à 40 kg K/ha/an, de l'ordre de dix fois le terrain. Pour le phosphore, la rétrogradation ramène l'assimilable vers un vingt-troisième du total en cinq ans, quand le terrain donne une demi-vie de neuf ans. **Un nombre calé sur un stock faux devient faux quand le stock devient juste** : chiffrer ce qu'un alignement entraîne avant de le présenter comme un soin.
+
+### Où va le phosphore que prend une culture
+
+Nulle part : la plante n'en porte pas, la paille ne le rend pas, le grain ne l'emporte pas. Les quatre cinquièmes reviennent de l'humus, qui libère 0,09 g de phosphore par gramme d'azote minéralisé sans phosphore organique derrière. Rendre son phosphore à la strate ne fermerait donc pas le bilan. L'humus rend déjà la part humifiée de sa litière, et il rend de même, une seconde fois, le phosphore des feuilles d'arbre, déjà rendu à leur chute. **Avant d'ajouter un retour, chercher par où le flux revient déjà.**
+
+### Une moyenne non nulle peut cacher des zéros
+
+Sous V1, la réserve de potassium se vide encore dans 12 à 13 % des cellules d'allée du LER, alors que la moyenne des allées en garde 1 600 kg/ha. La carte dit où : toutes au bord de la parcelle, la rangée aval et les deux colonnes extrêmes. **Une moyenne qui ne descend pas à zéro peut cacher des cellules à zéro ; une carte dit si elles sont un champ ou un bord.**
+
+### Ce que ça donne
+
+Déterministe à graine donnée ; sans arbre, les graines rendent le même bilan au bit près.
+
+| | main | V1 (stocks d'un limon cultivé) |
+|---|---|---|
+| blé 192 kg N : P pris / voulu, kg/ha/an | 12 / 25, plafonné dès l'an 2 | 25 / 25 jusqu'à l'an 11 |
+| blé : P libéré par l'humus | 9 à 10 kg/ha/an, quatre cinquièmes du P pris | idem |
+| blé : réserve de K | vide à l'an 30, puis 36 kg K/ha/an comptés sans être pris | jamais vide en 60 ans |
+| blé : lessivage du K | 7 kg/ha/an | 40 kg/ha/an |
+| LER : cellules d'allée à réserve vide, an 59 | 41 à 46 % | 12 à 13 %, au bord |
+| LER : facteurs P et K des noyers | 1,000 | 1,000 |
+| lande : facteur P du pin, ans 1-4, non fauché / fauché | 0,59 / 0,49 | V1 ne touche pas la lande |
+
+### Les prédictions fausses
+
+- B2 : le blé devait prendre 11 à 13 kg P/ha/an ; 14,0 la deuxième année.
+- B4 : le phosphore fixé du blé devait rester entre 80 et 110 kg/ha ; 65,5 à l'an 60.
+- L3 : 0,30 à 0,45 g/m² de phosphore assimilable dans les allées au printemps ; 0,004 à 0,017. Le blé le vide chaque printemps.
+- L4 : 5 à 10 kg P/ha/an manquants dans le LER ; 10,1.
+- D1, D2, D5, D6 (lande) : 2 % de semaines plafonnées sous la fauche (aucune prédite) ; l'humus libère 1,6 kg P/ha la première année (2 à 5 prédits) ; P fixé 121,6 kg/ha (95 à 120) ; réserve de K −14 % (−10 % au plus).
+- V1-K1 : la réserve ne devait se vider nulle part sous V1 ; des cellules de bord du LER se vident dès l'an 24.
+- V1-P1 : 50 à 70 kg P/ha d'assimilable la première année ; 70,2.
+
+### Ce qui reste ouvert
+
+- **Les options de #395** : stocks en unités d'analyse de terre (S), fertilisation P et K (F), culture que P et K freinent (L), chemin symétrique implicite (A de #222), pool de phosphore dans la plante (C de #222, format 13). À trancher.
+- **L'érosion** emporte le potassium échangeable et le phosphore assimilable, pas la réserve ni le fixé, alors que son commentaire dit que le sédiment part avec sa charge.
+- **Lus dans le code, non mesurés** : le phosphore des feuilles d'arbre rendu deux fois ; l'humification d'une paille pauvre puise dans l'azote de l'engrais, qui rend plus tard du phosphore par l'humus.
+- **Le pin landais** gagnait 20 à 30 % quand la strate rendait son phosphore (#222) : chiffre à remesurer sans la double comptabilité de l'humus.
+
+## Ce qu'un lot précédent a appris (le froid de l'hiver, #419, puis le gel des pousses, #371)
 
 Deux décisions de l'utilisateur, prises sur instruction : recaler le débourrement par une loi commune du froid (#419, option O3), puis bâtir dessus le gel des jeunes pousses (#371, option A2). Les prédictions et les mesures sont dans les commits de la branche `claude/v06-gel-pousses`, avant chaque course.
 
