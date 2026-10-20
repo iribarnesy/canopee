@@ -123,8 +123,10 @@ describe("le froid de l'hiver : un hiver doux RETARDE le printemps", () => {
     // C'est le paradoxe documenté du réchauffement sur la phénologie de
     // printemps : le bourgeon ne sort pas de dormance sans avoir eu froid, et
     // un hiver trop doux recule le débourrement au lieu de l'avancer.
+    // L'hiver normal comptait vingt semaines à 0-10 °C ; en unités de Hänninen,
+    // c'est le froid de référence, celui d'un hiver du nord (#419).
     const hetre = getEspece("fagus_sylvatica");
-    const hiverNormal = debourrementExigeDJ(hetre, 20);
+    const hiverNormal = debourrementExigeDJ(hetre, FROID_REFERENCE);
     const hiverDoux = debourrementExigeDJ(hetre, 4);
     expect(hiverNormal).toBeCloseTo(hetre.phenologie.debourrementDJ, 6);
     expect(hiverDoux).toBeGreaterThan(1.5 * hiverNormal);
