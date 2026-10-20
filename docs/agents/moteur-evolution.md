@@ -94,6 +94,14 @@ ModVege fait tomber le mort à 0,001 par °C·j fois un facteur d'âge de 1, 2 o
 
 Sous la version 13, le mort partait en litière la semaine même. Un bloc de version 13 relu avec le mort sur pied à zéro écrit donc l'état qu'il avait, sans compter ce mort deux fois : c'est la deuxième montée qui relit l'ancien bloc, après la neige. Le format passe à 14 (#410 avait pris le 13 pendant ce lot), et le lecteur sait maintenant relire des grilles absentes.
 
+### Déplacer une matière, c'est relire tous ceux qui la lisaient
+
+Le foin qui tombait en litière la semaine même tient maintenant debout. Deux lecteurs de la litière l'ont perdu sans que rien ne casse à la compilation :
+- **le feu**, dont la charge de surface lisait la litière au sol. Sur le banc de la lande, la première année portait moins de combustible, et un incendie de 1 507 cellules n'en faisait plus que 169 : la propagation est un seuil. La charge lit maintenant la litière et le mort sur pied, la même matière, que le feu brûle déjà (1 353 cellules) ;
+- **l'évaporation**, que la litière paille. La première année sèche un peu plus vite, et un hêtre d'essai mourait une semaine plus tôt. Celle-là n'est pas corrigée : le partage de l'eau appartient à #391, qui fera évaporer le sol à proportion de ce qui le couvre.
+
+**Avant de faire changer de compartiment une matière, chercher tout ce qui lit l'ancien.**
+
 ### Un essai peut mesurer au bord d'une mort
 
 `soif-proportionnelle.test.ts` mesurait un hêtre en semaine 28 qui, sur main, avait déjà un stress de 6,9 pour un seuil de 10. Le foin debout ne paillant plus le sol tout de suite, la première année sèche une semaine plus tôt, et le hêtre mourait en semaine 27. L'essai mesure ce qu'une racine boit, pas la survie : il le prend deux semaines plus tôt, ses deux critères inchangés. Le désherbage du banc a été essayé d'abord : il changeait ce que l'arbre boit sur le profil plein (7,9 % au lieu de 3,4 %) et faisait tomber un critère, il n'est pas resté. **Avant de corriger un essai qui casse, relever où il se tenait sur main.**
