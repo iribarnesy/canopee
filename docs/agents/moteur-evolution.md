@@ -61,42 +61,59 @@ qu'un rapport (voir la note de maintenance).
 Séparer calibration et validation : caler un paramètre sur un âge, garder
 l'autre âge pour vérifier.
 
-## Ce que le dernier lot a appris (le phosphore et le potassium des cultures, #395, instruction)
+## Ce que le dernier lot a appris (le potassium des cultures, #395 : instruction, puis stocks déclarés et potasse)
 
-Un lot d'instruction, sans une ligne de moteur. Les mesures, le terrain et les options sont dans #395 (commentaire du 20 octobre) ; les prédictions et les mesures, dans les commits de la branche `claude/v06-phosphore`, avant chaque course. Rien n'est tranché. La recommandation attend le propriétaire : le potassium par ses stocks, puis la potasse ; le phosphore dans un lot à part, avec un pool dans la plante.
+Un lot d'instruction, puis la décision de l'utilisateur : le potassium d'abord (stocks déclarés, puis potasse et potassium du fumier), le phosphore à part (#434, v0.7). Les mesures de l'instruction sont dans #395 (commentaire du 20 octobre) ; les prédictions et les mesures de tout le lot sont dans les commits de la branche `claude/v06-phosphore`, avant chaque course. Le format de sauvegarde ne bouge pas.
 
 ### Rapporter un stock à la masse avant de le comparer
 
-Les stocks de phosphore et de potassium sont en g/m². Ils sortent de deux formules sans source qui ne lisent que l'horizon de surface, sans son épaisseur. Rapportés à la masse de cet horizon, ils se lisent comme une analyse de terre, et la comparaison se fait d'un coup d'œil. Le limon riche porte 2,3 mg P/kg : l'Olsen d'un sol de Rothamsted privé de phosphore depuis 1848 (Syers et al. 2008). Son potassium échangeable, 24,5 mg K/kg, est sous le seuil de pauvreté d'un horizon minéral forestier (Bonneau 1995). Par kilo, il a même moins de phosphore que la lande landaise du moteur. **Avant de chercher une règle, convertir le stock dans l'unité où le terrain le mesure.**
+Les stocks de phosphore et de potassium sont en g/m². Ils sortaient de deux formules sans source qui ne lisent que l'horizon de surface, sans son épaisseur. Rapportés à la masse de cet horizon, ils se lisent comme une analyse de terre. Le limon riche portait 2,3 mg P/kg, l'Olsen d'un sol de Rothamsted privé de phosphore depuis 1848 (Syers et al. 2008), et 24,5 mg K/kg échangeable, sous le seuil de pauvreté d'un horizon minéral forestier (Bonneau 1995). **Avant de chercher une règle, convertir le stock dans l'unité où le terrain le mesure.** Le potassium est maintenant déclaré ainsi, station par station (`potassiumEchangeableMgKg`).
+
+### Chercher la donnée publiée avant le seuil cité
+
+Pour les stations forestières, l'instruction comparait le moteur à un seuil repris de seconde main. Le réseau RENECOFOR publie ses analyses de 102 placettes, couche par couche (Saenger et al. 2023, Zenodo 8391353). On en tire une valeur par station, avec la même méthode : les trois placettes du Loir-et-Cher pour la Sologne, les quatre podzols pour le sable de dekzand, les vingt-sept sols sableux acides pour la suberaie. Le jeu dit aussi sa limite, un seuil de mesure à 0,05 cmol+/kg. Pour les terres agricoles, la carte des médianes cantonales de la BDAT donne la classe (Gis Sol 2011). **Un jeu de données publié vaut mieux qu'un seuil cité : il donne une valeur par station et dit d'où elle vient.** Le moteur était d'ailleurs déjà juste sur les sols forestiers (×0,7 à ×1,25) ; il n'était faux que sur les terres cultivées (×2,7 à ×6,2).
 
 ### Un stock aligné révèle les calages faits sur l'ancien
 
-La variante V1 donne au limon riche les stocks d'un limon cultivé : 20 mg P/kg Olsen et 120 mg K/kg échangeable. Pour le potassium, la réserve ne se vide plus sous le blé en soixante ans. Mais le lessivage, proportionnel au stock et calé sur le stock bas, passe de 7 à 40 kg K/ha/an, de l'ordre de dix fois le terrain. Pour le phosphore, la rétrogradation ramène l'assimilable vers un vingt-troisième du total en cinq ans, quand le terrain donne une demi-vie de neuf ans. **Un nombre calé sur un stock faux devient faux quand le stock devient juste** : chiffrer ce qu'un alignement entraîne avant de le présenter comme un soin.
+Sous la variante V1 de l'instruction, le lessivage du potassium, proportionnel au stock et calé sur le stock bas, passait de 7 à 40 kg K/ha/an, dix fois le terrain. Sa rétention a donc été recalée sur sa propre source, le PDA (1,2 kg K₂O/ha par 100 mm de drainage sur les limons et les argiles), mesurée sur le blé continu : 1,22. **Un nombre calé sur un stock faux devient faux quand le stock devient juste** : chiffrer ce qu'un alignement entraîne avant de le présenter comme un soin.
+
+### Un plafond peut prendre la place de la loi
+
+L'ancienne rétention était plafonnée à 99,5 %. Avec la constante recalée, treize fois plus petite, tout sol de plus de 3 cmol+/kg de capacité d'échange se serait retrouvé sur le plafond, et c'est lui qui aurait fixé le lessivage. Il a été retiré avec l'ancien nombre. **Avant de recaler une constante, vérifier qu'aucun garde ne prendra sa place.**
+
+### Un recalage change aussi les stations qu'on ne regardait pas
+
+La rétention recalée sur un limon cultivé a divisé par neuf le lessivage de la lande : 23,9 kg K/ha/an sur main, 2,6 maintenant. Le podzol perdait plus de potassium par drainage qu'un champ fertilisé, huit fois ses dépôts atmosphériques, et aucun essai ne le regardait. La prédiction disait 5 à 25 % de potassium en plus au bout de douze ans ; il y en a 41 %. **Après un recalage, relever le flux sur toutes les stations, pas seulement sur la cible.**
 
 ### Où va le phosphore que prend une culture
 
-Nulle part : la plante n'en porte pas, la paille ne le rend pas, le grain ne l'emporte pas. Les quatre cinquièmes reviennent de l'humus, qui libère 0,09 g de phosphore par gramme d'azote minéralisé sans phosphore organique derrière. Rendre son phosphore à la strate ne fermerait donc pas le bilan. L'humus rend déjà la part humifiée de sa litière, et il rend de même, une seconde fois, le phosphore des feuilles d'arbre, déjà rendu à leur chute. **Avant d'ajouter un retour, chercher par où le flux revient déjà.**
+Nulle part : la plante n'en porte pas, la paille ne le rend pas, le grain ne l'emporte pas. Les quatre cinquièmes reviennent de l'humus, qui libère 0,09 g de phosphore par gramme d'azote minéralisé sans phosphore organique derrière. L'humus rend aussi une seconde fois le phosphore des feuilles d'arbre, déjà rendu à leur chute. **Avant d'ajouter un retour, chercher par où le flux revient déjà.** C'est le lot #434.
 
 ### Une moyenne non nulle peut cacher des zéros
 
-Sous V1, la réserve de potassium se vide encore dans 12 à 13 % des cellules d'allée du LER, alors que la moyenne des allées en garde 1 600 kg/ha. La carte dit où : toutes au bord de la parcelle, la rangée aval et les deux colonnes extrêmes. **Une moyenne qui ne descend pas à zéro peut cacher des cellules à zéro ; une carte dit si elles sont un champ ou un bord.**
+Sous V1, la réserve de potassium se vidait encore dans 12 à 13 % des cellules d'allée du LER, alors que la moyenne en gardait 1 600 kg/ha : toutes au bord de la parcelle. **Une carte dit si les cellules à zéro sont un champ ou un bord.** Avec les stocks déclarés et le lessivage recalé, aucune ne se vide en soixante ans.
 
 ### Ce que ça donne
 
-Déterministe à graine donnée ; sans arbre, les graines rendent le même bilan au bit près.
+Sans arbre, le moteur est déterministe : les graines 4, 11 et 23 rendent le même bilan au bit près. Avec arbres, les volumes et le grain sont identiques à main à la quatrième décimale sur les trois graines : le potassium ne limitait aucun arbre, et rien d'autre ne le lit.
 
-| | main | V1 (stocks d'un limon cultivé) |
+| | main | #395 |
 |---|---|---|
-| blé 192 kg N : P pris / voulu, kg/ha/an | 12 / 25, plafonné dès l'an 2 | 25 / 25 jusqu'à l'an 11 |
-| blé : P libéré par l'humus | 9 à 10 kg/ha/an, quatre cinquièmes du P pris | idem |
-| blé : réserve de K | vide à l'an 30, puis 36 kg K/ha/an comptés sans être pris | jamais vide en 60 ans |
-| blé : lessivage du K | 7 kg/ha/an | 40 kg/ha/an |
-| LER : cellules d'allée à réserve vide, an 59 | 41 à 46 % | 12 à 13 %, au bord |
-| LER : facteurs P et K des noyers | 1,000 | 1,000 |
-| lande : facteur P du pin, ans 1-4, non fauché / fauché | 0,59 / 0,49 | V1 ne touche pas la lande |
+| K échangeable du limon riche | 24,5 mg K/kg | 124,5 (150 mg K₂O/kg, BDAT) |
+| blé 192 kg N/ha : réserve de K | vide à l'an 29-30, puis 36 kg K/ha/an comptés sans être pris | 3 503 kg/ha à l'an 59 sur 5 436, rien de compté |
+| blé : K échangeable de printemps | 2 kg/ha | 436 kg/ha |
+| blé : lessivage du K | 7,8 kg/ha/an (2,8 kg K₂O par 100 mm) | 3,4 (1,22 ; PDA : 1,2) |
+| blé + 56 kg K₂O/ha/an (Comifer) | | réserve à 6 200 kg/ha à l'an 59 |
+| blé + 170 kg N/ha de fumier | | réserve à 16 140 kg/ha, échangeable à 802 |
+| LER : cellules d'allée à réserve vide, an 59 | 41 à 46 % | aucune |
+| LER complet, graines 4 / 11 / 23 | 1,444 / 1,460 / 1,367 | identique |
+| lande : lessivage du K | 23,9 kg/ha/an | 2,6 |
+| lande : pin fauché / non fauché, douze ans | 0,887 / 0,890 / 0,891 | identique |
+| bouleaux de `pk.test.ts` : lessivage du K | 10,3 kg/ha/an | 3,2 |
 
 ### Les prédictions fausses
 
+De l'instruction :
 - B2 : le blé devait prendre 11 à 13 kg P/ha/an ; 14,0 la deuxième année.
 - B4 : le phosphore fixé du blé devait rester entre 80 et 110 kg/ha ; 65,5 à l'an 60.
 - L3 : 0,30 à 0,45 g/m² de phosphore assimilable dans les allées au printemps ; 0,004 à 0,017. Le blé le vide chaque printemps.
@@ -105,12 +122,18 @@ Déterministe à graine donnée ; sans arbre, les graines rendent le même bilan
 - V1-K1 : la réserve ne devait se vider nulle part sous V1 ; des cellules de bord du LER se vident dès l'an 24.
 - V1-P1 : 50 à 70 kg P/ha d'assimilable la première année ; 70,2.
 
+Du lot :
+- SD1, pour moitié : le K échangeable de la lande devait gagner 5 à 25 % en douze ans ; 41 %. Le lessivage est bien divisé par 9,2.
+- SL3, pour moitié : le facteur P des noyers devait valoir 1,000 ; 0,9955 à la pire semaine de la graine 11, comme dans main. Le lot ne touche pas le phosphore, et le chiffre de l'instruction était une moyenne de saison arrondie.
+
 ### Ce qui reste ouvert
 
-- **Les options de #395** : stocks en unités d'analyse de terre (S), fertilisation P et K (F), culture que P et K freinent (L), chemin symétrique implicite (A de #222), pool de phosphore dans la plante (C de #222, format 13). À trancher.
-- **L'érosion** emporte le potassium échangeable et le phosphore assimilable, pas la réserve ni le fixé, alors que son commentaire dit que le sédiment part avec sa charge.
-- **Lus dans le code, non mesurés** : le phosphore des feuilles d'arbre rendu deux fois ; l'humification d'une paille pauvre puise dans l'azote de l'engrais, qui rend plus tard du phosphore par l'humus.
-- **Le pin landais** gagnait 20 à 30 % quand la strate rendait son phosphore (#222) : chiffre à remesurer sans la double comptabilité de l'humus.
+- **Le phosphore** : stocks, pool dans la plante, superphosphate, culture que P et K freinent, pin landais à remesurer (#434, v0.7, nouveau format de sauvegarde).
+- **L'érosion** emporte le potassium échangeable et le phosphore assimilable, pas la réserve ni le fixé, alors que son commentaire dit que le sédiment part avec sa charge. Sans cible mesurée (plus aucune cellule ne se vide), elle n'est pas corrigée ici.
+- **L'échangeable revient toujours vers la teneur déclarée.** Sous le fumier, la réserve absorbe presque tout l'excédent : 16 000 kg/ha en soixante ans, vingt fois l'échangeable, encore dans la gamme de Balík. Ce que l'échangeable d'une parcelle fumée de longue durée devient sur le terrain n'a pas été confronté.
+- **La texture pèse moins dans le lessivage que sur le terrain**, lu sur la loi et non mesuré : le PDA cite 0,6 et 8,4 kg K₂O/ha par 100 mm pour 24 % et 5 % d'argile au Danemark, quatorze fois plus ; à teneur égale, la loi du moteur donne deux à trois fois plus.
+- **À calibrer ou à confirmer** : le prix de la potasse et sa dose maximale ; le barème Comifer du fumier ; l'unité de la carte BDAT (la légende dit « K échangeable ») ; la suberaie, sans placette RENECOFOR dans les Maures (les deux placettes sur arène granitique, en Corse, portent trois à quatre fois plus).
+- **Le bouton et l'affichage** : aucun bouton n'appelle `fertiliser`, sous aucune forme (#435).
 
 ## Ce qu'un lot précédent a appris (les dates d'une parcelle vieillie, #397)
 

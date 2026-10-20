@@ -30,23 +30,29 @@ import { tick } from "../../src/engine/tick";
  *     strate n'est pas un état : il suit son azote (`potassiumDeLaStrateG`).
  *     Le prélèvement et les retours y deviennent des transferts internes, si
  *     bien qu'une semaine ne doit changer le total que de l'apport moins les
- *     pertes, et un geste que de ce que le grain emporte.
+ *     pertes, et un geste que de ce que le grain emporte, ou de ce que la
+ *     potasse et le fumier apportent (#395).
  *
  * Le second bilan est le plus exigeant : il échoue si un retour manque, s'il
  * compte deux fois, ou si la strate prend son azote sans le potassium qui va
- * avec. Un blé fertilisé vide chaque printemps le potassium échangeable du
- * limon ; la réserve non échangeable fournit alors le reste
- * (`prelevementPotassium`, pk.ts), et le bilan reste exact **tant qu'elle n'est
- * pas vide**. L'essai vérifie donc aussi qu'elle ne s'est vidée nulle part. Si
+ * avec. Quand un blé fertilisé vide le potassium échangeable, la réserve non
+ * échangeable fournit le reste (`prelevementPotassium`, pk.ts), et le bilan
+ * reste exact **tant qu'elle n'est pas vide**. L'essai vérifie donc aussi qu'elle ne s'est vidée nulle part. Si
  * elle se vide, la plante prend son azote sans son potassium, le pool implicite
  * compte un potassium qu'elle n'a pas pris, et le bilan ne peut plus tenir :
  * l'essai le dit alors par son propre message, avant l'écart du bilan.
  *
- * La précision est de 1e-4 kg/ha : le potassium échangeable est tenu en
- * flottants simples, et une dizaine de g/m² s'y arrondit au millionième.
+ * La précision est de 1e-3 kg/ha, et elle suit la grandeur du stock : le
+ * potassium échangeable est tenu en flottants simples. Elle était de 1e-4 quand
+ * le limon riche en portait une dizaine de g/m². Depuis qu'il porte la teneur
+ * d'une terre cultivée (#395), 54 g/m², une écriture s'arrondit à 3e-5 kg/ha
+ * près. Sur cette parcelle plate, toutes les cellules sont identiques : leurs
+ * arrondis s'additionnent au lieu de se compenser, et une semaine en compte
+ * plusieurs. Mesuré : 5e-5 sur le blé, 9e-5 sous le fumier. Une fuite réelle
+ * se compte en dixièmes de kilo par semaine.
  */
 
-const PRECISION = 4;
+const PRECISION = 3;
 const moyenne = (a: ArrayLike<number>) => {
   let t = 0;
   for (let i = 0; i < a.length; i++) t += a[i] ?? 0;
