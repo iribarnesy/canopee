@@ -274,6 +274,7 @@ import {
   AZOTE_HOUPPIER_G_M2_AN,
   cnBois,
   dureeChandelleSemaines,
+  EMBOLIE_DEFEUILLAISON,
   estInstalle,
   fractionsRacinairesParHorizon,
   LITTER_RETURN_FRACTION,
@@ -3084,9 +3085,10 @@ export function tick(state: GameState, weather: WeekWeather): TickResult {
     return { ...tree, gelPousseSemaine: state.week };
   });
   // **La soif, elle, fait tomber le feuillage en plein été** (#391). Un feuillu
-  // installé ne laisse pas casser son bois : quand la soif atteint le seuil où
-  // ses vaisseaux commenceraient à s'emboliser, il lâche ses feuilles encore
-  // vertes. Le hêtre de 2003 s'est entièrement défeuillé, le charme en partie, le
+  // installé ne laisse pas casser son bois : quand la soif l'embolise encore et
+  // qu'il a déjà perdu 12 % de sa conductivité, le point où l'embolie s'emballe
+  // (`EMBOLIE_DEFEUILLAISON`), il lâche ses feuilles encore vertes. Le hêtre de
+  // 2003 s'est entièrement défeuillé, le charme en partie, le
   // chêne pas du tout ; les feuilles tombées étaient vertes, les organes
   // pérennes protégés, et ces hêtres avaient un houppier normal l'été suivant
   // (Bréda et al. 2006, *Ann. For. Sci.* 63 : 625). En 1976, bouleaux et
@@ -3104,6 +3106,7 @@ export function tick(state: GameState, weather: WeekWeather): TickResult {
       return tree;
     }
     if ((waterSatisfaction[t] ?? 1) >= seuilDeCavitation(espece)) return tree;
+    if (tree.dommageHydraulique < EMBOLIE_DEFEUILLAISON) return tree;
     return { ...tree, defeuillaisonSemaine: state.week };
   });
 

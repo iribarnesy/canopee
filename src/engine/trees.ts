@@ -546,6 +546,24 @@ export const EMBOLIE_LETALE_FEUILLU = 0.88;
  */
 export const EMBOLIE_LETALE_RESINEUX = 0.5;
 
+/**
+ * Part de la conductivité perdue à laquelle un feuillu installé lâche ses
+ * feuilles : 12 %, le point d'entrée d'air, où la perte de conductivité se met
+ * à croître vite (Meinzer et al. 2009, *Funct. Ecol.* 23 : 922 ; seuil à 12 %
+ * de Domec et Gartner 2001, d'après Gleason et al. 2016).
+ *
+ * Les hêtres que la sécheresse de 2003 a défeuillés avaient lâché des feuilles
+ * vertes, les pétioles sans doute embolisés, sans presque rien perdre de la
+ * conductivité de leurs rameaux (Bréda et al. 2006) : la feuille tombe quand
+ * le bois commence à casser, pas avant, et c'est ce qui le protège. Et c'est un
+ * événement rare : à Hesse, la première défeuillaison estivale mesurée en
+ * trente ans, depuis 1976. Déclencher la chute dès que la soif passe le seuil de
+ * cavitation, sans attendre que le bois casse, défeuillait un aulne du limon
+ * neuf étés sur onze (#391). *(à confirmer : la chute au point d'entrée d'air
+ * est une lecture de la segmentation hydraulique, pas une mesure.)*
+ */
+export const EMBOLIE_DEFEUILLAISON = 0.12;
+
 /** Le seuil d'embolie qui tue cette essence, selon son grand groupe. */
 export function embolieLetale(espece: EspeceV0): number {
   return espece.eau.resineux ? EMBOLIE_LETALE_RESINEUX : EMBOLIE_LETALE_FEUILLU;
