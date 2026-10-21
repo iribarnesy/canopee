@@ -37,7 +37,12 @@ describe("hauteurs absolues contre les tables de production (frêne, charme, ch�
           `${ref.nom} à ${jalon} : ${obtenu.toFixed(1)} m simulés contre ${attendu} m dans la table (${(100 * ecart).toFixed(0)} %)`,
         ).toBeLessThan(tolerance);
       }
-    }, 300_000);
+      // **Le délai** (#378) : deux graines de quarante ans par essence, sur la
+      // parcelle déjà réduite de `hauteurs-commun.ts`. En CI sur main (six
+      // courses), le frêne en prend 140 à 189 s, le châtaignier et le charme
+      // jusqu'à 175, pour 300 s de délai. Il fait 2,5 fois la plus longue course
+      // de main, arrondi à la minute.
+    }, 480_000);
   }
   it("le châtaignier de semis reste DERRIÈRE la courbe de taillis en jeunesse", () => {
     // Le sens de l'écart est une prédiction, pas un réglage : un rejet de

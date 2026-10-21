@@ -78,8 +78,18 @@ describe("ce que la mémoire d'abri sait dire", () => {
   });
 });
 
-/** Quarante ans de pins : le peuplement qu'on va éclaircir. */
+/**
+ * Quarante ans de pins : le peuplement qu'on va éclaircir.
+ *
+ * Il ne se joue qu'une fois par graine (#378) : l'essai de l'estompe éclaircit
+ * la graine 7, que l'essai du haut et du bas a déjà jouée. Le moteur est
+ * déterministe, et une éclaircie rend un état neuf sans toucher au peuplement.
+ */
+const PEUPLEMENTS = new Map<string, GameState>();
 function peuplement(graine: number, ans = 40): GameState {
+  const cle = `${graine}|${ans}`;
+  const deja = PEUPLEMENTS.get(cle);
+  if (deja) return deja;
   let s: GameState = plantScattered(
     createGameState(STATION, rngStateFromSeed(graine)),
     "pinus_sylvestris",
@@ -90,6 +100,7 @@ function peuplement(graine: number, ans = 40): GameState {
     if (!w) throw new Error("météo manquante");
     s = tick(s, w).state;
   }
+  PEUPLEMENTS.set(cle, s);
   return s;
 }
 
@@ -273,5 +284,12 @@ describe("LE CRITÈRE : un peuplement qu'on vient d'ouvrir verse", () => {
     expect(toutDeSuiteTemoin).toBeGreaterThan(0);
     expect(toutDeSuiteEclairci).toBeGreaterThan(1.75 * toutDeSuiteTemoin);
     expect(couchesEclairci).toBeGreaterThan(1.3 * couchesTemoin);
-  }, 900_000);
+    // **Le délai** (#378) : six graines de quarante ans, puis deux bras de douze.
+    // Rien ne s'y rogne : les couchés se comptent par dizaines sur les six
+    // graines (49 contre 20 sur cinq ans), et une graine de moins amincit
+    // l'effectif qui porte le rapport. 421 à 557 s en CI sur main (six courses)
+    // pour 900 s de délai,
+    // 597 s sur une autre tête. Il fait 2,5 fois la plus longue course de main,
+    // arrondi à la minute.
+  }, 1_440_000);
 });

@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest";
+import { beforeAll, describe, expect, it } from "vitest";
 import { ESPECES_V0, getEspece } from "../../src/engine/especes";
 import { syntheticYear } from "../../src/engine/meteo";
 import { rngStateFromSeed } from "../../src/engine/rng";
@@ -85,21 +85,59 @@ const meteo = syntheticYear(LIMON_RICHE.climat);
  * ce qui n'a pas atteint cinquante centimètres — il tuait un charme sur vingt et
  * l'essai du dessous comptait des morts qui n'avaient rien à voir avec le sol.
  */
-function peuplement(plantations: [string, number][], annees: number, seed: number): GameState {
+function peuplementAuxAges(
+  plantations: [string, number][],
+  ages: readonly number[],
+  seed: number,
+): Map<number, GameState> {
   let s = createGameState(
     { ...ACIDE, gibierParHa: 0, sanglierParHa: 0, voisinage: [] },
     rngStateFromSeed(seed),
   );
   for (const [id, n] of plantations) s = plantScattered(s, id, n, 0.3);
-  for (let i = 0; i < annees * 52; i++) {
+  const releves = new Map<number, GameState>();
+  const dernier = Math.max(...ages);
+  for (let i = 0; i < dernier * 52; i++) {
     const w = meteo[s.week % meteo.length];
     if (!w) throw new Error("météo manquante");
     s = tick(s, w).state;
+    if (ages.includes((i + 1) / 52)) releves.set((i + 1) / 52, s);
   }
+  return releves;
+}
+
+function peuplement(plantations: [string, number][], annees: number, seed: number): GameState {
+  const s = peuplementAuxAges(plantations, [annees], seed).get(annees);
+  if (!s) throw new Error("âge non relevé");
+  return s;
+}
+
+/**
+ * **Les charmes purs ne se jouent qu'une fois** (#378). L'essai de quinze ans et
+ * celui de quarante plantaient le même peuplement sur les mêmes graines, et le
+ * premier rejouait donc les quinze premières années du second. Le moteur est
+ * déterministe et une course ne connaît pas son horizon : l'état relevé à
+ * quinze ans d'une course de quarante est celui qu'une course de quinze rend,
+ * à l'octet.
+ */
+const charmesPurs = new Map<number, Map<number, GameState>>();
+function charmesPursA(age: number, graine: number): GameState {
+  const s = charmesPurs.get(graine)?.get(age);
+  if (!s) throw new Error(`charmes purs : ${age} ans non relevés sur la graine ${graine}`);
   return s;
 }
 
 describe("le pH distingue enfin pousser mal et mourir", () => {
+  // Trois courses de quarante ans, une par graine. Mesuré en CI sur main, six
+  // courses vertes : 86 à 113 s, quand l'essai de quarante ans les jouait. Le
+  // délai fait 2,5 fois la plus longue, arrondi à la minute : c'est un délai de
+  // calcul, pas une borne de réalisme.
+  beforeAll(() => {
+    for (const g of GRAINES) {
+      charmesPurs.set(g, peuplementAuxAges([["carpinus_betulus", 20]], [15, 40], g));
+    }
+  }, 300_000);
+
   it("DANS son amplitude, aucune espèce ne voit son facteur bouger d'un iota", () => {
     // **La garantie qui protège les tables de production**, et elle est structurelle
     // plutôt que mesurée : la queue de croissance ne vit qu'au-dehors, donc à
@@ -158,7 +196,7 @@ describe("le pH distingue enfin pousser mal et mourir", () => {
     // 4,5-8,0) : 0/20 vivants à cinq ans, cause `solHorsGamme`, à un pH que
     // l'atlas donne pour tolérable.
     for (const g of GRAINES) {
-      const s = peuplement([["carpinus_betulus", 20]], 15, g);
+      const s = charmesPursA(15, g);
       const coh = s.trees.filter((t) => t.id <= 20);
       const vivants = coh.filter((t) => t.alive);
       expect(vivants.length).toBeGreaterThan(15);
@@ -172,7 +210,7 @@ describe("le pH distingue enfin pousser mal et mourir", () => {
     // d'un millimètre ni mourir. L'issue dit « pousse mal **et** tient », pas « ne
     // pousse pas ». D'où la queue de croissance dans la marge.
     const hauteurs = GRAINES.map((g) => {
-      const s = peuplement([["carpinus_betulus", 20]], 40, g);
+      const s = charmesPursA(40, g);
       const v = s.trees.filter((t) => t.alive && t.id <= 20);
       return v.reduce((a, t) => a + t.heightM, 0) / v.length;
     });
@@ -245,5 +283,12 @@ describe("le pH distingue enfin pousser mal et mourir", () => {
       expect(hp).toBeGreaterThan(5);
       expect(hc).toBeLessThan(2);
     }
-  });
+    // **Un délai à lui** (#378). Trois pinèdes de cinquante ans : 143 à 174 s en
+    // CI sur main (six courses vertes), jusqu'à 212 s sur d'autres têtes, et
+    // trois échecs relevés sur le délai par défaut de 180 s (#364, #410, #411)
+    // sans une assertion fausse. Rien ne s'y raccourcit sans
+    // changer la mesure : l'âge porte la hauteur que le plancher du pin juge, la
+    // parcelle porte la densité, et une partie n'est pas une mesure. Le délai
+    // fait 2,5 fois la plus longue course de main, arrondi à la minute.
+  }, 480_000);
 });
