@@ -221,7 +221,7 @@ describe("arbustes : ce que disent les mesures de terrain, faute de tables", () 
         expect(h, message).toBeGreaterThan(bande.bas);
         expect(h, message).toBeLessThan(bande.haut);
       }
-    }, 120_000);
+    });
   }
 
   it("le troène devance le fusain, comme dans l'essai de Grubb", () => {
