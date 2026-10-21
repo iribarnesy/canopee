@@ -286,3 +286,19 @@ describe("la saison sur la bête", () => {
     expect(boisDuBrocard(46)).toBe(false);
   });
 });
+
+describe("les marques d'avant l'arrivée (#414)", () => {
+  it("une marque de la semaine −1 est un témoin frais à la semaine 0", () => {
+    // Depuis #410, les dates du vieillissement arrivent négatives.
+    const t = temoinsDuGibier(
+      monde({
+        semaine: 0,
+        arbres: [
+          { id: 1, x: 10, y: 10, brouteSemaine: -1 },
+          { id: 2, x: 20, y: 10, brouteSemaine: -40 },
+        ],
+      }),
+    );
+    expect(t.map((a) => a.id)).toEqual([1]);
+  });
+});

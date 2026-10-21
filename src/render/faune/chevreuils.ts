@@ -227,8 +227,12 @@ export function surfaceOuverteHa(monde: Pick<MondeDuGibier, "coteM" | "cloture">
  * trois ans et brouté cette semaine est un témoin de broutage, pas de frottis.
  */
 export function temoinsDuGibier(monde: MondeDuGibier): ArbreDuGibier[] {
+  // Les dates sont du compte du joueur (#410) : l'écart est toujours positif ou
+  // nul, et une marque de la semaine −1 est un témoin frais à la semaine 0. La
+  // garde `semaine ≥ s`, qui écartait les dates du vieillissement lues comme à
+  // venir, n'a plus rien à écarter (#414).
   const recent = (s: number | undefined): s is number =>
-    s !== undefined && monde.semaine >= s && monde.semaine - s <= TEMOIN_SEMAINES;
+    s !== undefined && monde.semaine - s <= TEMOIN_SEMAINES;
   const temoins: ArbreDuGibier[] = [];
   for (const a of monde.arbres) {
     const broute = recent(a.brouteSemaine);
