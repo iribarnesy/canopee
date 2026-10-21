@@ -128,16 +128,6 @@ function charmesPursA(age: number, graine: number): GameState {
 }
 
 describe("le pH distingue enfin pousser mal et mourir", () => {
-  // Trois courses de quarante ans, une par graine. Mesuré en CI sur main, sept
-  // courses : 74 à 113 s, quand l'essai de quarante ans les jouait. Le
-  // délai fait 2,5 fois la plus longue, arrondi à la minute : c'est un délai de
-  // calcul, pas une borne de réalisme.
-  beforeAll(() => {
-    for (const g of GRAINES) {
-      charmesPurs.set(g, peuplementAuxAges([["carpinus_betulus", 20]], [15, 40], g));
-    }
-  }, 300_000);
-
   it("DANS son amplitude, aucune espèce ne voit son facteur bouger d'un iota", () => {
     // **La garantie qui protège les tables de production**, et elle est structurelle
     // plutôt que mesurée : la queue de croissance ne vit qu'au-dehors, donc à
@@ -191,33 +181,46 @@ describe("le pH distingue enfin pousser mal et mourir", () => {
     expect(facteurSurviePh(charme.ph, min - MARGE_SURVIE_PH - 0.2)).toBe(0);
   });
 
-  it("un charme sous sa borne SURVIT, là où il mourait à 20 sur 20", () => {
-    // Avant ce lot, mesuré sur ces trois graines (sur le hêtre, alors calé
-    // 4,5-8,0) : 0/20 vivants à cinq ans, cause `solHorsGamme`, à un pH que
-    // l'atlas donne pour tolérable.
-    for (const g of GRAINES) {
-      const s = charmesPursA(15, g);
-      const coh = s.trees.filter((t) => t.id <= 20);
-      const vivants = coh.filter((t) => t.alive);
-      expect(vivants.length).toBeGreaterThan(15);
-      expect(coh.filter((t) => t.causeMort === "solHorsGamme")).toHaveLength(0);
-    }
-  });
+  describe("les charmes purs, une course par graine pour les deux essais qui les lisent", () => {
+    // Trois courses de quarante ans, une par graine. Mesuré en CI sur main, sept
+    // courses : 74 à 113 s, quand l'essai de quarante ans les jouait. Le délai
+    // fait 2,5 fois la plus longue, arrondi à la minute : c'est un délai de
+    // calcul, pas une borne de réalisme. Le crochet ne porte que les deux essais
+    // qui le lisent : s'il tombe, les essais de fonctions n'en tombent pas.
+    beforeAll(() => {
+      for (const g of GRAINES) {
+        charmesPurs.set(g, peuplementAuxAges([["carpinus_betulus", 20]], [15, 40], g));
+      }
+    }, 300_000);
 
-  it("mais il VÉGÈTE : il pousse, très peu, et n'est pas un nain immortel", () => {
-    // Le premier jet de ce lot laissait la croissance à zéro sous la borne :
-    // l'arbre tenait cinquante ans à ses 0,30 m de plantation, sans grandir
-    // d'un millimètre ni mourir. L'issue dit « pousse mal **et** tient », pas « ne
-    // pousse pas ». D'où la queue de croissance dans la marge.
-    const hauteurs = GRAINES.map((g) => {
-      const s = charmesPursA(40, g);
-      const v = s.trees.filter((t) => t.alive && t.id <= 20);
-      return v.reduce((a, t) => a + t.heightM, 0) / v.length;
+    it("un charme sous sa borne SURVIT, là où il mourait à 20 sur 20", () => {
+      // Avant ce lot, mesuré sur ces trois graines (sur le hêtre, alors calé
+      // 4,5-8,0) : 0/20 vivants à cinq ans, cause `solHorsGamme`, à un pH que
+      // l'atlas donne pour tolérable.
+      for (const g of GRAINES) {
+        const s = charmesPursA(15, g);
+        const coh = s.trees.filter((t) => t.id <= 20);
+        const vivants = coh.filter((t) => t.alive);
+        expect(vivants.length).toBeGreaterThan(15);
+        expect(coh.filter((t) => t.causeMort === "solHorsGamme")).toHaveLength(0);
+      }
     });
-    for (const h of hauteurs) {
-      expect(h).toBeGreaterThan(0.45); // il a poussé
-      expect(h).toBeLessThan(2); // et très peu : quarante ans pour deux tiers de mètre
-    }
+
+    it("mais il VÉGÈTE : il pousse, très peu, et n'est pas un nain immortel", () => {
+      // Le premier jet de ce lot laissait la croissance à zéro sous la borne :
+      // l'arbre tenait cinquante ans à ses 0,30 m de plantation, sans grandir
+      // d'un millimètre ni mourir. L'issue dit « pousse mal **et** tient », pas « ne
+      // pousse pas ». D'où la queue de croissance dans la marge.
+      const hauteurs = GRAINES.map((g) => {
+        const s = charmesPursA(40, g);
+        const v = s.trees.filter((t) => t.alive && t.id <= 20);
+        return v.reduce((a, t) => a + t.heightM, 0) / v.length;
+      });
+      for (const h of hauteurs) {
+        expect(h).toBeGreaterThan(0.45); // il a poussé
+        expect(h).toBeLessThan(2); // et très peu : quarante ans pour deux tiers de mètre
+      }
+    });
   });
 
   it("et il reste un BRIN DOMINÉ dans une pinède : C7 tient autrement", () => {
