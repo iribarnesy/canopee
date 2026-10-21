@@ -440,6 +440,12 @@ describe("le dispositif à trois bras, soixante ans", () => {
    * sien, et la réserve fournit ce que l'échangeable n'a plus), mêmes graines :
    * culture 0,648 / 0,651 / 0,662, arbre 0,809 / 0,752 / 0,719, **total 1,457 /
    * 1,404 / 1,381**.
+   *
+   * **Relevé depuis que les stations déclarent leur potassium** (#395 : le limon
+   * riche porte la teneur d'une terre cultivée, et aucune cellule d'allée ne vide
+   * plus sa réserve), mêmes graines : culture 0,637 / 0,639 / 0,652, arbre
+   * 0,806 / 0,821 / 0,715, **total 1,444 / 1,460 / 1,367**, identique à main au
+   * millième. Main en était déjà là, après #396, #412 et #420.
    */
   it("le mélange bat la somme des parties", () => {
     const agro = bras(RANGS_AGROFORESTERIE, true);

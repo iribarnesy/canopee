@@ -440,6 +440,34 @@ beforeAll(() => {
         },
         attendu: "refus",
       },
+      {
+        nom: "potasse",
+        state: vieux,
+        action: {
+          type: "fertiliser",
+          week: w,
+          x: c,
+          y: c,
+          rayonM: 10,
+          forme: "potasse",
+          doseKgK2OHa: 60,
+        },
+        attendu: "travail",
+      },
+      {
+        nom: "potasse au-delà de la dose maximale",
+        state: vieux,
+        action: {
+          type: "fertiliser",
+          week: w,
+          x: c,
+          y: c,
+          rayonM: 10,
+          forme: "potasse",
+          doseKgK2OHa: 400,
+        },
+        attendu: "refus",
+      },
     ],
     trogner: [
       {
