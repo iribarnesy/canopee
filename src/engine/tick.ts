@@ -273,12 +273,13 @@ import {
   AZOTE_HOUPPIER_G_M2_AN,
   cnBois,
   dureeChandelleSemaines,
+  estInstalle,
   fractionsRacinairesParHorizon,
   LITTER_RETURN_FRACTION,
-  prochainDommageHydraulique,
   rootRadiusM,
   STRESS_LETHAL,
   seasonFactor,
+  seuilDeCavitation,
   tickTree,
   treeExtractionCapacityGWeek,
   treeNitrogenNeedGWeek,
@@ -826,11 +827,16 @@ export function tick(state: GameState, weather: WeekWeather): TickResult {
   //
   // Un arbre dont les jeunes pousses ont gelé n'a plus ce feuillage-là, et il ne
   // revient qu'en quelques semaines (gelPousses.ts, #371) : ni ombre, ni
-  // croissance, ni transpiration pour ce qui manque.
-  const feuillageRevenu = (tree: TreeState): number => {
-    if (tree.gelPousseSemaine === undefined) return 1;
-    return refeuillaison(state.week - tree.gelPousseSemaine);
-  };
+  // croissance, ni transpiration pour ce qui manque. Celui que la soif a fait
+  // tomber revient de même, par les bourgeons dormants (#391).
+  const revenuApresLeGel = (tree: TreeState): number =>
+    tree.gelPousseSemaine === undefined ? 1 : refeuillaison(state.week - tree.gelPousseSemaine);
+  const revenuApresLaSoif = (tree: TreeState): number =>
+    tree.defeuillaisonSemaine === undefined
+      ? 1
+      : refeuillaison(state.week - tree.defeuillaisonSemaine);
+  const feuillageRevenu = (tree: TreeState): number =>
+    Math.min(revenuApresLeGel(tree), revenuApresLaSoif(tree));
   const partOmbrageanteDe: PartOmbrageante = (tree) =>
     partFoliaireOmbrageanteDans(getEspece(tree.especeId), pheno) * feuillageRevenu(tree);
   const groundLight = computeGroundLight(trees, dims.widthM, dims.heightM, partOmbrageanteDe);
@@ -2690,10 +2696,14 @@ export function tick(state: GameState, weather: WeekWeather): TickResult {
       tMean: weather.tMean,
       // Le feuillage **actif**, pas l'ombrageant : des feuilles mortes de
       // marcescence font de l'ombre mais ne travaillent pas (phenologie.ts).
-      // Et ce que le gel des pousses a emporté manque, et se paie (#371).
+      // Et ce que le gel des pousses a emporté manque, et se paie (#371) ; ce que
+      // la soif a fait tomber aussi, sous son propre nom (#391).
       partFoliaire: partFoliaireActiveDans(getEspece(tree.especeId), pheno) * feuillageRevenu(tree),
       feuillageGele:
-        partFoliaireActiveDans(getEspece(tree.especeId), pheno) * (1 - feuillageRevenu(tree)),
+        partFoliaireActiveDans(getEspece(tree.especeId), pheno) * (1 - revenuApresLeGel(tree)),
+      feuillageTombe:
+        partFoliaireActiveDans(getEspece(tree.especeId), pheno) *
+        Math.max(0, revenuApresLeGel(tree) - revenuApresLaSoif(tree)),
       facteurCo2,
     });
     const next = result.tree;
@@ -2743,16 +2753,9 @@ export function tick(state: GameState, weather: WeekWeather): TickResult {
     // La vigueur suit le facteur limitant, lissée sur quelques mois : c'est
     // l'état de santé que les ravageurs lisent, pas la hauteur.
     const vigueur = next.vigueur + ((result.limitingFactor ?? 1) - next.vigueur) * 0.05;
-    // La cavitation s'installe vite et se dilue lentement : c'est la mémoire
-    // pluriannuelle des sécheresses (trees.ts).
     const houppierPerdu = next.houppierPerdu
       ? prochainHouppierPerdu(next.houppierPerdu, 0) || undefined
       : undefined;
-    const dommageHydraulique = prochainDommageHydraulique(
-      next.dommageHydraulique,
-      waterSatisfaction[t] ?? 1,
-      getEspece(tree.especeId).eau.seuilStressSecheresse,
-    );
     // Élagage naturel (docs/realisme.md B10) : sous l'ombre, les branches
     // basses cessent de payer leur respiration et meurent. La base du houppier
     // **monte**, et ne redescend jamais — une branche morte ne repousse pas. C'est
@@ -2775,7 +2778,6 @@ export function tick(state: GameState, weather: WeekWeather): TickResult {
     return {
       ...next,
       vigueur,
-      dommageHydraulique,
       houppierPerdu,
       baseHouppierM,
       uptakeYearG: next.uptakeYearG + acquired - prisAuFeuillage,
@@ -3028,7 +3030,7 @@ export function tick(state: GameState, weather: WeekWeather): TickResult {
     return { ...tree, fruitsKg, fruitProgress, bloomFrosted };
   });
 
-  // ── 5 bis B. Le gel des jeunes pousses (#371) ─────────────────────────────
+  // ── 5 bis B. Les feuilles perdues : le gel des pousses, la soif de l'été (#371, #391) ──
   // Une nuit de printemps grille le feuillage qui vient de sortir. Le bourgeon
   // dormant ne craint rien, la feuille durcie non plus : seul le feuillage
   // **tendre** gèle, entre le débourrement et quelques semaines après. Le seuil
@@ -3037,7 +3039,10 @@ export function tick(state: GameState, weather: WeekWeather): TickResult {
   // et la nuit se juge sous le couvert qui surplombe l'arbre : le semis du
   // milieu d'une coupe gèle, celui qui pousse sous un houppier non. L'arbre
   // perd le feuillage sorti, le refait en huit semaines environ sur ses
-  // réserves, et l'année de croissance en paie le prix (gelPousses.ts).
+  // réserves, et l'année de croissance en paie le prix (gelPousses.ts). En plein
+  // été, c'est la soif qui fait tomber les feuilles : un feuillu installé les
+  // lâche encore vertes plutôt que de laisser casser son bois, et les refait de
+  // même.
   const debutDeLAnnee = state.week - week;
   nextTrees = nextTrees.map((tree, t) => {
     if (!tree.alive) return tree;
@@ -3051,6 +3056,29 @@ export function tick(state: GameState, weather: WeekWeather): TickResult {
       return tree;
     }
     return { ...tree, gelPousseSemaine: state.week };
+  });
+  // **La soif, elle, fait tomber le feuillage en plein été** (#391). Un feuillu
+  // installé ne laisse pas casser son bois : quand la soif atteint le seuil où
+  // ses vaisseaux commenceraient à s'emboliser, il lâche ses feuilles encore
+  // vertes. Le hêtre de 2003 s'est entièrement défeuillé, le charme en partie, le
+  // chêne pas du tout ; les feuilles tombées étaient vertes, les organes
+  // pérennes protégés, et ces hêtres avaient un houppier normal l'été suivant
+  // (Bréda et al. 2006, *Ann. For. Sci.* 63 : 625). En 1976, bouleaux et
+  // charmes ont perdu leurs feuilles en juillet et en août sans mourir (Aussenac
+  // 1978). L'arbre sans feuilles ne transpire plus, n'assimile plus, n'ombrage
+  // plus, et refait son feuillage sur ses réserves par ses bourgeons dormants,
+  // comme après un gel des pousses ; il ne lâche que celui qu'il porte. Un plant
+  // ne le fait pas : la soif le dessèche avant (trees.ts, `estInstalle`), et un
+  // persistant garde ses aiguilles.
+  nextTrees = nextTrees.map((tree, t) => {
+    if (!tree.alive || !estInstalle(tree)) return tree;
+    const espece = getEspece(tree.especeId);
+    if (!espece.lumiere.caduc || feuillageRevenu(tree) < 1) return tree;
+    if (partFoliaireActiveDans(espece, pheno) <= (espece.lumiere.retentionHivernale ?? 0)) {
+      return tree;
+    }
+    if ((waterSatisfaction[t] ?? 1) >= seuilDeCavitation(espece)) return tree;
+    return { ...tree, defeuillaisonSemaine: state.week };
   });
 
   // ── 5 ter. Le gibier (§7.4, ch4-C) ────────────────────────────────────────

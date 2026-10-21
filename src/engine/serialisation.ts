@@ -205,8 +205,18 @@ const MAGIE = "CANOPEE\u0000";
  * date du joueur dès que le compteur l'a dépassée : aucune conversion n'est
  * sûre. On refuse, et le rejeu du journal refait le vieillissement avec ses
  * dates justes.
+ *
+ * **14 (issue #391, la soif d'un arbre installé)** : un feuillu installé lâche
+ * ses feuilles sous la soif, et l'arbre garde la date où elles sont tombées
+ * (`defeuillaisonSemaine`), qui dit où en est la refeuillaison. La forme du bloc
+ * ne bouge pas, et l'absence de la date est innocente, comme le manteau neigeux
+ * de la version 9 : un moteur de version 13 ne faisait jamais tomber de
+ * feuilles sous la soif, et un arbre sans date est exactement l'arbre qu'il
+ * écrivait. Un bloc de version 13 se relit donc tel quel (`VERSIONS_RELUES`).
+ * Un moteur de version 13, lui, refuse un bloc de version 14 : il rendrait ses
+ * feuilles à un arbre qui les refait encore.
  */
-export const VERSION_FORMAT = 13;
+export const VERSION_FORMAT = 14;
 
 /**
  * Les versions d'un bloc que ce moteur sait relire, et ce qu'il faut ajouter à
@@ -215,6 +225,9 @@ export const VERSION_FORMAT = 13;
  */
 const VERSIONS_RELUES: Record<number, Record<string, unknown>> = {
   [VERSION_FORMAT]: {},
+  // Rien à ajouter au sol : seule une date d'arbre manque, et son absence dit
+  // « jamais défeuillé par la soif », ce qui était vrai (#391).
+  13: {},
 };
 
 /** Une grille de sol, telle que l'en-tête la déclare. */
