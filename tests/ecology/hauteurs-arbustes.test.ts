@@ -38,9 +38,9 @@ describe("hauteurs absolues contre les tables de production (frêne, charme, ch�
         ).toBeLessThan(tolerance);
       }
       // **Le délai** (#378) : deux graines de quarante ans par essence, sur la
-      // parcelle déjà réduite de `hauteurs-commun.ts`. En CI sur main (six
-      // courses), le frêne en prend 140 à 189 s, le châtaignier et le charme
-      // jusqu'à 175, pour 300 s de délai. Il fait 2,5 fois la plus longue course
+      // parcelle déjà réduite de `hauteurs-commun.ts`. En CI sur main (sept
+      // courses), le frêne en prend 141 à 189 s, le châtaignier et le charme
+      // jusqu'à 185, pour 300 s de délai. Il fait 2,5 fois la plus longue course
       // de main, arrondi à la minute.
     }, 480_000);
   }

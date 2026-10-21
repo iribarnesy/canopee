@@ -425,7 +425,7 @@ describe("le bois d'un peuplement qui vit et meurt", () => {
     // fixée : ce 0,9936 est reproductible, pas un tirage heureux.
     expect(moy(oriente, "eau")).toBeLessThan(0.995 * moy(aPlat, "eau"));
     // **Un délai à lui** (#378). Quatre courses de soixante ans : 98 à 187 s en
-    // CI sur main (six courses), et main est tombé une fois sur le délai
+    // CI sur main (sept courses), et main est tombé une fois sur le délai
     // par défaut de 180 s sans une assertion fausse (b90b6fd). Le haut de
     // l'essai dit pourquoi ni l'âge, ni la parcelle, ni les graines ne se
     // rognent plus. Le délai fait 2,5 fois la plus longue course de main,

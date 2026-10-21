@@ -157,8 +157,8 @@ describe("hauteurs absolues contre les tables de production (hêtre, pin, aulne)
         ).toBeLessThan(tolerance);
       }
       // **Le délai** (#378) : deux graines de quarante ans par essence, sur la
-      // parcelle déjà réduite de `hauteurs-commun.ts`. En CI sur main (six
-      // courses), le pin en prend 154 à 214 s, le hêtre et l'aulne jusqu'à 183,
+      // parcelle déjà réduite de `hauteurs-commun.ts`. En CI sur main (sept
+      // courses), le pin en prend 154 à 214 s, le hêtre et l'aulne jusqu'à 189,
       // pour 300 s de délai ; le pin a pris 251 s sur une autre tête. Il fait
       // 2,5 fois la plus longue course de main, arrondi à la minute.
     }, 540_000);

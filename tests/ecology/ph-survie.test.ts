@@ -128,8 +128,8 @@ function charmesPursA(age: number, graine: number): GameState {
 }
 
 describe("le pH distingue enfin pousser mal et mourir", () => {
-  // Trois courses de quarante ans, une par graine. Mesuré en CI sur main, six
-  // courses vertes : 86 à 113 s, quand l'essai de quarante ans les jouait. Le
+  // Trois courses de quarante ans, une par graine. Mesuré en CI sur main, sept
+  // courses : 74 à 113 s, quand l'essai de quarante ans les jouait. Le
   // délai fait 2,5 fois la plus longue, arrondi à la minute : c'est un délai de
   // calcul, pas une borne de réalisme.
   beforeAll(() => {
@@ -283,8 +283,8 @@ describe("le pH distingue enfin pousser mal et mourir", () => {
       expect(hp).toBeGreaterThan(5);
       expect(hc).toBeLessThan(2);
     }
-    // **Un délai à lui** (#378). Trois pinèdes de cinquante ans : 143 à 174 s en
-    // CI sur main (six courses vertes), jusqu'à 212 s sur d'autres têtes, et
+    // **Un délai à lui** (#378). Trois pinèdes de cinquante ans : 136 à 174 s en
+    // CI sur main (sept courses), jusqu'à 212 s sur d'autres têtes, et
     // trois échecs relevés sur le délai par défaut de 180 s (#364, #410, #411)
     // sans une assertion fausse. Rien ne s'y raccourcit sans
     // changer la mesure : l'âge porte la hauteur que le plancher du pin juge, la

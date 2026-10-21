@@ -287,7 +287,7 @@ describe("LE CRITÈRE : un peuplement qu'on vient d'ouvrir verse", () => {
     // **Le délai** (#378) : six graines de quarante ans, puis deux bras de douze.
     // Rien ne s'y rogne : les couchés se comptent par dizaines sur les six
     // graines (49 contre 20 sur cinq ans), et une graine de moins amincit
-    // l'effectif qui porte le rapport. 421 à 557 s en CI sur main (six courses)
+    // l'effectif qui porte le rapport. 421 à 557 s en CI sur main (sept courses)
     // pour 900 s de délai,
     // 597 s sur une autre tête. Il fait 2,5 fois la plus longue course de main,
     // arrondi à la minute.

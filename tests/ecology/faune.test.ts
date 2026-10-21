@@ -493,13 +493,13 @@ describe("l'arbre qui disparaît expulse quelqu'un de nommé", () => {
 
 describe("le commutateur, et la preuve qu'il ne déplace rien", () => {
   // Les deux parties de trente ans que lisent les trois essais du bloc, jouées
-  // une fois. Mesuré en CI sur main, six courses vertes : 174 à 212 s pour les
-  // deux, qu'un essai jouait seul. Le délai fait 2,5 fois la plus longue,
-  // arrondi à la minute : c'est un délai de calcul, pas une borne de réalisme.
+  // une fois. Mesuré en CI sur main, sept courses : 174 à 213 s pour les deux,
+  // qu'un essai jouait seul. Le délai fait 2,5 fois la plus longue, arrondi à la
+  // minute : c'est un délai de calcul, pas une borne de réalisme.
   beforeAll(() => {
     partieJouee(false);
     partieJouee(true);
-  }, 600_000);
+  }, 540_000);
 
   it("éteinte, la faune n'existe pas — et c'est ÇA, le contrôle du lot 3", () => {
     // **cet essai affirmait le contraire, et il avait raison jusqu'au lot 3.**
@@ -691,12 +691,13 @@ describe("une mauvaise année est un avertissement, deux sont une décision", ()
 describe("et la table PAIE : une haie de vieux arbres n'est pas un bois", () => {
   // La partie de vingt-cinq chênes est déjà jouée par le bloc du commutateur ;
   // il ne reste ici que celle de trois. Lancé seul, le bloc joue les deux :
-  // 160 à 244 s en CI sur main, quand l'essai les jouait lui-même. Le délai
-  // couvre ce cas-là, à 2,5 fois près.
+  // 160 à 244 s en CI sur main (sept courses), quand l'essai les jouait
+  // lui-même. Le délai couvre ce cas-là : 2,5 fois la plus longue, arrondi à la
+  // minute.
   beforeAll(() => {
     partieJouee(true, 25);
     partieJouee(true, 3);
-  }, 600_000);
+  }, 660_000);
 
   it("le même gîte, le même sol, trois arbres au lieu de vingt-cinq", () => {
     // **l'essai qui dit si le mécanisme sert à quelque chose.** Un mécanisme

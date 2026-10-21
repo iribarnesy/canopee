@@ -187,7 +187,7 @@ describe("en partie : ce sont les DOMINANTS que le lot change", () => {
     // plafonne au tiers, et la rafale reçue n'en perd qu'une part.
     expect(abriDense).toBeLessThan(0.7);
     // **Un délai à lui** (#378). Deux futaies de quarante-cinq ans, dont une de
-    // six cents pins : 127 à 157 s en CI sur main (six courses), contre le délai
+    // six cents pins : 114 à 157 s en CI sur main (sept courses), contre le délai
     // par défaut de 180 s. Rien ne s'y raccourcit sans changer la mesure : le
     // relevé du dessus montre que l'abri suit la densité, et le rayon de
     // peuplement se compte en hauteurs, donc en années. Le délai fait 2,5 fois

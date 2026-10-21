@@ -268,7 +268,7 @@ describe("le rejet de souche ne crée ni ne détruit de carbone", () => {
     // bilan est vraiment empruntée, **en masse** ; pas quel nombre un décor donne.
     expect(rejets).toBeGreaterThan(100);
     // **Un délai à lui** (#378). L'essai joue la lande jusqu'au premier incendie
-    // à rejets, graine après graine : 88 à 153 s en CI sur main (six courses),
+    // à rejets, graine après graine : 83 à 153 s en CI sur main (sept courses),
     // contre le délai par défaut de 180 s. Sa durée est celle de la recherche,
     // et le paragraphe du dessus dit ce que coûtait un horizon trop court. Le
     // délai fait 2,5 fois la plus longue course de main, arrondi à la minute.
@@ -440,9 +440,9 @@ describe("ce que le feu consume et qui était déjà mort", () => {
     expect(consumeesVues).toBeGreaterThan(0);
     // **Le délai suit la recherche** (#378) : la lande se joue jusqu'au premier
     // feu sur chandelles, et l'horizon de quarante ans ne se rogne pas (le
-    // paragraphe sur #280 dit pourquoi). 147 à 227 s en CI sur main (six
-    // courses), pour 300 s de délai. Il fait 2,5 fois la plus longue course de
-    // main, arrondi à la minute.
+    // paragraphe sur #280 dit pourquoi). 31 à 227 s en CI sur main (sept
+    // courses : la dernière a trouvé son feu tôt), pour 300 s de délai. Il fait
+    // 2,5 fois la plus longue course de main, arrondi à la minute.
   }, 600_000);
 });
 
