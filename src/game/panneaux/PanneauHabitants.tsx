@@ -57,13 +57,26 @@ const DIT_LE_GITE: Record<TypeDeGite, string> = {
 };
 
 /**
- * « an 3 », comme partout ailleurs — et « avant vous » pour ce qui précède la
- * partie. Accordé à ce qui s'est installé : une colonie est « installée ».
+ * « il y a 3 ans », comme partout ailleurs — et « avant votre arrivée » pour ce
+ * qui précède la partie. Accordé à ce qui s'est installé : une colonie est
+ * « installée ».
+ *
+ * Une date négative est un habitant du vieillissement (#410) : la branche
+ * attendait ces dates, le moteur ne les donnait pas, et il s'affichait
+ * « installé cette année ». La durée se dit comme pour les autres (#414).
  */
-function depuisQuand(semaineInstallation: number, semaine: number, feminin: boolean): string {
+export function depuisQuand(
+  semaineInstallation: number,
+  semaine: number,
+  feminin: boolean,
+): string {
   const installe = feminin ? "installée" : "installé";
-  if (semaineInstallation < 0) return `${installe} avant votre arrivée`;
   const ans = Math.floor((semaine - semaineInstallation) / 52);
+  if (semaineInstallation < 0) {
+    return ans <= 0
+      ? `${installe} peu avant votre arrivée`
+      : `${installe} il y a ${ans} an${ans > 1 ? "s" : ""}, avant votre arrivée`;
+  }
   if (ans <= 0) return `${installe} cette année`;
   return `${installe} il y a ${ans} an${ans > 1 ? "s" : ""}`;
 }

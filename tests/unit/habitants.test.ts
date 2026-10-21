@@ -74,3 +74,13 @@ describe("la teinte dit la famille de gîte", () => {
     expect(une?.teinte).toEqual(autre?.teinte);
   });
 });
+
+describe("depuis quand un habitant est là (#414)", () => {
+  it("dit la durée de ce qui précède la partie, et qu'il était là avant", async () => {
+    const { depuisQuand } = await import("../../src/game/panneaux/PanneauHabitants");
+    expect(depuisQuand(-156, 4, false)).toBe("installé il y a 3 ans, avant votre arrivée");
+    expect(depuisQuand(-10, 4, true)).toBe("installée peu avant votre arrivée");
+    expect(depuisQuand(2, 4, false)).toBe("installé cette année");
+    expect(depuisQuand(2, 110, false)).toBe("installé il y a 2 ans");
+  });
+});
