@@ -97,6 +97,7 @@ L'inventaire carbone de `carbon.test.ts` ne lit que des stocks à l'hectare. Un 
 - P11 : tous les essais de la branche devaient tenir à deux fois leur délai ; `volis` et `gibier`, non touchés, sont passés à 1,89. Ils ont reçu leur délai ensuite.
 - P12 : l'humus de `carbon` devait coûter 0,25 à 0,35 fois sa durée de main en course appariée ; 0,36.
 - P15 : les deux versions devaient passer en course locale ; elles sont toutes deux tombées sur leurs délais dans le conteneur chargé.
+- P16 : sur la dernière course, tous les essais devaient tenir à 2,5 fois leur délai ; sept sont entre 2,2 et 2,5, dont cinq que ce lot ne touche pas (`fruticee`, `brousse`, `climat`, `tempete`, `abri-peuplement` lisière). La règle des 2,5 fois se prend sur la plus longue de plusieurs courses : une course seule peut tomber sur une machine plus lente que toutes celles de la mesure.
 
 Justes : l'identité à l'empreinte des courses partagées, l'humus et le vivant du quart d'hectare, sa durée au quart, `faune` à 301 et 306 s pour 280-360 prédits, et la stabilité des essais qui n'ont reçu qu'un délai.
 
