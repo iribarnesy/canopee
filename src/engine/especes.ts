@@ -879,7 +879,8 @@ export const ESPECES_V0: readonly EspeceV0[] = [
     // moyenne (Sewerniak 2012, *Sylwan* 156 : 427, tableau 1) ; les quatorze
     // pineraies du réseau RENECOFOR descendent à 3,65 en pH eau 0-10 cm
     // (Saenger et al. 2023). L'ancienne borne 4,0 était l'USFS (« can grow on
-    // soils with pH from 4.0 to 7.0 », Silvics of North America), que ces
+    // soils with pH from 4.0 to 7.0 », Skilling 1990, *Silvics of North
+    // America*, pour le pin introduit en Amérique du Nord), que ces
     // relevés contredisent. Haut 7,5 *(à confirmer)* : l'USFS dit 7,0, mais
     // Landolt le classe indifférent (R x) et l'Atlas européen ne donne pas de
     // nombre ; un 7,0 contredirait la classe sans relevé pour le porter. La
