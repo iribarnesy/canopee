@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest";
+import { beforeAll, describe, expect, it } from "vitest";
 import { syntheticYear } from "../../src/engine/meteo";
 import { rngStateFromSeed } from "../../src/engine/rng";
 import { createGameState, type GameState, plantScattered } from "../../src/engine/state";
@@ -45,31 +45,51 @@ function parcelle(
 }
 
 describe("les origines du stress sont des PARTS de stress", () => {
+  /**
+   * Une frênaie serrée : c'est le **seul** banc où la maladie tire, puisque la
+   * chalarose du frêne est la seule maladie de l'atlas. Deux essais la lisent,
+   * et elle ne se joue qu'une fois (#378) : le moteur est déterministe, et le
+   * second la rejouait à l'identique.
+   */
+  let frenaie: GameState[] = [];
+  beforeAll(() => {
+    frenaie = parcelle(LIMON_RICHE, [{ especeId: "fraxinus_excelsior", count: 60 }], 20, 11);
+  });
+
   it("leur somme ne dépasse jamais le stress, sur deux stations", () => {
     const debordements: string[] = [];
-    for (const [nom, sc, especes] of [
+    for (const [nom, releves] of [
       [
         "limon riche",
-        LIMON_RICHE,
-        [
-          { especeId: "prunus_armeniaca", count: 25 },
-          { especeId: "malus_domestica", count: 25 },
-        ],
+        () =>
+          parcelle(
+            LIMON_RICHE,
+            [
+              { especeId: "prunus_armeniaca", count: 25 },
+              { especeId: "malus_domestica", count: 25 },
+            ],
+            20,
+            11,
+          ),
       ],
       [
         "vallée engorgée",
-        VALLEE_ENGORGEE,
-        [
-          { especeId: "alnus_glutinosa", count: 25 },
-          { especeId: "salix_alba", count: 25 },
-        ],
+        () =>
+          parcelle(
+            VALLEE_ENGORGEE,
+            [
+              { especeId: "alnus_glutinosa", count: 25 },
+              { especeId: "salix_alba", count: 25 },
+            ],
+            20,
+            11,
+          ),
       ],
-      // Une frênaie serrée : c'est le **seul** banc où la maladie tire, puisque la
-      // chalarose du frêne est la seule maladie de l'atlas. Sans elle, la
-      // moitié « maladie » du lot serait livrée sans avoir jamais tourné.
-      ["frênaie", LIMON_RICHE, [{ especeId: "fraxinus_excelsior", count: 60 }]],
+      // Sans la frênaie, la moitié « maladie » du lot serait livrée sans avoir
+      // jamais tourné.
+      ["frênaie", () => frenaie],
     ] as const) {
-      for (const etat of parcelle(sc, [...especes], 20, 11)) {
+      for (const etat of releves()) {
         for (const t of etat.trees) {
           const nommé = (t.stressLent ?? 0) + (t.stressRavageurs ?? 0) + (t.stressMaladie ?? 0);
           // Le frottis ajoute du stress sans compteur nommé — il se lit par
@@ -118,8 +138,7 @@ describe("les origines du stress sont des PARTS de stress", () => {
     // n'éprouve rien. Le premier jet de cet essai faisait exactement ça — des
     // abricotiers, des pommiers, des aulnes et des saules, et une moitié du lot
     // jamais exécutée, en vert.
-    const releves = parcelle(LIMON_RICHE, [{ especeId: "fraxinus_excelsior", count: 60 }], 20, 11);
-    const fin = releves[releves.length - 1];
+    const fin = frenaie[frenaie.length - 1];
     if (!fin) throw new Error("aucun relevé");
     const vivants = fin.trees.filter((t) => t.alive);
     const malades = vivants.filter((t) => (t.stressMaladie ?? 0) > 0);

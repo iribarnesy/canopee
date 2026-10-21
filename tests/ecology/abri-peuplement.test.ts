@@ -186,7 +186,13 @@ describe("en partie : ce sont les DOMINANTS que le lot change", () => {
     // Et jamais au point de les rendre intouchables : l'abri de peuplement
     // plafonne au tiers, et la rafale reçue n'en perd qu'une part.
     expect(abriDense).toBeLessThan(0.7);
-  });
+    // **Un délai à lui** (#378). Deux futaies de quarante-cinq ans, dont une de
+    // six cents pins : 114 à 157 s en CI sur main (sept courses), contre le délai
+    // par défaut de 180 s. Rien ne s'y raccourcit sans changer la mesure : le
+    // relevé du dessus montre que l'abri suit la densité, et le rayon de
+    // peuplement se compte en hauteurs, donc en années. Le délai fait 2,5 fois
+    // la plus longue course de main, arrondi à la minute.
+  }, 420_000);
 
   it("un dominant de LISIÈRE l'est moins qu'un dominant d'intérieur", () => {
     // La distance à la lisière n'est calculée nulle part : un arbre de bordure
