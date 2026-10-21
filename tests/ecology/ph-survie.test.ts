@@ -284,11 +284,11 @@ describe("le pH distingue enfin pousser mal et mourir", () => {
       expect(hc).toBeLessThan(2);
     }
     // **Un délai à lui** (#378). Trois pinèdes de cinquante ans : 136 à 174 s en
-    // CI sur main (sept courses), jusqu'à 212 s sur d'autres têtes, et
-    // trois échecs relevés sur le délai par défaut de 180 s (#364, #410, #411)
-    // sans une assertion fausse. Rien ne s'y raccourcit sans
-    // changer la mesure : l'âge porte la hauteur que le plancher du pin juge, la
-    // parcelle porte la densité, et une partie n'est pas une mesure. Le délai
-    // fait 2,5 fois la plus longue course de main, arrondi à la minute.
+    // CI sur main (sept courses), jusqu'à 212 s sur d'autres têtes, et trois
+    // échecs relevés sur le délai par défaut de 180 s (#364, #410, #411) sans
+    // une assertion fausse. Rien ne s'y raccourcit sans changer la mesure :
+    // l'âge porte la hauteur que le plancher du pin juge, la parcelle porte la
+    // densité, et une partie n'est pas une mesure. Le délai fait 2,5 fois la
+    // plus longue course de main, arrondi à la minute.
   }, 480_000);
 });

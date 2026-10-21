@@ -61,7 +61,27 @@ qu'un rapport (voir la note de maintenance).
 Séparer calibration et validation : caler un paramètre sur un âge, garder
 l'autre âge pour vérifier.
 
-## Ce que le dernier lot a appris (la production de la strate, puis la hauteur du tapis et le mort sur pied, #370)
+## Ce que le dernier lot a appris (les essais qui frôlent leur délai, #378 et #423)
+
+Lot de maintenance des essais : aucune ligne du moteur, aucune borne, aucun critère ni aucune graine ne change. Huit essais tournaient en CI à moins de 1,5 fois leur délai, et deux étaient déjà tombés dessus sans une assertion fausse : `bois-en-travers` sur main (187 s pour 180), le brin dominé de `ph-survie` sur trois PR (jusqu'à 212 s). Les prédictions et les mesures sont dans les commits de la branche, avant chaque course.
+
+### Un délai se mesure en CI, sur plusieurs courses, et sur la plus longue
+
+`bois-en-travers` a pris 98 s sur main (bd4f3b3) et 177 s sur la première course de cette branche : même moteur, mêmes fichiers dans la même tranche, et un essai dont seul le délai a changé. La CI fait tourner trois fichiers à la fois sur un runner à quatre cœurs virtuels, et ce qui tourne à côté d'un essai, à la seconde près, change d'une course à l'autre. Une marge relevée sur une course est une photographie. La règle prise ici : **2,5 fois la plus longue de sept courses de main, arrondie à la minute**, écrite à côté du délai, avec la raison pour laquelle l'essai ne se raccourcit pas. Les journaux des jobs suffisent : le rapporteur de vitest y écrit la durée de chaque essai de plus de 300 ms, et le temps d'un fichier qu'aucun essai n'explique est celui de ses crochets.
+
+### Avant de donner un délai, chercher la partie qu'un voisin a déjà jouée
+
+`faune` jouait six parties de trente ans pour trois distinctes ; `ph-survie` rejouait les quinze premières années d'une course de quarante ; `stress-origines` et `naivete-vent` rejouaient une course qu'un essai voisin venait de jouer. Le moteur est déterministe : une partie jouée une fois dans un crochet, que les essais lisent, rend les mêmes nombres. Le seul partage qui ne soit pas un simple double appel, l'arrêt en chemin d'une course plus longue, a été vérifié à l'empreinte sur les trois graines. **Le temps passe alors dans le crochet, et c'est lui qui porte le délai** (`hookTimeout`), dimensionné comme un essai.
+
+### Une parcelle plus petite, si tout ce qu'on lit est rapporté à l'hectare
+
+L'inventaire carbone de `carbon.test.ts` ne lit que des stocks à l'hectare. Un quart d'hectare à la même densité (dix et dix au lieu de quarante et quarante) rend l'humus au millième et le vivant à 0,83-0,96 fois, onze fois au moins au-dessus de son plancher, en un quart du temps. Ça ne vaut que pour un banc qui ne mesure pas une dynamique de peuplement : `bois-en-travers` a déjà montré qu'une pente plus courte barre moins, et `abri-peuplement` que l'abri suit la densité.
+
+### Les tranches se coupent au nombre de fichiers, pas à la durée
+
+`vitest --shard` trie les fichiers par empreinte sha1 de leur chemin et les coupe en parts égales en **nombre**. Sur bd4f3b3 : 6 min pour la tranche 2, 28 min pour la tranche 5, quand l'équilibre ferait environ 15 min. La tranche 5 porte à elle seule trois des sept plus gros fichiers. Couper un gros fichier en deux ne corrige rien de façon durable : la moitié tombe là où l'empreinte de son nom la met, et chaque fichier ajouté ailleurs déplace jusqu'à cinq autres fichiers d'une tranche à la suivante. Le temps de mur d'une tranche est borné par son travail total, pas par son plus gros fichier.
+
+## Ce qu'un lot précédent a appris (la production de la strate, puis la hauteur du tapis et le mort sur pied, #370)
 
 Décision du propriétaire sur l'instruction de #413 : instruire d'abord la production de la strate (D), puis donner au moteur une hauteur de tapis et une matière morte sur pied (C). Le rapport D est sur #370 ; les prédictions et les mesures sont dans les commits de la branche, avant chaque course.
 
