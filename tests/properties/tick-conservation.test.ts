@@ -5,8 +5,8 @@ import { syntheticYear } from "../../src/engine/meteo";
 import { rngStateFromSeed } from "../../src/engine/rng";
 import { createGameState, type GameState, plantScattered } from "../../src/engine/state";
 import type { StationClimat } from "../../src/engine/stations";
-import { LANDE_SECHE, VALLEE_ENGORGEE } from "../../src/engine/stations";
-import { tick } from "../../src/engine/tick";
+import { LANDE_SECHE, SABLE_PROFOND, VALLEE_ENGORGEE } from "../../src/engine/stations";
+import { type TickResult, tick } from "../../src/engine/tick";
 import { cnBois, dureeChandelleSemaines } from "../../src/engine/trees";
 
 /**
@@ -56,6 +56,24 @@ function meanNStockKgHa(state: GameState): number {
   return ((sum + state.stockBrf.azoteG + state.carbon.deadWoodNG + boisCoucheNG) / n) * 10;
 }
 
+/**
+ * Azote du **système entier**, kg/ha : le sol ci-dessus, la strate herbacée
+ * (vivante et morte sur pied) et les arbres (feuillage de l'année, réserve et
+ * bois). Le bilan du sol ne voit pas l'azote qu'un arbre perd sans le verser :
+ * il ne compte que ce qui arrive au sol (#345).
+ */
+function azoteDuSystemeKgHa(state: GameState): number {
+  const n = state.soil.mineralNG.length;
+  let strate = 0;
+  for (const v of state.soil.herbeAzoteG) strate += v;
+  for (const v of state.soil.herbeMorteAzoteG) strate += v;
+  let arbres = 0;
+  for (const t of state.trees)
+    arbres += t.uptakeYearG + (t.reserveAzoteG ?? 0) + (t.azoteBoisG ?? 0);
+  // Une cellule fait un mètre carré : g par cellule = g/m².
+  return meanNStockKgHa(state) + ((strate + arbres) / n) * 10;
+}
+
 /** Le peuplement des essais : trois essences, posées petites et grandes. */
 function peuplementMixte(state: GameState): GameState {
   let s = plantScattered(state, "fagus_sylvatica", 40);
@@ -67,7 +85,11 @@ function checkConservation(
   sc: StationClimat,
   years: number,
   preparer: (state: GameState) => GameState = peuplementMixte,
-  suivre: (state: GameState) => void = () => {},
+  suivre: (state: GameState, resultat: TickResult) => void = () => {},
+  // Le bilan du système entier ne se ferme que sans fixateur : l'azote qu'un
+  // aulne tire de l'air entre dans l'arbre sans flux publié (la fixation du
+  // tick compte ce que sa litière rend au sol).
+  systemeEntier = false,
 ): number {
   const weather = syntheticYear(sc.climat);
   let manteauMax = 0;
@@ -78,7 +100,9 @@ function checkConservation(
     if (!w) throw new Error("météo manquante");
     const before = meanWaterStock(state);
     const beforeN = meanNStockKgHa(state);
-    const { state: next, fluxes } = tick(state, w);
+    const avantSysteme = systemeEntier ? azoteDuSystemeKgHa(state) : 0;
+    const resultat = tick(state, w);
+    const { state: next, fluxes } = resultat;
 
     const deltaWater = meanWaterStock(next) - before;
     expect(
@@ -110,13 +134,28 @@ function checkConservation(
     // ruisselant hors de la parcelle (erosion.ts).
     // La minéralisation de l'humus et l'humification ne sont plus que des
     // transferts entre deux postes du stock.
+    // **Et l'azote que les ectomycorhizes minent dans l'humus** (#289, #347) : il
+    // sort du stock sans passer par le minéral, donc sans entrer dans les
+    // prélèvements. La propriété ne l'avait pas, et elle ne tournait que sur des
+    // mulls, où le minage ne s'ouvre jamais.
     expect(
       fluxes.uptakeKgHa +
+        fluxes.minageEctoKgHa +
         fluxes.leachedKgHa +
         fluxes.erosionNKgHa +
         fluxes.erosionNHumusKgHa +
         deltaN,
     ).toBeCloseTo(fluxes.litterfallKgHa + fluxes.fixationKgHa + fluxes.depositionKgHa, 6);
+
+    // Le système entier ne gagne que ce qui tombe du ciel, et ne perd que ce
+    // qui part à l'eau ou avec la terre : tout le reste passe d'un poste à
+    // l'autre, du sol à la plante et de la plante au sol (#345).
+    if (systemeEntier) {
+      expect(azoteDuSystemeKgHa(next) - avantSysteme).toBeCloseTo(
+        fluxes.depositionKgHa - fluxes.leachedKgHa - fluxes.erosionNKgHa - fluxes.erosionNHumusKgHa,
+        6,
+      );
+    }
 
     // **et ce qui sort du sol doit arriver dans une plante** (#115). Le bilan
     // ci-dessus ferme le côté **sol** : il compte `uptakeKgHa`, c'est-à-dire ce que
@@ -128,7 +167,7 @@ function checkConservation(
     expect(fluxes.uptakeArbresKgHa + fluxes.uptakeHerbeKgHa).toBeCloseTo(fluxes.uptakeKgHa, 9);
     manteauMax = Math.max(manteauMax, next.soil.manteauNeigeMm);
     state = next;
-    suivre(state);
+    suivre(state, resultat);
   }
   return manteauMax;
 }
@@ -140,6 +179,35 @@ describe("conservation eau + azote sur le tick complet (grille + arbres)", () =>
 
   it("vallée engorgée, 3 ans, peuplement mixte", () => {
     checkConservation(VALLEE_ENGORGEE, 3);
+  });
+
+  it("un mor sous des pins, et des tempêtes : ni le minage ni l'ébranchage ne perdent d'azote", () => {
+    // Le sable profond déclare un humus de mor (C/N 30) : les pins y minent
+    // l'azote de l'humus par leurs ectomycorhizes (#289), ce qu'ils ne font sur
+    // aucun mull. Posés à douze mètres, ils sont aussi à la hauteur où le vent
+    // arrache des branches. Sans fixateur, le bilan du système entier se
+    // ferme : il voit ce que le bilan du sol ne voit pas, l'azote qu'un arbre
+    // perdrait sans le verser. Sur le moteur d'avant #345, il s'ouvrait dès la
+    // première tempête (0,6 kg N/ha) et jusqu'à 5 kg N/ha à la quatrième, quand
+    // le bilan du sol restait fermé à 1e-11.
+    const station = { ...SABLE_PROFOND.station, coteM: 40, voisinage: [], gibierParHa: 0 };
+    let minageKgHa = 0;
+    let ebranches = 0;
+    checkConservation(
+      { ...SABLE_PROFOND, station },
+      3,
+      (depart) => plantScattered(depart, "pinus_sylvestris", 100, 12),
+      (_s, r) => {
+        minageKgHa += r.fluxes.minageEctoKgHa;
+        ebranches += r.tempete?.arbresEbranches ?? 0;
+      },
+      true,
+    );
+    // Les gardes : le minage a vraiment tourné (18,6 kg N/ha en trois ans sur
+    // le moteur où l'essai a été écrit, quand le peuplement mixte des deux
+    // premiers cas n'en mine que des millièmes), et le vent a ébranché.
+    expect(minageKgHa).toBeGreaterThan(5);
+    expect(ebranches).toBeGreaterThan(0);
   });
 
   it("des arbres qui meurent et des chandelles qui tombent : l'azote suit le bois", () => {
