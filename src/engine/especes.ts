@@ -56,33 +56,47 @@ export interface EspeceV0 {
    * aujourd'hui, où une généraliste à large amplitude est pleine presque
    * partout et une spécialiste presque nulle part.
    *
-   * **Ce qui manque**, et c'est le vrai défaut de l'atlas : l'**optimum**. Le
-   * moteur le devine au milieu de l'amplitude *(hypothèse, pas mesure)* alors
-   * que **six** fiches le portent déjà dans leur propre commentaire et le
-   * jettent — le pin « optimum 4,5-6,0 » (USFS Silvics), le noyer « préfère
-   * 6,6-7,5 », le pommier « optimum 6-7 », l'abricotier « optimum 6,7-7,5 »,
-   * le cornouiller « préfère 5,5-7,5 », le frêne « préfère base-riche au-dessus
-   * de 5,5 ».
+   * **Ce qui manque** : l'**optimum**. Le moteur le devine au milieu de
+   * l'amplitude *(hypothèse, pas mesure)*. Les fiches qui en citent un le
+   * disent maintenant dans leur commentaire, à part de la borne (#278).
    *
-   * Et c'est ce manque, pas la largeur de la rampe, qui fait le défaut de
-   * #262 : le milieu de l'amplitude met l'optimum du pin à 5,75 quand sa source
-   * le met à 5,25, si bien que le moteur en fait une espèce à l'aise sur un
-   * limon neutre (0,764 à pH 7,0) et en peine sur un podzol (0,336 à pH 4,2).
-   * C'est exactement l'inverse d'un calcifuge.
+   * **La grandeur** (#279). Les deux nombres sont lus en **pH eau de
+   * l'horizon minéral de surface**, la grandeur que le moteur suit pour le sol :
+   * les stations déclarent le pH eau de leur premier horizon (`phSurface`), et
+   * c'est lui que les arbres lisent. Une source en pH KCl est convertie par
+   * pH eau = −1,95 + 11,58 log₁₀(pH KCl) (Kabała et al. 2016, *Pol. J. Environ.
+   * Stud.* 25 : 647, éq. 7, deux cents sols de Pologne, forestiers compris) ;
+   * sous pin sur sable, elle rend 4,20 pour le pH KCl moyen de l'horizon A
+   * (3,4) que Sewerniak 2012 mesure à 4,1 en pH eau. Une source en pH CaCl₂
+   * l'est par pH eau = pH CaCl₂ + 0,65, l'écart médian de 400 couches de 0 à
+   * 20 cm du réseau RENECOFOR (Saenger et al. 2023, Zenodo 8391353), stable de
+   * pH 3 à 8. Une source qui ne dit pas sa grandeur est lue comme pH eau,
+   * l'usage le plus courant *(à confirmer)*, et la fiche le dit.
    *
-   * **Et l'atlas n'est pas homogène** : les bornes ci-dessous ne déclarent pas
-   * toutes la même grandeur. Onze fiches sourcées ont été ouvertes à la
-   * source (#279) ; **une seule tombe juste**. Le cas le plus net est le
-   * pommier : PFAF donne « **tolerates** a pH range from 6 to 7, **preferring**
-   * 6.5 to 6.8 », et la fiche appelle « optimum » le premier en jetant le
-   * second — les deux paramètres du modèle, intervertis. Six autres portent
-   * des nombres attribués à une source qui n'en donne **aucun** : les flores
-   * publient des catégories (« mildly acid, neutral, basic »), le dépôt les a
-   * traduites en nombres et a laissé l'attribution dessus. Et quinze fiches
-   * sur vingt-six ne citent aucune source pour ce champ.
+   * **La règle**, une seule pour toutes les fiches :
    *
-   * Recensé et non corrigé : toucher une borne déplace une calibration, donc
-   * c'est un lot à part, à mesurer.
+   * 1. **Une présence observée prouve, une absence non observée ne prouve
+   *    rien.** Une borne est l'extrême des relevés publiés où l'espèce est
+   *    présente — peuplements mesurés, flores, monographies, plantations
+   *    suivies. Un relevé ne peut donc qu'**élargir** une borne : qu'un réseau
+   *    n'ait pas de hêtraie au-dessus de pH 7,3 ne dit pas qu'il n'y en a pas.
+   * 2. **Une classe, quand l'espèce n'a pas de relevé.** La valeur de réaction R
+   *    de Landolt et al. 2010 (*Flora indicativa*, lue sur InfoFlora) range
+   *    chaque espèce dans une classe dont la source donne le pH : 1, très acide,
+   *    2,5 à 5,5 ; 2, acide, 3,5 à 6,5 ; 3, peu acide à neutre, 4,5 à 7,5 ; 4,
+   *    neutre à basique, 5,5 à 8,5 ; 5, basique, 6,5 à 8,5 ; « x » : indifférente,
+   *    sans nombre. Une borne qui tombe sur sa classe est portée par elle.
+   * 3. **Ni l'un ni l'autre** : la valeur reste, marquée *(à confirmer)*, et la
+   *    fiche dit ce que sa classe proposerait. Une classe ne remplace pas une
+   *    borne qu'elle contredit : sous la rampe actuelle, une espèce de classe 3
+   *    vaut 0,76 à pH 7, au milieu de sa propre classe (#262).
+   *
+   * **Ce qui n'est pas une borne** : une plage de culture ou de pépinière (PFAF,
+   * FAO EcoCrop, guides horticoles), qui ne dit pas d'où viennent ses nombres ;
+   * une catégorie sans nombre (« mildly acid, neutral and basic ») ; une
+   * préférence ou un optimum ; une donnée non publiée ou une communication
+   * personnelle, même relayée par une base de données. Les fiches les citent
+   * comme telles quand elles servent à autre chose.
    *
    * Lire ces deux nombres comme des **murs** a déjà coûté : le moteur tuait à
    * coup sûr au pH exact qu'il annonçait tolérable.
@@ -653,7 +667,14 @@ export const ESPECES_V0: readonly EspeceV0[] = [
     // Atlas : « très hygrophile (tolère l'engorgement) », berges — vit en marais
     // mais souffre vite en sol sec (seuil de confort élevé).
     eau: { seuilConfortSecheresse: 0.85, seuilStressSecheresse: 0.65, toleranceEngorgement: 1 },
-    ph: [4.5, 7.5],
+    // pH (#279). Bas 3,4 : relevé, des plantations suivies sur terrils
+    // d'Ohio et du Kentucky, « minimum pH for satisfactory European alder
+    // growth as about 3.4 » (Funk 1990, *Silvics of North America*, grandeur
+    // non précisée). Haut 7,5 : sa classe de Landolt (R 3, 4,5 à 7,5) ; l'EFD
+    // donne 7,52 d'après Ellenberg 1988 *(non ouvert)*. La même source note une
+    // croissance réduite « under the alkaline or near-neutral conditions » et
+    // un optimum de nodulation de 5,5 à 7,0 (#278).
+    ph: [3.4, 7.5],
     // Atlas : héliophile pionnier.
     lumiere: { compensation: 0.2, saturation: 0.7, lai: 2, houppierRatio: 0.3, caduc: true },
     racines: { profondeurMaxCm: 90 }, // traçant de berge, l'eau est en surface
@@ -701,8 +722,14 @@ export const ESPECES_V0: readonly EspeceV0[] = [
     pousseMaxMAn: 0.57,
     // Atlas : mésophile, « aime le frais, sensible à la sécheresse ».
     eau: { seuilConfortSecheresse: 0.85, seuilStressSecheresse: 0.25, toleranceEngorgement: 0.1 },
-    // pH, littérature : Leuschner et al. 2006 (Ann. For. Sci.), 50 peuplements d'Europe centrale : extrêmes **mesurés** pH(H2O) 3,2-7,3 ; PFAF donne 3,5-8,5.
-    ph: [3.5, 8],
+    // pH (#279). Bas 3,2 : relevé, extrêmes **mesurés** dans 50 hêtraies
+    // d'Europe centrale, pH eau 1:2,5 de l'horizon minéral 0-10 cm (Leuschner,
+    // Meier et Hertel 2006, *Ann. For. Sci.* 63 : 355). Haut 8,5 : « a pH range
+    // from 3.5 to 8.5 » (Houston Durrant et al. 2016, *European Atlas of Forest
+    // Tree Species*, d'après Walthert et al. 2013, grandeur non précisée).
+    // Les vingt hêtraies du réseau RENECOFOR tombent entre les deux : 4,04 à
+    // 7,66 en pH eau 0-10 cm (Saenger et al. 2023). Landolt : R 3.
+    ph: [3.2, 8.5],
     // Atlas : sciaphile climacique — un semis survit à ~1-2 % de lumière (ch3-B),
     // couronne très opaque.
     // Marcescent seulement jeune ou taillé, d'où une valeur nettement plus
@@ -759,6 +786,10 @@ export const ESPECES_V0: readonly EspeceV0[] = [
     pousseMaxMAn: 0.35,
     // Atlas : xérophile, thermophile ; craint les sols engorgés.
     eau: { seuilConfortSecheresse: 0.35, seuilStressSecheresse: 0.1, toleranceEngorgement: 0.05 },
+    // pH (#279) : **aucun relevé**, les deux bornes *(à confirmer)*. Sa classe de
+    // Landolt (R 3) proposerait 4,5 à 7,5 ; l'Atlas européen le dit
+    // « indifferent to pH », calcicole au nord de son aire et fréquent sur sol
+    // acide dans les pays chauds (Pasta et al. 2016), sans nombre.
     ph: [5.5, 8.5],
     // Atlas : héliophile, couronne claire de coteau sec.
     // Marcescent, surtout jeune : le trait est ici une moyenne sur la vie de
@@ -843,23 +874,23 @@ export const ESPECES_V0: readonly EspeceV0[] = [
     pousseMaxMAn: 0.4,
     // Atlas : xérophile, oligotrophe, « rustique, large amplitude ».
     eau: { seuilConfortSecheresse: 0.3, seuilStressSecheresse: 0.1, toleranceEngorgement: 0.2 },
-    // pH : **laissé tel quel**, et la raison mérite d'être lue. L'USFS Silvics
-    // donne « 4,0 à 7,0, optimum 4,5-6,0, chlorose au-delà de 6,5 » ; d'autres
-    // fiches donnent « tolère l'alcalin jusqu'à 7,5 ». Les deux sont
-    // compatibles — une préférence n'est pas une borne — et la seconde est
-    // celle qui était déjà là.
+    // pH (#279). Bas 2,8 : relevé, l'horizon A ou AE de 215 pineraies sur
+    // sable du sud-ouest de la Pologne titre de 2,8 à 6,1 en pH eau, 4,1 en
+    // moyenne (Sewerniak 2012, *Sylwan* 156 : 427, tableau 1) ; les quatorze
+    // pineraies du réseau RENECOFOR descendent à 3,65 en pH eau 0-10 cm
+    // (Saenger et al. 2023). L'ancienne borne 4,0 était l'USFS (« can grow on
+    // soils with pH from 4.0 to 7.0 », Silvics of North America), que ces
+    // relevés contredisent. Haut 7,5 *(à confirmer)* : l'USFS dit 7,0, mais
+    // Landolt le classe indifférent (R x) et l'Atlas européen ne donne pas de
+    // nombre ; un 7,0 contredirait la classe sans relevé pour le porter. La
+    // clause « chlorose au-delà de 6,5 » que ce commentaire prêtait à l'USFS
+    // n'y figure pas (#279).
     //
-    // **Le manque que ce commentaire signalait est comblé** (#254) : la station
-    // qui vaut une classe médiane pour un pin existe — `SABLE_PROFOND`, le
-    // sable de couverture sans alios que la table néerlandaise décrit —, et
-    // c'est là que le banc juge désormais l'espèce. La borne, elle, n'est
-    // **toujours pas** tranchée, et ce n'est plus faute de station : passer à 7,0
-    // ferait tomber le facteur de pH du pin de 0,764 à 0,05 **sur le limon
-    // riche**, où le banc des hauteurs ne le plante plus mais où trente et un
-    // fichiers d'essai le citent encore — l'appétence du gibier (G7), la survie
-    // au pH, l'abri de peuplement, la tempête. Trancher demande donc son propre
-    // lot, avec la suite complète pour témoin.
-    ph: [4, 7.5],
+    // L'optimum, lui, est publié et n'est pas le milieu : « grows best on soils
+    // in the 4.5 to 6.0 range » (USFS) ; l'indice de station des 215
+    // pineraies décroît avec le pH, meilleur vers 4,5 en pH eau moyen du profil
+    // (Sewerniak 2012). C'est #278.
+    ph: [2.8, 7.5],
     // Atlas : très héliophile ; houppier clair, persistant (ombrage toute l'année).
     // Aiguilles : 2 à 8 ans selon la latitude, plus longtemps au nord (Reich et al. 1996) ; le bas de la fourchette pour une plaine tempérée *(à confirmer)*.
     lumiere: {
@@ -919,11 +950,14 @@ export const ESPECES_V0: readonly EspeceV0[] = [
     pousseMaxMAn: 0.9,
     // Atlas : pionnier colonisateur, oligotrophe, plutôt frais.
     eau: { seuilConfortSecheresse: 0.6, seuilStressSecheresse: 0.25, toleranceEngorgement: 0.4 },
-    // pH : **laissé tel quel**, et c'est une correction de ma propre correction.
-    // J'avais resserré la borne haute à 7,0 sur « PFAF : préfère sous 6,5 » —
-    // mais la même fiche dit aussi qu'il pousse en sols « basiques (légèrement
-    // alcalins) ». Poser la mort à 7,0 contredisait la seconde moitié de la
-    // source. Une préférence n'est pas une borne.
+    // pH (#279) : **aucun relevé**, les deux bornes *(à confirmer)*. Landolt le
+    // classe indifférent (R x), sans nombre. PFAF ne donne que des catégories
+    // (« mildly acid, neutral and basic (mildly alkaline) soils and can grow in
+    // very acid soils »), une présence sans nombre (« occasionally found on
+    // calcareous soils in the wild ») et une préférence (« generally prefers a
+    // pH below 6.5 ») ; l'Atlas européen, « particularly when soil conditions
+    // are acidic » (Beck et al. 2016). La borne 7,5 est la traduction de
+    // « mildly alkaline » qui courait dans l'atlas, pas une mesure.
     ph: [3.8, 7.5],
     // Atlas : très héliophile ; ombre légère (couronne aérée) — le bon parasol de nurse.
     lumiere: { compensation: 0.25, saturation: 0.75, lai: 1.3, houppierRatio: 0.3, caduc: true },
@@ -977,7 +1011,13 @@ export const ESPECES_V0: readonly EspeceV0[] = [
     // ce qui limite l'agroforesterie au noyer aux bonnes terres.
     eau: { seuilConfortSecheresse: 0.6, seuilStressSecheresse: 0.25, toleranceEngorgement: 0.1 },
     // Il fuit l'acide : c'est un arbre de sols neutres à calcaires.
-    // pH, littérature : PFAF et World Agroforestry : tolère 5,1-8,3, préfère 6,6-7,5 ; la chaux libre ne le limite pas.
+    // pH (#279) : **aucun relevé**, les deux bornes *(à confirmer)*. Sa classe
+    // de Landolt (R 4) proposerait 5,5 à 8,5. Ce que la fiche citait n'est pas
+    // une amplitude de présence : PFAF donne une plage de culture (« a pH in
+    // the range of 4.5 to 8.2 »), et l'Atlas européen une préférence (« deep
+    // and rich soils, with pH values of between 6 and 7.5 », de Rigo et al.
+    // 2016), qui sert à #278. L'ancien « tolère 5,1-8,3 » ne disait pas d'où
+    // venait chaque nombre.
     ph: [5, 8.3],
     lumiere: { compensation: 0.2, saturation: 0.75, lai: 2.6, houppierRatio: 0.5, caduc: true },
     // **Un pivot de 3,7 m**, mesuré dans une plantation de semis du nord de
@@ -1091,7 +1131,12 @@ export const ESPECES_V0: readonly EspeceV0[] = [
     pousseMaxMAn: 0.5,
     // Atlas : « fruitier clé » ; mésophile de plaine.
     eau: { seuilConfortSecheresse: 0.7, seuilStressSecheresse: 0.3, toleranceEngorgement: 0.15 },
-    // pH, littérature : ICL et PFAF : optimum 6-7, tolère dès 5,0, carences en fer au-delà de 8 (source horticole).
+    // pH (#279) : **aucun relevé** — un fruitier cultivé n'a pas d'aire
+    // spontanée où le relever. Bas 5,0 *(à confirmer)* ; haut 7,5 : sa classe de
+    // Landolt (R 3, 4,5 à 7,5). PFAF est une source horticole, et elle dit
+    // l'inverse de ce que la fiche lui prêtait : « tolerates a pH range from
+    // 6 to 7, preferring 6.5 to 6.8 » — une plage de culture et une
+    // préférence (#278), pas un « optimum 6-7 ».
     ph: [5, 7.5],
     lumiere: { compensation: 0.2, saturation: 0.7, lai: 2, houppierRatio: 0.45, caduc: true },
     racines: { profondeurMaxCm: 120 }, // fruitier greffé, enracinement moyen
@@ -1145,7 +1190,10 @@ export const ESPECES_V0: readonly EspeceV0[] = [
     pousseMaxMAn: 0.5,
     // Atlas : « gel des fleurs = risque ; sec » — xérophile, floraison très précoce.
     eau: { seuilConfortSecheresse: 0.4, seuilStressSecheresse: 0.15, toleranceEngorgement: 0.05 },
-    // pH, littérature : PFAF et Garden Oracle : 6,0-7,8, optimum 6,7-7,5 (source horticole).
+    // pH (#279) : **aucun relevé**, les deux bornes *(à confirmer)* ; sa classe
+    // de Landolt (R 4) proposerait 5,5 à 8,5. Les sources citées sont
+    // horticoles : PFAF « prefers a pH in the range 6.5 to 7.5 », une
+    // préférence (#278) ; l'ancien « optimum 6,7 » n'y est pas.
     ph: [6, 7.8],
     lumiere: { compensation: 0.25, saturation: 0.75, lai: 1.8, houppierRatio: 0.45, caduc: true },
     racines: { profondeurMaxCm: 180 }, // pivot des sols secs et chauds
@@ -1200,7 +1248,12 @@ export const ESPECES_V0: readonly EspeceV0[] = [
     pousseMaxMAn: 0.6,
     // Atlas : demi-ombre, cépée — l'arbuste des sous-étages agroforestiers.
     eau: { seuilConfortSecheresse: 0.6, seuilStressSecheresse: 0.25, toleranceEngorgement: 0.3 },
-    // pH, littérature : Hicks 2022, Biological Flora : calcaires pH 7-8, dépôts sur craie 4-5, **et** sols très acides sous 4.
+    // pH (#279) : bornes *(à confirmer)*. La fiche citait la *Biological Flora*
+    // (Hicks 2022 : « calcaires pH 7-8, dépôts sur craie 4-5, et sols très
+    // acides sous 4 »), sous péage et **non ouverte** : la phrase est une
+    // affirmation sur la source. Sa classe de Landolt (R 3) proposerait 4,5 à
+    // 7,5, que les deux bornes débordent ; l'Atlas européen le dit à l'aise
+    // « on dry calcareous soils » (Enescu et al. 2016), sans nombre.
     ph: [4, 8],
     lumiere: { compensation: 0.05, saturation: 0.4, lai: 2.5, houppierRatio: 0.5, caduc: true },
     racines: { profondeurMaxCm: 90 }, // cépée à racines traçantes
@@ -1272,6 +1325,8 @@ export const ESPECES_V0: readonly EspeceV0[] = [
     pousseMaxMAn: 0.4,
     // Atlas : arbuste pionnier, « drageonne, nurse », haies — Europe entière.
     eau: { seuilConfortSecheresse: 0.5, seuilStressSecheresse: 0.18, toleranceEngorgement: 0.15 },
+    // pH (#279) : **aucun relevé**, les deux bornes *(à confirmer)*. Sa classe de
+    // Landolt (R 3) proposerait 4,5 à 7,5.
     ph: [5.5, 8.5],
     lumiere: { compensation: 0.12, saturation: 0.7, lai: 2.2, houppierRatio: 0.6, caduc: true },
     racines: { profondeurMaxCm: 100 },
@@ -1341,7 +1396,12 @@ export const ESPECES_V0: readonly EspeceV0[] = [
     pousseMaxMAn: 0.3,
     // Atlas : « nurse épineuse », pionnière, très commune.
     eau: { seuilConfortSecheresse: 0.55, seuilStressSecheresse: 0.2, toleranceEngorgement: 0.2 },
-    ph: [5.5, 8.5],
+    // pH (#279). Bas 3,8 : relevé, les fourrés d'aubépine des collines du nord
+    // du pays de Galles (Good, Bryant et Carlill 1990, *J. Appl. Ecol.* 27 :
+    // 272), relayé par l'EFD *(non ouvert, grandeur non précisée)*. Haut 8,5 :
+    // sa classe de Landolt (R 4, 5,5 à 8,5). L'EFD donne aussi un maximum de
+    // 5,9 d'après Fitter 1978 : c'est le haut d'un relevé, pas une absence.
+    ph: [3.8, 8.5],
     lumiere: { compensation: 0.1, saturation: 0.65, lai: 2.5, houppierRatio: 0.55, caduc: true },
     racines: { profondeurMaxCm: 130 },
     tBaseCroissanceC: 5,
@@ -1388,16 +1448,12 @@ export const ESPECES_V0: readonly EspeceV0[] = [
     pousseMaxMAn: 1.4,
     // Atlas : « nurse (fruticée) », pionnière, cosmopolite tempéré.
     eau: { seuilConfortSecheresse: 0.6, seuilStressSecheresse: 0.25, toleranceEngorgement: 0.25 },
-    // pH : **les deux bornes sont sans source**, et la mention qui les portait était
-    // fausse (#279). Elle disait « BSBI (Fermanagh) : la plus fréquente à pH 3,5-5,0,
-    // et tolère jusqu'au très alcalin » ; le compte d'espèce du BSBI dit « brambles are
-    // most abundant on damp to wet acid soils and comparatively few microspecies grow
-    // on chalk or limestone » — aucun nombre, nulle part. *(Les chiffres viennent
-    // peut-être de la flore imprimée de Fermanagh ; ce qui est établi, c'est qu'ils ne
-    // sont pas dans la source consultable sous ce nom.)*
-    //
-    // Les valeurs n'ont pas bougé : une borne déplacée déplace une calibration, et
-    // c'est un lot à mesurer *(à confirmer)*.
+    // pH (#279) : **aucun relevé**, les deux bornes *(à confirmer)*. Le BSBI de
+    // Fermanagh, que la fiche citait pour « la plus fréquente à pH 3,5-5,0 », dit
+    // « brambles are most abundant on damp to wet acid soils and comparatively
+    // few microspecies grow on chalk or limestone » — aucun nombre. L'EFD donne
+    // 3,2 à 8,3, sur deux communications personnelles : pas une source. Un
+    // agrégat d'espèces n'a pas de fiche chez Landolt.
     ph: [3.5, 8],
     // Demi-ombre tolérée : elle tient sous un couvert clair, ce qui lui permet
     // d'attendre la trouée.
@@ -1462,6 +1518,8 @@ export const ESPECES_V0: readonly EspeceV0[] = [
     pousseMaxMAn: 0.9,
     // Atlas : « nitrophile, pousse vite », pionnier, très commun.
     eau: { seuilConfortSecheresse: 0.7, seuilStressSecheresse: 0.3, toleranceEngorgement: 0.3 },
+    // pH (#279) : **aucun relevé**. Bas 5,5 : sa classe de Landolt (R 4, 5,5 à
+    // 8,5) ; haut 8,0 *(à confirmer)*, que la classe porterait à 8,5.
     ph: [5.5, 8],
     lumiere: { compensation: 0.1, saturation: 0.55, lai: 2.5, houppierRatio: 0.6, caduc: true },
     racines: { profondeurMaxCm: 80 },
@@ -1531,6 +1589,10 @@ export const ESPECES_V0: readonly EspeceV0[] = [
     // hêtre était la seule essence d'ombre du moteur, et une forêt n'a jamais
     // un seul candidat au sous-étage.
     eau: { seuilConfortSecheresse: 0.7, seuilStressSecheresse: 0.3, toleranceEngorgement: 0.35 },
+    // pH (#279) : **aucun relevé**. Bas 4,5 : sa classe de Landolt (R 3, 4,5 à
+    // 7,5) ; haut 8,0 *(à confirmer)* : la classe dirait 7,5, mais elle le met
+    // alors à 0,76 sur le limon riche où il est calé (#262). L'Atlas européen :
+    // « from sub-acid to calcareous […] but never acid » (Sikkema et al. 2016).
     ph: [4.5, 8],
     // **Marcescent** type : c'est lui qu'on voit roux en janvier dans les haies, et
     // c'est ce qui fait du charme un brise-vent d'hiver quand le hêtre voisin
@@ -1587,8 +1649,14 @@ export const ESPECES_V0: readonly EspeceV0[] = [
     // **permanent** de sous-bois : en janvier, sous une hêtraie nue, c'est lui qui
     // abrite et nourrit.
     eau: { seuilConfortSecheresse: 0.75, seuilStressSecheresse: 0.3, toleranceEngorgement: 0.2 },
-    // pH, littérature : Peterken & Lloyd 1967, Biological Flora : « presque indifférent au pH », de l'acide au riche en calcaire.
-    ph: [4, 8],
+    // pH (#279). Bas 3,5 : relevé, Peterken et Lloyd 1967 (*Biological Flora*),
+    // relayé par l'EFD *(non ouvert, grandeur non précisée)*. Haut 8,0 *(à
+    // confirmer)* : sa classe de Landolt (R 3) dirait 7,5, PFAF 7,2 (une plage
+    // de culture), l'EFD 6,7 d'après un livre d'ornithologie (Snow et Snow
+    // 1988) ; aucun n'est une absence. L'Atlas européen : « very plastic,
+    // growing in a wide variety of soil moistures and pH, but grows best in
+    // acid conditions » (Guerrero Hue et al. 2016).
+    ph: [3.5, 8],
     // Feuilles : 25 ± 7 mois (Mediavilla et Escudero 2003).
     lumiere: {
       compensation: 0.02,
@@ -1645,6 +1713,10 @@ export const ESPECES_V0: readonly EspeceV0[] = [
     // l'aulne, c'est l'essence des ripisylves — et la seule qui accepte d'avoir
     // les pieds dans l'eau presque en permanence.
     eau: { seuilConfortSecheresse: 0.85, seuilStressSecheresse: 0.6, toleranceEngorgement: 0.95 },
+    // pH (#279) : **aucun relevé**, les deux bornes *(à confirmer)*. Sa classe de
+    // Landolt (R 4) proposerait 5,5 à 8,5 ; l'Atlas européen : « preferring
+    // sandy, silty or calcareous soils » (Houston Durrant et al. 2016), sans
+    // nombre. Le « pH indifférent » de l'atlas du jeu n'a pas de source.
     ph: [4.5, 8],
     lumiere: { compensation: 0.18, saturation: 0.8, lai: 2, houppierRatio: 0.45, caduc: true },
     racines: { profondeurMaxCm: 120 },
@@ -1709,7 +1781,12 @@ export const ESPECES_V0: readonly EspeceV0[] = [
     // tout le monde — c'est la première ressource de l'année pour les
     // pollinisateurs, et cela compte dans l'indice de biodiversité.
     eau: { seuilConfortSecheresse: 0.45, seuilStressSecheresse: 0.15, toleranceEngorgement: 0.1 },
-    // pH, littérature : PFAF : 5,0-8,0, préfère 5,5-7,5, pousse en très alcalin.
+    // pH (#279). Haut 8,5 : sa classe de Landolt (R 4, 5,5 à 8,5). Bas 5,0 *(à
+    // confirmer)*, que la classe porterait à 5,5. PFAF ne donne **aucun**
+    // nombre — « mildly acid, neutral and basic (mildly alkaline) soils and
+    // can grow in very alkaline soils » — et le « 5,0-8,0, préfère 5,5-7,5 » que
+    // la fiche lui prêtait n'y est pas ; l'Atlas européen dit « from slightly
+    // acid to very alkaline » (Da Ronch et al. 2016), sans nombre.
     ph: [5, 8.5],
     lumiere: { compensation: 0.06, saturation: 0.5, lai: 2.5, houppierRatio: 0.5, caduc: true },
     racines: { profondeurMaxCm: 100 },
@@ -1765,6 +1842,10 @@ export const ESPECES_V0: readonly EspeceV0[] = [
     // calcaire. Ses capsules roses à quatre lobes et ses arilles orange sont
     // toxiques — et son bois donne les fusains à dessin.
     eau: { seuilConfortSecheresse: 0.6, seuilStressSecheresse: 0.25, toleranceEngorgement: 0.2 },
+    // pH (#279) : **aucun relevé** ; les deux bornes sont sa classe de Landolt
+    // (R 4, 5,5 à 8,5). L'EFD donne un « extreme maximum » de 4,77 d'après la
+    // *Biological Flora* (Thomas et al. 2011) : un fusain de calcaire plafonné
+    // sous pH 5 est une erreur de saisie, pas un relevé.
     ph: [5.5, 8.5],
     lumiere: { compensation: 0.05, saturation: 0.45, lai: 2.2, houppierRatio: 0.5, caduc: true },
     racines: { profondeurMaxCm: 90 },
@@ -1804,6 +1885,8 @@ export const ESPECES_V0: readonly EspeceV0[] = [
     // Atlas : « semi-persistant ; calcicole ; très mellifère (juin) ; supporte
     // la taille → haies ». Ourlets et lisières, surtout sur calcaire.
     eau: { seuilConfortSecheresse: 0.5, seuilStressSecheresse: 0.2, toleranceEngorgement: 0.2 },
+    // pH (#279) : **aucun relevé**. Haut 8,5 : sa classe de Landolt (R 4, 5,5 à
+    // 8,5) ; bas 6,0 *(à confirmer)*, que la classe porterait à 5,5.
     ph: [6, 8.5],
     // **Semi-persistant** : il ne se dénude jamais tout à fait. C'est le seul de
     // l'atlas dans ce cas, et c'est ce qui lui vaut sa place dans les haies —
@@ -1873,6 +1956,10 @@ export const ESPECES_V0: readonly EspeceV0[] = [
     pousseMaxMAn: 0.45,
     // Atlas : « épineux, landes acides », façade atlantique — **la** nurse de lande.
     eau: { seuilConfortSecheresse: 0.3, seuilStressSecheresse: 0.08, toleranceEngorgement: 0.15 },
+    // pH (#279) : **aucun relevé** ; les deux bornes sont sa classe de Landolt
+    // (R 2, 3,5 à 6,5). Le bas recoupe la revue de l'USDA (« tolerant of
+    // relatively low pH in the range of 3.5 to 4.5 », Zouhar 2005, *Fire
+    // Effects Information System*), qui ne dit rien du haut.
     ph: [3.5, 6.5],
     // Rameaux épineux persistants : il ombrage et brise le vent toute l'année.
     // Épines vertes, même ordre que le houx *(à confirmer)*.
@@ -1935,6 +2022,8 @@ export const ESPECES_V0: readonly EspeceV0[] = [
     pousseMaxMAn: 0.5,
     // Atlas : « landes acides, améliore le sol » — l'autre pionnière fixatrice.
     eau: { seuilConfortSecheresse: 0.35, seuilStressSecheresse: 0.1, toleranceEngorgement: 0.1 },
+    // pH (#279) : **aucun relevé**, les deux bornes *(à confirmer)*. Sa classe de
+    // Landolt (R 2) proposerait 3,5 à 6,5.
     ph: [4, 7],
     // Tiges vertes qui portent la photosynthèse, même ordre que le houx *(à confirmer)*.
     lumiere: {
@@ -1997,6 +2086,11 @@ export const ESPECES_V0: readonly EspeceV0[] = [
     pousseMaxMAn: 0.12,
     // Atlas : « lande acide pauvre, bio-indicatrice acidité » — couvre-sol.
     eau: { seuilConfortSecheresse: 0.3, seuilStressSecheresse: 0.08, toleranceEngorgement: 0.2 },
+    // pH (#279) : **aucun relevé publié**, les deux bornes *(à confirmer)*. Sa
+    // classe de Landolt (R 1) proposerait 2,5 à 5,5. L'EFD donne 3,2 à 7,4,
+    // sur une donnée non publiée et une communication personnelle : pas une
+    // source ; ses valeurs tirées de Gimingham 1972 sont des pH d'eau de
+    // tourbière, pas de sol.
     ph: [3.5, 6],
     // Même ordre que les persistants mesurés de l'atlas *(à confirmer)*.
     lumiere: {
@@ -2057,6 +2151,10 @@ export const ESPECES_V0: readonly EspeceV0[] = [
     // Atlas : mésoxérophile, **acidiphile (calcifuge)** — l'arbre à valoriser
     // sur la lande, mais qui a besoin d'être abrité pour s'installer.
     eau: { seuilConfortSecheresse: 0.55, seuilStressSecheresse: 0.22, toleranceEngorgement: 0.05 },
+    // pH (#279) : **aucun relevé**. Haut 6,5 : sa classe de Landolt (R 2, 3,5 à
+    // 6,5) ; bas 4,0 *(à confirmer)*, que la classe porterait à 3,5. L'Atlas
+    // européen : « very acidic to neutral soils », « does not thrive on
+    // limestone » (Conedera et al. 2016), sans nombre.
     ph: [4, 6.5],
     lumiere: { compensation: 0.08, saturation: 0.5, lai: 3.2, houppierRatio: 0.38, caduc: true },
     racines: { profondeurMaxCm: 180 }, // pivot, mais qui redoute l'asphyxie
@@ -2118,7 +2216,16 @@ export const ESPECES_V0: readonly EspeceV0[] = [
     // Atlas : xérophile, **silice/acide**, sempervirent, résiste au feu.
     eau: { seuilConfortSecheresse: 0.35, seuilStressSecheresse: 0.12, toleranceEngorgement: 0.25 },
     // Atlas : « silice/acide » — calcifuge strict des sables siliceux.
-    ph: [3.8, 6.8],
+    //
+    // pH (#279) : relevé, les deux bornes. Le pH de l'horizon de surface (0-5
+    // ou 0-10 cm) sous les suberaies de l'aire, compilé profil par profil, est
+    // « generally in the range of 4.7 to 6.5 and, more rarely, 3.4 to 7.8 » ;
+    // le 7,8 est la suberaie de Pinet, sur dolomie décalcifiée (Serrasolses et
+    // al. 2009, in Aronson et al., *Cork Oak Woodlands on the Edge*, ch. 8,
+    // tableau 8.1 ; grandeur non précisée). « Calcifuge strict » est donc trop
+    // fort : rare sur calcaire, pas absente, et moins dense (même source).
+    // Pas de fiche chez Landolt (hors de Suisse).
+    ph: [3.4, 7.8],
     // Semi-héliophile : contrairement au pin, ses jeunes supportent le couvert
     // — c'est ainsi qu'une subéraie s'installe **sous** la pinède et prend le
     // relais, le pin ne se régénérant pas sous sa propre ombre.
@@ -2183,7 +2290,13 @@ export const ESPECES_V0: readonly EspeceV0[] = [
     // souffre vite en sol sec — c'est **le** frêne des fonds de vallée et des
     // haies bocagères.
     eau: { seuilConfortSecheresse: 0.8, seuilStressSecheresse: 0.45, toleranceEngorgement: 0.5 },
-    // pH, littérature : Thomas 2016, Biological Flora : **absent** sous pH 4,2 en surface, tolère 4,5, préfère base-riche au-dessus de 5,5.
+    // pH (#279) : **aucun relevé ouvert**, les deux bornes *(à confirmer)*. La
+    // fiche lisait « **absent** sous pH 4,2 » dans la *Biological Flora* (Thomas
+    // 2016) ; le résumé dit « commonest on nutrient-rich soils with a high base
+    // status and pH > 4.2 » : une fréquence, pas une absence. Sa classe de
+    // Landolt (R 4) proposerait 5,5 à 8,5 ; l'Atlas européen donne une
+    // préférence, « grows best on fertile soils where soil pH exceeds 5.5 »
+    // (Beck et al. 2016), qui sert à #278.
     ph: [4.2, 8],
     // Demi-héliophile : il s'installe en lisière et dans les trouées, pas sous
     // couvert fermé.
@@ -2228,7 +2341,13 @@ export const ESPECES_V0: readonly EspeceV0[] = [
     pousseMaxMAn: 0.25,
     // Atlas : « méditerranéen, acidiphile, rejette après feu », mycorhize éricoïde.
     eau: { seuilConfortSecheresse: 0.35, seuilStressSecheresse: 0.12, toleranceEngorgement: 0.05 },
-    // pH, littérature : van den Berk et World Agroforestry : de 5,0 (grès acide) à 7,8 (limon calcaire) ; tolérance à l'alcalin rare chez une éricacée.
+    // pH (#279). Bas 4,0 : relevé, l'arbousier d'Irlande (Sealy 1949 et Sealy
+    // et Webb 1950, *J. Ecol.*), relayé par l'EFD *(non ouvert, grandeur non
+    // précisée)*, qui donne 4,0 à 7,2. Haut 7,8 *(à confirmer)* : le 7,2
+    // irlandais est le haut d'un relevé, pas une absence. Van den Berk et
+    // World Agroforestry, que la fiche citait pour « 5,0 à 7,8 », ne donnent
+    // **aucun** nombre, d'après l'audit de #279 (« tolerating both acidic and
+    // calcareous soils »). Pas de fiche chez Landolt.
     ph: [4, 7.8],
     // Entre le chêne-liège et le houx, les deux persistants mesurés de l'atlas *(à confirmer)*.
     lumiere: {
@@ -2354,6 +2473,13 @@ export const ESPECES_V0: readonly EspeceV0[] = [
     // celle de l'essai, pas une limite observée *(à confirmer)* : Coello 2013 le
     // dit tolérant au calcaire actif, le fichier wallon sensible aux sols
     // carbonatés.
+    //
+    // pH (#279) : la borne basse est un relevé (des plantations suivies, encore
+    // présentes sous 4 avec de fortes pertes), de grandeur non précisée — le
+    // réseau forestier allemand mesure souvent en KCl ou en CaCl₂, ce qui la
+    // mettrait 0,65 à 1,0 plus haut en pH eau *(à confirmer)*. Hybride horticole,
+    // pas de fiche chez Landolt. La bonne croissance de 5 à 8 est un optimum
+    // (#278).
     ph: [4, 8],
     // Héliophile (fichier wallon : intolérant à l'ombre jeune, il « exige la
     // pleine lumière » adulte), un peu moins que le commun (MAA 2024 : le
