@@ -74,6 +74,28 @@ export const DUREE_VIE_TISSUS_DJ = 460;
 export const T_BASE_TISSUS_C = 4;
 
 /**
+ * **Le mort reste debout, puis tombe** (#370). Un tissu qui meurt ne part pas en
+ * litière dans la semaine : le foin d'été et la paille d'hiver tiennent sur
+ * pied des semaines, et c'est eux qui font la hauteur d'une prairie qu'on ne
+ * fauche pas. Ils tombent à une vitesse qui suit la température.
+ *
+ * Part du mort sur pied qui tombe par degré-jour (base 0 °C) : 0,001 dans
+ * ModVege, le modèle de prairie de l'INRAE (Jouven, Carrère et Baumont 2006,
+ * `KlDV`), multiplié par un facteur d'âge qui vaut 1, 2 ou 3 selon que le
+ * mort a moins d'un tiers, moins des deux tiers ou plus de la durée de vie des
+ * feuilles. Le moteur ne suit pas l'âge du mort. Il prend le facteur 2, celui
+ * où se tient un compartiment que la mort remplit et la chute vide à ce
+ * rythme : il y séjourne alors 500 °C·j, entre le tiers et les deux tiers des
+ * 800 et 1 400 °C·j que ModVege prête au dactyle et à la molinie (types B et D).
+ */
+export const CHUTE_DU_MORT_PAR_DJ = 0.001 * 2;
+
+/** Ce qui tombe du mort sur pied en une semaine, part ∈ [0,1]. */
+export function chuteDuMortSurPied(tMeanC: number): number {
+  return 1 - Math.exp(-CHUTE_DU_MORT_PAR_DJ * 7 * Math.max(0, tMeanC));
+}
+
+/**
  * Inertie du tapis face à l'humidité : part de l'écart rattrapée chaque semaine
  * par l'humidité « vécue » (constante de temps ≈ 6 semaines).
  *

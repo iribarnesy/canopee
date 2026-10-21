@@ -60,7 +60,19 @@ const station = {
   ventExposition: 0,
 };
 const meteo = syntheticYear(LANDE_SECHE.climat);
-const SEMAINE_ETE = 28;
+/**
+ * **Fin juin, et non plus mi-juillet** (#370). Le hêtre arrivait en semaine 28 au
+ * bord de la mort de soif (stress 6,9 sur main, pour un seuil de 10) : le tapis
+ * recolonise la parcelle en seize semaines et la sèche. Depuis que le foin reste
+ * sur pied au lieu de pailler le sol tout de suite, la première année sèche une
+ * semaine plus tôt, et il mourait en semaine 27. L'essai ne mesure pas la
+ * survie, il mesure ce qu'une racine boit : il le prend deux semaines plus tôt.
+ * Mesuré en semaine 26 : 4,6 % et 30 % de ce qu'il boit sur le profil plein,
+ * 6,57 fois plus à 30 cm qu'à 21 (3,4 %, 22 % et 6,57 en semaine 28 sur main).
+ * Le rapport des deux ne bouge pas, puisqu'il ne lit que les racines ; ce que
+ * boit le profil plein baisse, l'arbre étant plus stressé.
+ */
+const SEMAINE_ETE = 26;
 
 /** Le hêtre amené à l'été, feuilles sorties, sur la parcelle sans herbe. */
 function aLEte(): GameState {
@@ -110,7 +122,7 @@ function transpirationParcelle(surfacePleine: boolean, trees: GameState["trees"]
 
 /**
  * Ce que boit le hêtre seul, L : la parcelle avec lui moins la parcelle sans lui.
- * Le tapis herbacé a repoussé en vingt-huit semaines et boit cent fois plus
+ * Le tapis herbacé a repoussé en vingt-six semaines et boit cent fois plus
  * qu'un plant de trente centimètres ; le fond reste plein, donc il ne prend
  * rien au hêtre et la différence est la part de l'arbre.
  */

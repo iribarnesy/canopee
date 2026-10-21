@@ -52,8 +52,11 @@ const moyenne = (a: ArrayLike<number>) => (a.length === 0 ? 0 : somme(a) / a.len
 function prairie(ans: number, cote = 30) {
   const station = { ...LIMON_RICHE.station, coteM: cote, voisinage: [], gibierParHa: 0 };
   let s: GameState = createGameState(station, rngStateFromSeed(4));
-  // L'azote de la strate, kg N/ha : la somme des espèces, moyennée sur la parcelle.
-  const azotePlante = () => moyenne(s.soil.herbeAzoteG) * N_HERBACEES * 10;
+  // L'azote de la strate, kg N/ha : la somme des espèces, moyennée sur la
+  // parcelle, vivant et mort sur pied. Le foin et la paille sont à la plante
+  // tant qu'ils ne sont pas tombés (#370) : leur azote n'est pas encore rendu.
+  const azotePlante = () =>
+    (moyenne(s.soil.herbeAzoteG) + moyenne(s.soil.herbeMorteAzoteG)) * N_HERBACEES * 10;
   const azote0 = azotePlante();
   const humus: number[] = [];
   const litiere: number[] = [];
