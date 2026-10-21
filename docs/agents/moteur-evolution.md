@@ -63,7 +63,7 @@ l'autre âge pour vérifier.
 
 ## Ce que le dernier lot a appris (l'eau du tapis et la soif des jeunes plants, #391)
 
-Le lot v0.6 issu de l'instruction de #210 (ses options 1, 2 et 6). Le partage de l'eau entre le sol et le tapis suit maintenant FAO-56 (Allen et al. 1998) : la strate transpire au Kcb d'un tapis fermé (0,90) sur ce qu'elle couvre de vert, le sol n'évapore que sur ce qu'elle laisse découvert, au plafond Kc max = 1,20, en deux phases (REW, TEW). Trois réglages *à calibrer* tombent (`HERBE_TRANSPIRATION_COEFF`, `SOIL_EVAP_FRACTION`, `PLAFOND_ENERGIE`), avec la quadratique `soilEvapFactor` et un facteur de saison sans source posé sur la soif de l'herbe. Le format de sauvegarde ne change pas : l'eau évaporable se lit sur le déficit de l'horizon de surface, pas sur un état nouveau. Les prédictions et les mesures sont dans les commits de la branche, avant chaque course.
+Le lot v0.6 issu de l'instruction de #210 (ses options 1, 2 et 6). Le partage de l'eau entre le sol et le tapis suit maintenant FAO-56 (Allen et al. 1998) : la strate transpire au Kcb d'un tapis fermé (0,90) sur ce qu'elle couvre de vert, le sol n'évapore que sur ce qu'elle laisse découvert, au plafond Kc max = 1,20, en deux phases (REW, TEW). Trois réglages *à calibrer* tombent (`HERBE_TRANSPIRATION_COEFF`, `SOIL_EVAP_FRACTION`, `PLAFOND_ENERGIE`), avec la quadratique `soilEvapFactor` et un facteur de saison sans source posé sur la soif de l'herbe. L'eau évaporable se lit sur le déficit de l'horizon de surface, pas sur un état nouveau. Sur décision de l'utilisateur, le lot a ensuite revu la mort de soif d'un arbre installé (O1) : le compteur immédiat ne vaut plus que pour un plant de moins de trois ans ; un arbre installé meurt par l'embolie, à son seuil, ou par l'épuisement de ses réserves, et un feuillu installé lâche ses feuilles sous la soif. Le format de sauvegarde monte à 15 pour la date de défeuillaison. Les prédictions et les mesures sont dans les commits de la branche, avant chaque course.
 
 ### Un nombre calé sur le moteur peut porter deux erreurs qui s'annulent
 
@@ -119,6 +119,18 @@ Une autre sonde lit la soif de survie à travers la vigueur individuelle (±20 %
 
 Dans la frênaie pure de `maladies.test.ts`, le stress médian des frênes vaut déjà 8,8 sur 10 au printemps 1973, par la chalarose ; l'été sec les achève, et 44 des 62 morts inscrites « de sécheresse » ont une majorité de stress de maladie. Depuis #103, un coup rapide qui achève un arbre presque tué par une cause lente rend la mort à la cause lente ; l'inverse n'est pas traité, et un frêne que la chalarose a tué meurt « de sécheresse ». La symétrie, mesurée sur une copie, ne change aucune trajectoire et remonte la frênaie de 0,375 à 0,674 ; mais le mélange reste à 0,389 (0,278 sur `main`) : ses frênes meurent davantage de la chalarose, sans doute parce que la soif ajoute son stress à leur compteur et que la maladie les achève plus tôt (hypothèse, non mesurée). L'essai reste cassé : **une correction juste qui ne touche pas sa cible ne s'applique pas**, et la règle de #103, choisie dans un seul sens, est rapportée comme option.
 
+### Un compteur qui ne connaît pas l'âge tue un arbre fait comme un plant
+
+Le compteur de soif menait au seuil, en sept semaines à une satisfaction de 0,1, un aulne de douze ans comme un plant de l'année. Le terrain les sépare par l'âge, et le dit avec la même frontière deux fois : en 1976, « les plantations de l'année ou celles âgées de deux à trois ans » sont mises à part, celles de cinq à dix ans ont souffert « moins sérieusement » (Aussenac 1978, p. 104) ; trois ans de désherbage assurent d'ordinaire l'installation (Davies 1987, p. 34). Le compteur ne vaut donc plus que pour un plant de moins de trois ans. Un arbre installé meurt de soif par ce que la littérature mesure : l'embolie, à 88 % de conductivité perdue chez un feuillu (Urli et al. 2013), à la moitié chez un résineux (Brodribb et Cochard 2009 ; Choat et al. 2012), et l'épuisement des réserves, que la soif vide en fermant les stomates (McDowell et al. 2008) : le revenu de `reserves.ts` suit la même courbe de soif que la croissance, et la part de puisement que la soif ajoute à l'ombre donne une mort de sécheresse. Rien de nouveau n'est tenu : les réserves restent le compteur vu par l'autre bout. Le plafond de 85 % de l'embolie, qui disait la mort sans la compter, tombe : c'est la mort qui borne le dommage. Mesuré, prédictions écrites avant : aucun aulne de douze ans ne meurt de soif en 1976 (136 / 135 / 137 avant), les plants de l'année et de deux ans y meurent toujours tous, et `ravageurs` et `maladies` passent sans réécriture. **Avant d'empiler une règle d'âge, chercher si le terrain sépare déjà les deux populations, et sur quel critère** : ici, il les séparait par l'âge, deux fois.
+
+### Une chute de feuilles déclenchée au seuil défeuille chaque été
+
+La première défeuillaison partait dès que la soif passait le seuil de cavitation, sans attendre que le bois casse. Mesurée sur trois graines : les aulnes de `ravageurs.test.ts` se défeuillaient neuf étés sur onze (1967, 1969 à 1973, 1975, 1976), les frênes dès 1967, et le coût de leurs refeuillaisons s'ajoutait au stress de la chalarose (121 / 113 / 117 frênes morts de maladie à la fin de 1973, contre 41 / 47 / 45). Or une défeuillaison estivale est rare : à Hesse, la première mesurée en trente ans, en 2003, et les feuilles tombent vertes quand les pétioles s'embolisent, presque sans perte de conductivité des rameaux (Bréda et al. 2006). Elle part maintenant quand la soif embolise encore l'arbre et qu'il a perdu 12 % de sa conductivité, le point d'entrée d'air (Meinzer et al. 2009 ; Domec et Gartner 2001, *à confirmer*) : les aulnes et les frênes ne se défeuillent plus qu'en 1976 de 1966 à 1977. **Un seuil instantané sur un signal qui oscille d'une semaine à l'autre se franchit chaque été** ; un état qui intègre la sévérité et la durée (ici l'embolie elle-même) ne se franchit que dans les années qui le méritent.
+
+### Une protection sans faille protège aussi du réchauffement
+
+La défeuillaison coupe toute la soif de l'arbre : sans feuilles, il ne demande rien, sa satisfaction vaut 1, et son bois cesse de casser. C'est ce que Bréda et al. (2006) observent en 2003 sur le hêtre, qui avait un houppier normal l'été suivant. Mais `climat.test.ts` cassait : sous SSP5-8.5, à soixante ans, 12 à 27 hêtres de la cohorte mouraient de soif, surtout l'an 58 (la sécheresse de 2022 rejouée sous le climat de 2084) ; ils s'y défeuillent maintenant (13 à 22) et passent, et le hêtre ne paie plus plus cher que le chêne (debout 0,49 / 0,84 / 0,78 du témoin figé, borne 0,5). Le terrain de 2018, plus chaud que 2003, dit l'inverse : les potentiels hydriques ont passé le seuil de rupture dans beaucoup d'espèces malgré la chute précoce des feuilles, et la mortalité a continué en 2019 (Schuldt et al. 2020). Ce qui manque n'est pas un nombre, c'est un mécanisme : un arbre sans feuilles perd encore de l'eau, et son bois suit le sol qui sèche ; ou la refeuillaison coûte plus qu'une semaine sans revenu. **Une protection qui annule le signal qui l'a déclenchée ne laisse plus rien mesurer au-delà** ; elle est rapportée avec ses options, pas corrigée.
+
 ### Ce que ça donne
 
 Banc de #210 (25 plants de 0,30 m protégés, une espèce par parcelle de 30 m, cinq ans, météo réelle, graine g = fenêtre 1964 + 20 (g − 1) ; déterministe à graine donnée), désherbé sur enherbé, graines 1 / 2 / 3 :
@@ -148,6 +160,21 @@ Bilan d'eau sans arbre, bilan vertical (sans bassin amont), dix ans après un an
 
 Les tables de production ne bougent pas de plus de 3 % à quarante ans (pin -3 %, frêne +1 %).
 
+La mort de soif d'un arbre installé (O1), météo réelle du limon riche, graines 4 / 17 / 29, sur `main` bd4f3b3 fusionnée (base sans O1, puis la tête) :
+
+| | base | O1 |
+|---|---|---|
+| aulnaie de `ravageurs` : aulnes de douze ans morts de soif en 1976 | 136 / 135 / 137 | 0 / 0 / 0 |
+| aulnaie : aulnes défeuillés, 1976 (autres années de 1966 à 1977) | — | 143 / 141 / 140 (aucun) |
+| frênaie de `maladies` : frênes morts de soif en 1973 et 1976 | 46+19 / 42+24 / 54+12 | 0 |
+| plants de l'année et de deux ans (aulne, frêne), morts de soif en 1976 | 25 sur 25 | 25 sur 25 |
+| plants de quatre ans (aulne, frêne), morts de soif en 1976 | 25 sur 25 | 0 |
+| hêtres de l'année, 1976 | aucun | aucun |
+| `climat.test.ts`, SSP5-8.5 sur figé à soixante ans : cohorte debout | 0,46 / 0,43 / 0,46 | 0,60 / 0,81 / 0,74 |
+| la même, hêtres seuls (borne 0,5) | 0,32 / 0,34 / 0,40 | 0,49 / 0,84 / 0,78 |
+
+Le banc de #210 et la lande de #312 ne bougent pas (rapports à 0,016 près, aucune mort de plus ni de moins).
+
 ### Les prédictions fausses
 
 - P5 : le sol nu de la lande devait évaporer 180 à 300 mm/an sur main ; 340 à 349.
@@ -175,6 +202,10 @@ Les tables de production ne bougent pas de plus de 3 % à quarante ans (pin -3 %
 - V2 : la seule lumière au sol doublée devait tuer à vingt près autant que V1 ; 83 à 90 contre 61 à 64.
 - V3 : la vigueur dans la soif de survie devait laisser mourir 50 à 110 aulnes ; 127 à 130.
 - I2 : l'imputation symétrique devait remonter la frênaie à 0,70-0,95 et faire passer l'essai ; 0,674, et le mélange reste à 0,389.
+- O1, Q2 : la frênaie défeuillée à 12 % devait compter 70 à 125 frênes morts de maladie à la fin de 1977 ; 47 / 62 / 62 (sans soif pour l'achever, la chalarose attend l'après-1976).
+- O1, P9 : `climat.test.ts` devait passer ; le hêtre ne paie plus le réchauffement plus cher que le chêne.
+- O1, R2 : sous SSP5-8.5, les hêtres de la cohorte devaient se défeuiller au moins cinq années sur soixante ; deux (l'an 12 et l'an 58).
+- O1, R1 : `bois-en-travers.test.ts` devait passer sur la base fusionnée sans O1 ; il y dépasse son délai comme sur la tête.
 
 ### Ce qui reste ouvert
 
@@ -183,8 +214,9 @@ Les tables de production ne bougent pas de plus de 3 % à quarante ans (pin -3 %
 - **Le haut du sol nu** (56 à 65 % de la pluie, l'excès de janvier à avril sur Rothamsted) : ce n'est pas l'ETP, à 2 % de celle de Penman de Météo-France sur 2001-2020 ; le climat de Harpenden ou le plafond d'un sol mouillé, à instruire.
 - **Le phosphore de la strate** fait le gros du désherbage et de la fauche sur la lande (#395).
 - **Le pin du banc dégagé** meurt sur le sable profond quand plus rien ne pousse sous lui : cause à relever.
-- **Deux assertions écologiques attendent une décision**, instruites et non touchées : l'aulnaie de 1976 (`ravageurs`) et la frênaie pure (`maladies`). Les quatre autres sont réécrites sur décision, et `succession` passe depuis la fusion de #419.
-- **La mort de soif d'un arbre installé** : un aulne de douze ans meurt en sept semaines à une satisfaction de 0,1, comme un plant de l'année, tous ensemble, sans que l'individu compte ; le terrain de 1976 voit mourir les plantations de l'année, beaucoup moins les peuplements de cinq à dix ans (Aussenac 1978). Options et recommandation dans #391.
+- **Le hêtre sous SSP5-8.5** (`climat.test.ts`, D8) : la défeuillaison protège entièrement un feuillu installé, et le hêtre ne paie plus le réchauffement plus cher que le chêne ; le terrain de 2018 dit qu'elle ne protège pas de tout (Schuldt et al. 2020). Options dans #391.
+- **La défeuillaison à 12 % d'embolie** est une lecture de la segmentation hydraulique, *à confirmer* ; la vitesse de cavitation (`CAVITATION_PAR_SEMAINE`) et la réparation du stress (`RECUPERATION_STRESS`) restent *à calibrer*, et ce sont elles qui décident maintenant de la mort de soif d'un arbre installé.
+- **Le rendu ne montre pas la défeuillaison** : `defeuillaisonSemaine` n'est pas lu côté jeu.
 - **La fermeture du couvert** : indice foliaire effectif de 1,2 sous des aulnes de douze ans qui couvrent 146 % du sol (4,8 sous une aulnaie adulte), 0,28 de lumière au sol sous la hêtraie de quarante ans (E9). Le recalage de l'extinction des houppiers touche tout le moteur.
 - **La règle d'imputation de #103**, à sens unique : un frêne que la chalarose a mené à neuf dixièmes du seuil meurt « de sécheresse » si l'été l'achève.
 
