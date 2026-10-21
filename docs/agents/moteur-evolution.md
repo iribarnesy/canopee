@@ -188,6 +188,82 @@ Les tables de production ne bougent pas de plus de 3 % à quarante ans (pin -3 %
 - **La fermeture du couvert** : indice foliaire effectif de 1,2 sous des aulnes de douze ans qui couvrent 146 % du sol (4,8 sous une aulnaie adulte), 0,28 de lumière au sol sous la hêtraie de quarante ans (E9). Le recalage de l'extinction des houppiers touche tout le moteur.
 - **La règle d'imputation de #103**, à sens unique : un frêne que la chalarose a mené à neuf dixièmes du seuil meurt « de sécheresse » si l'été l'achève.
 
+## Ce qu'un lot précédent a appris (la production de la strate, puis la hauteur du tapis et le mort sur pied, #370)
+
+Décision du propriétaire sur l'instruction de #413 : instruire d'abord la production de la strate (D), puis donner au moteur une hauteur de tapis et une matière morte sur pied (C). Le rapport D est sur #370 ; les prédictions et les mesures sont dans les commits de la branche, avant chaque course.
+
+### L'azote tient la production, et il cache ce qu'il tient
+
+Sur une parcelle sans arbre, la production de la strate ne bouge presque pas quand on lui retire l'eau (×1,00 sur le limon), qu'on triple la durée de vie de ses tissus ou qu'on divise son potentiel lumineux par deux (−3 à −10 %). Sans frein d'azote, elle passe ×5 sur le limon et ×18,6 sur la lande. Le potentiel lumineux (34 à 50 t/ha/an) est trois fois celui des meilleures prairies de fauche, et c'est le frein d'azote qui le rend invisible : divisé par deux, la strate prend plus d'azote (66 kg/ha/an au lieu de 40) et son NNI monte de 0,27 à 0,45. **Une production juste peut venir de deux erreurs qui se compensent** : regarder le NNI, pas seulement la production. La prédiction écrite (la production suit la racine carrée du potentiel) supposait un flux d'azote fixe ; il ne l'est pas.
+
+### Le phosphore ne freine que ce qui le lit
+
+#395 a montré que le phosphore limite le pin de la lande ; l'instruction demandait s'il limite aussi la strate. Il ne peut pas : sa croissance ne lit pas le phosphore, elle en prélève au prorata de l'azote qu'elle prend. **Avant de chercher un facteur dans une mesure, vérifier que le code le lit.**
+
+### Une durée de vie commune vide la plante
+
+Toutes les herbacées vivaient 460 °C·j base 4 (Lemaire et Agnusdei 2000). Cruz et al. 2010 mesurent 1 030 °C·j base 0 pour le dactyle et 1 684 pour la molinie, et ModVege prend 500 à 1 400 selon le type fonctionnel. La matière vivante ne garde ainsi que cinq à six semaines de production. Corrigée par espèce (D3), elle passe de 40 à 67 g/m² pour la molinie à la mi-juin, sans que la production bouge, et l'azote de la strate baisse de 16 à 40 %. Non gardée : elle ne touche pas sa cible (500 à 670 g/m² de pointe chez Taylor et al. 2001) et déplace l'azote de tous les bancs plantés dans l'herbe. Elle est dans #433.
+
+### Une hauteur se lit sur la matière, ou elle se tient dans l'état : les deux ont été mesurés
+
+La consigne proposait un état de hauteur, ou une hauteur déduite de la matière si la production était juste. Les deux ont été écrits en sonde, sur dix ans :
+
+- **l'état** qui suit la croissance existante monte de (plafond − hauteur) × croissance relative. Il donne une molinie de 0,44 m à la mi-juin. Mais à matière nulle, la croissance relative vaut 1 et la hauteur saute à son plafond : il lui faut une graine (le chaume de ModVege), et il monte encore à 0,62 m en mars de la première année. Il se tient à jour à six endroits (tick, fauche, feu, labour, moisson, semis) ;
+- **la hauteur déduite** ne s'écrit nulle part : la matière sur pied, vivante et morte, à la densité de ModVege, sous la hauteur de LEDA. Le feu, le labour, la moisson et la fauche la rabattent parce qu'ils emportent la matière. Elle donne un dactyle juste (12 cm en février, 30 cm en juin) et une molinie de 5 cm, parce que la molinie est trop maigre.
+
+**Les deux ne se valent pas.** L'état donne des hauteurs de terrain en se détachant de la matière, la déduite hérite de l'erreur de production au lieu de la cacher. La déduite est prise : aucune règle ni aucun état de plus, et elle montera avec #433.
+
+### Un taux sans l'âge : prendre le facteur où le compartiment se tient
+
+ModVege fait tomber le mort à 0,001 par °C·j fois un facteur d'âge de 1, 2 ou 3. Sans le facteur (C1), le dactyle de juin est à 58 % mort et fait 0,36 m en février. Le moteur ne suit pas l'âge du mort. Le facteur 2 n'a pas été choisi sur ce résultat : c'est celui où se tient un compartiment que la mort remplit et que la chute vide à ce rythme. Il y séjourne 500 °C·j, entre le tiers et les deux tiers des durées de vie de ModVege pour les types B et D. **Quand une loi dépend d'un état qu'on ne tient pas, chercher la valeur où la loi se tient d'elle-même** plutôt que celle qui donne le résultat voulu.
+
+### Relire un ancien bloc quand l'ancien état est le nouveau à zéro près
+
+Sous la version 13, le mort partait en litière la semaine même. Un bloc de version 13 relu avec le mort sur pied à zéro écrit donc l'état qu'il avait, sans compter ce mort deux fois : c'est la deuxième montée qui relit l'ancien bloc, après la neige. Le format passe à 14 (#410 avait pris le 13 pendant ce lot), et le lecteur sait maintenant relire des grilles absentes.
+
+### Déplacer une matière, c'est relire tous ceux qui la lisaient
+
+Le foin qui tombait en litière la semaine même tient maintenant debout. Deux lecteurs de la litière l'ont perdu sans que rien ne casse à la compilation :
+- **le feu**, dont la charge de surface lisait la litière au sol. Sur le banc de la lande, la première année portait moins de combustible, et un incendie de 1 507 cellules n'en faisait plus que 169 : la propagation est un seuil. La charge lit maintenant la litière et le mort sur pied, la même matière, que le feu brûle déjà (1 353 cellules) ;
+- **l'évaporation**, que la litière paille. La première année sèche un peu plus vite, et un hêtre d'essai mourait une semaine plus tôt. Celle-là n'est pas corrigée : le partage de l'eau appartient à #391, qui fera évaporer le sol à proportion de ce qui le couvre.
+
+**Avant de faire changer de compartiment une matière, chercher tout ce qui lit l'ancien.**
+
+### Un essai peut mesurer au bord d'une mort
+
+`soif-proportionnelle.test.ts` mesurait un hêtre en semaine 28 qui, sur main, avait déjà un stress de 6,9 pour un seuil de 10. Le foin debout ne paillant plus le sol tout de suite, la première année sèche une semaine plus tôt, et le hêtre mourait en semaine 27. L'essai mesure ce qu'une racine boit, pas la survie : il le prend deux semaines plus tôt, ses deux critères inchangés. Le désherbage du banc a été essayé d'abord : il changeait ce que l'arbre boit sur le profil plein (7,9 % au lieu de 3,4 %) et faisait tomber un critère, il n'est pas resté. **Avant de corriger un essai qui casse, relever où il se tenait sur main.**
+
+### Deux bancs de tirage ont basculé, et ils ont pris les graines que leur commentaire relevait
+
+`chandelles.test.ts` (concentration des chutes ventées) et `fruticee.test.ts` (l'aubépine dernière pionnière debout) sont tombés d'un cheveu : 0,0994 pour un seuil de 0,1, 54 aubépines contre 55 ronces. Aucune cause physique ne touche les saules morts ni les arbustes : le foin debout a dévié les trajectoires, et une partie change de 0,07 de concentration, ou de 29 ronces sur une graine. Les deux commentaires relevaient déjà six et cinq graines ; les deux essais les cumulent maintenant, seuils inchangés (0,125 et 67 contre 54 sur la branche, 0,100 et 57 contre 33 à la base). Le cumul de la fruticée n'est pas le même sous Node 22 et sous Node 24 (44 aubépines contre 47 ronces, 54 contre 55) : un banc de tirage change aussi d'une version de V8 à l'autre.
+
+### Ce que ça donne
+
+Moteur de la branche, série réelle, quatrième année, taille de la station, déterministe :
+
+| | février | mi-juin | mi-août | décembre |
+|---|---|---|---|---|
+| dactyle du limon riche : hauteur, part morte | 12 cm, 40 % | 30 cm, 43 % | 33 cm, 56 % | 15 cm, 46 % |
+| molinie de la lande : hauteur, part morte | 0,7 cm, 65 % | 4,7 cm, 59 % | 1,5 cm, 71 % | 0,9 cm, 73 % |
+
+Fauche en semaine 24 : 3,8 cm, puis 10 cm huit semaines plus tard. Azote pris par la strate, Park Grass et rapport de fauche de `herbe.test.ts` inchangés à quelques millièmes près.
+
+### Les prédictions fausses
+
+- R2 : dactyle 450 à 750 et 300 à 600 g/m²/an ; 763 et 773.
+- R5 et R6 : sans frein d'azote ×3 à ×7 et ×2 à ×4 ; ×18,6 et ×5,0. L'eau ×1,5 à ×2,5 ; ×1,14.
+- D3a : 70 à 130 g/m² à la mi-juin avec les durées de vie de Cruz ; 67.
+- D4 : la production devait suivre la racine carrée du potentiel (0,65 à 0,78) ; 0,90 à 0,97.
+- C1b : sans le facteur d'âge du mort, 60 à 150 g/m² de mort en juin et 0,08 à 0,15 m en février ; 255 g/m² et 0,36 m.
+- C1d : la hauteur déduite à 2-4 cm après la fauche ; 6 cm.
+
+### Ce qui reste ouvert
+
+- **#433** : la production de la strate (potentiel gonflé, NNI, durée de vie par espèce, azote de la lande). La molinie de la lande reste à 5 cm tant qu'elle n'est pas faite.
+- **#436** (`rendu`) : dessiner le tapis à la hauteur publiée.
+- Entre hauteur déduite et état de hauteur, le propriétaire a retenu la **hauteur déduite** (21 octobre) ; la sonde de l'état reste prête si la molinie corrigée (#433) le demande.
+- La fauche garde sa règle du dixième, sans hauteur de coupe ; le chevreuil ne baisse pas la hauteur ; l'évaporation ne lit pas le foin debout ; l'indice `herbeBiomasse` ne voit pas la saison.
+
 ## Ce qu'un lot précédent a appris (le potassium des cultures, #395 : instruction, puis stocks déclarés et potasse)
 
 Un lot d'instruction, puis la décision de l'utilisateur : le potassium d'abord (stocks déclarés, puis potasse et potassium du fumier), le phosphore à part (#434, v0.7). Les mesures de l'instruction sont dans #395 (commentaire du 20 octobre) ; les prédictions et les mesures de tout le lot sont dans les commits de la branche `claude/v06-phosphore`, avant chaque course. Le format de sauvegarde ne bouge pas.

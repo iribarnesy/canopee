@@ -206,6 +206,25 @@ export interface HerbaceeV0 {
    */
   vitesseInstallation: number;
   /**
+   * **Hauteur de la touffe**, m : la hauteur de canopée de l'espèce, celle de
+   * son plus haut tissu vert (LEDA Traitbase, Kleyer et al. 2008). C'est un
+   * **plafond** : la hauteur du tapis se lit sur la matière sur pied
+   * (`hauteurDuTapisM`), et une espèce maigre reste sous lui (#370).
+   */
+  hauteurM: number;
+  /**
+   * **Densité apparente** de la touffe, g de matière sèche par m³ : ce qu'un
+   * mètre cube de tapis pèse, pour le vert et pour le mort sur pied (#370).
+   *
+   * Ce sont les densités du modèle de prairie de l'INRAE, ModVege (Jouven,
+   * Carrère et Baumont 2006), qui en donne une par type fonctionnel de
+   * graminée. Le type de chaque espèce est celui de Cruz et al. 2010. Le mort
+   * est plus léger que le vert chez une graminée de prairie riche (il tient
+   * debout et prend de la place), plus lourd chez une graminée de sol pauvre
+   * (il se couche en litière dense).
+   */
+  densiteApparente: { vert: number; mort: number };
+  /**
    * **culture** : présent quand l'espèce est semée et récoltée plutôt que
    * spontanée. C'est une histoire de vie différente, et il faut l'assumer —
    * tout le reste de ce module décrit des **pérennes**.
@@ -304,6 +323,12 @@ const AHDB_RB209_2023 =
   "AHDB, Nutrient Management Guide (RB209), section 4 Arable crops, juin 2023, table 4.12 : blé d'hiver, grain seul 5,5 kg K2O par tonne de matière fraîche (15 % d'humidité), grain et paille 10,5 ; le potassium de la paille peut baisser nettement entre la maturité et la récolte";
 const TAYLOR_2001 =
   "Taylor, Rowland & Jones 2001, Biological Flora of the British Isles: Molinia caerulea (L.) Moench, Journal of Ecology 89:126-144 (Grande-Bretagne)";
+const LEDA_2008 =
+  "Kleyer et al. 2008, The LEDA Traitbase: a database of life-history traits of the Northwest European flora, Journal of Ecology 96:1266-1274 ; fichier canopy_height (hauteur de canopée, m)";
+const MODVEGE_2006 =
+  "Jouven, Carrère & Baumont 2006, Model predicting dynamics of biomass, structure and digestibility of herbage in managed permanent pastures. 1. Model description, Grass and Forage Science 61:112-124 (INRAE ; densités apparentes et abscission du mort par type fonctionnel, paramètres repris du paquet growR 1.3.0)";
+const CRUZ_2010 =
+  "Cruz, Theau, Lecloux, Jouany & Duru 2010, Typologie fonctionnelle de graminées fourragères pérennes : une classification multitraits, Fourrages 201:11-17 (INRAE ; dactyle de type B, molinie de type d, que la pratique range avec D)";
 
 /**
  * **trois** espèces, contrastées sur les axes que le moteur sait déjà lire : la
@@ -367,7 +392,14 @@ export const HERBACEES: readonly HerbaceeV0[] = [
     // ancienne) : soit ~17 ans pour remplir un mètre carré depuis son bord,
     // étalés sur la quinzaine de semaines où elle végète *(à confirmer)*.
     vitesseInstallation: 0.004,
-    sources: [SHIRREFFS_1985],
+    // 0,175 m : la moyenne des deux valeurs de LEDA qui ne sont pas des
+    // minima (0,18 d'après Clapham 1987, 0,175 d'après Rothmaler, gamme 0,06 à
+    // 0,30).
+    hauteurM: 0.175,
+    // Une dicotylédone : ModVege ne décrit que des graminées. Densités du type
+    // A, faute de mieux *(à calibrer)*.
+    densiteApparente: { vert: 850, mort: 500 },
+    sources: [SHIRREFFS_1985, LEDA_2008, MODVEGE_2006],
   },
   {
     id: "dactylis_glomerata",
@@ -414,7 +446,14 @@ export const HERBACEES: readonly HerbaceeV0[] = [
     // celle de la reconquête du tapis d'avant ce lot (0,12 par semaine de
     // pleine végétation), pour la même raison que ses seuils de lumière.
     vitesseInstallation: 0.12,
-    sources: [BEDDOWS_1959],
+    // 0,775 m (gamme 0,45 à 1,1), LEDA d'après Hegi 1906. C'est la canopée de
+    // la plante fleurie ; l'autre valeur de LEDA, 0,133 m, vient de pelouses
+    // de rochers (Lavergne 2003) et n'est pas celle d'une prairie.
+    hauteurM: 0.775,
+    // Type B (Cruz et al. 2010) : 850 g/m³ pour le vert, 500 pour le mort
+    // (ModVege).
+    densiteApparente: { vert: 850, mort: 500 },
+    sources: [BEDDOWS_1959, LEDA_2008, MODVEGE_2006, CRUZ_2010],
   },
   {
     id: "molinia_caerulea",
@@ -441,7 +480,13 @@ export const HERBACEES: readonly HerbaceeV0[] = [
     tBaseCroissanceC: 8,
     // Touffe, plus lente à couvrir qu'une graminée traçante *(à calibrer)*.
     vitesseInstallation: 0.05,
-    sources: [TAYLOR_2001],
+    // 0,525 m (gamme 0,35 à 0,7), LEDA d'après Haeupler 2000. L'autre valeur,
+    // 1,05 m, est un maximum, panicules comprises.
+    hauteurM: 0.525,
+    // Type d, rangé avec D (Cruz et al. 2010) : 800 g/m³ pour le vert, 2 200
+    // pour le mort, qui se couche (ModVege).
+    densiteApparente: { vert: 800, mort: 2200 },
+    sources: [TAYLOR_2001, LEDA_2008, MODVEGE_2006, CRUZ_2010],
   },
   {
     id: "triticum_aestivum",
@@ -498,6 +543,13 @@ export const HERBACEES: readonly HerbaceeV0[] = [
     tBaseCroissanceC: 3,
     // Elle ne conquiert **rien** : son emprise est posée par le semis.
     vitesseInstallation: 0,
+    // 0,78 m, mesure de jardin de LEDA (Oldenburg, 17 plantes). Les flores
+    // anciennes de la même base (1,25 à 1,7 m) décrivent des blés d'avant les
+    // gènes de nanisme *(à confirmer sur une variété actuelle)*.
+    hauteurM: 0.78,
+    // Une culture : ModVege ne la décrit pas. Densités du type A *(à
+    // calibrer)* ; le blé ne meurt pas sur pied avant la moisson.
+    densiteApparente: { vert: 850, mort: 500 },
     culture: {
       /**
        * 0,45 à 0,5 pour les blés d'hiver modernes d'Europe du Nord-Ouest, la
@@ -539,6 +591,7 @@ export const HERBACEES: readonly HerbaceeV0[] = [
       DUPRAZ_CAPILLON,
       COMIFER_2007_PKMG,
       AHDB_RB209_2023,
+      LEDA_2008,
     ],
   },
 ];
@@ -869,6 +922,39 @@ export function rabattreParEspece(parEspece: GrilleEcrite, base: number, facteur
   for (let s = 0; s < N_HERBACEES; s++) {
     parEspece[base + s] = (parEspece[base + s] ?? 0) * facteur;
   }
+}
+
+/**
+ * **La hauteur du tapis d'une espèce**, m (#370) : ce que sa matière sur pied
+ * occupe au-dessus de la place qu'elle tient.
+ *
+ * Elle ne se tient pas dans l'état, elle se **lit** sur lui : la matière vivante
+ * et la matière morte sur pied de l'espèce, ramenées à son emprise, chacune à
+ * sa densité apparente. Le vert et le mort occupent la même hauteur, chacun à
+ * sa densité, et la touffe a la hauteur du plus haut des deux. C'est ce que
+ * suppose la coupe de ModVege, qui laisse à chaque compartiment la hauteur de
+ * coupe fois sa densité. La hauteur de canopée de l'espèce la plafonne.
+ *
+ * Aucune règle ne la fait monter ni descendre : elle suit ce qui fait bouger la
+ * matière. Elle monte avec la croissance, tient quand l'herbe sèche (le foin
+ * reste debout), descend quand le mort tombe en litière. La fauche, le feu, le
+ * labour et la moisson la rabattent parce qu'ils emportent la matière. Le
+ * broutage du chevreuil ne la touche pas : il ne prend que la couverture verte
+ * (`gibier.ts`), pas la matière.
+ *
+ * **Elle hérite de la production** : une espèce maigre fait un tapis bas. Le
+ * moteur fait une molinie de lande trop maigre (#370, #433), donc trop basse.
+ */
+export function hauteurDuTapisM(
+  h: HerbaceeV0,
+  matiereG: number,
+  morteG: number,
+  emprise: number,
+): number {
+  if (emprise <= 0) return 0;
+  const vert = Math.max(0, matiereG) / h.densiteApparente.vert;
+  const mort = Math.max(0, morteG) / h.densiteApparente.mort;
+  return Math.min(h.hauteurM, Math.max(vert, mort) / emprise);
 }
 
 /**
