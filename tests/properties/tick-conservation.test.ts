@@ -7,7 +7,7 @@ import { createGameState, type GameState, plantScattered } from "../../src/engin
 import type { StationClimat } from "../../src/engine/stations";
 import { LANDE_SECHE, SABLE_PROFOND, VALLEE_ENGORGEE } from "../../src/engine/stations";
 import { type TickResult, tick } from "../../src/engine/tick";
-import { cnBois, dureeChandelleSemaines } from "../../src/engine/trees";
+import { dureeChandelleSemaines } from "../../src/engine/trees";
 
 /**
  * Conservation au niveau du **tick** complet, grille + arbres (docs/regles.md §16) :
@@ -213,10 +213,11 @@ describe("conservation eau + azote sur le tick complet (grille + arbres)", () =>
   it("des arbres qui meurent et des chandelles qui tombent : l'azote suit le bois", () => {
     // Le bois mort garde l'azote de l'arbre et le rend en pourrissant (#328) :
     // deux stocks de plus, que le bilan doit compter chaque semaine. Vingt
-    // charmes de douze mètres dont le bois porte l'azote de son espèce : la
-    // moitié meurt à la première semaine et verse son bois au pool de la
-    // parcelle, l'autre moitié sont des chandelles qui s'abattent à la première
-    // semaine et couchent le leur sur le sol.
+    // charmes de douze mètres dont le bois porte l'azote de son espèce (que
+    // `plantScattered` pose depuis #379) : la moitié meurt à la première
+    // semaine et verse son bois au pool de la parcelle, l'autre moitié sont des
+    // chandelles qui s'abattent à la première semaine et couchent le leur sur
+    // le sol.
     const espece = getEspece("carpinus_betulus");
     const azoteCouche: number[] = [];
     const azoteDuPool: number[] = [];
@@ -229,9 +230,9 @@ describe("conservation eau + azote sur le tick complet (grille + arbres)", () =>
         let poolN = 0;
         const trees = s.trees.map((t, i) => {
           const boisKgC = treeTotalCarbonKg(espece, t.diametreCm, t.heightM);
-          const azoteBoisG = (boisKgC * 1000) / cnBois(espece);
+          const azoteBoisG = t.azoteBoisG ?? 0;
           const mort = { ...t, alive: false, causeMort: "secheresse" as const };
-          if (i % 2 === 0) return { ...mort, azoteBoisG };
+          if (i % 2 === 0) return mort;
           // Une chandelle déjà versée au pool, morte depuis le temps qu'elle
           // tient debout : elle s'abat cette semaine.
           poolC += boisKgC;
