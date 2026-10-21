@@ -106,6 +106,10 @@ Le foin qui tombait en litière la semaine même tient maintenant debout. Deux l
 
 `soif-proportionnelle.test.ts` mesurait un hêtre en semaine 28 qui, sur main, avait déjà un stress de 6,9 pour un seuil de 10. Le foin debout ne paillant plus le sol tout de suite, la première année sèche une semaine plus tôt, et le hêtre mourait en semaine 27. L'essai mesure ce qu'une racine boit, pas la survie : il le prend deux semaines plus tôt, ses deux critères inchangés. Le désherbage du banc a été essayé d'abord : il changeait ce que l'arbre boit sur le profil plein (7,9 % au lieu de 3,4 %) et faisait tomber un critère, il n'est pas resté. **Avant de corriger un essai qui casse, relever où il se tenait sur main.**
 
+### Deux bancs de tirage ont basculé, et ils ont pris les graines que leur commentaire relevait
+
+`chandelles.test.ts` (concentration des chutes ventées) et `fruticee.test.ts` (l'aubépine dernière pionnière debout) sont tombés d'un cheveu : 0,0994 pour un seuil de 0,1, 54 aubépines contre 55 ronces. Aucune cause physique ne touche les saules morts ni les arbustes : le foin debout a dévié les trajectoires, et une partie change de 0,07 de concentration, ou de 29 ronces sur une graine. Les deux commentaires relevaient déjà six et cinq graines ; les deux essais les cumulent maintenant, seuils inchangés (0,125 et 67 contre 54 sur la branche, 0,100 et 57 contre 33 à la base). Le cumul de la fruticée n'est pas le même sous Node 22 et sous Node 24 (44 aubépines contre 47 ronces, 54 contre 55) : un banc de tirage change aussi d'une version de V8 à l'autre.
+
 ### Ce que ça donne
 
 Moteur de la branche, série réelle, quatrième année, taille de la station, déterministe :
