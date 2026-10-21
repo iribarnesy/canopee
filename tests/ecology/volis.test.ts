@@ -206,7 +206,11 @@ describe("en partie : les deux ruines coexistent", () => {
     // sur trois graines. C'est la **direction** qui est testée, pas la part — elle
     // dépend de l'élancement, cf. le commentaire du référentiel.
     expect(casses).toBeGreaterThan(verses);
-  });
+    // **Un délai à lui** (#378) : soixante ans de saulaie, 58 à 98 s en CI sur
+    // main (sept courses), et les runners vont jusqu'à deux fois plus lentement
+    // l'un que l'autre. Il fait 2,5 fois la plus longue course de main, arrondi
+    // à la minute.
+  }, 300_000);
 });
 
 describe("le troisième mode : des branches en moins, l'arbre debout", () => {

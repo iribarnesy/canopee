@@ -61,7 +61,52 @@ qu'un rapport (voir la note de maintenance).
 Séparer calibration et validation : caler un paramètre sur un âge, garder
 l'autre âge pour vérifier.
 
-## Ce que le dernier lot a appris (la production de la strate, puis la hauteur du tapis et le mort sur pied, #370)
+## Ce que le dernier lot a appris (les essais qui frôlent leur délai, #378 et #423)
+
+Lot de maintenance des essais : aucune ligne du moteur, aucune borne, aucun critère ni aucune graine ne change. Huit essais tournaient en CI à moins de 1,5 fois leur délai, et deux étaient déjà tombés dessus sans une assertion fausse : `bois-en-travers` sur main (187 s pour 180), le brin dominé de `ph-survie` sur trois PR (jusqu'à 212 s). Les prédictions et les mesures sont dans les commits de la branche, avant chaque course.
+
+### Un délai se mesure en CI, sur plusieurs courses, et sur la plus longue
+
+`bois-en-travers` a pris 98 s sur main (bd4f3b3) et 177 s sur la première course de cette branche : même moteur, mêmes fichiers dans la même tranche, et un essai dont seul le délai a changé. Ce n'est pas l'essai, **c'est la machine** : sur cette course, tous les fichiers de plus de vingt secondes de la tranche 1 ont pris 1,7 à 2,0 fois leur temps de main, et ceux de la tranche 2 en ont pris 0,4 à 0,8 fois. Les runners n'ont pas tous la même vitesse, et une tranche entière suit la sienne ; les trois fichiers qui tournent ensemble sur ses quatre cœurs virtuels ajoutent leur part. Une marge relevée sur une course est une photographie. La règle prise ici : **2,5 fois la plus longue de sept courses de main, arrondie à la minute**, écrite à côté du délai, avec la raison pour laquelle l'essai ne se raccourcit pas. Les journaux des jobs suffisent : le rapporteur de vitest y écrit la durée de chaque essai de plus de 300 ms, et le temps d'un fichier qu'aucun essai n'explique est celui de ses crochets.
+
+### Avant de donner un délai, chercher la partie qu'un voisin a déjà jouée
+
+`faune` jouait six parties de trente ans pour trois distinctes ; `ph-survie` rejouait les quinze premières années d'une course de quarante ; `stress-origines` et `naivete-vent` rejouaient une course qu'un essai voisin venait de jouer. Le moteur est déterministe : une partie jouée une fois dans un crochet, que les essais lisent, rend les mêmes nombres. Le seul partage qui ne soit pas un simple double appel, l'arrêt en chemin d'une course plus longue, a été vérifié à l'empreinte sur les trois graines. **Le temps passe alors dans le crochet, et c'est lui qui porte le délai** (`hookTimeout`), dimensionné comme un essai. Et le crochet vit dans le bloc des seuls essais qui le lisent : s'il tombe, il emporte tout son bloc, et le premier jet de `ph-survie` y entraînait trois essais de fonctions qui n'en lisaient rien.
+
+### Un délai explicite peut être plus serré que le défaut
+
+`gibier` et les arbustes de `hauteurs-arbustes` portaient un délai de 120 s, posé quand le défaut était plus bas, et resté là quand le défaut est passé à 180. La callune y tournait jusqu'à 67 s : le réglage n'abritait plus rien, il serrait. Il est retiré. D'autres délais de 120 s restent (`mort-sur-pied`, `neige`, `meteo-vieillie`, `pools-positifs`, `pollinisateurs`, le crochet de `prevoir`), tous à plus de deux fois leur durée.
+
+### Un conteneur chargé ne dit pas si un délai tient
+
+La course locale appariée, main et branche dans le même processus, tournait dans un conteneur chargé à 5 ou 6 pour quatre cœurs : les essais longs y prenaient trois à quatre fois leur temps de CI, et ceux de main comme ceux de la branche y ont dépassé leur délai. Elle compare deux versions ; seule la CI dit si un délai tient.
+
+### Une parcelle plus petite, si tout ce qu'on lit est rapporté à l'hectare
+
+L'inventaire carbone de `carbon.test.ts` ne lit que des stocks à l'hectare. Un quart d'hectare à la même densité (dix et dix au lieu de quarante et quarante) rend l'humus au millième et le vivant à 0,83-0,96 fois, onze fois au moins au-dessus de son plancher, en un quart du temps. Ça ne vaut que pour un banc qui ne mesure pas une dynamique de peuplement : `bois-en-travers` a déjà montré qu'une pente plus courte barre moins, et `abri-peuplement` que l'abri suit la densité.
+
+### Les tranches se coupent au nombre de fichiers, pas à la durée
+
+`vitest --shard` trie les fichiers par empreinte sha1 de leur chemin et les coupe en parts égales en **nombre**. Sur bd4f3b3 : 6 min pour la tranche 2, 28 min pour la tranche 5, quand l'équilibre ferait environ 15 min. La tranche 5 porte à elle seule trois des sept plus gros fichiers. Couper un gros fichier en deux ne corrige rien de façon durable : la moitié tombe là où l'empreinte de son nom la met, et chaque fichier ajouté ailleurs déplace jusqu'à cinq autres fichiers d'une tranche à la suivante. Le temps de mur d'une tranche est borné par son travail total, pas par son plus gros fichier.
+
+### Les prédictions fausses
+
+- P7 : `ph-survie` devait passer à 260-290 s en CI ; 309 et 295. Son crochet devait prendre 80 à 120 s ; 126 et 124. Le brin dominé a pris 183 s sur la première course, sur une machine 1,3 fois plus lente que celle de main.
+- P8 : la frênaie de `stress-origines` devait prendre 20 à 35 s ; 39 sur la première course.
+- P9 : `naivete-vent` devait passer à 715-740 s ; 762.
+- P11 : tous les essais de la branche devaient tenir à deux fois leur délai ; `volis` et `gibier`, non touchés, sont passés à 1,89. Ils ont reçu leur délai ensuite.
+- P12 : l'humus de `carbon` devait coûter 0,25 à 0,35 fois sa durée de main en course appariée ; 0,36.
+- P15 : les deux versions devaient passer en course locale ; elles sont toutes deux tombées sur leurs délais dans le conteneur chargé.
+- P16 : sur la dernière course, tous les essais devaient tenir à 2,5 fois leur délai ; sept sont entre 2,2 et 2,5, dont cinq que ce lot ne touche pas (`fruticee`, `brousse`, `climat`, `tempete`, `abri-peuplement` lisière). La règle des 2,5 fois se prend sur la plus longue de plusieurs courses : une course seule peut tomber sur une machine plus lente que toutes celles de la mesure.
+
+Justes : l'identité à l'empreinte des courses partagées, l'humus et le vivant du quart d'hectare, sa durée au quart, `faune` à 301 et 306 s pour 280-360 prédits, et la stabilité des essais qui n'ont reçu qu'un délai.
+
+### Ce qui reste ouvert
+
+- **L'équilibre des tranches.** Deux options, à trancher par le propriétaire : un séquenceur vitest qui répartit les fichiers par durée mesurée (une table des durées en CI, tenue par un script qui lit les journaux ; une table périmée dégrade l'équilibre sans jamais faire sauter un fichier), ou des tranches plus nombreuses, qui ne corrigent pas l'écart. Recommandé : le séquenceur.
+- **Les campagnes de collecte.** `fruticee`, `feu`, `saumos`, `succession` et d'autres jouent des parties dans le corps d'un `describe` : 830 à 1 650 s d'import par tranche lourde, en bonne part ces parties, qu'aucun délai ne couvre. La note de maintenance dit déjà de les mettre dans un `beforeAll`.
+
+## Ce qu'un lot précédent a appris (la production de la strate, puis la hauteur du tapis et le mort sur pied, #370)
 
 Décision du propriétaire sur l'instruction de #413 : instruire d'abord la production de la strate (D), puis donner au moteur une hauteur de tapis et une matière morte sur pied (C). Le rapport D est sur #370 ; les prédictions et les mesures sont dans les commits de la branche, avant chaque course.
 
