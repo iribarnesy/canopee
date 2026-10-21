@@ -61,7 +61,35 @@ qu'un rapport (voir la note de maintenance).
 Séparer calibration et validation : caler un paramètre sur un âge, garder
 l'autre âge pour vérifier.
 
-## Ce que le dernier lot a appris (la production de la strate, puis la hauteur du tapis et le mort sur pied, #370)
+## Ce que le dernier lot a appris (la conservation de l'azote : l'ébranchage, #345, le minage, #347, et le bois posé, #379)
+
+Trois issues de maintenance, instruites sur main avec des sondes hors dépôt. Les prédictions et les mesures sont dans les commits de la branche `claude/v06-azote`, avant chaque course.
+
+### Un bilan du sol ne voit pas ce qu'un arbre perd sans le verser
+
+La propriété du tick ferme le côté sol : ce qui en sort, ce qui y entre, la variation du stock. Elle comptait la litière versée par une tempête et ignorait la moitié retirée à l'arbre sans aller nulle part. Sur un banc de cent pins de douze mètres, son résidu restait à 1e-11 pendant que 5 kg N/ha disparaissaient en une semaine. Le bilan du **système entier** (sol, strate, arbres) se ferme à 1e-11 quand rien ne fixe l'azote de l'air, et c'est lui qui voit la fuite : il tombe dès la première tempête sur le moteur d'avant. **Une propriété ratifie ce qu'elle ne compte pas** : avant d'en conclure qu'un mécanisme conserve, vérifier que le stock qu'il vide est dans le bilan.
+
+### Une correction écrite avant un changement de règle se relit quand la règle change
+
+L'ébranchage avait été corrigé une première fois parce qu'il **créait** de l'azote. La correction retirait à l'arbre ce qu'il versait, à une époque où une feuille rendait tout au sol. Puis #247 a fait résorber la moitié avant la chute, dans trois chemins sur quatre ; la tempête n'a pas suivi. Une seule fonction de chute (`feuillesQuiTombent`) sert maintenant les quatre, et la règle ne peut plus diverger. **Quand une règle change, chercher toutes ses copies** ; mieux, n'en laisser qu'une.
+
+### Une propriété qui tourne là où le mécanisme est fermé ne vérifie rien
+
+La propriété du tick ne tournait que sur deux mulls, où le minage ectomycorhizien ne s'ouvre pas, et son équation ne le comptait pas. Ajouter le sable profond ne suffisait pas : le peuplement mixte des autres cas y mine quelques millièmes de kg N/ha par an. Le cas nouveau pose des pins de douze mètres qui minent 18,6 kg N/ha en trois ans, et il garde ce chiffre : sans minage réel, il échoue. **Un cas de propriété porte une garde qui prouve que son mécanisme a tourné.**
+
+### Un essai qui attend un tirage rare ne se rend pas robuste par le décor
+
+L'essai du feu des chandelles brûle sur une graine sur douze. L'espérance de départs de feu, mesurée dans `departDeFeu`, vaut 0,085 en cinq ans sur sa lande : 8 % de chances de brûler. Les chandelles de charme tiennent neuf ans et demi, la série réelle de 2018 à 2022 donne 0,18, et le plafond du départ (0,015 par semaine) borne tout décor à quelques dixièmes. Il en faudrait cinq pour que trois graines brûlent à coup sûr. **Mesurer l'espérance d'un événement avant de chercher un décor qui le rende sûr** : ici, aucun ne le peut sans balayer les graines ou imposer le départ, et c'est une décision du propriétaire.
+
+### Les prédictions fausses
+
+- P1 : une perte à l'ébranchage dès les premières années ; aucune semaine d'ébranchage en vingt ans, les pins n'y sont pas assez grands.
+- P1' : 0,03 à 0,5 kg N/ha/an et 0,05 à 0,5 par tempête ; 1,4 à 2,3 et 1,7 à 2,4. Une pinède fermée porte beaucoup d'azote dans ses aiguilles, et une tempête prend tout le peuplement à la fois.
+- P2 : 0,01 à 0,5 kg N/ha/sem d'écart sans le minage ; 3e-4 et 2e-3 sur les peuplements de jeunes plants, qui minent à peine.
+- P5 : la série réelle de Mont-de-Marsan multiplierait les départs de feu (0,2 à 3 en cinq ans) ; 0,08 et 0,18.
+- P6 : la réserve garderait 85 à 138 kg N/ha de plus ; elle est remobilisée chaque printemps, et c'est la litière cumulée qui monte, de 53 à 117 kg N/ha en soixante ans.
+
+## Ce qu'un lot précédent a appris (la production de la strate, puis la hauteur du tapis et le mort sur pied, #370)
 
 Décision du propriétaire sur l'instruction de #413 : instruire d'abord la production de la strate (D), puis donner au moteur une hauteur de tapis et une matière morte sur pied (C). Le rapport D est sur #370 ; les prédictions et les mesures sont dans les commits de la branche, avant chaque course.
 
