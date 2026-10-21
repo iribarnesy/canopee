@@ -21,12 +21,13 @@
  * molécules du vivant — il n'est donc quasiment pas immobilisé dans la matière
  * organique, et la pluie le lessive des feuilles avant même qu'elles tombent.
  *
- * Non modélisé : le calcium et le magnésium, la fertilisation minérale, les
+ * Non modélisé : le calcium et le magnésium, la fertilisation phosphatée, les
  * différences d'exigence entre espèces (les besoins en P et K sont pris
  * proportionnels au besoin en azote, faute de données fiables par essence),
  * et le potassium **dans** le cycle des cultures : une culture prélève et rend
- * son potassium, le grain l'emporte, mais aucune ne pousse moins faute de lui
- * (seuls les arbres le lisent).
+ * son potassium, le grain l'emporte, la potasse et le fumier en apportent
+ * (`fertiliser`, actions.ts), mais aucune ne pousse moins faute de lui (seuls
+ * les arbres le lisent).
  *
  * Les deux cycles sont complets, conservatifs et **branchés sur la loi du
  * minimum** : altération de la roche sur tout le profil, dépôts
@@ -47,6 +48,7 @@
  *     passage, celui qui donne enfin une fonction aux mycorhizes.
  */
 
+import { masseHorizonKgM2 } from "./erosion";
 import type { Horizon } from "./soil";
 
 /**
@@ -92,11 +94,14 @@ export function potassiumDeLaStrateG(azoteG: number): number {
  * `vouluG` : d'abord l'échangeable, puis, s'il ne suffit plus, la réserve non
  * échangeable (#222).
  *
- * **Une culture vide l'échangeable, et elle continue de prélever.** Un blé
- * fertilisé prend chaque saison de l'ordre de ce que le limon porte de
- * potassium échangeable. Au printemps, le pool tombe à presque rien, et la
- * plante prenait alors son azote sans le potassium qui va avec. Sur le
- * terrain, ce potassium vient de la réserve. Ce que les sols des essais de
+ * **Une culture peut vider l'échangeable, et elle continue de prélever.** Un
+ * blé fertilisé prend chaque saison 150 kg K/ha. Sur l'ancien stock du limon
+ * riche, forestier (107 kg/ha d'échangeable), le pool tombait à presque rien
+ * chaque printemps, et la plante prenait alors son azote sans le potassium qui
+ * va avec. Depuis que la station déclare la teneur d'une terre cultivée (#395),
+ * il ne descend plus qu'à 436 kg/ha sur 544 ; un sol pauvre, une culture plus
+ * exigeante ou une allée sans potasse peuvent encore le vider. Sur le terrain,
+ * ce potassium vient de la réserve. Ce que les sols des essais de
  * Rothamsted et de Woburn libèrent sous culture ne suit pas leur potassium
  * échangeable de départ (Johnston et Addiscott 1971, *J. Agric. Sci.* 76 :
  * 539-552). Un ray-grass cultivé en continu sous serre
@@ -109,8 +114,9 @@ export function potassiumDeLaStrateG(azoteG: number): number {
  * `echangeReserveK`. Le moteur n'a pas d'état de plus pour cela, et le bilan
  * de la parcelle reste exact tant que la réserve n'est pas vide
  * (`potassium-conservation.test.ts`). Une fois vide, la plante prend de nouveau
- * son azote sans son potassium. La culture ne lit pas le potassium : elle ne
- * pousse pas moins faute de lui.
+ * son azote sans son potassium. Sur les stocks déclarés, elle ne se vide plus
+ * en soixante ans de blé continu : 3 500 kg/ha restent sur 5 400 (#395). La
+ * culture ne lit pas le potassium : elle ne pousse pas moins faute de lui.
  */
 export function prelevementPotassium(
   echangeableG: number,
@@ -212,6 +218,29 @@ export function alterationPotassiumG(profil: readonly Horizon[]): number {
 }
 
 /**
+ * Rétention du potassium par le complexe d'échange, cmol+/kg : la part de
+ * l'échangeable qui passe dans l'eau de drainage vaut `RETENTION_K / (CEC +
+ * RETENTION_K)`. La concentration de l'eau qui draine suit donc la part du
+ * complexe que le potassium occupe, comme la loi d'échange de Gapon le veut :
+ * à potassium égal, une argile en rend moins qu'un sable.
+ *
+ * **Le nombre est réglé sur sa source, pas sur le moteur** (#395). Le Potash
+ * Development Association rapporte, en moyenne sur les limons et les argiles
+ * cultivés, des pertes de l'ordre de 1,2 kg K₂O/ha par 100 mm de drainage,
+ * soit une eau à environ 1 mg K/L ; l'eau qui draine une terre agricole
+ * britannique dépasse rarement 3 mg K/L (PDA, *Potash and the Environment*,
+ * fiche 29, 2019). La valeur est celle qui rend ces 1,2 kg au limon riche
+ * cultivé, en blé continu, rapportés au drainage du profil
+ * (`potassium-conservation.test.ts`) : c'est un réglage calé sur une cible
+ * sourcée, pas une ancre.
+ *
+ * L'ancien nombre (0,2, plafonné à 99,5 % de rétention) avait été calé sur des
+ * stocks forestiers : dès que le limon cultivé a porté le potassium d'une terre
+ * cultivée, il en lessivait 40 kg/ha/an, dix fois le terrain.
+ */
+export const RETENTION_K = 0.015;
+
+/**
  * Lessivage du potassium : comme l'azote, il part avec l'eau qui draine — mais
  * le complexe d'échange le retient d'autant mieux qu'il est fourni.
  */
@@ -222,10 +251,7 @@ export function lessivagePotassiumG(
   cec: number,
 ): number {
   const fractionEau = drainageMm / Math.max(1e-9, drainageMm + eauSolMm);
-  // Le complexe retient très efficacement : sous forêt, les pertes réelles se
-  // comptent en quelques kilos par hectare et par an, pas en dizaines. Seuls
-  // les sables, presque sans argile ni humus, laissent filer *(à calibrer)*.
-  const retention = Math.min(0.995, cec / (cec + 0.2));
+  const retention = cec / (cec + RETENTION_K);
   return stockG * fractionEau * (1 - retention);
 }
 
@@ -310,12 +336,37 @@ export function phosphoreAssimilableGM2(profil: readonly Horizon[]): number {
   return (0.25 + 0.35 * surface.moPct) * (1 - surface.pierrosite);
 }
 
+/** K₂O → K, en masse : 2 × 39,10 / 94,20. */
+export const K_SUR_K2O = 0.83;
+
+/** Un cmol+/kg (un méq/100 g) de potassium échangeable, en mg K/kg. */
+export const MG_K_PAR_CMOL = 391;
+
 /**
- * Stock de potassium échangeable d'un profil, g/m² : proportionnel à ce que le
- * complexe d'échange peut retenir.
+ * Réserve de potassium non échangeable rapportée à l'échangeable de départ.
+ *
+ * Sur des sols cultivés d'Europe centrale suivis vingt et un ans, le potassium
+ * non échangeable vaut 8 à 38 fois l'échangeable (942 à 2 808 mg K/kg), et il
+ * libère 46 à 69 kg K/ha/an sous culture (Balík et al. 2020, *Soil and Water
+ * Research* 15 : 211). Dix est dans cette gamme, à son bas.
  */
-export function potassiumEchangeableGM2(profil: readonly Horizon[]): number {
+export const RESERVE_K_SUR_ECHANGEABLE = 10;
+
+/**
+ * Stock de potassium échangeable de l'horizon de surface, g/m², depuis sa
+ * teneur d'analyse de terre, mg K/kg (#395).
+ *
+ * **La station déclare sa teneur, comme elle déclare son azote minéral de
+ * départ.** Le moteur la tirait d'une formule sans source (0,9 g/m² par cmol+/kg
+ * de capacité d'échange) qui ignorait la masse de l'horizon : par kilo de terre,
+ * le limon riche n'avait guère plus de potassium qu'un podzol, 24,5 mg K/kg,
+ * sous le seuil de pauvreté d'un horizon minéral forestier (0,12 méq/100 g,
+ * Bonneau 1995) et quatre à cinq fois moins qu'une parcelle de Rothamsted
+ * privée de potassium depuis un siècle (Blake et al. 1999). La teneur de chaque
+ * station porte maintenant sa source (stations.ts).
+ */
+export function potassiumEchangeableGM2(profil: readonly Horizon[], mgKg: number): number {
   const surface = profil[0];
   if (!surface) return 0;
-  return 0.9 * capaciteEchange(surface) * (1 - surface.pierrosite);
+  return (mgKg * masseHorizonKgM2(surface)) / 1000;
 }

@@ -137,18 +137,23 @@ export function duree(semaines: number): string {
 }
 
 /**
- * Depuis quand — ou « avant votre arrivée ».
+ * Depuis quand — et « avant votre arrivée » pour ce qui précède la partie.
  *
- * **Une marque peut être plus vieille que la partie**, et c'est ce qui rendait
- * la fiche fausse : une parcelle vieillie de quarante ans porte des arbres
- * broutés en semaine 1 800, alors que le compteur du joueur repart de zéro à
- * son arrivée (`worker.ts`, `faireVieillir`). L'écart est négatif, et un
- * `Math.max(0, …)` en faisait un « il y a 0 semaine » — un brout de l'année
- * dernière annoncé comme celui de cette semaine. Relevé dans le navigateur, sur
- * un pin dont la fiche disait qu'il venait d'être brouté.
+ * **Les dates sont des semaines du compte du joueur** (#397, #410) : `semaine −
+ * marque` est le temps écoulé, toujours positif ou nul, et une date **négative**
+ * dit à elle seule « avant votre arrivée » — une parcelle vieillie de N ans
+ * porte les marques de son vieillissement, entre −52 N et −1.
+ *
+ * Elles étaient comptées depuis le début du vieillissement : un pin brouté en
+ * semaine 1 800 se lisait comme un brout à venir, et la fiche s'en gardait par
+ * un `marque > semaine`, qui cédait dès que le compteur rattrapait la date
+ * (« Brouté il y a 10 semaines » d'un brout de cinq ans). La garde est tombée
+ * avec l'ancienne forme (#414). La durée se dit toujours, la mention la suit :
+ * « il y a 3 ans, avant votre arrivée ».
  */
 export function depuis(semaine: number, marque: number): string {
-  return marque > semaine ? "avant votre arrivée" : ilYA(semaine - marque);
+  const ecart = ilYA(semaine - marque);
+  return marque < 0 ? `${ecart}, avant votre arrivée` : ecart;
 }
 
 /**
@@ -299,9 +304,9 @@ export function ficheDeLArbre(
       dire(
         "🕰",
         "Chandelle depuis",
-        arbre.mortSemaine > ctx.semaine
-          ? "avant votre arrivée"
-          : duree(ctx.semaine - arbre.mortSemaine),
+        // Une chandelle de deux ans n'est pas une chandelle de trente : la durée,
+        // et la mention quand elle précède la partie (#414).
+        `${duree(ctx.semaine - arbre.mortSemaine)}${arbre.mortSemaine < 0 ? ", avant votre arrivée" : ""}`,
       );
     }
     // **Ce dont elle se mourait déjà** : le moteur le calcule chaque semaine et

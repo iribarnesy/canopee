@@ -163,6 +163,9 @@ describe("les cycles, et ce qui leur manque encore", () => {
     // *(À confirmer : je n'ai pas trouvé de bilan français de hêtraie
     // directement citable, seulement des ordres de grandeur concordants.)*
     expect(run.parAn.k).toBeLessThan(80);
+    // Mesuré : 3,2 kg K/ha/an, soit 1,4 kg K₂O par 100 mm de drainage, depuis
+    // que le limon riche porte la teneur d'une terre cultivée et que la
+    // rétention suit le PDA (#395). Avant : 10,3, sur un stock cinq fois plus bas.
     expect(run.parAn.lessivageK).toBeLessThan(15);
   });
 

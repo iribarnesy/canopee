@@ -8,7 +8,7 @@
 import { type EauDeSurface, SANS_EAU } from "./eau_surface";
 import type { SyntheticClimate } from "./meteo";
 import { bordersUniformes, entourageDeLaStation } from "./paysage";
-import { phosphoreAssimilableGM2, potassiumEchangeableGM2 } from "./pk";
+import { K_SUR_K2O, MG_K_PAR_CMOL, phosphoreAssimilableGM2, potassiumEchangeableGM2 } from "./pk";
 import {
   carboneProfilTHa,
   drainageProfilMmSemaine,
@@ -73,13 +73,28 @@ export function stationDepuisProfil(
     mineralizationPotentialKgHaWeek: mineralisationPotentielleKgHaSemaine(profil),
     initialSoilCTHa: carboneProfilTHa(profil),
     phInitial: phSurface(profil),
-    // Stocks de départ dérivés du sol, comme tout le reste : l'argile porte
-    // le potassium, la matière organique et le pH décident du phosphore
-    // assimilable (pk.ts).
+    // La matière organique et le pH décident du phosphore assimilable (pk.ts).
+    // Le potassium échangeable, lui, est déclaré par la station en teneur
+    // d'analyse de terre, et rapporté ici à la masse de l'horizon (#395).
     phosphoreInitialGM2: phosphoreAssimilableGM2(profil),
-    potassiumInitialGM2: potassiumEchangeableGM2(profil),
+    potassiumInitialGM2: potassiumEchangeableGM2(profil, reste.potassiumEchangeableMgKg),
   };
 }
+
+/**
+ * Potassium échangeable d'une terre agricole de limon, mg K/kg (#395).
+ *
+ * Les médianes cantonales de la Base de Données d'Analyses de Terre, 2000-2004,
+ * tombent dans la classe 100-200 mg/kg sur les plateaux de limon du Nord, de la
+ * Somme à l'Aisne, avec des taches à 200-300 (Gis Sol 2011, *L'état des sols de
+ * France*, carte p. 85). On retient le milieu de la classe, 150, exprimé en K₂O
+ * comme toute analyse de terre française *(unité à confirmer : la légende de la
+ * carte dit « K échangeable »)*. Ce sont des teneurs de fin de cycle, prises
+ * avant la fertilisation de la culture suivante. C'est l'ordre de grandeur d'une
+ * parcelle de Rothamsted laissée sans potassium depuis un siècle, qui plafonne
+ * à 90-120 mg K/kg (Blake et al. 1999, repris par Balík et al. 2020).
+ */
+export const K_ECHANGEABLE_TERRE_DE_LIMON_MG_KG = 150 * K_SUR_K2O;
 
 /** Lande sableuse sèche et pauvre (esprit Sud-Gironde) : RU faible, drainage éclair. */
 export const LANDE_SECHE: StationClimat = {
@@ -108,6 +123,15 @@ export const LANDE_SECHE: StationClimat = {
       horizon(40, { sable: 88, limon: 8, argile: 4 }, { moPct: 0.3, ph: 5, induration: 0.9 }),
     ],
     initialMineralNKgHa: 15,
+    // Les sols landais portent 0,01 à 0,05 méq/100 g de potassium échangeable
+    // dans leurs horizons minéraux, 0,02 à 0,2 dans les horizons humifères
+    // (Trichet et al. 1999, *Étude et Gestion des Sols* 6 : 197). On retient le
+    // haut de la gamme minérale, qui est le bas de la gamme humifère : la
+    // surface de ce podzol n'a que 1,8 % de matière organique. Les trois
+    // placettes de pin maritime des Landes du réseau RENECOFOR donnent 0,050 à
+    // 0,074 cmol+/kg sur 0-20 cm, 0,05 étant leur seuil de mesure (campagne
+    // 1993-1995 ; Saenger et al. 2023, Zenodo 8391353).
+    potassiumEchangeableMgKg: 0.05 * MG_K_PAR_CMOL,
     // Nappe perchée sur l'alios, autour de deux mètres et demi — plus haute
     // l'hiver, plus basse l'été. Elle reste sous le profil : le sable
     // au-dessus est à sec en été, et c'est bien ce contraste qui fait la
@@ -148,6 +172,10 @@ export const VALLEE_ENGORGEE: StationClimat = {
       horizon(55, { sable: 20, limon: 45, argile: 35 }, { moPct: 1.2, ph: 6.6 }),
     ],
     initialMineralNKgHa: 40,
+    // Une prairie de fond de vallée est une terre agricole : la teneur des
+    // médianes cantonales de la BDAT, qui couvrent aussi la Touraine dont la
+    // station partage la météo (classe 100-200 mg/kg, Gis Sol 2011).
+    potassiumEchangeableMgKg: K_ECHANGEABLE_TERRE_DE_LIMON_MG_KG,
     // Fond de vallée : la nappe est juste sous les pieds toute l'année, et le
     // réseau régional la réalimente en permanence.
     profondeurNappeEquilibreCm: 40,
@@ -183,6 +211,9 @@ export const LIMON_RICHE: StationClimat = {
       horizon(65, { sable: 15, limon: 70, argile: 15 }, { moPct: 0.8, ph: 7.2 }),
     ],
     initialMineralNKgHa: 60,
+    // Un limon du Nord sorti de culture : la teneur d'une terre de limon
+    // cultivée (BDAT).
+    potassiumEchangeableMgKg: K_ECHANGEABLE_TERRE_DE_LIMON_MG_KG,
     // Plateau limoneux bien drainé : la nappe est hors de portée des racines.
     profondeurNappeEquilibreCm: 630,
     remonteeNappeMmSemaine: 0,
@@ -255,6 +286,12 @@ export const LIMON_ACIDE: StationClimat = {
     // La minéralisation est lente en sol acide : la matière organique
     // s'accumule, mais elle libère peu.
     initialMineralNKgHa: 30,
+    // Les sols forestiers et acides de Sologne sont parmi les plus pauvres en
+    // potassium échangeable de France (Gis Sol 2011, p. 98). Les trois placettes
+    // du réseau RENECOFOR en Loir-et-Cher portent 0,054, 0,056 et 0,104 cmol+/kg
+    // sur 0-30 cm (campagne 1993-1995, moyenne des couches pondérée par leur
+    // épaisseur ; Saenger et al. 2023, Zenodo 8391353). On retient la médiane.
+    potassiumEchangeableMgKg: 0.056 * MG_K_PAR_CMOL,
     profondeurNappeEquilibreCm: 500,
     remonteeNappeMmSemaine: 0,
     drainageExterneMmSemaine: Number.POSITIVE_INFINITY,
@@ -285,6 +322,9 @@ export const FRICHE_LIMON: StationClimat = {
       horizon(50, { sable: 25, limon: 60, argile: 15 }, { moPct: 0.9, ph: 6.9 }),
     ],
     initialMineralNKgHa: 40,
+    // Une friche est un ancien champ : la teneur d'une terre de limon cultivée
+    // (BDAT).
+    potassiumEchangeableMgKg: K_ECHANGEABLE_TERRE_DE_LIMON_MG_KG,
     profondeurNappeEquilibreCm: 610,
     remonteeNappeMmSemaine: 0,
     drainageExterneMmSemaine: Number.POSITIVE_INFINITY,
@@ -393,6 +433,13 @@ export const SUBERAIE_MAURES: StationClimat = {
       horizon(50, { sable: 82, limon: 12, argile: 6 }, { moPct: 0.4, ph: 5.7 }),
     ],
     initialMineralNKgHa: 20,
+    // Un sol forestier sableux et acide : la médiane des vingt-sept placettes
+    // RENECOFOR de texture sableuse et de sol acide, 0,087 cmol+/kg sur 0-25 cm
+    // (campagne 1993-1995 ; Saenger et al. 2023, Zenodo 8391353). *(À
+    // confirmer : le réseau n'a pas de placette dans les Maures, et ses deux
+    // placettes sur arène granitique, en Corse, en portent trois à quatre fois
+    // plus.)*
+    potassiumEchangeableMgKg: 0.087 * MG_K_PAR_CMOL,
     // Versant de massif : la roche fissurée sous l'arène ne porte pas de nappe
     // que les racines atteignent, et rien ne la réalimente en été.
     profondeurNappeEquilibreCm: 600,
@@ -620,6 +667,11 @@ export const SABLE_PROFOND: StationClimat = {
     // À C/N 30 le sol minéralise ce qu'un podzol minéralise. Le stock minéral de
     // départ est donc bas pour la bonne raison.
     initialMineralNKgHa: 25,
+    // Un podzol forestier : la médiane des quatre podzols du réseau RENECOFOR,
+    // 0,063 cmol+/kg sur 0-25 cm (campagne 1993-1995 ; Saenger et al. 2023,
+    // Zenodo 8391353), dont deux sous pin maritime dans les Landes, l'analogue
+    // français que la station se donne.
+    potassiumEchangeableMgKg: 0.063 * MG_K_PAR_CMOL,
     // Veldpodzol : la nappe est à portée du pivot, et c'est ce qui sépare un
     // site de classe médiane d'une dune sèche.
     //

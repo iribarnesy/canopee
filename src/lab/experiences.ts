@@ -25,6 +25,7 @@ import { horizon } from "../engine/soil";
 import { createGameState, type GameState, plantAt, type Station } from "../engine/state";
 import {
   FRICHE_LIMON,
+  K_ECHANGEABLE_TERRE_DE_LIMON_MG_KG,
   LANDE_SECHE,
   LIMON_RICHE,
   STATIONS_V0,
@@ -318,6 +319,8 @@ const BAC_A_SABLE: Experience = {
       paysageId: "bocage",
       relief: RELIEF_PLAT,
       initialMineralNKgHa: 20,
+      // Le bac à sable est un bocage : la teneur d'une terre de limon (#395).
+      potassiumEchangeableMgKg: K_ECHANGEABLE_TERRE_DE_LIMON_MG_KG,
       remonteeNappeMmSemaine: 0,
       drainageExterneMmSemaine: 40,
       herbeInitiale: 0.6,

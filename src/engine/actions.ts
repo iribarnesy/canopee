@@ -30,7 +30,7 @@ import { decoteEngorgement, indiceDuMarche } from "./marche";
 import { partMecanisable } from "./mecanisation";
 import { SURVIE_APRES_LABOUR, TYPES_MYCORHIZE } from "./mycorhizes";
 import { KG_PER_HA_TO_G_PER_M2, litterDecayRate } from "./nitrogen";
-import { potassiumDeLaStrateG } from "./pk";
+import { K_SUR_K2O, potassiumDeLaStrateG } from "./pk";
 import { altitudeParCellule } from "./relief";
 import { profondeurPenetrableCm } from "./soil";
 import type { GameState } from "./state";
@@ -390,6 +390,38 @@ export const FUMIER_HEURES_HA = 2.5;
  */
 export const DOSE_AZOTE_MAX_KG_HA = 250;
 /**
+ * Potassium d'un fumier de bovins rapporté à son azote, kg K par kg N (#395).
+ *
+ * Un fumier de bovins frais (25 % de matière sèche) porte 6,0 kg N et 9,4 kg K₂O
+ * par tonne, dont 90 % de potassium disponible pour la culture suivante (AHDB,
+ * RB209, section 2, *Organic materials*). Le relevé français donne 5,9 kg N et
+ * 9,5 kg K₂O *(Réussir ; barème Comifer à confirmer)*. Le potassium d'un
+ * fumier est surtout celui des urines, un ion libre : il entre dans
+ * l'échangeable à l'épandage, comme celui des tissus morts (`tick.ts`).
+ *
+ * La dose du geste reste en kg N/ha : le potassium vient avec. 170 kg N/ha, le
+ * plafond de la directive nitrates, apportent ainsi 221 kg K/ha.
+ */
+export const FUMIER_K_SUR_N = (9.4 / 6.0) * K_SUR_K2O;
+/**
+ * Prix de la potasse, €/kg K₂O : un chlorure de potassium à 60 % de K₂O, rendu
+ * ferme. Le chlorure se négociait vers 440 dollars la tonne en Europe en mars
+ * 2025, en gros, soit 0,7 €/kg K₂O *(à calibrer : prix agriculteur non trouvé,
+ * et le prix des engrais a doublé en 2022)*.
+ */
+export const POTASSE_EUR_KG_K2O = 0.9;
+/**
+ * Dose maximale d'un apport de potasse, kg K₂O/ha. La dose d'entretien du
+ * Comifer est l'exportation de la culture multipliée par un coefficient voisin
+ * de 1 sur un sol moyen, soit une cinquantaine de kilos de K₂O pour un blé de
+ * 9 t ; en 2017, les surfaces de blé tendre qui reçoivent de la potasse en
+ * reçoivent 48 kg K₂O/ha en moyenne (Agreste, enquête Pratiques culturales
+ * en grandes cultures 2017), et les parcelles PK de Broadbalk 90 kg K/ha/an
+ * (108 kg K₂O). Au-delà de 300 kg en un passage, on redresse un sol, on ne le
+ * fertilise plus *(à calibrer)*.
+ */
+export const DOSE_POTASSE_MAX_KG_HA = 300;
+/**
  * Surcoût de temps pour charger le broyat au lieu de le laisser tomber sur
  * place : il faut remplir et déplacer la remorque *(à calibrer)*.
  */
@@ -576,13 +608,28 @@ export type GameAction =
        *    minéralisé, et il construit de l'humus au passage.
        *
        * La dose est en kg N/ha dans les deux cas, pour qu'elles se comparent.
+       * Le fumier apporte aussi son potassium (`FUMIER_K_SUR_N`).
+       *
+       *  - **potasse** (#395) : du chlorure de potassium, dosé en kg K₂O/ha
+       *    comme le dosent le Comifer et les enquêtes Agreste. Il entre dans le
+       *    potassium échangeable. C'est le geste qui compense ce que le grain
+       *    emporte, et sans lui la réserve du sol paie seule.
        */
       type: "fertiliser";
       week: number;
-      forme: "mineral" | "fumier";
-      /** dose d'azote apportée, kg N/ha */
-      doseKgNHa: number;
-    } & Zone)
+    } & Zone &
+      (
+        | {
+            forme: "mineral" | "fumier";
+            /** dose d'azote apportée, kg N/ha */
+            doseKgNHa: number;
+          }
+        | {
+            forme: "potasse";
+            /** dose de potasse apportée, kg K₂O/ha */
+            doseKgK2OHa: number;
+          }
+      ))
   | {
       /**
        * Étêter (trogner) : couper la charpente à hauteur d'homme, au-dessus de
@@ -1805,18 +1852,20 @@ function applyFertiliser(
   state: GameState,
   action: Extract<GameAction, { type: "fertiliser" }>,
 ): ApplyResult {
-  const dose = action.doseKgNHa;
+  const potasse = action.forme === "potasse";
+  const dose = action.forme === "potasse" ? action.doseKgK2OHa : action.doseKgNHa;
+  const doseMax = potasse ? DOSE_POTASSE_MAX_KG_HA : DOSE_AZOTE_MAX_KG_HA;
   if (!(dose > 0)) {
     return { state, refusals: [refuse(action.week, "fertiliser", "dose nulle")] };
   }
-  if (dose > DOSE_AZOTE_MAX_KG_HA) {
+  if (dose > doseMax) {
     return {
       state,
       refusals: [
         refuse(
           action.week,
           "fertiliser",
-          `dose au-delà de ${DOSE_AZOTE_MAX_KG_HA} kg N/ha : ce n'est plus fertiliser`,
+          `dose au-delà de ${doseMax} ${potasse ? "kg K₂O/ha" : "kg N/ha"} : ce n'est plus fertiliser`,
         ),
       ],
     };
@@ -1832,15 +1881,24 @@ function applyFertiliser(
   const azoteParCelluleG = dose * KG_PER_HA_TO_G_PER_M2;
   const areaHa = cells.length / 10_000;
   const mineral = action.forme === "mineral";
-  const cost = dose * areaHa * (mineral ? AZOTE_MINERAL_EUR_KG : FUMIER_EUR_KG_N);
-  const hours = areaHa * (mineral ? FERTILISATION_HEURES_HA : FUMIER_HEURES_HA);
+  const prix = potasse ? POTASSE_EUR_KG_K2O : mineral ? AZOTE_MINERAL_EUR_KG : FUMIER_EUR_KG_N;
+  const cost = dose * areaHa * prix;
+  // La potasse passe à l'épandeur centrifuge, comme l'ammonitrate.
+  const hours = areaHa * (action.forme === "fumier" ? FUMIER_HEURES_HA : FERTILISATION_HEURES_HA);
   // Les heures n'arrêtent rien (#133) : elles montent, et `depassementHoraire`
   // les facture en fin de semaine. Ces trois gestes de culture — semer,
   // fertiliser, moissonner — ont été écrits pendant que la règle changeait sur
   // `main` ; ils suivent la nouvelle, comme les quinze autres.
 
   const soil = { ...state.soil };
-  if (mineral) {
+  if (potasse) {
+    // Le chlorure se dissout dans l'eau du sol : son potassium entre dans
+    // l'échangeable, que la réserve, le lessivage et les racines lisent déjà.
+    const potassiumG = state.soil.potassiumG.slice();
+    const potassiumParCelluleG = dose * K_SUR_K2O * KG_PER_HA_TO_G_PER_M2;
+    for (const i of cells) potassiumG[i] = (potassiumG[i] ?? 0) + potassiumParCelluleG;
+    soil.potassiumG = potassiumG;
+  } else if (mineral) {
     // **l'azote minéral arrive disponible, et donc lessivable.** Il entre dans
     // le pool que les plantes prélèvent et que le drainage emporte : un apport
     // posé avant l'hiver part avec l'eau, et le moteur n'a rien eu à apprendre
@@ -1869,6 +1927,12 @@ function applyFertiliser(
     soil.litterNG = litterNG;
     soil.litterCG = litterCG;
     soil.litterK = litterK;
+    // Et son potassium, qui ne passe pas par la litière : il est déjà soluble.
+    const potassiumG = state.soil.potassiumG.slice();
+    for (const i of cells) {
+      potassiumG[i] = (potassiumG[i] ?? 0) + azoteParCelluleG * FUMIER_K_SUR_N;
+    }
+    soil.potassiumG = potassiumG;
   }
 
   return {
