@@ -1366,8 +1366,8 @@ export function phFactor(espece: EspeceV0, ph: number): number {
   //
   // **Aucune table de production ne peut bouger**, et c'est démontrable plutôt que
   // mesuré : la queue ne vit que **hors** de l'amplitude déclarée, et aucune espèce
-  // n'est calée hors de la sienne — le pin sylvestre est à pH 7 dans sa gamme
-  // 4–7,5, le châtaignier sur le limon acide où il vaut 1. Les seuils
+  // n'est calée hors de la sienne — le pin sylvestre est à pH 4,8 dans sa gamme
+  // 2,8–7,5, le châtaignier sur le limon acide où il vaut 1. Les seuils
   // d'installation (`paysage.ts`, `regeneration.ts`) ne bougent pas non plus :
   // ils excluent sous 0,20 et 0,25, quand la queue plafonne à 0,05.
   return Math.max(dansLaGamme, VIGUEUR_A_LA_BORNE * facteurSurviePh(espece.ph, ph));

@@ -552,8 +552,9 @@ export const SUBERAIE_MAURES: StationClimat = {
  * analyse granulométrique n'a été consultée, ce sont des ordres de grandeur)*.
  *
  * **Le pH est le chiffre qui a demandé le plus de prudence, et il est plus haut
- * que le terrain.** Un podzol de dekzand sous pin titre pH-KCl 3,3 à 4,0, soit
- * pH-eau 4,0 à 4,8 environ *(à confirmer)*. Le moteur, lui, lit l'amplitude
+ * que le terrain.** Un podzol de dekzand sous pin titre pH-KCl 3,3 à 4,0
+ * *(à confirmer)*, soit pH-eau 4,05 à 5,0 par la conversion que l'atlas
+ * déclare (Kabała et al. 2016, éq. 7 ; #279). Le moteur, lui, lit l'amplitude
  * déclarée de l'espèce comme un **plateau à bords en rampe** : le pin (4,0-7,5)
  * n'est à pleine vigueur qu'entre 4,67 et 6,84, et il tombe à 0,34 dès pH 4,2.
  * Déclarer le sol à son pH réel aurait donc mesuré `facteurGammePh`, pas le
@@ -567,6 +568,13 @@ export const SUBERAIE_MAURES: StationClimat = {
  * pin rend **6,79 m** à quarante ans, à pH 4,8 **14,91 m** sur les deux mêmes
  * graines. Six dixièmes de pH valent ici plus de la moitié de la hauteur — la
  * station serait donc muette sur le sol tant que cette rampe décide.
+ *
+ * **La raison de ce 4,8 est tombée avec #279**, pas le chiffre. La borne basse
+ * 4,0 du pin était celle de l'USFS ; les relevés européens la contredisent
+ * (l'horizon A de 215 pineraies polonaises descend à pH eau 2,8), elle vaut
+ * maintenant 2,8 et le pin est à pleine vigueur dès pH 3,47. Redescendre la
+ * station au pH de terrain mesurerait enfin le sable ; c'est une option de
+ * #262 et #172, à mesurer, et elle n'est pas prise ici.
  *
  * Pas de nappe dans le profil, mais une nappe à deux mètres : c'est le
  * *veldpodzol*, le podzol de bas de pente qui porte l'essentiel des pineraies
