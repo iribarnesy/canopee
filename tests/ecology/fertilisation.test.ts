@@ -11,10 +11,16 @@
  */
 
 import { describe, expect, it } from "vitest";
-import { applyAction, type GameAction, grainRecoltableT } from "../../src/engine/actions";
+import {
+  applyAction,
+  FUMIER_K_SUR_N,
+  type GameAction,
+  grainRecoltableT,
+} from "../../src/engine/actions";
 import { CN_HUMUS } from "../../src/engine/carbon";
 import { HERBACEES } from "../../src/engine/herbacees";
 import { syntheticYear } from "../../src/engine/meteo";
+import { K_SUR_K2O } from "../../src/engine/pk";
 import { rngStateFromSeed } from "../../src/engine/rng";
 import { createGameState, type GameState, plantAt } from "../../src/engine/state";
 import { LIMON_RICHE } from "../../src/engine/stations";
@@ -135,6 +141,56 @@ describe("le geste refuse ce qui n'est pas de la fertilisation", () => {
     // vulnérable, et les paliers de Broadbalk montent à 192 en minéral.
     expect(applyAction(nu, apport(400)).refusals[0]?.reason).toContain("ce n'est plus fertiliser");
     expect(applyAction(nu, apport(192)).refusals).toEqual([]);
+  });
+
+  it("au-delà de 300 kg K₂O/ha de potasse, non plus (#395)", () => {
+    const potasse = (doseKgK2OHa: number): GameAction => ({
+      type: "fertiliser",
+      week: 10,
+      x: 10,
+      y: 10,
+      rayonM: 5,
+      forme: "potasse",
+      doseKgK2OHa,
+    });
+    expect(applyAction(nu, potasse(0)).refusals).toHaveLength(1);
+    expect(applyAction(nu, potasse(400)).refusals[0]?.reason).toContain("kg K₂O/ha");
+    expect(applyAction(nu, potasse(60)).refusals).toEqual([]);
+  });
+});
+
+describe("la potasse et le fumier apportent leur potassium (#395)", () => {
+  const nu = createGameState(
+    { ...LIMON_RICHE.station, coteM: 20, voisinage: [] },
+    rngStateFromSeed(4),
+  );
+  const zone = { x: 10, y: 10, rayonM: 5 };
+  const cellules = cellulesDeLaZone(20, zone);
+  /** Potassium échangeable gagné par la zone, kg/ha. */
+  const gagne = (action: GameAction): number => {
+    const apres = applyAction(nu, action).state;
+    let t = 0;
+    for (const i of cellules) t += (apres.soil.potassiumG[i] ?? 0) - (nu.soil.potassiumG[i] ?? 0);
+    return (t / cellules.length) * 10;
+  };
+
+  it("la potasse, à sa dose en K₂O", () => {
+    // 48 kg K₂O/ha, la dose moyenne des blés qui en reçoivent (Agreste 2017).
+    const k = gagne({ type: "fertiliser", week: 10, ...zone, forme: "potasse", doseKgK2OHa: 48 });
+    expect(k).toBeCloseTo(48 * K_SUR_K2O, 3);
+  });
+
+  it("le fumier, avec son azote : 9,4 kg K₂O pour 6 kg N (RB209)", () => {
+    const k = gagne({ type: "fertiliser", week: 40, ...zone, forme: "fumier", doseKgNHa: 170 });
+    expect(k).toBeCloseTo(170 * FUMIER_K_SUR_N, 3);
+    expect(k).toBeGreaterThan(200);
+    expect(k).toBeLessThan(240);
+  });
+
+  it("l'ammonitrate n'en apporte pas", () => {
+    expect(gagne({ type: "fertiliser", week: 10, ...zone, forme: "mineral", doseKgNHa: 120 })).toBe(
+      0,
+    );
   });
 });
 

@@ -142,9 +142,10 @@ describe("une chandelle", () => {
     expect(l.map((x) => x.quoi)).not.toContain("Sur pied depuis");
   });
 
-  it("garde une chandelle plus vieille que la partie hors du « depuis »", () => {
-    expect(valeur(fiche({ alive: false, mortSemaine: 1800 }, 12), "Chandelle depuis")).toBe(
-      "avant votre arrivée",
+  it("dit l'âge d'une chandelle plus vieille que la partie, et qu'elle l'est (#414)", () => {
+    // Une date négative : morte deux ans avant l'arrivée, vue à la semaine 12.
+    expect(valeur(fiche({ alive: false, mortSemaine: -92 }, 12), "Chandelle depuis")).toBe(
+      "2 ans, avant votre arrivée",
     );
   });
 
@@ -202,9 +203,10 @@ describe("une marque plus vieille que la partie", () => {
     // quarante ans, le compteur du joueur repart de zéro mais les arbres
     // gardent leurs marques d'avant. « Brouté il y a 0 semaine » sur un pin
     // que personne n'avait touché depuis dix ans.
-    const l = fiche({ brouteSemaine: 1800 }, 12);
-    expect(valeur(l, "Brouté")).toBe("avant votre arrivée");
-    expect(depuis(12, 1800)).toBe("avant votre arrivée");
+    // Depuis #410, ses dates arrivent négatives, et la fiche dit la durée (#414).
+    const l = fiche({ brouteSemaine: -144 }, 12);
+    expect(valeur(l, "Brouté")).toBe("il y a 3 ans, avant votre arrivée");
+    expect(depuis(12, -144)).toBe("il y a 3 ans, avant votre arrivée");
     expect(depuis(60, 8)).toBe("il y a 1 an");
   });
 });
