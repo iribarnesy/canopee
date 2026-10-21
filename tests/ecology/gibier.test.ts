@@ -182,7 +182,7 @@ describe("la sélectivité réoriente la composition", () => {
     // Vingt-six points d'écart mesurés ; le seuil est une **marge**, pas une
     // ancre — ce qui est ancré est le sens, que porte le trait d'appétence.
     expect(perteNoisetier - pertePin).toBeGreaterThan(0.15);
-  }, 120_000);
+  });
 
   it("une pression forte fait plus de dégâts qu'une pression faible", () => {
     const faible = plantation("quercus_pubescens", { protege: false, gibierParHa: 0.03 });

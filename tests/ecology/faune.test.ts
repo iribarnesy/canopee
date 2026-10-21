@@ -30,7 +30,7 @@
  *      serait un paramètre, pas un mécanisme.
  */
 
-import { describe, expect, it } from "vitest";
+import { beforeAll, describe, expect, it } from "vitest";
 import { serieMeteoPour } from "../../src/data/meteo";
 import {
   diametreCaviteCm,
@@ -181,6 +181,25 @@ function partie(faune: boolean, arbres = 25): { hash: number; state: GameState }
     s = advanceWeek(s, m, []).state;
   }
   return { hash: stateHash(s), state: s };
+}
+
+/**
+ * **Chaque partie ne se joue qu'une fois** (#423). Quatre essais en demandaient
+ * six, pour trois parties distinctes : la partie sans faune deux fois, la partie
+ * de vingt-cinq chênes avec faune trois fois. Le moteur est déterministe, et
+ * `partie` ne lit que ses deux arguments : le deuxième appel rendait le même
+ * état que le premier, à l'octet, pour une minute et demie de calcul.
+ *
+ * Les essais lisent la partie que leur crochet a jouée, et aucun ne la modifie.
+ */
+const PARTIES = new Map<string, { hash: number; state: GameState }>();
+function partieJouee(faune: boolean, arbres = 25): { hash: number; state: GameState } {
+  const cle = `${faune}|${arbres}`;
+  const deja = PARTIES.get(cle);
+  if (deja) return deja;
+  const jouee = partie(faune, arbres);
+  PARTIES.set(cle, jouee);
+  return jouee;
 }
 
 describe("le gîte trie les espèces, et rien dans le code ne les connaît", () => {
@@ -473,6 +492,15 @@ describe("l'arbre qui disparaît expulse quelqu'un de nommé", () => {
 });
 
 describe("le commutateur, et la preuve qu'il ne déplace rien", () => {
+  // Les deux parties de trente ans que lisent les trois essais du bloc, jouées
+  // une fois. Mesuré en CI sur main, sept courses : 174 à 213 s pour les deux,
+  // qu'un essai jouait seul. Le délai fait 2,5 fois la plus longue, arrondi à la
+  // minute : c'est un délai de calcul, pas une borne de réalisme.
+  beforeAll(() => {
+    partieJouee(false);
+    partieJouee(true);
+  }, 540_000);
+
   it("éteinte, la faune n'existe pas — et c'est ÇA, le contrôle du lot 3", () => {
     // **cet essai affirmait le contraire, et il avait raison jusqu'au lot 3.**
     // Aux lots 1 et 2, allumer la faune ne déplaçait **aucune** partie : les
@@ -486,7 +514,7 @@ describe("le commutateur, et la preuve qu'il ne déplace rien", () => {
     // n'existe pas.** Pas un tableau vide, pas un parcours, pas une allocation,
     // et `carteBiotique` ne reçoit rien — elle retombe donc sur son proxy
     // d'avant, au bit près, par construction et non par mesure.
-    const sans = partie(false);
+    const sans = partieJouee(false);
     expect(sans.state.faune).toBeUndefined();
   });
 
@@ -495,14 +523,12 @@ describe("le commutateur, et la preuve qu'il ne déplace rien", () => {
     // commutateur, trente ans : si les empreintes coïncidaient encore, c'est
     // que les auxiliaires ne mangeraient toujours rien.
     //
-    // Deux parties de trente ans : 155 s sur main, 164 s depuis que la strate
-    // fabrique de la matière (#247), contre le délai de 180 s par défaut. Le
-    // runner d'intégration l'a dépassé une fois ; le délai est porté à celui des
-    // autres parties longues du dépôt.
-    const sans = partie(false);
-    const avec = partie(true);
+    // Les deux parties sont celles du crochet du bloc : cet essai les jouait
+    // seul, et dépassait le délai par défaut de 180 s une fois sur quelques-unes.
+    const sans = partieJouee(false);
+    const avec = partieJouee(true);
     expect(avec.hash).not.toBe(sans.hash);
-  }, 600_000);
+  });
 
   it("et allumée, elle peuple la parcelle à des densités plausibles", () => {
     // Relevé sur trente ans, vingt-cinq chênes creusés sur 0,64 ha, trois
@@ -516,7 +542,7 @@ describe("le commutateur, et la preuve qu'il ne déplace rien", () => {
     // 10 publiés), 4 écureuils (1/ha, pour 0,5 à 1,5) et **une** buse. Les ordres de
     // grandeur sont les bons, et aucun n'a été calé : ils tombent du gîte et du
     // territoire.
-    const { state } = partie(true);
+    const { state } = partieJouee(true);
     const peuplement = state.faune ?? [];
     expect(peuplement.length).toBeGreaterThan(3);
     // Chaque individu est ancré à un arbre qui existe encore.
@@ -663,6 +689,16 @@ describe("une mauvaise année est un avertissement, deux sont une décision", ()
 });
 
 describe("et la table PAIE : une haie de vieux arbres n'est pas un bois", () => {
+  // La partie de vingt-cinq chênes est déjà jouée par le bloc du commutateur ;
+  // il ne reste ici que celle de trois. Lancé seul, le bloc joue les deux :
+  // 160 à 244 s en CI sur main (sept courses), quand l'essai les jouait
+  // lui-même. Le délai couvre ce cas-là : 2,5 fois la plus longue, arrondi à la
+  // minute.
+  beforeAll(() => {
+    partieJouee(true, 25);
+    partieJouee(true, 3);
+  }, 660_000);
+
   it("le même gîte, le même sol, trois arbres au lieu de vingt-cinq", () => {
     // **l'essai qui dit si le mécanisme sert à quelque chose.** Un mécanisme
     // qui ne change rien sur une partie réelle n'est pas un mécanisme, c'est un
@@ -678,8 +714,8 @@ describe("et la table PAIE : une haie de vieux arbres n'est pas un bois", () => 
     // ordre : c'est lui dont le territoire est le plus grand, donc celui qui
     // moyenne le plus de vide. Une mésange se contente d'un hectare, un pic en
     // demande sept — trois arbres ne les nourrissent pas de la même façon.
-    const bois = partie(true, 25).state.faune ?? [];
-    const haie = partie(true, 3).state.faune ?? [];
+    const bois = partieJouee(true, 25).state.faune ?? [];
+    const haie = partieJouee(true, 3).state.faune ?? [];
     expect(bois.length).toBeGreaterThan(haie.length);
     // Le bois porte des espèces que la haie n'a pas.
     const especesDuBois = new Set(bois.map((i) => i.especeId));
@@ -687,7 +723,7 @@ describe("et la table PAIE : une haie de vieux arbres n'est pas un bois", () => 
     expect(especesDuBois.size).toBeGreaterThan(especesDeLaHaie.size);
     // Et la haie garde tout de même du monde : elle est pauvre, pas morte.
     expect(haie.length).toBeGreaterThan(0);
-  }, 900_000);
+  });
 });
 
 describe("l'auxiliaire PAIE : le gîte cesse d'être un proxy (lot 3)", () => {

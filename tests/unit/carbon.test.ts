@@ -96,17 +96,32 @@ describe("allométrie carbone", () => {
 
 describe("inventaire carbone d'une parcelle", () => {
   it("l'humus domine les stocks, et une jeune plantation stocke du vivant", () => {
-    const state = runYears(LIMON_RICHE, 15, {
+    // **Un quart d'hectare, à la densité de l'hectare** (#378). L'essai plantait
+    // quarante bouleaux et quarante hêtres sur le limon riche entier (un
+    // hectare) et prenait 79 à 124 s en CI pour un délai de 180. Tout ce qu'il
+    // lit est rapporté à l'hectare : dix et dix sur cinquante mètres de côté
+    // gardent la densité, et les bornes ne bougent pas. Relevé à quinze ans,
+    // déterministe, hectare puis quart d'hectare :
+    //
+    //     graine   humus / départ      vivant (t C/ha)   durée sous tsx
+    //       42    1,0015 · 1,0010      6,23 · 5,72       179 · 47 s
+    //        1    1,0013 · 1,0006      7,15 · 6,88       183 · 48 s
+    //        2    1,0014 · 1,0011      6,41 · 5,35       204 · 54 s
+    //
+    // L'humus ne bouge pas d'un millième ; le vivant reste onze à quatorze fois
+    // au-dessus de son plancher de 0,5.
+    const QUART = { ...LIMON_RICHE, station: { ...LIMON_RICHE.station, coteM: 50 } };
+    const state = runYears(QUART, 15, {
       plantations: [
-        { especeId: "betula_pendula", count: 40 },
-        { especeId: "fagus_sylvatica", count: 40 },
+        { especeId: "betula_pendula", count: 10 },
+        { especeId: "fagus_sylvatica", count: 10 },
       ],
     });
     const inv = carbonInventory(state, LIMON_RICHE.station.initialSoilCTHa);
     // Le sol reste **le** stock dominant en tempéré (§12).
     expect(inv.humusTHa).toBeGreaterThan(inv.vivantTHa);
     // L'humus **tient** sous une prairie plantée, comme celui de Park Grass (#247) :
-    // 73,8 t C/ha à quinze ans pour 74,0 au départ. La fourchette de 50 à 70
+    // 74,0 t C/ha à quinze ans pour 74,0 au départ. La fourchette de 50 à 70
     // écrivait la perte d'une prairie qui minait son humus (−36 % en quarante
     // ans) faute de rendre ce qu'elle fabrique. Elle est remplacée par celle de
     // `litiere-herbacee.test.ts`, écrite avant la mesure : ±10 % du départ.

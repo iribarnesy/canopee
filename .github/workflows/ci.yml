@@ -42,15 +42,29 @@ jobs:
   # vitest ne peut pas en inventer un troisième. Six machines ramènent le mur
   # au sixième.
   #
+  # Depuis, les runners ont quatre cœurs virtuels et vitest y lance trois
+  # ouvriers : les tranches lourdes tiennent 2,5 à 2,7 fois de parallélisme
+  # (octobre 2026, #378). Et ils ne vont pas tous à la même vitesse : au même
+  # moteur, les mêmes fichiers d'une tranche ont pris ensemble 1,7 à 2,0 fois
+  # leur temps d'une course à l'autre, ceux d'une autre tranche deux fois
+  # moins. Un délai se dimensionne sur plusieurs courses, pas sur une.
+  #
   # `--shard` répartit les FICHIERS, pas les essais : chaque tranche est une
   # suite complète et autonome, et le découpage ne change donc rien à ce qui
   # est vérifié. Si une tranche rougit, son journal porte l'échec entier.
   #
+  # Il les répartit en nombre, pas en durée : trié par empreinte du chemin,
+  # coupé en parts égales. En octobre 2026, la tranche 2 tient en 6 min et la
+  # 5 en 28. Chaque fichier ajouté déplace jusqu'à cinq fichiers d'une tranche
+  # à la suivante.
+  #
   # LE PLANCHER EST LE FICHIER LE PLUS LOURD, et c'est pour ça que les essais
   # de hauteur ont été coupés en deux (700 s à eux seuls, 16 % de la suite) :
   # aucun nombre de tranches ne pouvait passer sous un fichier indivisible. Le
-  # plancher est désormais à ~320 s. Avant d'ajouter des tranches, vérifier que
-  # ce n'est pas un fichier qui borne, sinon on paie des machines pour rien.
+  # plancher est remonté à ~840 s (`naivete-vent`), mais une tranche est bornée
+  # par son travail total bien avant de l'être par lui. Avant d'ajouter des
+  # tranches, vérifier que ce n'est pas un fichier qui borne, sinon on paie des
+  # machines pour rien.
   #
   # Pour changer le nombre : allonger `tranche` ET le dénominateur. Les deux
   # doivent rester d'accord, sinon des fichiers ne sont tournés par personne.
