@@ -777,7 +777,25 @@ export function pollinisateursParCellule(
   return carte;
 }
 
-export function tick(state: GameState, weather: WeekWeather): TickResult {
+/**
+ * Réglages réservés aux essais et au laboratoire. Le jeu ne les passe jamais :
+ * le protocole du worker ne les porte pas. Aucun n'est une règle écologique ;
+ * sans eux, la partie est la même à l'octet.
+ */
+export interface ReglagesDEssai {
+  /**
+   * Un départ de feu imposé : la semaine (au compte de la partie, `state.week`)
+   * et la cellule où le feu prend, quelles que soient la saison et la
+   * sécheresse. Le tirage du départ a lieu comme d'habitude, donc le flux
+   * aléatoire ne bouge pas : seule son issue est remplacée. La propagation,
+   * les dégâts et leurs tirages restent ceux du moteur. Pour un essai qui
+   * examine ce que fait un feu, et non s'il part (#379) : un départ ne tombe
+   * qu'une partie sur douze dans le décor de l'essai des chandelles.
+   */
+  departDeFeuImpose?: { semaine: number; cellule: number };
+}
+
+export function tick(state: GameState, weather: WeekWeather, essai?: ReglagesDEssai): TickResult {
   const { station } = state;
   const dims = gridDims(station);
   const nCells = cellCount(dims);
@@ -3825,7 +3843,12 @@ export function tick(state: GameState, weather: WeekWeather): TickResult {
       frequentationDesBordures(station.bordures),
     );
     rng = depart.rng;
-    if (depart.origine !== undefined) {
+    // Un essai peut imposer l'allumage (`ReglagesDEssai`) : le tirage ci-dessus a
+    // eu lieu, seule la cellule d'origine change.
+    const impose = essai?.departDeFeuImpose;
+    const origine =
+      impose !== undefined && impose.semaine === state.week ? impose.cellule : depart.origine;
+    if (origine !== undefined) {
       // Le feu lit le vent de la semaine, rabattu par l'abri du site : c'est
       // le vent que la **parcelle** reçoit qui pousse le front, pas celui du
       // bulletin régional.
@@ -3833,7 +3856,7 @@ export function tick(state: GameState, weather: WeekWeather): TickResult {
         versRad: weather.ventVersRad,
         vitesseMs: ventRecuParLeSite(weather.ventMoyMs, station.ventExposition),
       };
-      const propagation = propager(depart.origine, charge, station.coteM, rng, vent);
+      const propagation = propager(origine, charge, station.coteM, rng, vent);
       rng = propagation.rng;
       const brulees = propagation.brulees;
       let tues = 0;
@@ -4025,7 +4048,7 @@ export function tick(state: GameState, weather: WeekWeather): TickResult {
       // Le front, reconstitué **après** coup : aucun tirage, aucun changement au
       // parcours ni au résultat (feu.ts). Rangées par rang d'arrivée, les
       // cellules se découpent en tranches — la ligne de flammes du rendu.
-      const rangs = rangsDuFront(brulees, depart.origine, station.coteM);
+      const rangs = rangsDuFront(brulees, origine, station.coteM);
       const ordonnees = [...rangs].sort((a, b) => a[1] - b[1] || a[0] - b[0]);
       // Un départ qui ne prend pas n'est pas un incendie : la cellule d'allumage
       // passe le même tirage que les autres (feu.ts), et le front peut s'y
@@ -4039,7 +4062,7 @@ export function tick(state: GameState, weather: WeekWeather): TickResult {
           victimes,
           chandellesConsumees,
           carboneTHa: carboneFeuKgC / 1000 / areaHa,
-          origine: depart.origine,
+          origine,
           brulees: Int32Array.from(ordonnees, ([cellule]) => cellule),
           rangs: Int32Array.from(ordonnees, ([, rang]) => rang),
           charges: Float32Array.from(ordonnees, ([cellule]) => charge.parCellule[cellule] ?? 0),
