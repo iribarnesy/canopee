@@ -474,6 +474,8 @@ export class SceneParcelle {
   private formeDuGivre?: Graphics;
   private signatureDuGivre = "";
   private givreDessine?: GivreDeLaSemaine;
+  /** la hauteur du tapis sur laquelle les brins ont été taillés (#436) */
+  private givreSurLeTapis?: Float32Array;
   /** Les ondes du voile de chaleur à cette image (§5.7). Vide = pas de chaleur. */
   private ondes: readonly OndeDeChaleur[] = [];
   private ondeCuite?: HTMLCanvasElement;
@@ -1403,11 +1405,16 @@ export class SceneParcelle {
     }
     if (this.filtreDuGivre) this.filtreDuGivre.alpha = g.opacite;
     const signature = `${vue.cam.zoom}|${vue.cam.orientation}|${vue.centre.x},${vue.centre.y}|${vue.largeurPx}x${vue.hauteurPx}`;
-    if (signature === this.signatureDuGivre && this.givreDessine === g) {
+    if (
+      signature === this.signatureDuGivre &&
+      this.givreDessine === g &&
+      this.givreSurLeTapis === etat.sol.herbeHauteurM
+    ) {
       return this.touffesDuGivre?.children.length ?? 0;
     }
     this.signatureDuGivre = signature;
     this.givreDessine = g;
+    this.givreSurLeTapis = etat.sol.herbeHauteurM;
     const cote = etat.sol.coteM;
     const demiL = (TUILE_LARGEUR_PX * vue.cam.zoom) / 2 + 0.5;
     const demiH = (TUILE_HAUTEUR_PX * vue.cam.zoom) / 2 + 0.25;
@@ -1416,9 +1423,28 @@ export class SceneParcelle {
       p.sx > vue.largeurPx + demiL ||
       p.sy < -demiH * 4 ||
       p.sy > vue.hauteurPx + demiH;
+    // **La hauteur d'un brin est celle du tapis** (#436), cellule par cellule :
+    // le pré de juillet givre haut, la pelouse rase de février ne fait qu'un
+    // voile, et un semis de 0,7 m sort franchement de l'un comme de l'autre.
+    // Sans elle (le banc), la hauteur de dessin d'avant.
+    const hauteurs = etat.sol.herbeHauteurM;
+    const hauteurDe = (c: number) => (hauteurs ? (hauteurs[c] ?? 0) : HAUTEUR_DU_BRIN_GIVRE_M);
+    const metrePx = METRE_VERTICAL_PX * vue.cam.zoom;
+    const visibles = g.brins.filter((c) => {
+      const p = versEcranVue(
+        { x: (c % cote) + 0.5, y: Math.floor(c / cote) + 0.5, z: etat.sol.altitudesM[c] ?? 0 },
+        vue,
+      );
+      return !dehors(p);
+    });
     // La taille d'un brin à l'écran, et ce qu'elle décide : de loin, pas de
-    // brins et un voile franc ; de près, des brins sur un voile léger.
-    const brinPx = HAUTEUR_DU_BRIN_GIVRE_M * METRE_VERTICAL_PX * vue.cam.zoom;
+    // brins et un voile franc ; de près, des brins sur un voile léger. Sur la
+    // hauteur moyenne de l'herbe givrée qu'on voit : une parcelle rase reste
+    // au voile, même de près.
+    let hauteurMoyenne = 0;
+    for (const c of visibles) hauteurMoyenne += hauteurDe(c);
+    hauteurMoyenne = visibles.length > 0 ? hauteurMoyenne / visibles.length : 0;
+    const brinPx = hauteurMoyenne * metrePx;
     // **Un fondu, pas une bascule** : au zoom d'ouverture d'une partie, un brin
     // fait trois ou quatre pixels — assez pour basculer en « brins », trop peu
     // pour qu'on les voie, et le voile, allégé pour eux, laissait une parcelle
@@ -1476,24 +1502,20 @@ export class SceneParcelle {
     let n = 0;
     if (couche && textures && avecBrins) {
       const h = (c: number, k: number) => hacher(c, k, 0x61f7);
-      const visibles = g.brins.filter((c) => {
-        const p = versEcranVue(
-          { x: (c % cote) + 0.5, y: Math.floor(c / cote) + 0.5, z: etat.sol.altitudesM[c] ?? 0 },
-          vue,
-        );
-        return !dehors(p);
-      });
+      // Une touffe sous le pixel ne se voit pas : la cellule garde son voile,
+      // et le budget va aux brins qui se lisent.
+      const herbues = visibles.filter((c) => hauteurDe(c) * metrePx >= 1);
       // **Combien par cellule** : autant que le budget le permet, jusqu'à
       // quatre — de près une cellule d'herbe gelée est un tapis de brins, pas
       // une touffe isolée. Au-delà du budget, on éclaircit sans agrandir.
       const parCellule = Math.max(
         1,
-        Math.min(TOUFFES_PAR_CELLULE_MAX, Math.floor(TOUFFES_MAX / Math.max(1, visibles.length))),
+        Math.min(TOUFFES_PAR_CELLULE_MAX, Math.floor(TOUFFES_MAX / Math.max(1, herbues.length))),
       );
-      const part = Math.min(1, TOUFFES_MAX / Math.max(1, visibles.length * parCellule));
-      const echelle = brinPx / HAUT_MAX_DU_BRIN_PX;
-      const touffes: { c: number; k: number; sx: number; sy: number }[] = [];
-      for (const c of visibles) {
+      const part = Math.min(1, TOUFFES_MAX / Math.max(1, herbues.length * parCellule));
+      const touffes: { c: number; k: number; sx: number; sy: number; echelle: number }[] = [];
+      for (const c of herbues) {
+        const echelle = (hauteurDe(c) * metrePx) / HAUT_MAX_DU_BRIN_PX;
         for (let k = 0; k < parCellule; k++) {
           const graine = c * TOUFFES_PAR_CELLULE_MAX + k;
           if (part < 1 && h(graine, 7) >= part) continue;
@@ -1505,11 +1527,11 @@ export class SceneParcelle {
             },
             vue,
           );
-          touffes.push({ c: graine, k, sx: p.sx, sy: p.sy });
+          touffes.push({ c: graine, k, sx: p.sx, sy: p.sy, echelle });
         }
       }
       touffes.sort((a, b) => a.sy - b.sy);
-      for (const { c, sx, sy } of touffes) {
+      for (const { c, sx, sy, echelle } of touffes) {
         const tex = textures[Math.floor(h(c, 5) * textures.length)] ?? textures[0];
         if (!tex) continue;
         const sprite = SceneParcelle.sprite(couche, n++, tex);

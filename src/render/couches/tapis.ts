@@ -96,6 +96,44 @@ export const TAPIS_PLEIN_PX = 90;
  */
 export const BRINS_PAR_M2 = 15;
 
+/**
+ * **La hauteur et la paille de chaque cellule** (#436), composées des grilles
+ * par espèce que l'instantané publie depuis #370.
+ *
+ * Le moteur donne la hauteur des touffes d'une espèce **là où elle se tient**,
+ * et dit comment en faire une cellule : la pondérer par son emprise
+ * (`soilHerbeEmprises`, docs/attentes-du-rendu.md). La part morte se compose
+ * de même. Une cellule que personne ne tient n'a ni hauteur ni paille.
+ *
+ * Une fois par instantané, pas par image : trois grilles par espèce lues d'un
+ * trait.
+ */
+export function composerLeTapis(
+  emprises: readonly Uint8Array[],
+  hauteursCm: readonly Uint8Array[],
+  partsMortes: readonly Uint8Array[],
+  n: number,
+): { hauteurM: Float32Array; partMorte: Float32Array } {
+  const hauteurM = new Float32Array(n);
+  const partMorte = new Float32Array(n);
+  for (let i = 0; i < n; i++) {
+    let poids = 0;
+    let hauteur = 0;
+    let mort = 0;
+    for (let s = 0; s < emprises.length; s++) {
+      const e = emprises[s]?.[i] ?? 0;
+      if (e <= 0) continue;
+      poids += e;
+      hauteur += e * (hauteursCm[s]?.[i] ?? 0);
+      mort += e * (partsMortes[s]?.[i] ?? 0);
+    }
+    if (poids <= 0) continue;
+    hauteurM[i] = hauteur / poids / 100;
+    partMorte[i] = mort / poids / 255;
+  }
+  return { hauteurM, partMorte };
+}
+
 /** Densité du tapis pour une taille de tuile écran : nulle de loin, pleine de près. */
 export function densiteTapis(largeurTuilePx: number): number {
   if (largeurTuilePx <= TAPIS_DES_PX) return 0;

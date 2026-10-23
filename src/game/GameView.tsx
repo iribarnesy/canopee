@@ -1400,6 +1400,8 @@ export function GameView({ surPartie }: { surPartie?: (enPartie: boolean) => voi
             herbeHumidite: snapshot.soilHerbeHumidite,
             herbeEmprises: snapshot.soilHerbeEmprises,
             herbesIds: snapshot.herbesIds,
+            herbeHauteursCm: snapshot.soilHerbeHauteursCm,
+            herbePartsMortes: snapshot.soilHerbePartsMortes,
             enEau: station.enEau,
             ...(crue.lameMm ? { lameMm: crue.lameMm } : {}),
             boisAuSol: snapshot.soilBoisAuSol,

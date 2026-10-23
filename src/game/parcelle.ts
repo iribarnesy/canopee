@@ -37,6 +37,7 @@ import {
 import { dureeChandelleSemaines } from "../engine/trees";
 import type { ArbreAPoser } from "../render/couches/arbres";
 import type { CoteDecor, DecorBordures } from "../render/couches/decor";
+import { composerLeTapis } from "../render/couches/tapis";
 import type { DonneesSol } from "../render/couches/terrain";
 import { feuillageRevenu } from "./pousses";
 
@@ -68,6 +69,10 @@ export interface SolSource {
   herbeEmprises?: readonly Uint8Array[];
   /** `Snapshot.herbesIds` : les espèces, dans l'ordre des grilles */
   herbesIds?: readonly string[];
+  /** `Snapshot.soilHerbeHauteursCm` : la hauteur du tapis par espèce, cm (#436) */
+  herbeHauteursCm?: readonly Uint8Array[];
+  /** `Snapshot.soilHerbePartsMortes` : la part morte par espèce, 0-255 (#436) */
+  herbePartsMortes?: readonly Uint8Array[];
   /** `StationInfo.enEau` */
   enEau?: readonly boolean[];
   /** la lame de la crue de la semaine, mm (`useCrue`) — pas le débit `soilDebordementMm` */
@@ -96,6 +101,12 @@ export function donneesSolDe(src: SolSource): DonneesSol {
   for (let i = 0; i < n; i++) {
     humidite[i] = Math.min(1, Math.max(0, (src.waterMm[i] ?? 0) / ru));
   }
+  // La hauteur et la paille du tapis, composées une fois par instantané sur
+  // l'emprise des espèces, comme le moteur dit de le faire (#436).
+  const tapis =
+    src.herbeEmprises && src.herbeHauteursCm && src.herbePartsMortes
+      ? composerLeTapis(src.herbeEmprises, src.herbeHauteursCm, src.herbePartsMortes, n)
+      : undefined;
   return {
     coteM: src.coteM,
     altitudesM: src.altitudesM,
@@ -114,6 +125,7 @@ export function donneesSolDe(src: SolSource): DonneesSol {
     ...(src.herbeEmprises && src.herbesIds
       ? { herbeEmprises: src.herbeEmprises, herbesIds: src.herbesIds }
       : {}),
+    ...(tapis ? { herbeHauteurM: tapis.hauteurM, herbePartMorte: tapis.partMorte } : {}),
     ...(src.enEau ? { enEau: src.enEau } : {}),
     ...(src.lameMm ? { lameMm: Float32Array.from(src.lameMm) } : {}),
     ...(src.boisAuSol ? { boisAuSol: Float32Array.from(src.boisAuSol) } : {}),

@@ -54,10 +54,12 @@ import {
   DEBORDEMENT_PLEIN_MM,
   eclairer,
   estInondee,
+  hauteurDuPalier,
   type MelangeDuTapis,
   matieresDuSol,
   melange,
   palier,
+  palierDeHauteur,
   quantifier,
   signatureCellule,
   type Teinte,
@@ -235,6 +237,22 @@ export interface DonneesSol {
   /** les identifiants d'espèce, dans l'ordre de `herbeEmprises` */
   herbesIds?: readonly string[];
   /**
+   * La **hauteur du tapis**, m, par cellule (#436) : `Snapshot.soilHerbeHauteursCm`
+   * composée sur l'emprise des espèces (`composerLeTapis`). Elle remplace la
+   * taille de dessin des touffes et des brins givrés : une fauche se voit, un
+   * semis de 0,7 m dépasse le dactyle de février.
+   *
+   * Absente = la scène ne la porte pas, et les touffes gardent la taille
+   * qu'elles avaient (`HAUTEUR_SANS_DONNEE_M`).
+   */
+  herbeHauteurM?: Float32Array;
+  /**
+   * La **part morte** de ce qui est sur pied ∈ [0,1] (#436) :
+   * `Snapshot.soilHerbePartsMortes`, composée de même. Le foin d'été, la paille
+   * d'hiver. Absente = la biomasse en tient lieu (`couleurHerbe`).
+   */
+  herbePartMorte?: Float32Array;
+  /**
    * `StationInfo.enEau` : les cellules d'eau libre, fixées avec la station.
    * Absent = parcelle sans ruisseau ni mare.
    */
@@ -340,6 +358,8 @@ function celluleA(donnees: DonneesSol, i: number): CelluleQuantifiee {
     lumiere: donnees.lumiere?.[i] ?? 1,
     herbeHumidite: donnees.herbeHumidite?.[i] ?? 1,
     ...(tapis ? { tapis } : {}),
+    ...(donnees.herbeHauteurM ? { hauteurM: donnees.herbeHauteurM[i] ?? 0 } : {}),
+    ...(donnees.herbePartMorte ? { partMorte: donnees.herbePartMorte[i] ?? 0 } : {}),
   });
 }
 
@@ -410,7 +430,13 @@ export function signatureMorceau(
   for (let y = iy * COTE_MORCEAU_M; y < yFin; y++) {
     for (let x = ix * COTE_MORCEAU_M; x < xFin; x++) {
       const i = y * donnees.coteM + x;
-      h = (h ^ signatureCellule(celluleA(donnees, i))) >>> 0;
+      const cellule = signatureCellule(celluleA(donnees, i));
+      h = (h ^ cellule) >>> 0;
+      h = (h * 0x01000193) >>> 0;
+      // Le xor ne lit que trente-deux bits, et la signature d'une cellule les
+      // dépasse depuis que la hauteur et la paille du tapis y entrent (#436) :
+      // les chiffres de tête — l'humidité, la couverture — passent à part.
+      h = (h ^ Math.floor(cellule / 0x100000000)) >>> 0;
       h = (h * 0x01000193) >>> 0;
       // L'eau entre dans la signature : sans ça, une crue monterait sans que
       // le sol soit redessiné. Le débordement est quantifié comme le reste,
@@ -470,6 +496,26 @@ export function morceauxDeLEmprise(
 }
 
 /**
+ * La longueur moyenne d'une lame de touffe, en part de la hauteur de la touffe :
+ * la moyenne des cinq longueurs que `dessinerBrin` tire.
+ */
+const LAME_MOYENNE = 1.99;
+/**
+ * La hauteur d'une touffe quand la scène ne porte pas celle du tapis, m.
+ *
+ * C'est la taille de dessin qu'avaient toutes les touffes avant #436 — une
+ * trentaine de centimètres —, gardée pour que le banc et ses scènes cuites
+ * rendent ce qu'ils rendaient.
+ */
+export const HAUTEUR_SANS_DONNEE_M = 0.13 * 1.35 * LAME_MOYENNE;
+/**
+ * De combien la plus longue lame dépasse la hauteur du tapis : la plus grande
+ * taille de brin (1,4) par la plus longue lame (2,43 / 1,99). C'est la marge à
+ * garder au-dessus d'un morceau, pour qu'une touffe du bord ne soit pas coupée.
+ */
+const LAME_LA_PLUS_HAUTE = (1.4 * 2.43) / LAME_MOYENNE;
+
+/**
  * Trace un brin du tapis. Trois formes, aussi simples que possible : ce qui les
  * distingue à l'œil est leur **silhouette** et leur clarté, pas leur détail — à
  * cette taille, un brin fait dix pixels de haut.
@@ -481,6 +527,7 @@ function dessinerBrin(
   sy: number,
   demiLargeurTuile: number,
   couleur: string,
+  hauteurM = HAUTEUR_SANS_DONNEE_M,
 ): void {
   // Un brin est dimensionné en fraction de tuile : il grandit avec le zoom
   // comme tout le reste, sans qu'on ait à connaître le zoom ici.
@@ -498,15 +545,24 @@ function dessinerBrin(
     // toute la parcelle. Deux à quatre lames, ouvertes à un angle qui dépend de
     // leur nombre, et chacune de sa longueur : le motif cesse de se répéter
     // sans coûter un trait de plus.
+    //
+    // **La hauteur est celle du tapis** (#436), en mètres à l'échelle des
+    // arbres : un mètre vertical vaut `METRE_VERTICAL_PX` au zoom 1, comme
+    // un tronc. La taille du brin la fait varier autour, d'une touffe à sa
+    // voisine. Et l'écart des lames suit : un pré fauché à 4 cm est un chaume
+    // ras, pas une étoile couchée de vingt centimètres de large.
+    const metrePx = (demiLargeurTuile * 2 * METRE_VERTICAL_PX) / TUILE_LARGEUR_PX;
+    const hautPx = hauteurM * metrePx * brin.taille;
+    const ecart = Math.min(u * 1.5, 0.6 * hautPx);
     ctx.beginPath();
     for (let k = 0; k < brin.lames; k++) {
       const part = brin.lames === 1 ? 0 : k / (brin.lames - 1) - 0.5;
       const penche = brin.angle * 0.25 + part * 1.15;
       // Les lames d'une même touffe n'ont pas la même longueur : c'est le peu
       // qui sépare une touffe d'herbe d'une fourche.
-      const longue = 1.55 + ((k * 37 + brin.lames) % 5) * 0.22;
+      const longue = (1.55 + ((k * 37 + brin.lames) % 5) * 0.22) / LAME_MOYENNE;
       ctx.moveTo(sx - u * 0.18, sy);
-      ctx.lineTo(sx + Math.sin(penche) * u * 1.5, sy - Math.cos(penche) * u * longue * 1.35);
+      ctx.lineTo(sx + Math.sin(penche) * ecart, sy - Math.cos(penche) * hautPx * longue);
       ctx.lineTo(sx + u * 0.18, sy);
     }
     ctx.closePath();
@@ -578,6 +634,7 @@ function teintePave(
   let litiere = 0;
   let lumiere = 0;
   let herbeHumidite = 0;
+  let partMorte = 0;
   let z = 0;
   let relief = 0;
   let n = 0;
@@ -595,6 +652,7 @@ function teintePave(
       litiere += donnees.litiereCG[i] ?? 0;
       lumiere += donnees.lumiere?.[i] ?? 1;
       herbeHumidite += donnees.herbeHumidite?.[i] ?? 1;
+      partMorte += donnees.herbePartMorte?.[i] ?? 0;
       // Les emprises se moyennent comme le reste : on moyenne **puis** on
       // quantifie, pour que le pavé rende la couleur du sol moyen et non la
       // moyenne de paliers — la même règle que l'humidité, deux lignes plus
@@ -618,6 +676,7 @@ function teintePave(
     ...(donnees.herbesIds && emprises.length > 0
       ? { tapis: { ids: donnees.herbesIds, parts: emprises.map((somme) => somme / n) } }
       : {}),
+    ...(donnees.herbePartMorte ? { partMorte: partMorte / n } : {}),
   });
   return { teinte: eclairer(couleurSol(q, semaineAnnee), relief / n), z: z / n };
 }
@@ -746,6 +805,19 @@ function empriseDuMorceau(
   // Les flancs descendent jusqu'à l'altitude la plus basse du morceau, et un
   // peu plus bas pour que l'ourlet ne se termine pas net.
   const flancPx = (Math.max(0, maxSy - minSy) || 0) + TUILE_HAUTEUR_PX * vue.cam.zoom * 2;
+  // **Et le tapis monte au-dessus** (#436) : une touffe du bord arrière dépasse
+  // le sommet du losange de toute sa hauteur. À la hauteur du tapis le plus
+  // haut du morceau — un blé de 78 cm, pas une marge fixe pour tous.
+  let tapisM = donnees.herbeHauteurM ? 0 : HAUTEUR_SANS_DONNEE_M;
+  if (donnees.herbeHauteurM) {
+    for (let y = y0; y < yFin; y++) {
+      for (let x = x0; x < xFin; x++) {
+        const h = donnees.herbeHauteurM[y * donnees.coteM + x] ?? 0;
+        tapisM = Math.max(tapisM, hauteurDuPalier(palierDeHauteur(h)));
+      }
+    }
+  }
+  const tapisPx = Math.ceil(tapisM * LAME_LA_PLUS_HAUTE * METRE_VERTICAL_PX * vue.cam.zoom);
   return {
     x0,
     y0,
@@ -753,8 +825,8 @@ function empriseDuMorceau(
     yFin,
     zMin,
     largeur: Math.max(1, Math.ceil(maxSx - minSx) + 2),
-    hauteur: Math.max(1, Math.ceil(maxSy - minSy + flancPx) + 2),
-    decalage: { dx: minSx - 1, dy: minSy - 1 },
+    hauteur: Math.max(1, Math.ceil(maxSy - minSy + flancPx) + 2 + tapisPx),
+    decalage: { dx: minSx - 1, dy: minSy - 1 - tapisPx },
   };
 }
 
@@ -969,6 +1041,9 @@ export function cuireMorceau(
           // fond qu'elles recouvrent.
           const matieres = matieresDuSol(q, semaineAnnee);
           const relief = facteurRelief(donnees.altitudesM, donnees.coteM, cx2, cy2, penteReference);
+          // La hauteur du palier, pas la valeur : c'est elle que la signature
+          // a vue, et une touffe ne doit pas changer de taille sans recuisson.
+          const hauteurM = q.hauteur === undefined ? undefined : hauteurDuPalier(q.hauteur);
           for (const brin of brinsDeLaCellule(cx2, cy2, q, densite)) {
             const matiere =
               brin.motif === "touffe"
@@ -984,6 +1059,7 @@ export function cuireMorceau(
               b.sy - decalage.dy,
               demiLargeur,
               versCss(eclairer(matiere, relief * clarteDuMotif(brin.motif) * brin.nuance)),
+              hauteurM,
             );
           }
         }
