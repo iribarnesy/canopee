@@ -177,7 +177,7 @@ La mort de soif d'un arbre installé (O1), météo réelle du limon riche, grain
 | `climat.test.ts`, SSP5-8.5 sur figé à soixante ans : cohorte debout | 0,46 / 0,43 / 0,46 | 0,60 / 0,81 / 0,74 |
 | la même, hêtres seuls (borne 0,5) | 0,32 / 0,34 / 0,40 | 0,49 / 0,84 / 0,78 |
 
-Le banc de #210 et la lande de #312 ne bougent pas (rapports à 0,016 près, aucune mort de plus ni de moins).
+Le banc de #210 et la lande de #312 ne bougent pas (rapports à 0,016 près, aucune mort de plus ni de moins), ni le banc des tables : sept essences, année synthétique, hauteurs identiques au centimètre de cinq à quarante ans. L'année synthétique ne mène aucun arbre installé jusqu'au seuil de cavitation.
 
 ### Les prédictions fausses
 
