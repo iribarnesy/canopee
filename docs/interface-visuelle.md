@@ -837,6 +837,17 @@ test humain de la v0.4). Deux défauts relevés ensemble :
   verte même sur la terre, une plaque de terre brune même dans l'herbe
   (`matieresDuSol`). Elles prenaient toutes celle du fond, à quelques pour cent
   près.
+- **Les touffes ont la hauteur du tapis, et le foin sa part morte** (#436). Le
+  moteur publie depuis #370 la hauteur des touffes de chaque espèce et la part
+  morte de ce qui est sur pied ; le jeu les compose sur l'emprise
+  (`composerLeTapis`). Une touffe mesurait une trentaine de centimètres
+  partout ; elle prend maintenant la hauteur de sa cellule, en mètres à
+  l'échelle des arbres, et une fauche la rabat aussitôt à quelques centimètres.
+  La paille se lisait sur la biomasse (« beaucoup de matière, donc du foin ») :
+  une prairie de juin, haute et verte, sortait aussi blonde qu'un foin. Elle se
+  lit maintenant sur la part morte. La lande de molinie en sort rase et blonde,
+  parce que le moteur la fait trop maigre (#433) : c'est sa matière qu'il faut
+  corriger, pas le dessin.
 
 ### 5.2 L'eau
 
@@ -1041,9 +1052,11 @@ demandé deux champs, que le moteur porte depuis #303.
 
   Le premier test humain de la v0.4 en a relevé trois défauts (#355, #357).
   **Les brins mesuraient plus d'un mètre** — taillés sur la cellule puis
-  agrandis à l'éclaircie, ils dépassaient un bouleau de 0,7 m. Ils font
-  maintenant 25 cm, la hauteur des touffes du tapis : le moteur ne publie pas
-  de hauteur d'herbe, c'est donc une convention, mais en mètres. De loin, un
+  agrandis à l'éclaircie, ils dépassaient un bouleau de 0,7 m. Ils ont fait
+  25 cm, une convention en mètres faute de hauteur d'herbe publiée ; depuis
+  #436, ils ont la hauteur du tapis de leur cellule (`soilHerbeHauteursCm`,
+  #370), comme les touffes : une pelouse rase de février givre en voile, un
+  pré de 40 cm se hérisse de brins blancs. De loin, un
   brin fait moins de quatre pixels ; on n'en pose pas, et un voile franc semé
   d'un grain de cristaux (une vignette répétée, attachée au sol, à taille fixe)
   porte le blanc. Entre quatre et douze pixels, le voile cède à mesure que les
@@ -1051,8 +1064,8 @@ demandé deux champs, que le moteur porte depuis #303.
   le décor blanchit maintenant d'autant, par le filtre de couleur qui sert
   déjà à la neige. **Et rien ne disait ce que c'était** : un avis « Gel » s'ouvre
   au début de chaque épisode (`useAvisDuGel.ts`) et dit ce que le moteur en
-  fait — il ne détruit que les fleurs ouvertes, et le couvert tamponne la
-  nuit. Il ne parle pas des jeunes pousses : le moteur ne les gèle pas.
+  fait — il détruit les fleurs ouvertes, et le couvert tamponne la nuit.
+  Depuis #425, il nomme aussi les arbres dont les jeunes pousses ont grillé.
 - **La brume** (`render/temps/brume.ts`). Elle se pose sur les cellules où la
   nappe **affleure** (`soilNappeCm` = 0, c'est le moteur qui le dit, pas un seuil
   d'ici), et le vent reçu la chasse : par six mètres par seconde, il n'y en a

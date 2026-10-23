@@ -14,15 +14,17 @@
 
 import { describe, expect, it } from "vitest";
 import { syntheticYear } from "../../src/engine/meteo";
+import { K_SUR_K2O, MG_K_PAR_CMOL } from "../../src/engine/pk";
 import { rngStateFromSeed } from "../../src/engine/rng";
 import { ruHorizonMm } from "../../src/engine/soil";
 import { createGameState, type Station } from "../../src/engine/state";
-import { LIMON_RICHE } from "../../src/engine/stations";
+import { K_ECHANGEABLE_TERRE_DE_LIMON_MG_KG, LIMON_RICHE } from "../../src/engine/stations";
 import { tick } from "../../src/engine/tick";
 import {
   CALQUES,
   couleurDeLaCellule,
   enCss,
+  enK2O,
   etendueDuCalque,
   ficheDuCalque,
   partDuDegrade,
@@ -82,6 +84,8 @@ function station(enEau: boolean[] = new Array(COTE_M * COTE_M).fill(false)): Sta
     // L'épaisseur de ce même horizon : c'est l'échelle du calque d'érosion (#110).
     epaisseurHorizonSurfaceCm: horizon?.epaisseurCm ?? 0,
     phInitial: STATION.phInitial,
+    // La teneur que la station déclare (#395) : le repère du potassium (#435).
+    potassiumEchangeableMgKg: STATION.potassiumEchangeableMgKg,
     meteoLabel: "essai",
     enEau,
     nappeEquilibreCm: 200,
@@ -198,12 +202,12 @@ describe("l'extraction n'a pas changé la carte", () => {
     },
   };
 
-  // L'azote, les ravageurs et l'érosion n'y sont **pas**, et pour deux raisons
-  // opposées : l'azote a changé d'échelle exprès (bornes doublées, courbe en
-  // racine), les deux autres n'avaient pas de teinte d'avant — personne ne les
-  // dessinait (#109, #110). Les faire passer sous une épreuve qui dit « rien
-  // n'a bougé » noierait l'un et mentirait sur les autres.
-  const SANS_PASSE = new Set(["azote", "ravageurs", "erosion"]);
+  // L'azote, les ravageurs, l'érosion et le potassium n'y sont **pas**, et pour
+  // deux raisons opposées : l'azote a changé d'échelle exprès (bornes doublées,
+  // courbe en racine), les trois autres n'avaient pas de teinte d'avant —
+  // personne ne les dessinait (#109, #110, #435). Les faire passer sous une
+  // épreuve qui dit « rien n'a bougé » noierait l'un et mentirait sur les autres.
+  const SANS_PASSE = new Set(["azote", "ravageurs", "erosion", "potassium"]);
   for (const fiche of CALQUES.filter((c) => !SANS_PASSE.has(c.id))) {
     it(`même teinte qu'avant, calque ${fiche.id}`, () => {
       const st = station();
@@ -406,5 +410,74 @@ describe("le calque de l'érosion, une échelle qui diverge", () => {
     const e = etendueDuCalque(FICHE, avecRavine(), station(), COTE_M * COTE_M);
     expect(e?.haut).toBeCloseTo(2.1, 6);
     expect(e?.bas).toBeCloseTo(-2.6, 6);
+  });
+});
+
+/**
+ * **Le potassium se lit comme une analyse de terre** (#435).
+ *
+ * Le volet l'écrivait en « kg/ha assimilables », une moyenne de parcelle dans
+ * une unité qu'aucun bulletin n'emploie. La station déclare depuis #395 une
+ * teneur de laboratoire, en mg K/kg ; un laboratoire français l'écrit en
+ * mg K₂O/kg. Ces épreuves tiennent les deux bouts : la carte lit la grille de
+ * l'instantané et rien d'autre, et la conversion vers le bulletin est celle du
+ * moteur.
+ */
+describe("le calque du potassium, une teneur d'analyse de terre", () => {
+  const FICHE = ficheDuCalque("potassium");
+
+  it("lit la teneur de la cellule, en mg K/kg", () => {
+    const grille = new Float32Array(COTE_M * COTE_M).fill(124.5);
+    grille[7] = 170;
+    const s = { ...SNAPSHOT, soilPotassiumMgKg: grille };
+    expect(FICHE.unite).toBe("mg K/kg");
+    expect(FICHE.lire(s, station(), 7)).toBeCloseTo(170, 4);
+    expect(FICHE.lire(s, station(), 8)).toBeCloseTo(124.5, 4);
+    const e = etendueDuCalque(FICHE, s, station(), COTE_M * COTE_M);
+    expect(e?.haut).toBeCloseTo(170, 4);
+    expect(e?.bas).toBeCloseTo(124.5, 4);
+  });
+
+  it("une parcelle à peine entamée relit la teneur que sa station déclare", () => {
+    // Une semaine de tick a tourné : les racines et la réserve ont bougé le
+    // stock de quelques millièmes, pas davantage.
+    const st = station();
+    const e = etendueDuCalque(FICHE, SNAPSHOT, st, COTE_M * COTE_M);
+    expect(e).toBeDefined();
+    expect((e?.moyenne ?? 0) / st.potassiumEchangeableMgKg).toBeCloseTo(1, 1);
+  });
+
+  it("le bulletin d'analyse l'écrit en K₂O, au rapport du moteur", () => {
+    // La terre de limon des médianes BDAT : 150 mg K₂O/kg, déclarés en K.
+    expect(enK2O(K_ECHANGEABLE_TERRE_DE_LIMON_MG_KG)).toBeCloseTo(150, 9);
+    expect(FICHE.auBulletin?.unite).toBe("mg K₂O/kg");
+    expect(FICHE.auBulletin?.format(K_ECHANGEABLE_TERRE_DE_LIMON_MG_KG)).toBe("150");
+    // Environ 1,2 de K₂O par K, ce que l'issue rappelle.
+    expect(enK2O(1)).toBeCloseTo(1 / K_SUR_K2O, 12);
+    expect(enK2O(1)).toBeGreaterThan(1.19);
+    expect(enK2O(1)).toBeLessThan(1.21);
+  });
+
+  it("le haut du dégradé est un seuil : 300 mg K₂O/kg, la classe la plus riche de la BDAT", () => {
+    const [bas, haut] = FICHE.bornes(station());
+    expect(bas).toBe(0);
+    expect(enK2O(haut)).toBeCloseTo(300, 9);
+    expect(FICHE.borneHauteOuverte).toBe(true);
+    // Des apports répétés passent au-dessus : la teinte s'arrête, le chiffre non.
+    expect(partDuDegrade(400, FICHE, station())).toBe(1);
+    expect(FICHE.format(400)).toBe("400");
+  });
+
+  it("les sols forestiers et le limon ne se confondent pas", () => {
+    // Les stations forestières déclarent 20 à 34 mg K/kg (RENECOFOR), le limon
+    // 125 : sur une échelle droite, les premières tiendraient dans le premier
+    // huitième du dégradé et se ressembleraient toutes.
+    const st = station();
+    const lande = partDuDegrade(0.05 * MG_K_PAR_CMOL, FICHE, st);
+    const suberaie = partDuDegrade(0.087 * MG_K_PAR_CMOL, FICHE, st);
+    const limon = partDuDegrade(K_ECHANGEABLE_TERRE_DE_LIMON_MG_KG, FICHE, st);
+    expect(lande).toBeGreaterThan(0.25);
+    expect(suberaie - lande).toBeGreaterThan(0.05);
+    expect(limon - suberaie).toBeGreaterThan(0.25);
   });
 });
