@@ -13,16 +13,19 @@ import { applyAction, estGesteSurArbres } from "../../src/engine/actions";
 import { HERBACEES, hauteurDuTapisM, N_HERBACEES } from "../../src/engine/herbacees";
 import { syntheticYear } from "../../src/engine/meteo";
 import { contextePhenologique } from "../../src/engine/phenologie";
+import { potassiumEchangeableGM2 } from "../../src/engine/pk";
 import { rngStateFromSeed } from "../../src/engine/rng";
 import { createGameState, plantAt, type Station } from "../../src/engine/state";
-import { LIMON_RICHE } from "../../src/engine/stations";
+import { LIMON_RICHE, STATIONS_V0 } from "../../src/engine/stations";
 import { tick } from "../../src/engine/tick";
 import type { TreeState } from "../../src/engine/trees";
 import { diametreInitialCm } from "../../src/engine/trees";
+import { cellulesDeLaZone } from "../../src/engine/zone";
 import {
   arbreDuSnapshot,
   construireSnapshot,
   type EntreesSnapshot,
+  potassiumEnTeneurDAnalyse,
   transferablesDuSnapshot,
 } from "../../src/game/snapshot";
 
@@ -696,5 +699,75 @@ describe("les semaines de crue (#288)", () => {
     const avec = construireSnapshot({ ...entrees(etatNeuf()), crues });
     expect(avec.crues.map((c) => c.id + c.semaine)).toEqual([30, 31]);
     expect(avec.crues[1]?.phase).toBe("pic");
+  });
+});
+
+/**
+ * **Le potassium, en teneur d'analyse de terre** (#435).
+ *
+ * Le moteur tient son potassium échangeable en g/m², et la station le déclare
+ * en mg K/kg depuis #395. L'instantané le relit par la conversion même du
+ * moteur (`potassiumEchangeableGM2`) : ce que ces épreuves tiennent est qu'il
+ * ne pèse rien lui-même — une cellule intacte relit la teneur déclarée, sur
+ * toutes les stations livrées, quel que soit leur horizon de surface.
+ */
+describe("le potassium de chaque cellule, comme une analyse de terre (#435)", () => {
+  it("une parcelle neuve relit la teneur que sa station déclare, sur chaque station", () => {
+    for (const { station } of STATIONS_V0) {
+      const etat = createGameState(
+        { ...station, coteM: 6, voisinage: [], gibierParHa: 0 },
+        rngStateFromSeed(7),
+      );
+      const teneurs = potassiumEnTeneurDAnalyse(etat);
+      expect(teneurs, station.id).toHaveLength(36);
+      for (const v of teneurs) {
+        // Le stock voyage en simple précision : au millième près.
+        expect(v / station.potassiumEchangeableMgKg, station.id).toBeCloseTo(1, 5);
+      }
+    }
+  });
+
+  it("c'est l'inverse exact de la conversion du moteur, cellule par cellule", () => {
+    const state = etatNeuf();
+    const e = entrees(state);
+    const snapshot = construireSnapshot(e);
+    const profil = e.state.station.profil;
+    expect(snapshot.soilPotassiumMgKg).toHaveLength(STATION.coteM * STATION.coteM);
+    for (let i = 0; i < snapshot.soilPotassiumMgKg.length; i++) {
+      const g = potassiumEchangeableGM2(profil, snapshot.soilPotassiumMgKg[i] ?? 0);
+      expect(g / (e.state.soil.potassiumG[i] ?? 1)).toBeCloseTo(1, 5);
+    }
+  });
+
+  it("une potasse épandue en pause se voit aussitôt, et seulement là", () => {
+    const state = etatNeuf();
+    const zone = { x: 3.5, y: 3.5, rayonM: 2 };
+    const { state: apres } = applyAction(state, {
+      type: "fertiliser",
+      week: state.week,
+      ...zone,
+      forme: "potasse",
+      doseKgK2OHa: 48,
+    });
+    const avant = potassiumEnTeneurDAnalyse(state);
+    const snapshot = construireSnapshot({ ...entrees(state), state: apres });
+    const dedans = cellulesDeLaZone(STATION.coteM, zone);
+    for (let i = 0; i < avant.length; i++) {
+      const gain = (snapshot.soilPotassiumMgKg[i] ?? 0) - (avant[i] ?? 0);
+      if (dedans.includes(i)) expect(gain, `cellule ${i}`).toBeGreaterThan(1);
+      else expect(gain, `cellule ${i}`).toBeCloseTo(0, 4);
+    }
+  });
+
+  it("la réserve non échangeable voyage, en moyenne de la parcelle", () => {
+    const state = etatNeuf();
+    const e = entrees(state);
+    const snapshot = construireSnapshot(e);
+    const reserve = e.state.soil.potassiumReserveG;
+    const moyenne = reserve.reduce((t, v) => t + v, 0) / reserve.length;
+    expect(snapshot.potassiumReserveMoyenGM2).toBeCloseTo(moyenne, 9);
+    // Une réserve, et non l'échangeable une seconde fois : elle le dépasse de
+    // loin (dix fois au départ, `RESERVE_K_SUR_ECHANGEABLE`).
+    expect(snapshot.potassiumReserveMoyenGM2).toBeGreaterThan(e.fluxes.potassiumMoyenGM2 * 2);
   });
 });

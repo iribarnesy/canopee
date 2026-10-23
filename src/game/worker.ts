@@ -67,6 +67,7 @@ import type {
 } from "../engine/tick";
 import { tick } from "../engine/tick";
 import type { CauseMort, TreeState } from "../engine/trees";
+import { cellulesDeLaZone } from "../engine/zone";
 import { compterLaSoif, direLaSecheresse, solPresqueASec } from "./avisSecheresse";
 import { agreger, BILAN_VIDE, type Bilan } from "./bilan";
 import {
@@ -78,6 +79,7 @@ import {
   type LigneDeCompte,
 } from "./compteDeLAnnee";
 import { prefixeSousLePlafond } from "./facture";
+import { direLaFertilisation, doseDeLAction, ENGRAIS } from "./fertilisation";
 import { journalDe, type PorteurDeJournal } from "./journal";
 import { direLaMortaliteDesArbres, direLaMortaliteDesSemis, lireLaMortalite } from "./mortalite";
 import {
@@ -999,6 +1001,21 @@ function performAction(action: GameAction): EffetDeLAction {
     }
     case "labourer": {
       event("🚜", `Labour : ${eur} (${dHeures.toFixed(1)} h) — le sol est nu, l'azote est libéré`);
+      break;
+    }
+    case "fertiliser": {
+      // **Rien n'était écrit, pour aucune des trois formes** (#435). Un apport
+      // refusé — dose nulle, au-delà du plafond — n'a rien épandu : le refus
+      // se lit dans les avis, pas ici.
+      if (result.refusals.length > 0) break;
+      // La surface est celle que le moteur a fertilisée, comptée par sa propre
+      // fonction sur la parcelle d'avant le geste : un disque qui déborde du
+      // bord ne fertilise que ce qui est dedans, et ne se paie que là.
+      const m2 = cellulesDeLaZone(before.station.coteM, action).length;
+      event(
+        ENGRAIS[action.forme].icone,
+        direLaFertilisation(action.forme, doseDeLAction(action), m2, -dEur),
+      );
       break;
     }
     case "trogner": {
@@ -2071,6 +2088,9 @@ function stationInfo(): StationInfo {
     // laquelle une perte de sol se juge.
     epaisseurHorizonSurfaceCm: sc.station.profil[0]?.epaisseurCm ?? 0,
     phInitial: sc.station.phInitial,
+    // La teneur que la station déclare, telle que le moteur la lit (#395) :
+    // le repère de la ligne « Potassium » de la carte du sol (#435).
+    potassiumEchangeableMgKg: sc.station.potassiumEchangeableMgKg,
     meteoLabel: serie
       ? `${serie.stationMeteo} ${serie.periode[0]}-${serie.periode[1]} (Météo-France)`
       : "année synthétique répétée",

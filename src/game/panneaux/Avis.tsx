@@ -44,6 +44,9 @@ const NOM_DU_GESTE: Partial<Record<GameAction["type"], string>> = {
   receper: "Recéper",
   faucher: "Faucher",
   ramasserBoisMort: "Ramasser le bois mort",
+  // Le moteur refuse une dose nulle ou au-delà de son plafond (#435) : le
+  // curseur tient déjà ces bornes, mais un refus doit se lire en français.
+  fertiliser: "Fertiliser",
 };
 
 export function Avis({

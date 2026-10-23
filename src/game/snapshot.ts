@@ -27,6 +27,7 @@ import {
   partFloraison,
   partFoliaireOmbrageanteDans,
 } from "../engine/phenologie";
+import { potassiumEchangeableGM2 } from "../engine/pk";
 import { porositeDrainageMm } from "../engine/soil";
 import type { GameState, TickFluxes } from "../engine/state";
 import { gridDims, weekOfYear } from "../engine/state";
@@ -237,6 +238,30 @@ export function nappeParCellule(state: GameState): Float32Array {
 }
 
 /**
+ * **Le potassium échangeable de chaque cellule, en teneur d'analyse de terre**,
+ * mg K/kg (#435).
+ *
+ * Le moteur le tient en g/m² (`soil.potassiumG`), et la carte du sol l'affichait
+ * en kg/ha « assimilables » — une unité qu'aucun bulletin de laboratoire
+ * n'écrit. Depuis #395, la station déclare sa teneur comme l'écrit une analyse
+ * de terre (`potassiumEchangeableMgKg`), et le moteur la rapporte à la masse de
+ * l'horizon de surface par une seule fonction, `potassiumEchangeableGM2`.
+ *
+ * **On la lit à l'envers, et c'est la même fonction qui donne la conversion** :
+ * elle est linéaire en la teneur, donc ce qu'elle rend pour 1 mg K/kg est ce
+ * que pèse 1 mg K/kg dans l'horizon de surface de cette station. Rien n'est
+ * supposé ici — ni densité apparente, ni épaisseur, ni pierrosité : le moteur
+ * les tient, et le jour où il change sa façon de peser un horizon, la carte
+ * suit. Une cellule qui n'a reçu ni perdu aucun potassium relit donc la teneur
+ * déclarée par la station.
+ */
+export function potassiumEnTeneurDAnalyse(state: GameState): Float32Array {
+  const gM2ParMgKg = potassiumEchangeableGM2(state.station.profil, 1);
+  if (!(gM2ParMgKg > 0)) return new Float32Array(state.soil.potassiumG.length);
+  return Float32Array.from(state.soil.potassiumG, (g) => g / gM2ParMgKg);
+}
+
+/**
  * Engorgement moyen du profil sous chaque cellule ∈ [0,1] : la part de la
  * macroporosité occupée par l'eau, moyennée sur les horizons. C'est ce que les
  * racines subissent, et ce qu'on veut pouvoir **regarder** sur la carte.
@@ -403,6 +428,13 @@ export function construireSnapshot(e: EntreesSnapshot): Snapshot {
     /** et sa part en travers de la pente : celle qui barre l'eau */
     soilBoisEnTravers: Float32Array.from(state.soil.boisEnTraversPart),
     soilN: Float32Array.from(state.soil.mineralNG),
+    // Le potassium **est** de l'état, comme l'azote : on le lit dans le sol, et
+    // une potasse épandue en pause se voit aussitôt sur la carte (#435).
+    soilPotassiumMgKg: potassiumEnTeneurDAnalyse(state),
+    // La réserve non échangeable, en moyenne de parcelle : c'est elle qui paie
+    // quand le grain emporte plus que les apports ne rendent. Elle n'a pas de
+    // carte — elle se lit en une ligne, et elle ne voyageait pas du tout.
+    potassiumReserveMoyenGM2: somme(state.soil.potassiumReserveG) / Math.max(1, nCells),
     soilHerbe: Float32Array.from(state.soil.herbeCouverture),
     // La biomasse ne se déduit pas de la couverture : elle reste sur pied
     // quand l'herbe jaunit, et seul le feu, la fauche et la décomposition la
@@ -516,6 +548,7 @@ export function transferablesDuSnapshot(s: Snapshot): Transferable[] {
     s.soilBoisAuSol.buffer,
     s.soilBoisEnTravers.buffer,
     s.soilN.buffer,
+    s.soilPotassiumMgKg.buffer,
     s.soilHerbe.buffer,
     s.soilHerbeBiomasse.buffer,
     s.soilHerbeHumidite.buffer,

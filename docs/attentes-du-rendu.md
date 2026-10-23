@@ -61,12 +61,14 @@ issue au passage suivant.
 
 **Une fois, au lancement** (`StationInfo`) : `altitudesM` (le relief, maille du
 tick), `nappeCm` (champ figé), `enEau`, `eau`, `coteM`, `ruMm`, `phInitial`,
+`potassiumEchangeableMgKg` (la teneur d'analyse que la station déclare, #395),
 `nappeEquilibreCm`, `ventExposition`, `meteoLabel`.
 
 **À chaque instantané** (`Snapshot`) : la semaine, la météo, la neige, l'année
 civile, le CO₂, l'économie, l'inventaire carbone, la biodiversité, les `fluxes` du tick, la
-pression de gibier, le stock de BRF, le paysage, et le contexte phénologique
-(`pheno`).
+pression de gibier, le stock de BRF, le paysage, le contexte phénologique
+(`pheno`), et la réserve de potassium non échangeable en moyenne de parcelle
+(`potassiumReserveMoyenGM2`, g/m², #435).
 
 La météo (`weather`, un `WeekWeather` entier) porte depuis peu **le vent** :
 
@@ -159,6 +161,7 @@ fabriquent pas.
 | `soilWater` | eau de l'horizon de surface, mm |
 | `soilPh` | pH |
 | `soilN` | azote minéral, g/m² |
+| `soilPotassiumMgKg` | potassium **échangeable** de l'horizon de surface, en teneur d'analyse de terre, mg K/kg (×1/`K_SUR_K2O` ≈ 1,2 pour les mg K₂O/kg d'un bulletin français). Le stock du moteur (`soil.potassiumG`) relu par sa propre conversion, `potassiumEchangeableGM2` : l'instantané ne pèse rien lui-même, et une cellule intacte relit la teneur que la station déclare (#395, #435). Une potasse épandue se voit à sa place |
 | `soilHerbe` | couverture herbacée ∈ [0,1] |
 | `soilHerbeBiomasse` | herbe **sur pied** — elle reste quand l'herbe jaunit |
 | `soilHerbeHumidite` | humidité **vécue** du tapis ∈ [0,1] : la surface, lissée sur ~6 semaines — la pelouse grillée |

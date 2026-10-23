@@ -46,6 +46,7 @@ import { lignesDuBilan } from "./bilan";
 import { ESTOMPE } from "./ceQuiAChange";
 import { EditeurTerrain, terrainInitial } from "./EditeurTerrain";
 import { useEcranEmpile } from "./ecranEmpile";
+import { actionDeFertilisation } from "./fertilisation";
 import { nomEspece } from "./mots";
 import type { Niveau } from "./niveaux";
 import { NIVEAUX_LIVRES } from "./niveauxLivres";
@@ -1239,6 +1240,8 @@ export function GameView({ surPartie }: { surPartie?: (enPartie: boolean) => voi
     densiteCible,
     critereEclaircie,
     especeEclaircie,
+    formeEngrais,
+    dosesEngrais,
   } = geste;
   const [selectedIds, setSelectedIds] = useState<ReadonlySet<number>>(new Set());
   // L'orientation de la caméra vit dans `VueParcelle` ; elle remonte ici pour
@@ -1862,6 +1865,13 @@ export function GameView({ surPartie }: { surPartie?: (enPartie: boolean) => voi
     } else if (mode === "brf") {
       const zone = zoneDuClic();
       if (zone) game.dispatch({ type: "epandreBrf", ...zone, part: 1 });
+    } else if (mode === "fertiliser") {
+      // La dose part dans le champ de sa forme — `doseKgK2OHa` pour la potasse,
+      // `doseKgNHa` pour l'azote (#435) : c'est `actionDeFertilisation` qui le
+      // sait, et le moteur qui décide du reste.
+      const zone = zoneDuClic();
+      if (zone)
+        game.dispatch(actionDeFertilisation(formeEngrais, dosesEngrais[formeEngrais], zone));
     } else if (mode === "eclaircir") {
       // Par essence, c'est l'essence qui décide et non la densité : le moteur
       // prend toutes ses tiges dans le disque (#156). Sans essence choisie, on

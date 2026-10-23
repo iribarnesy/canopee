@@ -1,6 +1,7 @@
 import { useMemo } from "react";
 import { getEspece } from "../../engine/especes";
 import { aireM2DeLaZone, type Zone } from "../../engine/zone";
+import { DOSE_MIN, ENGRAIS, FORMES_ENGRAIS } from "../fertilisation";
 import { auFilDuTexte, capitale, de } from "../mots";
 import type { Snapshot } from "../protocol";
 import type { GameApi } from "../useGame";
@@ -19,6 +20,7 @@ const LEGENDE_RAYON: Partial<Record<Mode, string>> = {
   boisMort: "les troncs tombés partent au chauffage — plus d'humus ni d'abri dessous",
   brf: "le broyat est épandu, l'azote va où on le porte",
   cloturer: "le disque est mis hors d'atteinte du gibier",
+  fertiliser: "la dose est épandue sur toute la zone",
 };
 
 /**
@@ -98,6 +100,64 @@ function FormeDuChantier({ geste, legende }: { geste: ReglagesDeGeste; legende?:
         </>
       )}
     </>
+  );
+}
+
+/**
+ * **Fertiliser** (#435) : la forme, puis la dose **dans l'unité de la forme**.
+ *
+ * Le moteur sait épandre de l'ammonitrate et du fumier depuis #140, de la
+ * potasse depuis #395, et aucun bouton ne le lui demandait. Trois formes qui ne
+ * font pas la même chose — c'est l'intérêt du geste —, donc trois boutons et
+ * une phrase qui dit ce que chacune fait, avant le clic.
+ *
+ * Le curseur s'arrête au plafond du moteur (`doseMax`, la constante même qu'il
+ * lit pour refuser) : on ne peut pas armer une dose qu'il refuserait. Et
+ * l'unité change avec la forme — kg N/ha pour l'azote, kg K₂O/ha pour la
+ * potasse —, chaque forme gardant sa propre dose (`reglages.ts`).
+ */
+function ChoixDeLEngrais({ geste }: { geste: ReglagesDeGeste }) {
+  const { formeEngrais, setFormeEngrais, dosesEngrais, setDoseEngrais } = geste;
+  const fiche = ENGRAIS[formeEngrais];
+  const dose = dosesEngrais[formeEngrais];
+  return (
+    <div style={{ marginTop: 6 }}>
+      {FORMES_ENGRAIS.map((forme) => (
+        <button
+          key={forme}
+          type="button"
+          style={btn(formeEngrais === forme)}
+          onClick={() => setFormeEngrais(forme)}
+          title={ENGRAIS[forme].explication}
+        >
+          {ENGRAIS[forme].icone} {ENGRAIS[forme].nom}
+        </button>
+      ))}
+      <div style={{ marginTop: 2 }}>
+        Dose{" "}
+        <input
+          type="range"
+          min={DOSE_MIN}
+          max={fiche.doseMax}
+          step={1}
+          value={dose}
+          onChange={(e) => setDoseEngrais(formeEngrais, Number(e.target.value))}
+          style={{ verticalAlign: "middle", width: 110 }}
+          aria-label={`Dose ${de(auFilDuTexte(fiche.nom))}, ${fiche.unite}`}
+        />{" "}
+        <strong style={{ fontVariantNumeric: "tabular-nums" }}>
+          {dose} {fiche.unite}
+        </strong>
+        <span style={{ color: "var(--encre-douce)", fontSize: 13 }}>
+          {" "}
+          · au plus {fiche.doseMax}
+        </span>
+      </div>
+      <div style={{ color: "var(--encre-douce)", fontSize: 13, margin: "2px 0 6px" }}>
+        {fiche.explication}
+      </div>
+      <FormeDuChantier geste={geste} legende={LEGENDE_RAYON.fertiliser ?? ""} />
+    </div>
   );
 }
 
@@ -186,6 +246,14 @@ export function PanneauAction({
       </button>
       <button type="button" style={btn(mode === "chauler")} onClick={() => setMode("chauler")}>
         Chauler
+      </button>
+      <button
+        type="button"
+        style={btn(mode === "fertiliser")}
+        onClick={() => setMode("fertiliser")}
+        title="Épandre de l'ammonitrate, du fumier ou de la potasse sur une zone"
+      >
+        🧪 Fertiliser
       </button>
       <button
         type="button"
@@ -312,6 +380,8 @@ export function PanneauAction({
           </div>
         </div>
       )}
+
+      {mode === "fertiliser" && <ChoixDeLEngrais geste={geste} />}
 
       {mode === "eclaircir" && (
         <div style={{ marginTop: 6 }}>
