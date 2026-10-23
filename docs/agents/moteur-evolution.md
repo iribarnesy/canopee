@@ -131,6 +131,10 @@ La première défeuillaison partait dès que la soif passait le seuil de cavitat
 
 La défeuillaison coupe toute la soif de l'arbre : sans feuilles, il ne demande rien, sa satisfaction vaut 1, et son bois cesse de casser. C'est ce que Bréda et al. (2006) observent en 2003 sur le hêtre, qui avait un houppier normal l'été suivant. Mais `climat.test.ts` cassait : sous SSP5-8.5, à soixante ans, 12 à 27 hêtres de la cohorte mouraient de soif, surtout l'an 58 (la sécheresse de 2022 rejouée sous le climat de 2084) ; ils s'y défeuillent maintenant (13 à 22) et passent, et le hêtre ne paie plus plus cher que le chêne (debout 0,49 / 0,84 / 0,78 du témoin figé, borne 0,5). Le terrain de 2018, plus chaud que 2003, dit l'inverse : les potentiels hydriques ont passé le seuil de rupture dans beaucoup d'espèces malgré la chute précoce des feuilles, et la mortalité a continué en 2019 (Schuldt et al. 2020). Ce qui manque n'est pas un nombre, c'est un mécanisme : un arbre sans feuilles perd encore de l'eau, et son bois suit le sol qui sèche ; ou la refeuillaison coûte plus qu'une semaine sans revenu. **Une protection qui annule le signal qui l'a déclenchée ne laisse plus rien mesurer au-delà** ; elle est rapportée avec ses options, pas corrigée.
 
+### Une fusion qui déplace le feu casse ce qui comptait les brûlés
+
+La fusion du mort sur pied (#432) a cassé trois essais que ce lot ne touchait pas, les mêmes sur la base fusionnée sans O1 et sur la tête : la cause était la fusion, pas le lot. Deux portent sur le feu. Le foin et la paille restent maintenant debout et ne paillent plus le sol ; sur la lande, les feux changent de semaines et de graines. La graine du feu d'ajoncs de `potassium-conservation` ne brûlait plus : son commentaire écrit la règle (la plus précoce des treize graines de `feu.test.ts`), et le balayage l'a reprise (la 13, semaine 549 ; main brûle sur sept graines, la base fusionnée sur cinq, la tête sur quatre, parce que des ajoncs installés ne meurent plus de soif). Dans `nurse`, un feu de plus passe sur la graine 47 et celui de la graine 11 tue le liège abrité : il ne reste qu'une paire de pins épargnée, et les essais du liège comptent un brûlé pour zéro. Sans feu, l'abri gagne partout ; c'est à trancher. Le troisième, `bois-en-travers`, dépassait son délai : sans rapport avec la fusion, ses décennies durent 10 à 15 s sur toutes les copies, et #440 lui a donné un délai propre. **Après une fusion, rejouer les essais cassés sur la base fusionnée sans son lot** : c'est le seul moyen de savoir qui les casse.
+
 ### Ce que ça donne
 
 Banc de #210 (25 plants de 0,30 m protégés, une espèce par parcelle de 30 m, cinq ans, météo réelle, graine g = fenêtre 1964 + 20 (g − 1) ; déterministe à graine donnée), désherbé sur enherbé, graines 1 / 2 / 3 :
@@ -206,6 +210,8 @@ Le banc de #210 et la lande de #312 ne bougent pas (rapports à 0,016 près, auc
 - O1, P9 : `climat.test.ts` devait passer ; le hêtre ne paie plus le réchauffement plus cher que le chêne.
 - O1, R2 : sous SSP5-8.5, les hêtres de la cohorte devaient se défeuiller au moins cinq années sur soixante ; deux (l'an 12 et l'an 58).
 - O1, R1 : `bois-en-travers.test.ts` devait passer sur la base fusionnée sans O1 ; il y dépasse son délai comme sur la tête.
+- S2 : sur la base fusionnée, le liège à découvert devait battre le liège abrité sur au moins deux graines ; sur une seule, la 11, où l'abrité brûle.
+- S3 : la base fusionnée devait garder plus d'arbres sur le versant de `bois-en-travers`, et le délai suivre leur nombre ; mêmes effectifs à quelques tiges, mêmes durées : c'était le bruit des machines.
 
 ### Ce qui reste ouvert
 
