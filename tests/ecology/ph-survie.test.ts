@@ -37,10 +37,12 @@ import { phFactor, phFactorSurvie } from "../../src/engine/trees";
  * tampon de l'aluminium d'Ulrich et non un garde-fou. Un profil déclaré à 3,2
  * remonte à 4,1 au premier tick. Conséquence à retenir : **aucune espèce de**
  * **borne basse sous** 4,1 ne peut se retrouver sous sa borne dans ce moteur — le
- * hêtre, le bouleau, la ronce, la callune, l'ajonc, le chêne-liège. Leur rampe
- * acide existe dans la fonction et ne sera jamais atteinte en jeu. Le charme
- * (4,5-8,0) est l'arbre dont la borne basse est la plus haute parmi les
- * essences d'ombre : c'est lui qui permet l'épreuve.
+ * hêtre, le pin, l'aulne, le bouleau, l'aubépine, la ronce, le houx, la callune,
+ * l'ajonc, le chêne-liège (#279 a élargi sur relevé celles du hêtre, du pin, de
+ * l'aulne, de l'aubépine, du houx et du chêne-liège). Leur rampe acide existe
+ * dans la fonction et ne sera jamais atteinte en jeu. Le charme (4,5-8,0) est
+ * l'arbre dont la borne basse est la plus haute parmi les essences d'ombre :
+ * c'est lui qui permet l'épreuve.
  */
 
 /**
@@ -132,7 +134,7 @@ describe("le pH distingue enfin pousser mal et mourir", () => {
     // **La garantie qui protège les tables de production**, et elle est structurelle
     // plutôt que mesurée : la queue de croissance ne vit qu'au-dehors, donc à
     // l'intérieur `phFactor` rend exactement l'ancienne valeur. Aucune espèce
-    // n'étant calée hors de sa gamme — le pin sylvestre est à pH 7 dans 4–7,5,
+    // n'étant calée hors de sa gamme — le pin sylvestre est à pH 4,8 dans 2,8–7,5,
     // le châtaignier sur le limon acide où il vaut 1 — aucune table ne **peut**
     // bouger. Si cet essai tombe, c'est la calibration entière qui est en jeu.
     const ecarts: string[] = [];
@@ -227,8 +229,11 @@ describe("le pH distingue enfin pousser mal et mourir", () => {
     // Le point délicat du lot. Si le pH ne tue plus, la bio-indication doit
     // venir d'ailleurs — et elle vient de là où elle devrait : l'espèce à qui le
     // sol convient fait la canopée, l'autre reste au sol. À 4,2, le pin (gamme
-    // 4–7,5) est dans sa rampe basse et vaut 0,34 ; le charme (4,5–8) est sous
-    // sa borne et vaut 0,03.
+    // 2,8–7,5 depuis #279) est à pleine vigueur ; le charme (4,5–8) est sous sa
+    // borne et vaut 0,03. Avant #279, le pin, borné à 4,0, était dans sa rampe
+    // basse et valait 0,34 : remesuré sur ces trois graines, il passe de 8,40 ·
+    // 7,21 · 6,93 m à 12,85 · 11,15 · 10,92 m à cinquante ans, et le charme de
+    // 0,969 · 0,947 · 0,918 à 0,966 · 0,945 · 0,914 m.
     //
     // **cet essai affirmait `hp > 10 × hc`, et c'était un couteau** (#201). Le
     // pin recalé sur sa table de production l'a fait tomber sur une graine :
@@ -281,8 +286,8 @@ describe("le pH distingue enfin pousser mal et mourir", () => {
       expect(pins.length).toBeGreaterThan(10);
       const hp = pins.reduce((a, t) => a + t.heightM, 0) / pins.length;
       const hc = charmes.length ? charmes.reduce((a, t) => a + t.heightM, 0) / charmes.length : 0;
-      // Le pin fait un arbre (8,7 à 10,4 m mesurés), le charme reste un brin
-      // (0,93 à 0,98) : une pinède avec des charmes dessous, pas un mélange.
+      // Le pin fait un arbre (10,9 à 12,9 m mesurés depuis #279), le charme reste
+      // un brin (0,91 à 0,97) : une pinède avec des charmes dessous, pas un mélange.
       expect(hp).toBeGreaterThan(5);
       expect(hc).toBeLessThan(2);
     }
