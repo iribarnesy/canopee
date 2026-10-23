@@ -7,6 +7,7 @@
  */
 
 import { useState } from "react";
+import { CULTURE_PAR_DEFAUT, type GesteDuChamp } from "../cultures";
 import { bornerLaDose, ENGRAIS, type FormeEngrais } from "../fertilisation";
 
 export type Mode =
@@ -18,7 +19,9 @@ export type Mode =
   | "eclaircir"
   | "brf"
   | "cloturer"
-  | "fertiliser";
+  | "fertiliser"
+  // Labourer, semer, moissonner : les trois gestes du champ (#451).
+  | GesteDuChamp;
 
 /**
  * Comment l'éclaircie choisit ses tiges — les trois critères du moteur.
@@ -85,6 +88,12 @@ export interface ReglagesDeGeste {
   dosesEngrais: Readonly<Record<FormeEngrais, number>>;
   /** Règle la dose d'une forme, ramenée dans ce que le moteur accepte. */
   setDoseEngrais: (forme: FormeEngrais, dose: number) => void;
+  /**
+   * La culture que le geste « Semer » pose (#451) : un identifiant du catalogue
+   * du moteur (`CULTURES`), que `semer` reçoit tel quel en `cultureId`.
+   */
+  cultureId: string;
+  setCultureId: (id: string) => void;
   /** Le choix des essences est-il réduit à ce qui tient sur ce terrain ? */
   seulementTenables: boolean;
   setSeulementTenables: (v: boolean) => void;
@@ -116,6 +125,9 @@ export function useReglagesDeGeste(): ReglagesDeGeste {
   }));
   const setDoseEngrais = (forme: FormeEngrais, dose: number) =>
     setDosesEngrais((avant) => ({ ...avant, [forme]: bornerLaDose(forme, dose) }));
+  // La première culture du moteur — aujourd'hui la seule, le blé tendre
+  // d'hiver. Armer « Semer » ne sème rien : c'est le clic qui décide.
+  const [cultureId, setCultureId] = useState(CULTURE_PAR_DEFAUT);
   // Vrai au départ : sur une lande sèche, la moitié de la liste n'a aucun sens,
   // et c'est le filtre qui fait le gain de cette interface.
   const [seulementTenables, setSeulementTenables] = useState(true);
@@ -146,6 +158,8 @@ export function useReglagesDeGeste(): ReglagesDeGeste {
     setFormeEngrais,
     dosesEngrais,
     setDoseEngrais,
+    cultureId,
+    setCultureId,
     seulementTenables,
     setSeulementTenables,
   };

@@ -108,3 +108,51 @@ export function prochaineFin(lignes: readonly LigneDeRefus[]): number | undefine
   }
   return fin;
 }
+
+/**
+ * **Le nom du geste tel qu'on le dit**, pour les refus. Sans cette table, le
+ * joueur lisait l'identifiant du code — « ramasserBoisMort », « epandreBrf ».
+ *
+ * Elle vivait dans `Avis.tsx`, en `Partial` : un geste neuf du moteur s'y
+ * oubliait sans bruit, et c'est arrivé — **semer** et **moissonner** (#136) n'y
+ * étaient pas, si bien qu'un blé moissonné sur rien se refusait sous
+ * « moissonner : rien à moissonner ici », l'identifiant en tête (#451). Le
+ * `Record` est maintenant complet, comme `GESTE_DIT` au bilan : une action
+ * ajoutée au moteur ne compile plus tant qu'on ne lui a pas donné son nom.
+ */
+export const NOM_DU_GESTE: Readonly<Record<ActionRefusal["action"], string>> = {
+  planter: "Planter",
+  couper: "Abattre",
+  recolter: "Récolter",
+  embaucher: "Embaucher",
+  licencier: "Licencier",
+  chauler: "Chauler",
+  leverEcorce: "Cercler l'écorce",
+  eclaircir: "Éclaircir",
+  elaguer: "Élaguer",
+  epandreBrf: "Épandre le broyat",
+  trogner: "Trogner",
+  chasser: "Chasser",
+  cloturer: "Clôturer",
+  labourer: "Labourer",
+  proteger: "Protéger du gibier",
+  receper: "Recéper",
+  faucher: "Faucher",
+  ramasserBoisMort: "Ramasser le bois mort",
+  // Le moteur refuse une dose nulle ou au-delà de son plafond (#435) : le
+  // curseur tient déjà ces bornes, mais un refus doit se lire en français.
+  fertiliser: "Fertiliser",
+  // Hors de sa fenêtre, dans un tapis fermé, ou pour une culture qu'il ne
+  // connaît pas (#451).
+  semer: "Semer",
+  // Là où rien n'a été semé (#451).
+  moissonner: "Moissonner",
+};
+
+/**
+ * Une ligne de refus telle que la boîte des avis l'écrit : « Moissonner : rien
+ * à moissonner ici ». La raison est celle du moteur, mot pour mot.
+ */
+export function refusDit(r: Pick<ActionRefusal, "action" | "reason">): string {
+  return `${NOM_DU_GESTE[r.action] ?? r.action} : ${r.reason}`;
+}

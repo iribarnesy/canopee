@@ -6,8 +6,8 @@
  */
 
 import { type CSSProperties, useMemo, useState } from "react";
-import type { GameAction } from "../../engine/actions";
 import type { SnapshotTree } from "../protocol";
+import { refusDit } from "../refus";
 import type { AvisDuGel } from "../useAvisDuGel";
 import type { GameApi } from "../useGame";
 import { btn, panel } from "./styles";
@@ -19,34 +19,6 @@ const FERMER: CSSProperties = {
   marginBottom: 0,
   padding: "0 6px",
   alignSelf: "start",
-};
-
-/**
- * Le nom du geste tel qu'on le dit, pour les refus. Sans cette table, le
- * joueur lisait l'identifiant du code — « ramasserBoisMort », « epandreBrf ».
- */
-const NOM_DU_GESTE: Partial<Record<GameAction["type"], string>> = {
-  planter: "Planter",
-  couper: "Abattre",
-  recolter: "Récolter",
-  embaucher: "Embaucher",
-  licencier: "Licencier",
-  chauler: "Chauler",
-  leverEcorce: "Cercler l'écorce",
-  eclaircir: "Éclaircir",
-  elaguer: "Élaguer",
-  epandreBrf: "Épandre le broyat",
-  trogner: "Trogner",
-  chasser: "Chasser",
-  cloturer: "Clôturer",
-  labourer: "Labourer",
-  proteger: "Protéger du gibier",
-  receper: "Recéper",
-  faucher: "Faucher",
-  ramasserBoisMort: "Ramasser le bois mort",
-  // Le moteur refuse une dose nulle ou au-delà de son plafond (#435) : le
-  // curseur tient déjà ces bornes, mais un refus doit se lire en français.
-  fertiliser: "Fertiliser",
 };
 
 export function Avis({
@@ -263,14 +235,15 @@ export function Avis({
       {/*
         **Les refus passent** (#402) : chacun s'efface seul après quelques
         secondes, les identiques font une ligne avec leur compte, et le ✕ les
-        efface tous d'un coup — on a lu, on veut voir la parcelle.
+        efface tous d'un coup — on a lu, on veut voir la parcelle. Le geste y
+        est nommé en français, par la table complète de `refus.ts` (#451).
       */}
       {game.refusals.length > 0 && (
         <div style={{ ...panel, color: "#8a4b2d", display: "flex", gap: 8 }}>
           <div style={{ flex: 1 }}>
             {game.refusals.map((r) => (
               <div key={r.cle}>
-                ⚠ {NOM_DU_GESTE[r.action] ?? r.action} : {r.reason}
+                ⚠ {refusDit(r)}
                 {r.fois > 1 && <strong> ×{r.fois}</strong>}
               </div>
             ))}

@@ -12,6 +12,8 @@ import {
   applyAction,
   coutDuDepassement,
   depassementHoraire,
+  estGesteSurZone,
+  grainRecoltableT,
   prevoirAction,
   valeurSurPied,
 } from "../engine/actions";
@@ -78,6 +80,7 @@ import {
   direLeCompte,
   type LigneDeCompte,
 } from "./compteDeLAnnee";
+import { direLaMoisson, direLeLabour, direLeSemis, partDeLaPlace } from "./cultures";
 import { prefixeSousLePlafond } from "./facture";
 import { direLaFertilisation, doseDeLAction, ENGRAIS } from "./fertilisation";
 import { journalDe, type PorteurDeJournal } from "./journal";
@@ -1000,7 +1003,43 @@ function performAction(action: GameAction): EffetDeLAction {
       break;
     }
     case "labourer": {
-      event("🚜", `Labour : ${eur} (${dHeures.toFixed(1)} h) — le sol est nu, l'azote est libéré`);
+      // **Un labour refusé n'a rien retourné** (#451). La ligne s'écrivait quand
+      // même — « Labour : 0 € (0.0 h) — le sol est nu » sous le refus « l'engin
+      // ne peut pas manœuvrer ici ». Le refus se lit dans les avis, pas ici.
+      if (result.refusals.length > 0) break;
+      // La surface est celle que le moteur rapporte avoir retournée : les
+      // cellules de son geste, pas l'aire du disque demandé.
+      const geste = (result.gestes ?? []).find((g) => g.type === "labourer");
+      const m2 = geste && estGesteSurZone(geste) ? geste.cellules.length : 0;
+      event("🚜", direLeLabour(m2, -dEur, dHeures));
+      break;
+    }
+    case "semer": {
+      // **Rien n'était écrit** (#451) — ni pour un semis, ni pour une moisson. Un
+      // semis refusé (hors fenêtre, tapis fermé) n'a rien posé.
+      if (result.refusals.length > 0) break;
+      // Les cellules que le moteur a semées, comptées par sa propre fonction ;
+      // la part de la place est l'emprise qu'il y a posée, relue après le geste.
+      const cellules = cellulesDeLaZone(before.station.coteM, action);
+      event(
+        "🌱",
+        direLeSemis(
+          action.cultureId,
+          cellules.length,
+          -dEur,
+          dHeures,
+          partDeLaPlace(state.soil.herbeEmprise, cellules, action.cultureId),
+        ),
+      );
+      break;
+    }
+    case "moissonner": {
+      // « Rien à moissonner ici » n'a rien vendu : le refus suffit.
+      if (result.refusals.length > 0) break;
+      // **Le grain vendu se lit, il ne se recalcule pas** : `grainRecoltableT`
+      // sur la parcelle d'avant le geste est la somme même que la moisson a
+      // vendue. La trésorerie, elle, dit la recette moins l'engin (#247).
+      event("🌾", direLaMoisson(grainRecoltableT(before, action), dEur, dHeures));
       break;
     }
     case "fertiliser": {
@@ -2504,8 +2543,16 @@ self.addEventListener("message", (event: MessageEvent<ToWorker>) => {
       // `prevoirAction` porte la garantie dans sa signature, et l'essai qui la
       // défend éprouve désormais **tous** les types d'action sur leur chemin de
       // travail, là où le mien ne couvrait que la plantation.
-      const refusals = prevoirAction(state, { ...msg.action, week: state.week } as GameAction);
-      const reponse: FromWorker = { type: "prevision", cle: msg.cle, refusals };
+      const action = { ...msg.action, week: state.week } as GameAction;
+      const refusals = prevoirAction(state, action);
+      // Une moisson qui passerait dit **ce qu'elle emporterait** (#451) : le
+      // moteur ne refuse pas une moisson hors saison, il vend ce qui est sur
+      // pied. Le grain, lu par la fonction que la moisson vend, est donc ce que
+      // le joueur doit voir avant de cliquer — pas un kilo en mars.
+      const reponse: FromWorker =
+        action.type === "moissonner" && refusals.length === 0
+          ? { type: "prevision", cle: msg.cle, refusals, grainT: grainRecoltableT(state, action) }
+          : { type: "prevision", cle: msg.cle, refusals };
       self.postMessage(reponse);
       break;
     }
