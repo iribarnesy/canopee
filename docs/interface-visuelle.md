@@ -827,9 +827,12 @@ test humain de la v0.4). Deux défauts relevés ensemble :
 - **Des pointillés clairs en diagonale, et un damier de seize mètres.** Deux quads
   voisins laissaient, à chaque sommet partagé, un demi-pixel d'antialiasing par où
   passait le fond de page ; le trait de même couleur qui devait le fermer en
-  ajoutait, dans l'ordre du peintre. Un **fond d'un seul tenant** est maintenant
-  tracé sous les quads de chaque morceau — un seul chemin, comme l'eau libre —, et
-  son trait déborde d'un demi-pixel sur le morceau voisin.
+  ajoutait, dans l'ordre du peintre. Un **fond** est maintenant tracé sous les
+  quads, et son trait déborde d'un demi-pixel sur le voisin. Il était d'un seul
+  tenant pour le morceau, dans la teinte de son centre, et une fauche au milieu
+  d'un pré sortait quadrillée de vert pâle, avec les diagonales du morceau par
+  dessus (#450) : il est maintenant **par pavé**, dans la teinte du pavé — un seul
+  chemin pour ses quads, comme l'eau libre.
 - **28 % et 79 % de couverture donnaient le même aplat.** La part d'herbe était
   gonflée (un quart d'office, puis ×1,15) : un tiers de couverture sortait aux
   deux tiers vert, et tout saturait dès 66 %. Elle est maintenant celle du moteur.
