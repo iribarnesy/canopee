@@ -75,7 +75,7 @@ L'ébranchage avait été corrigé une première fois parce qu'il **créait** de
 
 ### Une propriété qui tourne là où le mécanisme est fermé ne vérifie rien
 
-La propriété du tick ne tournait que sur deux mulls, où le minage ectomycorhizien ne s'ouvre pas, et son équation ne le comptait pas. Ajouter le sable profond ne suffisait pas : le peuplement mixte des autres cas y mine quelques millièmes de kg N/ha par an. Le cas nouveau pose des pins de douze mètres qui minent 18,6 kg N/ha en trois ans, et il garde ce chiffre : sans minage réel, il échoue. **Un cas de propriété porte une garde qui prouve que son mécanisme a tourné.**
+La propriété du tick ne tournait que sur deux mulls, où le minage ectomycorhizien ne s'ouvre pas, et son équation ne le comptait pas. Ajouter le sable profond ne suffisait pas : le peuplement mixte des autres cas y mine quelques millièmes de kg N/ha par an. Le cas nouveau pose des pins de douze mètres qui minent 18 kg N/ha en trois ans, et il garde ce chiffre : sans minage réel, il échoue. **Un cas de propriété porte une garde qui prouve que son mécanisme a tourné.**
 
 ### Un essai qui attend un tirage rare ne se rend pas robuste par le décor
 

@@ -203,9 +203,9 @@ describe("conservation eau + azote sur le tick complet (grille + arbres)", () =>
       },
       true,
     );
-    // Les gardes : le minage a vraiment tourné (18,6 kg N/ha en trois ans sur
-    // le moteur où l'essai a été écrit, quand le peuplement mixte des deux
-    // premiers cas n'en mine que des millièmes), et le vent a ébranché.
+    // Les gardes : le minage a vraiment tourné (18 kg N/ha en trois ans quand
+    // l'essai a été écrit, quand le peuplement mixte des deux premiers cas n'en
+    // mine que quelques millièmes par an), et le vent a ébranché.
     expect(minageKgHa).toBeGreaterThan(5);
     expect(ebranches).toBeGreaterThan(0);
   });
