@@ -1033,8 +1033,16 @@ export type FromWorker =
   | { type: "facture"; facture: FactureHoraire }
   /** la consigne en vigueur, à chaque fois qu'elle change (y compris au rejeu) */
   | { type: "politiqueHoraire"; politique: PolitiqueHoraire }
-  /** la réponse à `prevoir` : les refus qu'aurait produits ce geste */
-  | { type: "prevision"; cle: string; refusals: ActionRefusal[] }
+  /**
+   * la réponse à `prevoir` : les refus qu'aurait produits ce geste — et, pour
+   * une moisson acceptée, **le grain qu'elle emporterait** (`grainT`, tonnes).
+   *
+   * `grainT` est `grainRecoltableT` sur la zone visée, la somme même que
+   * `moissonner` vend (#451). Le moteur ne publie pas de fenêtre de moisson —
+   * il moissonne à toute date ce qui est sur pied —, et c'est donc la seule
+   * chose honnête à dire avant le clic : ce qu'il y a là, maintenant.
+   */
+  | { type: "prevision"; cle: string; refusals: ActionRefusal[]; grainT?: number }
   /**
    * **où en est la relecture** (#128).
    *

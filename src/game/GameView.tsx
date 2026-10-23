@@ -44,6 +44,7 @@ import { flaquesDeLaSemaine } from "../render/temps/flaques";
 import { gitesOccupes } from "../render/temps/habitants";
 import { lignesDuBilan } from "./bilan";
 import { ESTOMPE } from "./ceQuiAChange";
+import { actionDuChamp, estGesteDuChamp } from "./cultures";
 import { EditeurTerrain, terrainInitial } from "./EditeurTerrain";
 import { useEcranEmpile } from "./ecranEmpile";
 import { actionDeFertilisation } from "./fertilisation";
@@ -1242,6 +1243,7 @@ export function GameView({ surPartie }: { surPartie?: (enPartie: boolean) => voi
     especeEclaircie,
     formeEngrais,
     dosesEngrais,
+    cultureId,
   } = geste;
   const [selectedIds, setSelectedIds] = useState<ReadonlySet<number>>(new Set());
   // L'orientation de la caméra vit dans `VueParcelle` ; elle remonte ici pour
@@ -1701,6 +1703,35 @@ export function GameView({ surPartie }: { surPartie?: (enPartie: boolean) => voi
     return () => window.removeEventListener("keydown", surTouche);
   }, [game.basculer]);
 
+  /**
+   * La **bande en cours de tracé**, du départ au curseur (#205).
+   *
+   * Non nulle seulement entre les deux clics. C'est elle que la vue montre, et
+   * c'est elle que le panneau recense : le devis et le compte des tiges portent
+   * donc sur ce qu'on s'apprête vraiment à faire, et non sur un disque qu'on ne
+   * demandera pas.
+   */
+  const bandeEnCours =
+    traceBande && departBande && survol
+      ? bandeDuTrace(departBande, { x: survol.x + 0.5, y: survol.y + 0.5 }, largeurBande)
+      : undefined;
+
+  /**
+   * La zone que le geste armé demanderait si on cliquait maintenant.
+   *
+   * Calculée ici, avant l'écran de démarrage, plutôt qu'avec le reste du clic :
+   * le préavis des gestes du champ la soumet au moteur, et un effet ne se pose
+   * pas après un retour anticipé (#451).
+   */
+  const zoneDuGeste: Zone | undefined =
+    mode === "selection" || mode === "planter"
+      ? undefined
+      : traceBande
+        ? bandeEnCours
+        : survol
+          ? { x: survol.x + 0.5, y: survol.y + 0.5, rayonM: rayonChaulage }
+          : undefined;
+
   // **Le refus vient du moteur, jamais d'une règle refaite ici.** Le worker
   // applique la plantation sur l'état courant et jette le résultat, ne gardant
   // que les refus (`prevoir`). La règle du mètre, le plafond d'heures et le
@@ -1718,6 +1749,31 @@ export function GameView({ surPartie }: { surPartie?: (enPartie: boolean) => voi
       avecManchon,
     });
   }, [cleDuPreavis, survol, especeId, avecManchon, game.prevoir]);
+
+  /**
+   * **Le préavis des gestes du champ** (#451) : labourer, semer, moissonner.
+   *
+   * Le même chemin que la plantation — le moteur répond par `prevoir`, sur la
+   * zone visée, à la semaine ouverte —, et une raison de plus de le prendre :
+   * la fenêtre de semis est une règle du moteur, et le panneau ne doit pas
+   * décréter « hors saison » de lui-même. Il montre ce que le moteur répond ;
+   * pour une moisson, la réponse porte aussi le grain qu'elle emporterait.
+   *
+   * La clé porte l'action entière — zone et culture — et la révision : un semis
+   * rend refusée la place qu'on survolait, et une semaine qui passe peut faire
+   * entrer la fenêtre.
+   */
+  const actionDuChampPrevue =
+    estGesteDuChamp(mode) && zoneDuGeste ? actionDuChamp(mode, zoneDuGeste, cultureId) : undefined;
+  /** La clé sans la révision : la même question, posée sur la même zone. */
+  const questionDuChamp = actionDuChampPrevue
+    ? `champ:${JSON.stringify(actionDuChampPrevue)}:`
+    : undefined;
+  const cleDuChamp = questionDuChamp ? `${questionDuChamp}${game.revision}` : undefined;
+  useEffect(() => {
+    if (!cleDuChamp || !actionDuChampPrevue) return;
+    game.prevoir(cleDuChamp, actionDuChampPrevue);
+  }, [cleDuChamp, actionDuChampPrevue, game.prevoir]);
 
   if (!station || !snapshot) {
     return (
@@ -1761,19 +1817,6 @@ export function GameView({ surPartie }: { surPartie?: (enPartie: boolean) => voi
    * est le bon zéro : un plant occupe un point, et l'espacement minimal est
    * une règle du moteur qu'on ne redit pas ici.
    */
-  /**
-   * La **bande en cours de tracé**, du départ au curseur (#205).
-   *
-   * Non nulle seulement entre les deux clics. C'est elle que la vue montre, et
-   * c'est elle que le panneau recense : le devis et le compte des tiges portent
-   * donc sur ce qu'on s'apprête vraiment à faire, et non sur un disque qu'on ne
-   * demandera pas.
-   */
-  const bandeEnCours =
-    traceBande && departBande && survol
-      ? bandeDuTrace(departBande, { x: survol.x + 0.5, y: survol.y + 0.5 }, largeurBande)
-      : undefined;
-
   const empriseDuGeste: EmpriseDuGeste | undefined =
     mode === "selection"
       ? undefined
@@ -1785,18 +1828,18 @@ export function GameView({ surPartie }: { surPartie?: (enPartie: boolean) => voi
             (bandeEnCours ?? { rayonM: 0 })
           : { rayonM: rayonChaulage };
 
-  /** La zone que le geste armé demanderait si on cliquait maintenant. */
-  const zoneDuGeste: Zone | undefined =
-    mode === "selection" || mode === "planter"
-      ? undefined
-      : traceBande
-        ? bandeEnCours
-        : survol
-          ? { x: survol.x + 0.5, y: survol.y + 0.5, rayonM: rayonChaulage }
-          : undefined;
-
   const refusDuPreavis =
     cleDuPreavis && game.prevision?.cle === cleDuPreavis ? game.prevision.refusals : [];
+  /**
+   * La réponse du moteur au geste du champ qu'on vise, quand elle est arrivée.
+   *
+   * Celle de l'instantané d'avant reste lue le temps que la nouvelle arrive, si
+   * elle porte sur la même zone : le temps qui passe change la révision à
+   * chaque instantané, et la ligne s'effaçait puis revenait à chaque semaine
+   * jouée. Une autre zone, elle, attend sa propre réponse.
+   */
+  const preavisDuChamp =
+    questionDuChamp && game.prevision?.cle.startsWith(questionDuChamp) ? game.prevision : undefined;
 
   /** L'arbre adulte à annoncer sous le curseur, quand on plante. */
   const fantome =
@@ -1872,6 +1915,12 @@ export function GameView({ surPartie }: { surPartie?: (enPartie: boolean) => voi
       const zone = zoneDuClic();
       if (zone)
         game.dispatch(actionDeFertilisation(formeEngrais, dosesEngrais[formeEngrais], zone));
+    } else if (estGesteDuChamp(mode)) {
+      // Labourer, semer, moissonner (#451) : disque ou bande comme les autres
+      // gestes de zone, la culture choisie pour le semis — et c'est le moteur
+      // qui décide de la saison, de la place et de ce qu'il y a à moissonner.
+      const zone = zoneDuClic();
+      if (zone) game.dispatch(actionDuChamp(mode, zone, cultureId));
     } else if (mode === "eclaircir") {
       // Par essence, c'est l'essence qui décide et non la densité : le moteur
       // prend toutes ses tiges dans le disque (#156). Sans essence choisie, on
@@ -2174,6 +2223,7 @@ export function GameView({ surPartie }: { surPartie?: (enPartie: boolean) => voi
                 // indices entiers, et viser le coin décalerait le recensement
                 // d'un demi-mètre par rapport au disque qui sera appliqué.
                 {...(zoneDuGeste ? { zoneVisee: zoneDuGeste } : {})}
+                {...(preavisDuChamp ? { preavis: preavisDuChamp } : {})}
               />
             </Volet>
           ) : volets.estOuvert("bg", "essences") ? (
