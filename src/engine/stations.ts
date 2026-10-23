@@ -574,7 +574,7 @@ export const SUBERAIE_MAURES: StationClimat = {
  * (l'horizon A de 215 pineraies polonaises descend à pH eau 2,8), elle vaut
  * maintenant 2,8 et le pin est à pleine vigueur dès pH 3,47. Redescendre la
  * station au pH de terrain mesurerait enfin le sable ; c'est une option de
- * #262 et #172, à mesurer, et elle n'est pas prise ici.
+ * #262, à mesurer, et elle n'est pas prise ici.
  *
  * Pas de nappe dans le profil, mais une nappe à deux mètres : c'est le
  * *veldpodzol*, le podzol de bas de pente qui porte l'essentiel des pineraies
