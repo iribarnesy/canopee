@@ -79,7 +79,14 @@ La propriété du tick ne tournait que sur deux mulls, où le minage ectomycorhi
 
 ### Un essai qui attend un tirage rare ne se rend pas robuste par le décor
 
-L'essai du feu des chandelles brûle sur une graine sur douze. L'espérance de départs de feu, mesurée dans `departDeFeu`, vaut 0,085 en cinq ans sur sa lande : 8 % de chances de brûler. Les chandelles de charme tiennent neuf ans et demi, la série réelle de 2018 à 2022 donne 0,18, et le plafond du départ (0,015 par semaine) borne tout décor à quelques dixièmes. Il en faudrait cinq pour que trois graines brûlent à coup sûr. **Mesurer l'espérance d'un événement avant de chercher un décor qui le rende sûr** : ici, aucun ne le peut sans balayer les graines ou imposer le départ, et c'est une décision du propriétaire.
+L'essai du feu des chandelles brûle sur une graine sur douze. L'espérance de départs de feu, mesurée dans `departDeFeu`, vaut 0,085 en cinq ans sur sa lande : 8 % de chances de brûler. Neuf ans, juste avant que les chandelles de charme ne tombent, donnent 0,12 ; la série réelle de 2018 à 2022, 0,18. Le plafond du départ (0,015 par semaine) n'en laisse espérer que 4,7 en cinq ans, à risque maximal chaque semaine de saison, ce qu'aucune météo réelle ne donne. Il en faudrait 4 pour que trois graines brûlent à 95 %. **Mesurer l'espérance d'un événement avant de chercher un décor qui le rende sûr** : ici, aucun ne le peut sans balayer les graines ou imposer le départ, et c'est une décision du propriétaire (options sur #379).
+
+### Ce que ça donne
+
+- **#345** : la pinède exposée du banc du volis ne perd plus 85 à 138 kg N/ha en soixante ans. Ses dominants gagnent 0,3 à 1,4 %, la litière cumulée 53 à 117 kg N/ha ; rien ne change avant le premier ébranchage. Le pin du sable de `hauteurs.test.ts` passe de 15,75 à 15,84 m à quarante ans.
+- **#347** : la propriété du tick compte le minage, et son cas du sable profond vérifie aussi le système entier. Elle tombe sur le moteur d'avant #345.
+- **#379, point 2** : un arbre posé porte l'azote de son bois. La suite reste verte, l'essai du feu brûle à la même semaine, les hauteurs ne bougent pas. Trois essais qui le posaient à la main le lisent sur l'arbre.
+- Le format ne bouge pas (14) : les deux champs existaient.
 
 ### Les prédictions fausses
 
@@ -88,6 +95,16 @@ L'essai du feu des chandelles brûle sur une graine sur douze. L'espérance de d
 - P2 : 0,01 à 0,5 kg N/ha/sem d'écart sans le minage ; 3e-4 et 2e-3 sur les peuplements de jeunes plants, qui minent à peine.
 - P5 : la série réelle de Mont-de-Marsan multiplierait les départs de feu (0,2 à 3 en cinq ans) ; 0,08 et 0,18.
 - P6 : la réserve garderait 85 à 138 kg N/ha de plus ; elle est remobilisée chaque printemps, et c'est la litière cumulée qui monte, de 53 à 117 kg N/ha en soixante ans.
+
+Justes : le bilan du sol aveugle à #345 (P1b), aucune fuite du minage (P2), une seule graine qui brûle sur douze (P3, P7), 1 240 kg N/ha dans le bois des chandelles (P4), les hauteurs à moins de 1 % hors pin à quarante ans (P7), une suite qui reste verte (P6, P7).
+
+### Ce qui reste ouvert
+
+- **L'essai du feu des chandelles** (#379, point 1) : décision du propriétaire entre balayer les graines et imposer le départ.
+- **Une feuille arrachée verte ne résorbe rien.** La tempête suit maintenant le chemin d'un arbre vivant (moitié en réserve), comme son commentaire le voulait. Verser tout l'azote à la litière serait plus juste pour une feuille verte, mais `depositLitter` lit le carbone sur le C/N d'une feuille sénescente, donc le doublerait ; il faudrait lui donner le C/N de la feuille verte (le même défaut touche les feuilles d'un arbre qui meurt en été). Jugement de modélisation, à trancher.
+- **Le feu volatilise l'azote sans flux publié** : la litière brûlée, l'aérien d'une chandelle. Une propriété avec feu ne fermerait pas le bilan du sol.
+- **Le geste de plantation du jeu** pose ses plants sans l'azote de leur bois (un centième de gramme à trente centimètres), et `plantAt` pose sans les bases du bois (`basesBoisEq`), le même défaut pour le calcium.
+- **La pluie de semis** apporte des aulnes, qui tirent leur azote de l'air sans flux publié : le bilan du système entier ne se ferme qu'en leur absence.
 
 ## Ce qu'un lot précédent a appris (les essais qui frôlent leur délai, #378 et #423)
 
