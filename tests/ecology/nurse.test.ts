@@ -38,7 +38,14 @@ const WEATHER = serieToWeeks(serie);
  * prospère. Le volume, lui, ne se laisse pas tromper : il dit la même chose
  * avant et après le lot.
  */
-const GRAINES = [11, 29, 47];
+const GRAINES = [11, 29, 47, 1];
+// **La graine 1 est ajoutée, et c'est dit** (#391, décision de l'utilisateur).
+// Les comparaisons se font sur les paires que le feu épargne, et il en faut au
+// moins deux par essence. À la fusion du mort sur pied (#432), les feux de la
+// lande ont changé : sur 11, 29 et 47, il ne restait qu'une paire de pins. La
+// règle, écrite avant de voir les graines : ajouter 1, 2, 3, ... dans l'ordre,
+// s'arrêter à la première qui donne le compte, garder toutes celles ajoutées.
+// La 1 suffit (liège et pin épargnés tous deux).
 
 /** Le sujet de chaque graine, dans l'ordre de `GRAINES`. */
 function parGraine(especeId: string, nurses: number, distanceM: number, years: number) {
@@ -104,30 +111,56 @@ function sujetUneGraine(
   };
 }
 
+/**
+ * **Les paires que le feu épargne** (#391) : les graines où ni l'un ni l'autre
+ * des deux sujets comparés n'est mort par le feu. L'ajonc est un combustible ;
+ * un feu qui passe tue le sujet abrité ou le sujet à découvert selon où il
+ * passe, et c'est alors lui, pas l'abri, qui décide de la comparaison. Le feu
+ * est un vrai coût de la nurse ; ce n'est pas ce que ces essais mesurent.
+ */
+function epargnees<T extends { brule: boolean }>(a: readonly T[], b: readonly T[]) {
+  return GRAINES.flatMap((_, k) => {
+    const x = a[k];
+    const y = b[k];
+    return x && y && !x.brule && !y.brule ? [{ a: x, b: y }] : [];
+  });
+}
+
 describe("effet nurse sur lande sèche et ventée", () => {
+  const moyenne = (v: readonly { volumeM3: number }[]) =>
+    v.reduce((s, m) => s + m.volumeM3, 0) / v.length;
   // Le chêne-liège tolère l'ombre en jeunesse : pour lui, l'abri est tout bénéfice.
-  const liege = mesureApres("quercus_suber", 0, 0, 12);
-  const liegeNu = liege.volumeM3;
-  const liegeAbrite = volumeApres("quercus_suber", 6, 3, 12);
-  const liegeColle = volumeApres("quercus_suber", 6, 1.2, 12);
+  const liegesNus = parGraine("quercus_suber", 0, 0, 12);
+  const liegesAbrites = parGraine("quercus_suber", 6, 3, 12);
+  const liegesColles = parGraine("quercus_suber", 6, 1.2, 12);
+  const liegeHauteurNu = liegesNus.reduce((s, m) => s + m.hauteurM, 0) / liegesNus.length;
+  /** Abrité contre découvert, puis abrité contre collé, sur les seules paires épargnées. */
+  const abriteNu = epargnees(liegesAbrites, liegesNus);
+  const abriteColle = epargnees(liegesAbrites, liegesColles);
   // Le pin est franchement héliophile : trop près, l'ombre lui coûte plus que
   // l'abri ne lui rapporte.
   const pinsNus = parGraine("pinus_sylvestris", 0, 0, 12);
   const pinsAbrites = parGraine("pinus_sylvestris", 6, 3, 12);
-  const moyenne = (v: readonly { volumeM3: number }[]) =>
-    v.reduce((s, m) => s + m.volumeM3, 0) / v.length;
   const pinAbrite = moyenne(pinsAbrites);
   const pinColle = volumeApres("pinus_sylvestris", 6, 1.2, 12);
 
   it("le chêne-liège, adapté au sable acide, s'installe même nu (mais végète)", () => {
     // Sans entretien, la strate herbacée lui dispute l'eau et l'azote : il
     // survit sur la lande, il n'y prospère pas.
-    expect(liege.hauteurM).toBeGreaterThan(0.35);
+    expect(liegeHauteurNu).toBeGreaterThan(0.35);
   });
 
   it("abrité à bonne distance, il pousse mieux qu'à découvert", () => {
     // Le vent lui coûte plus que l'ombre — mais à **bonne distance** seulement.
-    expect(liegeAbrite).toBeGreaterThan(liegeNu);
+    //
+    // **Sur les paires que le feu épargne** (#391, décision de l'utilisateur), le
+    // critère déjà retenu pour le pin. À la fusion du mort sur pied (#432), le
+    // feu de la graine 11 s'est mis à tuer le liège abrité, et la moyenne, qui
+    // comptait ce brûlé pour zéro, faisait perdre l'abri (0,000389 contre
+    // 0,000456 m³). Le seuil ne bouge pas : il en faut deux, et l'abrité doit
+    // battre le découvert.
+    expect(abriteNu.length).toBeGreaterThanOrEqual(2);
+    expect(moyenne(abriteNu.map((p) => p.a))).toBeGreaterThan(moyenne(abriteNu.map((p) => p.b)));
   });
 
   it("même pour le sciaphile, il existe une bonne distance — et ce n'est pas zéro", () => {
@@ -182,8 +215,15 @@ describe("effet nurse sur lande sèche et ventée", () => {
     // mètres, 0,37 m à découvert. Ce qui n'a pas bougé, et qui est le fond de
     // l'affaire : la bonne distance dépend du **tempérament**, et l'héliophile,
     // lui, paie l'ombre (essai suivant).
-    expect(liegeAbrite).toBeGreaterThan(liegeColle);
-    expect(liegeAbrite).toBeGreaterThan(liegeNu);
+    //
+    // (Depuis #391, les deux comparaisons se font sur les paires que le feu
+    // épargne, comme pour le pin ; voir l'essai précédent.)
+    expect(abriteColle.length).toBeGreaterThanOrEqual(2);
+    expect(moyenne(abriteColle.map((p) => p.a))).toBeGreaterThan(
+      moyenne(abriteColle.map((p) => p.b)),
+    );
+    expect(abriteNu.length).toBeGreaterThanOrEqual(2);
+    expect(moyenne(abriteNu.map((p) => p.a))).toBeGreaterThan(moyenne(abriteNu.map((p) => p.b)));
   });
 
   it("l'héliophile, lui, paie l'ombre : collé à la nurse il fait moins bien qu'à distance", () => {
@@ -200,17 +240,15 @@ describe("effet nurse sur lande sèche et ventée", () => {
     // 11. Sans feu, l'abri gagne dans les cinq paires des deux copies (0,00339
     // à 0,00349 m³ contre 0,00287). Le feu est un vrai coût de la nurse ; ce
     // n'est pas ce que l'essai mesure.
-    const epargnees = GRAINES.flatMap((_, k) => {
-      const nu = pinsNus[k];
-      const abrite = pinsAbrites[k];
-      return nu && abrite && !nu.brule && !abrite.brule ? [{ nu, abrite }] : [];
-    });
+    //
+    // À la fusion du mort sur pied (#432), un feu de plus passe sur la graine 47
+    // et tue le pin à découvert : il ne restait que la paire de la graine 29. La
+    // graine 1 a été ajoutée par la règle écrite à `GRAINES`.
+    const paires = epargnees(pinsAbrites, pinsNus);
     // Il en faut au moins deux, sans quoi la comparaison redevient celle d'un
     // individu à un autre.
-    expect(epargnees.length).toBeGreaterThanOrEqual(2);
-    expect(moyenne(epargnees.map((p) => p.abrite))).toBeGreaterThan(
-      moyenne(epargnees.map((p) => p.nu)),
-    );
+    expect(paires.length).toBeGreaterThanOrEqual(2);
+    expect(moyenne(paires.map((p) => p.a))).toBeGreaterThan(moyenne(paires.map((p) => p.b)));
   });
 });
 
