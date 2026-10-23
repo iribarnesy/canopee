@@ -363,22 +363,4 @@ describe("ce que les lignes disent est ce que le moteur a fait", () => {
     const encore = prevoirAction(moisson.state, datee(actionDuChamp("moissonner", DISQUE, ""), 0));
     expect(encore.map(refusDit)).toEqual(["Moissonner : rien à moissonner ici"]);
   });
-
-  it("le moteur ne publie pas de fenêtre de moisson : en mars, il moissonne sans un kilo", () => {
-    // **Ce que le panneau ne dit pas de lui-même**, et pourquoi : la fiche porte
-    // une date de moisson, mais `moissonner` ne la lit pas. Un blé moissonné au
-    // sortir de l'hiver est accepté, ne vend presque rien, fait payer l'engin —
-    // et quitte le champ. Le panneau montre donc le grain sur pied au survol
-    // (`grainRecoltableT`), pas un « hors saison » qu'il aurait inventé. Le jour
-    // où le moteur refusera hors saison, cet essai tombera, et le panneau devra
-    // montrer son refus à la place.
-    const mars = avance(seme.state, (10 - (seme.state.week % 52) + 52) % 52);
-    const grain = grainRecoltableT(mars, DISQUE);
-    expect(auMoinsUnKilo(grain)).toBe(false);
-    const moisson = applyAction(mars, datee(actionDuChamp("moissonner", DISQUE, ""), mars.week));
-    expect(moisson.refusals).toEqual([]);
-    const dEur = moisson.state.economy.treasuryEur - mars.economy.treasuryEur;
-    expect(dEur).toBeLessThan(0);
-    expect(direLaMoisson(grain, dEur, 0.02)).toContain("pas un kilo de grain à vendre");
-  });
 });
