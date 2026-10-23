@@ -1406,13 +1406,18 @@ esthétique : trois règles tombent de ce choix sans qu'on les écrive.
 - **Un sol déjà acide s'acidifie de moins en moins**, parce que la courbe
   s'aplatit par le bas. Ce n'est pas un garde-fou de programmeur : c'est la
   gamme tampon de l'aluminium d'Ulrich, où les hydroxydes prennent le relais du
-  complexe. **Le plancher de 4,1 a été confronté au terrain** (#172, instruit dans
-  #441, rien de changé) : sur 0-20 cm, l'épaisseur de l'horizon de surface que
-  le moteur tient, les cent placettes RENECOFOR descendent à pH eau 3,86 et 4 à
-  9 % seulement passent sous 4,1 (Saenger et al. 2023, deux campagnes) ; les
-  quatre podzols du réseau titrent 4,08 à 4,47. Ce qui va plus bas est l'humus
-  (médiane 4,0 à 4,1, minimum 3,61) et les dix premiers centimètres (15 à 25 %
-  sous 4,1), que le moteur ne tient pas à part.
+  complexe. Le relais du tampon d'échange à celui de l'aluminium se fait vers
+  4,2 (Meiwes et al. 1986, d'après Serrasolses et al. 2009). **Le plancher de 4,1
+  a été confronté au terrain, et il est gardé** (#172) : sur 0-20 cm,
+  l'épaisseur de l'horizon de surface que le moteur tient, les cent placettes
+  RENECOFOR descendent à pH eau 3,86 et 4 à 9 % seulement passent sous 4,1
+  (Saenger et al. 2023, deux campagnes) ; les quatre podzols du réseau titrent
+  4,08 à 4,47. Ce qui va plus bas est l'humus (médiane 4,0 à 4,1, minimum 3,61)
+  et les dix premiers centimètres (15 à 25 % sous 4,1), que le moteur ne tient
+  pas à part. Le plancher coupe donc au plus 0,25 pH sur moins d'une placette
+  sur dix. Le descendre sans l'aluminium rendrait un sol très acide plus
+  hospitalier qu'il n'est : ce qui manque sous 4,1 est le tampon de l'aluminium
+  et sa toxicité, un mécanisme à part (#443, v0.7).
 - **Une partie démarre exactement au pH que sa station déclare**, parce que la
   saturation initiale est **inversée** depuis ce pH. Une dérive qui commence par
   déplacer son point de départ n'est pas une dérive, c'est un bug.

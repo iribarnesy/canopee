@@ -163,7 +163,7 @@ La suite complète passe sur l'atlas soigné, une fois `message-ph.test.ts` ré�
 ### Ce qui reste ouvert
 
 - **#262 et #278** : la recommandation est l'option C, un trait `optimumPh` sourcé qui devient le plateau, et des flancs tirés de ce plateau jusqu'aux bornes de présence, sans rampe absolue. À mesurer d'abord sur la suite complète (36 fichiers citent le pin et le limon riche).
-- **#172** : garder 4,1 (option A) ; la branche aluminium, avec sa toxicité, est le vrai manque.
+- **#172** : tranché, option A — le plancher de 4,1 est gardé et écrit avec sa source (`bases.ts`) ; la branche aluminium, avec sa toxicité, est le vrai manque (#443, v0.7).
 - **Trente-deux bornes sur cinquante-quatre restent *(à confirmer)***, dont celles du bouleau, du frêne, du noisetier et du charme, et les quatre herbacées (`herbacees.ts`) n'ont pas été reprises.
 - **Le pH de `SABLE_PROFOND`** (4,8, relevé pour franchir le genou du pin) n'a plus de raison d'être ; le redescendre au pH de terrain est une option de #262, à mesurer.
 - **Le chêne-liège** est au-dessus de sa bande à quarante ans : son calage sur la suberaie reste à faire.
