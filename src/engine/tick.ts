@@ -275,6 +275,7 @@ import {
   cnBois,
   dureeChandelleSemaines,
   EMBOLIE_DEFEUILLAISON,
+  EMBOLIE_LETALE_FEUILLU,
   estInstalle,
   fractionsRacinairesParHorizon,
   LITTER_RETURN_FRACTION,
@@ -2470,8 +2471,10 @@ export function tick(state: GameState, weather: WeekWeather): TickResult {
     const nd = nNeedG[t] ?? 0;
     // Satisfaction rapportée au besoin d'un arbre **intact** : c'est ce qui fait
     // qu'un sujet embolisé reste en déficit même le sol plein — et qu'il meurt
-    // souvent à la sécheresse **suivante**, pas à celle qui l'a abîmé.
-    const besoinIntact = wd / Math.max(0.15, 1 - tree.dommageHydraulique);
+    // souvent à la sécheresse **suivante**, pas à celle qui l'a abîmé. Le
+    // plancher suivait le plafond de 85 % de l'embolie ; il suit maintenant le
+    // seuil qui tue un feuillu (#391), au-delà duquel aucun arbre n'est vivant.
+    const besoinIntact = wd / Math.max(1 - EMBOLIE_LETALE_FEUILLU, 1 - tree.dommageHydraulique);
     waterSatisfaction[t] = besoinIntact > 0 ? Math.min(1, gotW / besoinIntact) : 1;
     satisfactionEau.set(tree.id, waterSatisfaction[t] ?? 1);
     const tirage = tirageReserveG[t] ?? 0;
