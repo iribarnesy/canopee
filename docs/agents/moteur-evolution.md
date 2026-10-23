@@ -61,7 +61,52 @@ qu'un rapport (voir la note de maintenance).
 Séparer calibration et validation : caler un paramètre sur un âge, garder
 l'autre âge pour vérifier.
 
-## Ce que le dernier lot a appris (les bornes de pH de l'atlas, #279 ; instruction de #262, #278 et #172)
+## Ce que le dernier lot a appris (la conservation de l'azote : l'ébranchage, #345, le minage, #347, et le bois posé, #379)
+
+Trois issues de maintenance, instruites sur main avec des sondes hors dépôt. Les prédictions et les mesures sont dans les commits de la branche `claude/v06-azote`, avant chaque course.
+
+### Un bilan du sol ne voit pas ce qu'un arbre perd sans le verser
+
+La propriété du tick ferme le côté sol : ce qui en sort, ce qui y entre, la variation du stock. Elle comptait la litière versée par une tempête et ignorait la moitié retirée à l'arbre sans aller nulle part. Sur un banc de cent pins de douze mètres, son résidu restait à 1e-11 pendant que 5 kg N/ha disparaissaient en une semaine. Le bilan du **système entier** (sol, strate, arbres) se ferme à 1e-11 quand rien ne fixe l'azote de l'air, et c'est lui qui voit la fuite : il tombe dès la première tempête sur le moteur d'avant. **Une propriété ratifie ce qu'elle ne compte pas** : avant d'en conclure qu'un mécanisme conserve, vérifier que le stock qu'il vide est dans le bilan.
+
+### Une correction écrite avant un changement de règle se relit quand la règle change
+
+L'ébranchage avait été corrigé une première fois parce qu'il **créait** de l'azote. La correction retirait à l'arbre ce qu'il versait, à une époque où une feuille rendait tout au sol. Puis #247 a fait résorber la moitié avant la chute, dans trois chemins sur quatre ; la tempête n'a pas suivi. Une seule fonction de chute (`feuillesQuiTombent`) sert maintenant les quatre, et la règle ne peut plus diverger. **Quand une règle change, chercher toutes ses copies** ; mieux, n'en laisser qu'une.
+
+### Une propriété qui tourne là où le mécanisme est fermé ne vérifie rien
+
+La propriété du tick ne tournait que sur deux mulls, où le minage ectomycorhizien ne s'ouvre pas, et son équation ne le comptait pas. Ajouter le sable profond ne suffisait pas : le peuplement mixte des autres cas y mine quelques millièmes de kg N/ha par an. Le cas nouveau pose des pins de douze mètres qui minent 18 kg N/ha en trois ans, et il garde ce chiffre : sans minage réel, il échoue. **Un cas de propriété porte une garde qui prouve que son mécanisme a tourné.**
+
+### Un essai qui attend un tirage rare ne se rend pas robuste par le décor
+
+L'essai du feu des chandelles brûle sur une graine sur douze. L'espérance de départs de feu, mesurée dans `departDeFeu`, vaut 0,085 en cinq ans sur sa lande : 8 % de chances de brûler. Neuf ans, juste avant que les chandelles de charme ne tombent, donnent 0,12 ; la série réelle de 2018 à 2022, 0,18. Le plafond du départ (0,015 par semaine) n'en laisse espérer que 4,7 en cinq ans, à risque maximal chaque semaine de saison, ce qu'aucune météo réelle ne donne. Il en faudrait 4 pour que trois graines brûlent à 95 %. **Mesurer l'espérance d'un événement avant de chercher un décor qui le rende sûr** : ici, aucun ne le peut sans balayer les graines ou imposer le départ, et c'est une décision du propriétaire (options sur #379).
+
+### Ce que ça donne
+
+- **#345** : la pinède exposée du banc du volis ne perd plus 85 à 138 kg N/ha en soixante ans. Ses dominants gagnent 0,3 à 1,4 %, la litière cumulée 53 à 117 kg N/ha ; rien ne change avant le premier ébranchage. Le pin du sable de `hauteurs.test.ts` passe de 15,75 à 15,84 m à quarante ans.
+- **#347** : la propriété du tick compte le minage, et son cas du sable profond vérifie aussi le système entier. Elle tombe sur le moteur d'avant #345.
+- **#379, point 2** : un arbre posé porte l'azote de son bois. La suite reste verte, l'essai du feu brûle à la même semaine, les hauteurs ne bougent pas. Trois essais qui le posaient à la main le lisent sur l'arbre.
+- Le format ne bouge pas (14) : les deux champs existaient.
+
+### Les prédictions fausses
+
+- P1 : une perte à l'ébranchage dès les premières années ; aucune semaine d'ébranchage en vingt ans, les pins n'y sont pas assez grands.
+- P1' : 0,03 à 0,5 kg N/ha/an et 0,05 à 0,5 par tempête ; 1,4 à 2,3 et 1,7 à 2,4. Une pinède fermée porte beaucoup d'azote dans ses aiguilles, et une tempête prend tout le peuplement à la fois.
+- P2 : 0,01 à 0,5 kg N/ha/sem d'écart sans le minage ; 3e-4 et 2e-3 sur les peuplements de jeunes plants, qui minent à peine.
+- P5 : la série réelle de Mont-de-Marsan multiplierait les départs de feu (0,2 à 3 en cinq ans) ; 0,08 et 0,18.
+- P6 : la réserve garderait 85 à 138 kg N/ha de plus ; elle est remobilisée chaque printemps, et c'est la litière cumulée qui monte, de 53 à 117 kg N/ha en soixante ans.
+
+Justes : le bilan du sol aveugle à #345 (P1b), aucune fuite du minage (P2), une seule graine qui brûle sur douze (P3, P7), 1 240 kg N/ha dans le bois des chandelles (P4), les hauteurs à moins de 1 % hors pin à quarante ans (P7), une suite qui reste verte (P6, P7).
+
+### Ce qui reste ouvert
+
+- **L'essai du feu des chandelles** (#379, point 1) : décision du propriétaire entre balayer les graines et imposer le départ.
+- **Une feuille arrachée verte ne résorbe rien.** La tempête suit maintenant le chemin d'un arbre vivant (moitié en réserve), comme son commentaire le voulait. Verser tout l'azote à la litière serait plus juste pour une feuille verte, mais `depositLitter` lit le carbone sur le C/N d'une feuille sénescente, donc le doublerait ; il faudrait lui donner le C/N de la feuille verte (le même défaut touche les feuilles d'un arbre qui meurt en été). Jugement de modélisation, à trancher.
+- **Le feu volatilise l'azote sans flux publié** : la litière brûlée, l'aérien d'une chandelle. Une propriété avec feu ne fermerait pas le bilan du sol.
+- **Le geste de plantation du jeu** pose ses plants sans l'azote de leur bois (un centième de gramme à trente centimètres), et `plantAt` pose sans les bases du bois (`basesBoisEq`), le même défaut pour le calcium.
+- **La pluie de semis** apporte des aulnes, qui tirent leur azote de l'air sans flux publié : le bilan du système entier ne se ferme qu'en leur absence.
+
+## Ce qu'un lot précédent a appris (les bornes de pH de l'atlas, #279 ; instruction de #262, #278 et #172)
 
 Un lot de soin, puis une instruction. #279 est livré : chaque borne de pH de l'atlas porte sa source, sa grandeur et son horizon, ou *(à confirmer)*. #262, #278 et #172 sont des choix de modélisation : leurs options et la recommandation sont dans la PR (#441), rien n'en est codé. Les prédictions et les mesures sont dans les commits de la branche, avant chaque course. Le format de sauvegarde ne bouge pas (un trait d'atlas n'est pas sérialisé).
 

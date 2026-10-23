@@ -3480,6 +3480,21 @@ export function tick(state: GameState, weather: WeekWeather): TickResult {
     verserAuBoisMort(tree, (tree.reserveAzoteG ?? 0) + (tree.azoteBoisG ?? 0), celluleDuBois);
     rendreBases(tree, tree.basesBoisEq ?? 0);
   };
+  /**
+   * Des feuilles qui tombent d'un arbre vivant, avec l'azote qu'elles portent :
+   * la moitié va à la litière, l'autre moitié est résorbée avant la chute et
+   * part en réserve (#247). Une seule règle pour l'automne, pour le persistant
+   * qui renouvelle son feuillage, et pour la tempête qui fait tomber des
+   * feuilles plus tôt (#345).
+   */
+  const feuillesQuiTombent = (tree: TreeState, azote: number): TreeState => {
+    depositLitter(tree, LITTER_RETURN_FRACTION * azote);
+    return {
+      ...tree,
+      uptakeYearG: tree.uptakeYearG - azote,
+      reserveAzoteG: (tree.reserveAzoteG ?? 0) + (1 - LITTER_RETURN_FRACTION) * azote,
+    };
+  };
 
   // La chute des feuilles s'étale sur un mois au lieu de tomber en une
   // semaine : chaque arbre lâche ce que sa propre sénescence lui a fait
@@ -3510,14 +3525,7 @@ export function tick(state: GameState, weather: WeekWeather): TickResult {
     const tombe = Math.max(0, restantAvant - restant);
     if (tombe <= 0) return tree;
     const part = Math.min(1, tombe / Math.max(1e-9, restantAvant));
-    const azote = part * tree.uptakeYearG;
-    depositLitter(tree, LITTER_RETURN_FRACTION * azote);
-    // L'autre moitié est résorbée avant la chute : elle part en réserve (#247).
-    return {
-      ...tree,
-      uptakeYearG: tree.uptakeYearG - azote,
-      reserveAzoteG: (tree.reserveAzoteG ?? 0) + (1 - LITTER_RETURN_FRACTION) * azote,
-    };
+    return feuillesQuiTombent(tree, part * tree.uptakeYearG);
   });
   // **Un persistant renouvelle son feuillage toute l'année** (#247) : chaque
   // semaine, la part de ses feuilles qui atteint sa durée de vie tombe, avec la
@@ -3527,13 +3535,10 @@ export function tick(state: GameState, weather: WeekWeather): TickResult {
     if (!tree.alive || tree.uptakeYearG <= 0) return tree;
     const lumiere = getEspece(tree.especeId).lumiere;
     if (lumiere.caduc || !lumiere.dureeVieFeuillageAns) return tree;
-    const azote = tree.uptakeYearG * Math.min(1, 1 / (52 * lumiere.dureeVieFeuillageAns));
-    depositLitter(tree, LITTER_RETURN_FRACTION * azote);
-    return {
-      ...tree,
-      uptakeYearG: tree.uptakeYearG - azote,
-      reserveAzoteG: (tree.reserveAzoteG ?? 0) + (1 - LITTER_RETURN_FRACTION) * azote,
-    };
+    return feuillesQuiTombent(
+      tree,
+      tree.uptakeYearG * Math.min(1, 1 / (52 * lumiere.dureeVieFeuillageAns)),
+    );
   });
   // Filet de sécurité : ce qu'un arbre n'a pas lâché avant la fin de l'année
   // tombe quand même, sinon son azote resterait dans un feuillage qui n'existe
@@ -3542,12 +3547,7 @@ export function tick(state: GameState, weather: WeekWeather): TickResult {
     nextTrees = nextTrees.map((tree) => {
       if (!tree.alive || tree.uptakeYearG <= 0) return tree;
       if (!getEspece(tree.especeId).lumiere.caduc) return tree;
-      depositLitter(tree, LITTER_RETURN_FRACTION * tree.uptakeYearG);
-      return {
-        ...tree,
-        uptakeYearG: 0,
-        reserveAzoteG: (tree.reserveAzoteG ?? 0) + (1 - LITTER_RETURN_FRACTION) * tree.uptakeYearG,
-      };
+      return feuillesQuiTombent(tree, tree.uptakeYearG);
     });
   }
 
@@ -4110,16 +4110,17 @@ export function tick(state: GameState, weather: WeekWeather): TickResult {
         // le moteur **créait** de l'azote à chaque coup de vent, et la parcelle
         // s'en trouvait fertilisée. Mesuré, le pin en sortait plus grand que
         // les tables de production. Un coup de vent ne fabrique pas des
-        // feuilles ; il les fait tomber plus tôt. On retire donc à la réserve
-        // de l'année exactement ce qu'on verse au sol.
-        const litiereArrachee = arrache * tree.uptakeYearG;
-        depositLitter(tree, LITTER_RETURN_FRACTION * litiereArrachee);
+        // feuilles ; il les fait tomber plus tôt.
+        //
+        // **Et elles tombent comme à l'automne** (#345) : la moitié de leur azote
+        // à la litière, l'autre en réserve. La correction ci-dessus avait été
+        // écrite quand une feuille rendait tout son azote au sol ; depuis que
+        // la chute en met la moitié en réserve (#247), la tempête retirait tout
+        // à l'arbre et n'en versait que la moitié. L'autre disparaissait : 85 à
+        // 138 kg N/ha en soixante ans dans une pinède exposée, jusqu'à 12 kg en
+        // une semaine.
         ebranches++;
-        return {
-          ...tree,
-          houppierPerdu: arrache,
-          uptakeYearG: tree.uptakeYearG - litiereArrachee,
-        };
+        return { ...feuillesQuiTombent(tree, arrache * tree.uptakeYearG), houppierPerdu: arrache };
       }
       // **Deux ruines**, **et c'est une comparaison qui tranche** (F17). L'arbre cède
       // par son point faible : si son fût casse avant que sa motte ne lâche,
