@@ -4,9 +4,9 @@
  * - l'eau gravitaire au-dessus de la capacité au champ : elle draine à une
  *   vitesse limitée (conductivité) et, tant qu'elle stagne, crée de
  *   l'**engorgement** (anoxie racinaire).
- * La cellule gère pluie, débordement, drainage et évaporation du sol nu ;
- * la **transpiration** des arbres est prélevée ensuite, cellule par cellule,
- * par l'allocation spatiale de tick.ts (docs/regles.md §4.2).
+ * La cellule gère pluie, débordement, drainage et évaporation du sol ;
+ * la **transpiration** des arbres et de la strate est prélevée ensuite, cellule
+ * par cellule, par l'allocation spatiale de tick.ts (docs/regles.md §4.2).
  * Invariant testé : pluie = évaporation + drainage + débordement + Δstock.
  * 1 mm sur 1 m² = 1 L.
  */
@@ -24,8 +24,10 @@ export interface CellWaterInput {
   drainagePerWeekMm: number;
   /** pluie de la semaine, mm */
   rainMm: number;
-  /** demande évaporatoire du sol nu, mm (fraction de l'ETP, cf. tick.ts) */
+  /** demande évaporatoire du sol découvert et humide, mm (cf. tick.ts) */
   evapDemandMm: number;
+  /** eau que la couche de surface peut évaporer, mm (`eauEvaporableMm`) */
+  eauEvaporableMm: number;
   /** remontée capillaire de nappe disponible, mm/semaine (fond de vallée, §2) */
   nappeMm: number;
 }
@@ -46,7 +48,7 @@ export interface CellWaterOutput {
 }
 
 /**
- * En dessous de `DRYNESS_THRESHOLD × RU`, évaporation et prélèvements
+ * En dessous de `DRYNESS_THRESHOLD × RU`, les prélèvements des racines
  * décroissent linéairement (modèles à réservoir type FAO-56).
  */
 export const DRYNESS_THRESHOLD = 0.6;
@@ -58,14 +60,85 @@ export function drynessFactor(soilWaterMm: number, ruMm: number): number {
 }
 
 /**
- * Frein propre à l'**évaporation** du sol : quadratique, car un sol qui sèche
- * s'auto-protège — la couche superficielle desséchée devient une barrière
- * (« mulch naturel », phase 2 de l'évaporation). Les racines, elles, vont
- * chercher l'eau liée bien plus efficacement, d'où deux courbes distinctes.
+ * **Épaisseur de la couche qui évapore**, cm. Un sol nu ne sèche pas par
+ * l'évaporation sur toute la profondeur de son horizon de surface : seuls les
+ * premiers centimètres perdent leur eau vers l'air, et quand ils sont secs ils
+ * font écran au reste. FAO-56 (Allen et al. 1998, éq. 73) recommande 0,10 à
+ * 0,15 m quand elle n'est pas mesurée, et donne son tableau 19 pour 0,10.
  */
-export function soilEvapFactor(soilWaterMm: number, ruMm: number): number {
-  const f = drynessFactor(soilWaterMm, ruMm);
-  return f * f;
+export const EPAISSEUR_EVAPORANTE_CM = 10;
+
+/**
+ * **Part de l'eau évaporable qui part à plein régime** (REW / TEW). Tant que la
+ * couche de surface n'a perdu que cette part, elle évapore autant que l'air le
+ * demande ; au-delà, de moins en moins, jusqu'à ne plus rien rendre une fois
+ * vidée. Le tableau 19 de FAO-56 donne les deux quantités par texture : le
+ * rapport de leurs milieux de fourchette va de 0,39 (argile) à 0,52 (sable
+ * limoneux), 0,44 pour un limon fin. Le milieu de cette plage.
+ */
+export const PART_EVAPORABLE_A_PLEIN = 0.45;
+
+/**
+ * **Eau totale qu'un sol peut évaporer** (TEW), mm : FAO-56, éq. 73,
+ * TEW = (θCC − 0,5 θPF) × Ze. La couche sèche à l'air bien au-dessous du point
+ * de flétrissement, d'où la moitié de l'eau qu'il retient.
+ *
+ * `ruMm` et `epaisseurCm` sont ceux de l'horizon de surface de la cellule (la
+ * réserve suit l'humus et l'érosion), `fletrissementMmParCm` l'eau qu'il garde
+ * au point de flétrissement (`eauFletrissementMmParCm`). La capacité au champ,
+ * en mm par cm, est la réserve utile par cm plus ce que retient le
+ * flétrissement. Un horizon aminci sous dix centimètres évapore sur ce qu'il a.
+ *
+ * Sur le limon riche, 25 mm ; sur la lande, 12 : les fourchettes du tableau 19
+ * pour un limon fin (18 à 25) et un sable limoneux (9 à 14).
+ */
+export function eauEvaporableMm(
+  ruMm: number,
+  epaisseurCm: number,
+  fletrissementMmParCm: number,
+): number {
+  if (epaisseurCm <= 0) return 0;
+  const ze = Math.min(EPAISSEUR_EVAPORANTE_CM, epaisseurCm);
+  return ze * (ruMm / epaisseurCm + 0.5 * fletrissementMmParCm);
+}
+
+/**
+ * **L'évaporation d'un sol en deux phases** (FAO-56, éq. 74 ; Ritchie 1972),
+ * intégrée sur la semaine, mm.
+ *
+ * Tant que la couche de surface a perdu moins que sa part à plein régime
+ * (REW), elle évapore à la demande. Au-delà, le coefficient de réduction vaut
+ * (TEW − D) / (TEW − REW) : il décroît à mesure que la couche se vide, et
+ * l'évaporation s'éteint quand elle a perdu toute son eau évaporable (TEW). La
+ * semaine est intégrée d'un bloc : la phase 1 dure le temps qu'il faut pour
+ * consommer ce qui restait à plein régime, la phase 2 décroît
+ * exponentiellement sur le reste de la semaine.
+ *
+ * Le déficit `deficitMm` est celui de l'horizon de surface sous sa capacité au
+ * champ, après la pluie de la semaine : le moteur tient cet horizon en une
+ * seule case d'eau, et ce que les racines y ont pris, la couche qui évapore
+ * l'a perdu aussi. Une pluie qui le remplit relance la phase 1.
+ *
+ * C'est ce qui fait qu'un sol nu cesse vite d'évaporer une fois sa surface
+ * sèche, et garde l'eau du dessous (Davies et Gardiner 1989) : la quadratique
+ * qui tenait lieu de phase 2 asséchait l'horizon entier.
+ */
+export function evaporationEnDeuxPhases(
+  demandeMm: number,
+  deficitMm: number,
+  eauEvaporable: number,
+): number {
+  if (demandeMm <= 0 || eauEvaporable <= 0) return 0;
+  const deficit = Math.max(0, deficitMm);
+  if (deficit >= eauEvaporable) return 0;
+  const aPlein = PART_EVAPORABLE_A_PLEIN * eauEvaporable;
+  const phase1 = Math.min(demandeMm, Math.max(0, aPlein - deficit));
+  const resteDeLaSemaine = 1 - phase1 / demandeMm;
+  if (resteDeLaSemaine <= 0) return phase1;
+  const encore = eauEvaporable - Math.max(deficit, aPlein);
+  const phase2 =
+    encore * (1 - Math.exp((-demandeMm * resteDeLaSemaine) / (eauEvaporable - aPlein)));
+  return phase1 + phase2;
 }
 
 /** Version sans allocation : écrit le résultat dans `out` (boucles de grille). */
@@ -85,8 +158,11 @@ export function cellWaterBalanceInto(input: CellWaterInput, out: CellWaterOutput
   const drainageMm = Math.min(drainagePerWeekMm, excessMm);
   excessMm -= drainageMm;
 
-  // 4. Évaporation du sol, freinée (quadratiquement) quand la cellule se vide.
-  const evapMm = Math.min(soilWaterMm, evapDemandMm * soilEvapFactor(soilWaterMm, ruMm));
+  // 4. Évaporation du sol, en deux phases selon ce que la surface a déjà perdu.
+  const evapMm = Math.min(
+    soilWaterMm,
+    evaporationEnDeuxPhases(evapDemandMm, ruMm - soilWaterMm, input.eauEvaporableMm),
+  );
   soilWaterMm -= evapMm;
 
   // 5. Remontée capillaire de la nappe : recharge la réserve utile par le bas
@@ -136,8 +212,13 @@ export interface ProfilHydroInput {
   /** eau gravitaire de chaque horizon, mm */
   excesMm: readonly number[];
   rainMm: number;
-  /** demande évaporatoire (elle ne touche **que** l'horizon de surface) */
+  /**
+   * demande évaporatoire d'un sol découvert et humide, mm (elle ne touche
+   * **que** l'horizon de surface)
+   */
   evapDemandMm: number;
+  /** eau que la couche de surface peut évaporer, mm (`eauEvaporableMm`) */
+  eauEvaporableMm: number;
   /** remontée capillaire depuis la nappe, alimente l'horizon le plus profond */
   nappeMm: number;
   /** ce que l'exutoire peut évacuer sous le dernier horizon, mm/semaine */
@@ -199,7 +280,8 @@ export interface ProfilHydroOutput {
  *     macroporosité de chaque horizon, le surplus descend ;
  *  2. ressuyage gravitaire — chaque horizon vidange son eau libre vers le bas,
  *     à la vitesse que sa texture permet et dans la place disponible.
- * L'évaporation ne prélève qu'en surface, la nappe recharge par le bas, et ce
+ * L'évaporation ne prélève qu'en surface, en deux phases
+ * (`evaporationEnDeuxPhases`), la nappe recharge par le bas, et ce
  * que l'exutoire refuse remonte en nappe perchée. L'engorgement devient **local**
  * à chaque horizon : de l'eau bloquée en profondeur n'asphyxie pas les racines
  * de surface.
@@ -317,7 +399,10 @@ export function profilHydro(input: ProfilHydroInput, out?: ProfilHydroOutput): P
   const h0 = horizons[0];
   let evapMm = 0;
   if (h0) {
-    evapMm = Math.min(eauMm[0] ?? 0, input.evapDemandMm * soilEvapFactor(eauMm[0] ?? 0, h0.ruMm));
+    evapMm = Math.min(
+      eauMm[0] ?? 0,
+      evaporationEnDeuxPhases(input.evapDemandMm, h0.ruMm - (eauMm[0] ?? 0), input.eauEvaporableMm),
+    );
     eauMm[0] = (eauMm[0] ?? 0) - evapMm;
   }
   let nappeMm = 0;

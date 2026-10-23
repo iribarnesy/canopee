@@ -146,7 +146,11 @@ describe("la prémisse, tenue par le moteur", () => {
     let state = createGameState(st, rngStateFromSeed(11));
     let vues = 0;
     let encoreLa = 0;
-    for (let s = 0; s < 8 * 52; s++) {
+    // Dix ans et non plus huit (#391) : depuis que la prairie du fond de vallée
+    // boit ce qu'un tapis fermé boit, moins de recrues y meurent en huit ans, et
+    // la garde d'effectif tombait à dix chutes pour onze exigées. On allonge
+    // l'épreuve plutôt que d'abaisser la garde.
+    for (let s = 0; s < 10 * 52; s++) {
       const w = meteo[state.week % meteo.length];
       if (!w) throw new Error("météo manquante");
       const t = tick(state, w);

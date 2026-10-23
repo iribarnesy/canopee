@@ -7,7 +7,9 @@
  *  - la faucher ne libère pas le plant, seuls le désherbage et le paillage le
  *    font (Davies 1985) ;
  *  - elle disparaît sous un couvert fermé.
- * Le moteur est encore loin des deux points du milieu (#210).
+ * Le moteur s'en est rapproché sans les atteindre (#210, #391) : l'herbe prend
+ * maintenant de l'eau au plant, mais la fauche y rapporte encore sur sol riche,
+ * et le désherbage y reste sous ce que le terrain mesure.
  */
 
 import { describe, expect, it } from "vitest";
@@ -201,8 +203,10 @@ describe("concurrence herbacée sur les jeunes plants", () => {
     // le désherbage chimique et le paillage la libèrent (Davies 1985,
     // *Forestry* 58 : 167 ; Davies et Gardiner 1989, *Arboriculture Research
     // Note* 59/89/ARB ; Willoughby et al. 2009, *Reducing pesticide use in
-    // forestry*). Le moteur n'a ni l'un ni l'autre comme geste, et l'herbe n'y
-    // prend presque pas d'eau à un jeune plant (#210).
+    // forestry*). Le moteur n'a ni l'un ni l'autre comme geste (#392). Depuis que
+    // la strate boit ce qu'un tapis fermé boit (#391), elle prend de l'eau au
+    // plant ; sur ce banc, le rapport ne bouge presque pas (0,893 / 0,898 / 0,893,
+    // graines 3, 7, 11) : sur la lande, c'est toujours le phosphore.
     expect(pauvre.rapport).toBeLessThan(1.05);
   });
 

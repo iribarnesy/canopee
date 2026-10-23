@@ -18,11 +18,22 @@
  */
 
 /**
- * Part de l'ETP qu'un couvert herbacé fermé transpire *(à calibrer)*. Elle
- * partage l'énergie avec le sol et les arbres : la somme des trois ne peut pas
- * dépasser l'ETP, d'où une valeur nettement sous 1.
+ * **Ce qu'un tapis herbacé fermé transpire**, en part de l'ETP de référence :
+ * le coefficient cultural de base (Kcb) d'un gazon de saison fraîche en pleine
+ * végétation, 0,90 (FAO-56, Allen et al. 1998, tableau 17 ; 0,80 à 1,00 pour
+ * une prairie pâturée en rotation). L'ETP de référence est par définition celle
+ * d'un gazon ras et fermé qui ne manque pas d'eau : un tapis fermé en rend
+ * presque autant.
+ *
+ * Il valait 0,3 *(à calibrer)*, pour que la strate, les arbres et le sol ne
+ * dépassent pas l'ETP à eux trois. Mais le sol, lui, évaporait sous le tapis
+ * comme s'il était nu : une prairie fermée buvait autant qu'un sol nu, environ
+ * 320 mm/an sur le limon riche (#210). L'énergie se partage maintenant comme
+ * FAO-56 la partage : la strate transpire sur ce qu'elle couvre, le sol
+ * n'évapore que sur ce qu'elle laisse découvert (tick.ts), et le plafond
+ * d'énergie de la cellule borne la somme des transpirations.
  */
-export const HERBE_TRANSPIRATION_COEFF = 0.3;
+export const KCB_HERBE = 0.9;
 /**
  * **La strate fabrique de la matière, et c'est d'elle que vient sa faim d'azote**
  * (#247). Elle prélevait jusqu'ici un débit fixe par unité de couverture
@@ -131,12 +142,19 @@ export function humiditeVecue(precedente: number, remplissageActuel: number): nu
  * est devenu le point de compensation de chacune.
  */
 
-/** Demande en eau d'une cellule d'herbe, L/semaine (1 m² : 1 mm = 1 L). */
-export function herbeDemandeEauL(
-  couverture: number,
-  etpMm: number,
-  lumiereAuSol: number,
-  saison: number,
-): number {
-  return etpMm * couverture * lumiereAuSol * HERBE_TRANSPIRATION_COEFF * saison;
+/**
+ * Demande en eau d'une cellule d'herbe, L/semaine (1 m² : 1 mm = 1 L) : le
+ * coefficient d'un tapis fermé, sur ce qu'elle couvre de vert, sous la lumière
+ * que les houppiers lui laissent.
+ *
+ * **Sans facteur de saison par-dessus** (#391). Elle en portait un, nul sous
+ * 4 °C et plein à 12 °C, sans source : un dactyle qui passe l'hiver vert ne
+ * transpirait plus rien de novembre à mars, et sous lui le sol, couvert,
+ * n'évaporait rien non plus. Un gazon d'hiver rend pourtant à l'air environ 0,6
+ * fois ce qu'évapore une eau libre (Penman 1948, *Proc. R. Soc. A* 193 : 120,
+ * Rothamsted). La saison est déjà dans ce qui est vert (`herbacees.ts`) et dans
+ * l'ETP, petite en hiver.
+ */
+export function herbeDemandeEauL(couverture: number, etpMm: number, lumiereAuSol: number): number {
+  return etpMm * couverture * lumiereAuSol * KCB_HERBE;
 }

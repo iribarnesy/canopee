@@ -155,12 +155,23 @@ export function compensationDeLArbre(espece: EspeceV0, heightM: number): number 
  * de l'atlas, entre le point de compensation de la feuille et la saturation.
  * Aucune courbe nouvelle : la lumière ne se lit pas de deux façons selon qu'on
  * parle de pousser ou de survivre.
+ *
+ * **Et la même courbe de soif** (`facteurEau`, le facteur de croissance de
+ * l'eau, #391) : un arbre qui ferme ses stomates n'assimile plus, et c'est par
+ * là que la sécheresse vide les réserves d'un arbre installé (McDowell et al.
+ * 2008, *New Phytol.* 178 : 719). Absent, l'arbre ne manque pas d'eau.
  */
-export function partPuiseeSurLesReserves(espece: EspeceV0, heightM: number, light: number): number {
+export function partPuiseeSurLesReserves(
+  espece: EspeceV0,
+  heightM: number,
+  light: number,
+  facteurEau = 1,
+): number {
   const depense = partEntretien(heightM);
   if (depense <= 0) return 0;
   const { compensation, saturation } = espece.lumiere;
-  const revenu = Math.min(1, Math.max(0, (light - compensation) / (saturation - compensation)));
+  const revenu =
+    Math.min(1, Math.max(0, (light - compensation) / (saturation - compensation))) * facteurEau;
   return Math.min(1, Math.max(0, 1 - revenu / depense));
 }
 

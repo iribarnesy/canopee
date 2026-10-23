@@ -274,12 +274,15 @@ import {
   AZOTE_HOUPPIER_G_M2_AN,
   cnBois,
   dureeChandelleSemaines,
+  EMBOLIE_DEFEUILLAISON,
+  EMBOLIE_LETALE_FEUILLU,
+  estInstalle,
   fractionsRacinairesParHorizon,
   LITTER_RETURN_FRACTION,
-  prochainDommageHydraulique,
   rootRadiusM,
   STRESS_LETHAL,
   seasonFactor,
+  seuilDeCavitation,
   tickTree,
   treeExtractionCapacityGWeek,
   treeNitrogenNeedGWeek,
@@ -287,13 +290,25 @@ import {
   volumeTigeM3,
 } from "./trees";
 import type { HorizonHydro } from "./water";
-import { drynessFactor, profilHydro } from "./water";
+import { drynessFactor, eauEvaporableMm, profilHydro } from "./water";
 
 /**
- * Part de l'ETP qu'un sol **nu** peut évaporer (la strate herbacée, elle, est
- * modélisée explicitement dans herbe.ts et transpire pour son compte).
+ * **Le plafond de ce qu'une surface peut rendre à l'air**, en multiple de l'ETP
+ * de référence : FAO-56 (Allen et al. 1998, éq. 72), 1,20 en climat subhumide
+ * (vent de 2 m/s, humidité minimale de 45 %), 1,05 à 1,30 selon le climat. Un
+ * couvert rugueux, ou un sol nu sombre et humide, capte un peu plus d'énergie
+ * qu'un gazon de référence.
+ *
+ * Il sert deux fois, et c'est le même plafond. Un sol **découvert et humide**
+ * évapore jusqu'à lui, la semaine où sa surface est mouillée (`water.ts`,
+ * `evaporationEnDeuxPhases`) ; ce que la strate et les houppiers couvrent ne
+ * l'est pas (FAO-56, éq. 75 : few = 1 − fc). Et la transpiration d'une cellule
+ * ne le dépasse pas (`plafond d'énergie`, plus bas).
+ *
+ * Il remplace deux nombres *(à calibrer)* : la demi-ETP d'un sol nu, qui ne
+ * lisait pas ce qui le couvrait, et un plafond de transpiration de 1,15.
  */
-const SOIL_EVAP_FRACTION = 0.5;
+const KC_MAX = 1.2;
 /**
  * Microclimat forestier (docs/regles.md §3, volet humidité) : sous couvert
  * fermé, l'évaporation du sol tombe à cette fraction de sa valeur plein soleil
@@ -309,13 +324,6 @@ const CANOPY_EVAP_FLOOR = 0.15;
  * — ~250 g C/m² ≈ 5 t MS/ha au sol *(à calibrer)*.
  */
 const MULCH_MAX_EFFECT = 0.5;
-/**
- * Plafond de transpiration d'une cellule, en multiple de l'ETP. Un couvert
- * rugueux capte un peu plus d'énergie qu'un gazon de référence — advection,
- * turbulence — d'où une valeur légèrement supérieure à 1 *(à calibrer)*.
- */
-const PLAFOND_ENERGIE = 1.15;
-
 const MULCH_FULL_CG = 250;
 /**
  * Seuil de compensation du prélèvement d'eau, ωc ∈ (0, 1] (Jarvis 1989 ;
@@ -822,11 +830,16 @@ export function tick(state: GameState, weather: WeekWeather): TickResult {
   //
   // Un arbre dont les jeunes pousses ont gelé n'a plus ce feuillage-là, et il ne
   // revient qu'en quelques semaines (gelPousses.ts, #371) : ni ombre, ni
-  // croissance, ni transpiration pour ce qui manque.
-  const feuillageRevenu = (tree: TreeState): number => {
-    if (tree.gelPousseSemaine === undefined) return 1;
-    return refeuillaison(state.week - tree.gelPousseSemaine);
-  };
+  // croissance, ni transpiration pour ce qui manque. Celui que la soif a fait
+  // tomber revient de même, par les bourgeons dormants (#391).
+  const revenuApresLeGel = (tree: TreeState): number =>
+    tree.gelPousseSemaine === undefined ? 1 : refeuillaison(state.week - tree.gelPousseSemaine);
+  const revenuApresLaSoif = (tree: TreeState): number =>
+    tree.defeuillaisonSemaine === undefined
+      ? 1
+      : refeuillaison(state.week - tree.defeuillaisonSemaine);
+  const feuillageRevenu = (tree: TreeState): number =>
+    Math.min(revenuApresLeGel(tree), revenuApresLaSoif(tree));
   const partOmbrageanteDe: PartOmbrageante = (tree) =>
     partFoliaireOmbrageanteDans(getEspece(tree.especeId), pheno) * feuillageRevenu(tree);
   const groundLight = computeGroundLight(trees, dims.widthM, dims.heightM, partOmbrageanteDe);
@@ -884,6 +897,9 @@ export function tick(state: GameState, weather: WeekWeather): TickResult {
   const epaisseurs = profil.map((h) => h.epaisseurCm);
   const solPenetrableCm = profondeurPenetrableCm(profil);
   const ruSurface = horizonsHydro[0]?.ruMm ?? 1;
+  // L'eau que l'horizon de surface garde au point de flétrissement, mm/cm : la
+  // couche qui évapore sèche au-dessous (water.ts, `eauEvaporableMm`).
+  const fletrissementSurface = profil[0] ? eauFletrissementMmParCm(profil[0]) : 0;
   // Réserve utile **dynamique** de l'horizon de surface (critère A12) : elle suit
   // l'humus de la cellule. C'est le retour sur investissement de « construire
   // du sol » — et, à l'inverse, ce qu'un labour répété finit par coûter en
@@ -1228,8 +1244,17 @@ export function tick(state: GameState, weather: WeekWeather): TickResult {
       excesCellule[h] = excessMm[base + h] ?? 0;
     }
     const surface = horizonsCellule[0];
+    let eauEvaporable = 0;
     if (surface) {
       surface.ruMm = ruSurfacePourHumus(humusCG[i] ?? humusInitialG, epaisseurPerdueCm[i] ?? 0);
+      eauEvaporable = eauEvaporableMm(
+        surface.ruMm,
+        Math.max(
+          EPAISSEUR_MINIMALE_CM,
+          surface.epaisseurCm - Math.max(0, epaisseurPerdueCm[i] ?? 0),
+        ),
+        fletrissementSurface,
+      );
     }
     // Ce qui ruisselle ne rentre pas : on le retire de la pluie qui s'infiltre,
     // et il rejoindra l'aval (relief.ts). La couverture du sol et la litière
@@ -1257,11 +1282,19 @@ export function tick(state: GameState, weather: WeekWeather): TickResult {
         eauMm: eauCellule,
         excesMm: excesCellule,
         rainMm: eauLiquideMm + amontIci - ruissele,
+        // **Ce que le sol découvert peut évaporer** quand sa surface est
+        // mouillée : le plafond FAO-56, sur la part que la strate ne couvre pas
+        // (éq. 75), sous l'ombre des houppiers et sous la litière. Sous un
+        // tapis fermé, le sol n'évapore presque plus : c'est la strate qui
+        // transpire à sa place, et la même énergie ne sert pas deux fois.
+        // `profilHydro` le réduit ensuite selon ce que la surface a déjà perdu.
         evapDemandMm:
           etpMm *
-          SOIL_EVAP_FRACTION *
+          KC_MAX *
+          (1 - Math.min(1, herbeCouverture[i] ?? 0)) *
           (CANOPY_EVAP_FLOOR + (1 - CANOPY_EVAP_FLOOR) * (groundLight[i] ?? 1)) *
           (1 - MULCH_MAX_EFFECT * Math.min(1, litiereAuSolCG(i) / MULCH_FULL_CG)),
+        eauEvaporableMm: eauEvaporable,
         // La remontée capillaire **puise** dans la nappe : ce n'est plus un apport
         // venu de nulle part, c'est un transfert.
         nappeMm: Number.isFinite(nappeCm[i] ?? Number.POSITIVE_INFINITY)
@@ -1978,10 +2011,11 @@ export function tick(state: GameState, weather: WeekWeather): TickResult {
     });
   }
 
-  // ── 3 bis. La strate herbacée demande sa part, en surface uniquement ──────
+  // ── 3 bis. La strate herbacée demande sa part, là où sont ses racines ─────
   // C'est la concurrence qui fait échouer les plantations non entretenues.
+  // La saison de l'herbe ne règle plus sa soif (herbe.ts) : elle ne sert qu'au
+  // gibier, plus bas.
   const saisonHerbe = Math.min(1, Math.max(0, (weather.tMean - 4) / 8));
-  const herbeDemandeL = new Array<number>(nCells).fill(0);
   /** Azote voulu par le tapis, rangé pour que le service relise la demande. */
   const herbeDemandeNG = new Array<number>(nCells).fill(0);
   /** Et ce qu'il demande au sous-sol (lot B). */
@@ -1993,8 +2027,7 @@ export function tick(state: GameState, weather: WeekWeather): TickResult {
   for (let i = 0; i < nCells; i++) {
     const couverture = herbeCouverture[i] ?? 0;
     if (couverture <= 0) continue;
-    const demandeEau = herbeDemandeEauL(couverture, etpMm, groundLight[i] ?? 1, saisonHerbe);
-    herbeDemandeL[i] = demandeEau;
+    const demandeEau = herbeDemandeEauL(couverture, etpMm, groundLight[i] ?? 1);
     // L'eau de la strate se prend là où sont ses racines (lot B) : chaque espèce
     // au prorata de son feuillage, sur ses fractions racinaires. Une anémone
     // puise en surface, un blé descend jusqu'au fond.
@@ -2088,17 +2121,20 @@ export function tick(state: GameState, weather: WeekWeather): TickResult {
   // *(Le défaut est apparu avec la nappe : tant que l'eau manquait, c'est elle
   // qui bridait, et le plafond ne servait jamais. Une aulnaie de fond de
   // vallée alimentée par la nappe transpirait 1 021 mm par an.)*
+  //
+  // La demande de la strate est déjà dans celle des horizons (3 bis) : elle
+  // n'est comptée qu'une fois. Et l'ETP porte déjà l'exposition du versant : le
+  // plafond ne la relit pas (#391).
+  const plafond = etpMm * KC_MAX;
   for (let i = 0; i < nCells; i++) {
     const base = i * nH;
-    let demandeCellule = herbeDemandeL[i] ?? 0;
+    let demandeCellule = 0;
     for (let h = 0; h < nH; h++) demandeCellule += cellWaterDemand[base + h] ?? 0;
-    const plafond = etpMm * facteurExpositionRayonnement(station.relief) * PLAFOND_ENERGIE;
     if (demandeCellule <= plafond || demandeCellule <= 0) continue;
     const facteur = plafond / demandeCellule;
     for (let h = 0; h < nH; h++) {
       cellWaterDemand[base + h] = (cellWaterDemand[base + h] ?? 0) * facteur;
     }
-    herbeDemandeL[i] = (herbeDemandeL[i] ?? 0) * facteur;
   }
 
   const waterServedRatio = new Array<number>(nCells * nH).fill(0);
@@ -2435,8 +2471,10 @@ export function tick(state: GameState, weather: WeekWeather): TickResult {
     const nd = nNeedG[t] ?? 0;
     // Satisfaction rapportée au besoin d'un arbre **intact** : c'est ce qui fait
     // qu'un sujet embolisé reste en déficit même le sol plein — et qu'il meurt
-    // souvent à la sécheresse **suivante**, pas à celle qui l'a abîmé.
-    const besoinIntact = wd / Math.max(0.15, 1 - tree.dommageHydraulique);
+    // souvent à la sécheresse **suivante**, pas à celle qui l'a abîmé. Le
+    // plancher suivait le plafond de 85 % de l'embolie ; il suit maintenant le
+    // seuil qui tue un feuillu (#391), au-delà duquel aucun arbre n'est vivant.
+    const besoinIntact = wd / Math.max(1 - EMBOLIE_LETALE_FEUILLU, 1 - tree.dommageHydraulique);
     waterSatisfaction[t] = besoinIntact > 0 ? Math.min(1, gotW / besoinIntact) : 1;
     satisfactionEau.set(tree.id, waterSatisfaction[t] ?? 1);
     const tirage = tirageReserveG[t] ?? 0;
@@ -2688,10 +2726,14 @@ export function tick(state: GameState, weather: WeekWeather): TickResult {
       tMean: weather.tMean,
       // Le feuillage **actif**, pas l'ombrageant : des feuilles mortes de
       // marcescence font de l'ombre mais ne travaillent pas (phenologie.ts).
-      // Et ce que le gel des pousses a emporté manque, et se paie (#371).
+      // Et ce que le gel des pousses a emporté manque, et se paie (#371) ; ce que
+      // la soif a fait tomber aussi, sous son propre nom (#391).
       partFoliaire: partFoliaireActiveDans(getEspece(tree.especeId), pheno) * feuillageRevenu(tree),
       feuillageGele:
-        partFoliaireActiveDans(getEspece(tree.especeId), pheno) * (1 - feuillageRevenu(tree)),
+        partFoliaireActiveDans(getEspece(tree.especeId), pheno) * (1 - revenuApresLeGel(tree)),
+      feuillageTombe:
+        partFoliaireActiveDans(getEspece(tree.especeId), pheno) *
+        Math.max(0, revenuApresLeGel(tree) - revenuApresLaSoif(tree)),
       facteurCo2,
     });
     const next = result.tree;
@@ -2741,16 +2783,9 @@ export function tick(state: GameState, weather: WeekWeather): TickResult {
     // La vigueur suit le facteur limitant, lissée sur quelques mois : c'est
     // l'état de santé que les ravageurs lisent, pas la hauteur.
     const vigueur = next.vigueur + ((result.limitingFactor ?? 1) - next.vigueur) * 0.05;
-    // La cavitation s'installe vite et se dilue lentement : c'est la mémoire
-    // pluriannuelle des sécheresses (trees.ts).
     const houppierPerdu = next.houppierPerdu
       ? prochainHouppierPerdu(next.houppierPerdu, 0) || undefined
       : undefined;
-    const dommageHydraulique = prochainDommageHydraulique(
-      next.dommageHydraulique,
-      waterSatisfaction[t] ?? 1,
-      getEspece(tree.especeId).eau.seuilStressSecheresse,
-    );
     // Élagage naturel (docs/realisme.md B10) : sous l'ombre, les branches
     // basses cessent de payer leur respiration et meurent. La base du houppier
     // **monte**, et ne redescend jamais — une branche morte ne repousse pas. C'est
@@ -2773,7 +2808,6 @@ export function tick(state: GameState, weather: WeekWeather): TickResult {
     return {
       ...next,
       vigueur,
-      dommageHydraulique,
       houppierPerdu,
       baseHouppierM,
       uptakeYearG: next.uptakeYearG + acquired - prisAuFeuillage,
@@ -3026,7 +3060,7 @@ export function tick(state: GameState, weather: WeekWeather): TickResult {
     return { ...tree, fruitsKg, fruitProgress, bloomFrosted };
   });
 
-  // ── 5 bis B. Le gel des jeunes pousses (#371) ─────────────────────────────
+  // ── 5 bis B. Les feuilles perdues : le gel des pousses, la soif de l'été (#371, #391) ──
   // Une nuit de printemps grille le feuillage qui vient de sortir. Le bourgeon
   // dormant ne craint rien, la feuille durcie non plus : seul le feuillage
   // **tendre** gèle, entre le débourrement et quelques semaines après. Le seuil
@@ -3035,7 +3069,10 @@ export function tick(state: GameState, weather: WeekWeather): TickResult {
   // et la nuit se juge sous le couvert qui surplombe l'arbre : le semis du
   // milieu d'une coupe gèle, celui qui pousse sous un houppier non. L'arbre
   // perd le feuillage sorti, le refait en huit semaines environ sur ses
-  // réserves, et l'année de croissance en paie le prix (gelPousses.ts).
+  // réserves, et l'année de croissance en paie le prix (gelPousses.ts). En plein
+  // été, c'est la soif qui fait tomber les feuilles : un feuillu installé les
+  // lâche encore vertes plutôt que de laisser casser son bois, et les refait de
+  // même.
   const debutDeLAnnee = state.week - week;
   nextTrees = nextTrees.map((tree, t) => {
     if (!tree.alive) return tree;
@@ -3049,6 +3086,31 @@ export function tick(state: GameState, weather: WeekWeather): TickResult {
       return tree;
     }
     return { ...tree, gelPousseSemaine: state.week };
+  });
+  // **La soif, elle, fait tomber le feuillage en plein été** (#391). Un feuillu
+  // installé ne laisse pas casser son bois : quand la soif l'embolise encore et
+  // qu'il a déjà perdu 12 % de sa conductivité, le point où l'embolie s'emballe
+  // (`EMBOLIE_DEFEUILLAISON`), il lâche ses feuilles encore vertes. Le hêtre de
+  // 2003 s'est entièrement défeuillé, le charme en partie, le
+  // chêne pas du tout ; les feuilles tombées étaient vertes, les organes
+  // pérennes protégés, et ces hêtres avaient un houppier normal l'été suivant
+  // (Bréda et al. 2006, *Ann. For. Sci.* 63 : 625). En 1976, bouleaux et
+  // charmes ont perdu leurs feuilles en juillet et en août sans mourir (Aussenac
+  // 1978). L'arbre sans feuilles ne transpire plus, n'assimile plus, n'ombrage
+  // plus, et refait son feuillage sur ses réserves par ses bourgeons dormants,
+  // comme après un gel des pousses ; il ne lâche que celui qu'il porte. Un plant
+  // ne le fait pas : la soif le dessèche avant (trees.ts, `estInstalle`), et un
+  // persistant garde ses aiguilles.
+  nextTrees = nextTrees.map((tree, t) => {
+    if (!tree.alive || !estInstalle(tree)) return tree;
+    const espece = getEspece(tree.especeId);
+    if (!espece.lumiere.caduc || feuillageRevenu(tree) < 1) return tree;
+    if (partFoliaireActiveDans(espece, pheno) <= (espece.lumiere.retentionHivernale ?? 0)) {
+      return tree;
+    }
+    if ((waterSatisfaction[t] ?? 1) >= seuilDeCavitation(espece)) return tree;
+    if (tree.dommageHydraulique < EMBOLIE_DEFEUILLAISON) return tree;
+    return { ...tree, defeuillaisonSemaine: state.week };
   });
 
   // ── 5 ter. Le gibier (§7.4, ch4-C) ────────────────────────────────────────

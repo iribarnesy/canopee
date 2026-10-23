@@ -220,8 +220,19 @@ const MAGIE = "CANOPEE\u0000";
  * bloc de version 13 se relit donc avec ces deux grilles à zéro
  * (`VERSIONS_RELUES`), et seulement lui : celui de version 12 reste refusé
  * pour ses dates.
+ *
+ * **15 (issue #391, la soif d'un arbre installé)** : un feuillu installé lâche
+ * ses feuilles sous la soif, et l'arbre garde la date où elles sont tombées
+ * (`defeuillaisonSemaine`), qui dit où en est la refeuillaison. La forme du bloc
+ * ne bouge pas, et l'absence de la date est innocente, comme le manteau neigeux
+ * de la version 9 : un moteur de version 14 ne faisait jamais tomber de
+ * feuilles sous la soif, et un arbre sans date est exactement l'arbre qu'il
+ * écrivait. Un bloc de version 14 se relit donc tel quel, et un bloc de version
+ * 13 comme avant, avec ses deux grilles de mort sur pied à zéro
+ * (`VERSIONS_RELUES`). Un moteur de version 14, lui, refuse un bloc de version
+ * 15 : il rendrait ses feuilles à un arbre qui les refait encore.
  */
-export const VERSION_FORMAT = 14;
+export const VERSION_FORMAT = 15;
 
 /** Ce qu'il faut ajouter au sol d'un bloc ancien pour en faire un sol de la version courante. */
 interface Relecture {
@@ -238,6 +249,9 @@ interface Relecture {
  */
 const VERSIONS_RELUES: Record<number, Relecture> = {
   [VERSION_FORMAT]: { sol: {}, grillesVides: [] },
+  // Rien à ajouter au sol : seule une date d'arbre manque, et son absence dit
+  // « jamais défeuillé par la soif », ce qui était vrai (#391).
+  14: { sol: {}, grillesVides: [] },
   // Le mort sur pied de #370 : sous la version 13, il était déjà en litière.
   13: { sol: {}, grillesVides: ["herbeMorteAzoteG", "herbeMorteG"] },
 };

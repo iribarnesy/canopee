@@ -1156,6 +1156,7 @@ export const DATES_D_UN_ARBRE = [
   "brouteSemaine",
   "derniereLeveeSemaine",
   "gelPousseSemaine",
+  "defeuillaisonSemaine",
 ] as const satisfies readonly (keyof TreeState)[];
 
 /**
@@ -1166,8 +1167,8 @@ export const DATES_D_UN_ARBRE = [
  * a tourné des années sans lui, et son an 1 commence là. Le compteur repartait
  * seul. Les dates que l'état avait gardées de ces années — la mort d'une
  * chandelle, le coup de vent qui a couché un arbre, le feu, la dent du
- * chevreuil, le gel des pousses, l'installation d'un habitant, le début d'une
- * crue — restaient comptées depuis le début du vieillissement, et se lisaient dans le compte du
+ * chevreuil, le gel des pousses, les feuilles que la soif a fait tomber,
+ * l'installation d'un habitant, le début d'une crue — restaient comptées depuis le début du vieillissement, et se lisaient dans le compte du
  * joueur : une chandelle morte à la semaine 2 000 d'un vieillissement de
  * quarante ans était, pour le moteur, morte dans 2 000 semaines, et tenait
  * debout quarante ans de trop.

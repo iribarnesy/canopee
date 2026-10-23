@@ -52,6 +52,7 @@ function foret(annees: number, partBassinSemblable = 0): GameState {
 function suivre(depart: GameState) {
   let s = depart;
   let transpiration = 0;
+  let evapotranspiration = 0;
   let ruissellement = 0;
   let nappeHiver = 0;
   let inondee = 0;
@@ -62,12 +63,13 @@ function suivre(depart: GameState) {
       s = r.state;
       if (an === 0) continue;
       transpiration += r.fluxes.transpirationMm;
+      evapotranspiration += r.fluxes.transpirationMm + r.fluxes.evapMm;
       ruissellement += r.fluxes.ruissellementSortantMm + r.fluxes.overflowMm;
       if (i >= 48 || i <= 4) nappeHiver += r.fluxes.nappeProfondeurCm / 9;
       inondee = Math.max(inondee, r.fluxes.partInondee);
     }
   }
-  return { transpiration, ruissellement, nappeHiver, inondee, state: s };
+  return { transpiration, evapotranspiration, ruissellement, nappeHiver, inondee, state: s };
 }
 
 describe("la forêt tient la nappe, et l'incendie la relâche", () => {
@@ -75,14 +77,29 @@ describe("la forêt tient la nappe, et l'incendie la relâche", () => {
   const intacte = suivre(avant);
   const brulee = suivre(bruler(avant));
 
-  it("1. la forêt transpirait : brûlée, elle ne transpire plus", () => {
-    // Mesuré : 730 mm par an avant, 196 après.
-    expect(intacte.transpiration).toBeGreaterThan(3 * brulee.transpiration);
+  it("1. la forêt rendait plus d'eau à l'air que la parcelle brûlée, et la nappe remonte", () => {
+    // **Réécrit sur son critère** (#391). Ce maillon exigeait que la forêt
+    // transpire trois fois plus que la parcelle brûlée. Le facteur venait d'un
+    // relevé du moteur (730 mm contre 196), pas d'une mesure de terrain : la
+    // parcelle brûlée ne transpirait presque pas parce que l'herbe revenue
+    // transpirait à 0,3 fois l'ETP, et que l'eau de son sol était comptée dans
+    // l'évaporation. L'herbe transpire maintenant au coefficient d'un tapis
+    // fermé (FAO-56) : deuxième année après le feu, 522 mm de transpiration et
+    // 80 d'évaporation, 602 en tout, contre 855 pour la forêt (sur `main` :
+    // 338 contre 771). La nappe d'hiver remonte de 51 cm (55 sur `main`).
+    //
+    // Ce qui tient la nappe, c'est ce que la parcelle **rend à l'air**, et c'est
+    // ce que les gestionnaires girondins disaient : la forêt pompe, brûlée elle
+    // pompe moins. Le maillon porte donc sur l'évapotranspiration et sur le sens
+    // de la remontée, sans facteur ; le maillon 2 en garde l'ampleur.
+    expect(intacte.evapotranspiration).toBeGreaterThan(brulee.evapotranspiration);
+    expect(brulee.nappeHiver).toBeLessThan(intacte.nappeHiver);
   });
 
   it("2. l'eau qu'elle ne prend plus fait REMONTER la nappe, d'un demi-mètre", () => {
     // Le maillon qui manquait : sans stock, cette eau disparaissait du modèle.
-    // Mesuré : la nappe d'hiver passe de 74 cm à 20 cm sous la surface.
+    // Mesuré : la nappe d'hiver passe de 77 cm à 26 cm sous la surface (#391 ;
+    // 72 et 17 sur `main`).
     expect(brulee.nappeHiver).toBeLessThan(intacte.nappeHiver - 30);
   });
 
