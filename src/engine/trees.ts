@@ -1352,7 +1352,7 @@ function waterloggingFactor(espece: EspeceV0, waterlogging: number): number {
  * (chlorose puis mort — la bio-indication de l'atlas : calcicoles vs acidiphiles).
  */
 export function phFactor(espece: EspeceV0, ph: number): number {
-  const dansLaGamme = facteurGammePh(espece.ph, ph);
+  const dansLaGamme = facteurGammePh(espece.ph, ph, espece.optimumPh);
   // **une queue dans la marge de survie**, sans quoi le lot trahirait son propre
   // énoncé (#161) : « un arbre entre les deux pousse mal **et** tient ». Avec la
   // seule rampe de l'atlas, la croissance tombe à zéro dès sous la borne, si

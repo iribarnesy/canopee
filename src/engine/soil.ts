@@ -264,8 +264,33 @@ export function facteurSurviePh(gamme: readonly [number, number], ph: number): n
  * aussi (`herbacees.ts`) : c'est une propriété du **sol** confrontée à une gamme,
  * elle ne suppose rien d'un tronc.
  */
-export function facteurGammePh(gamme: readonly [number, number], ph: number): number {
+export function facteurGammePh(
+  gamme: readonly [number, number],
+  ph: number,
+  optimum?: readonly [number, number],
+): number {
   const [min, max] = gamme;
+  if (optimum) {
+    // **Le plateau publié** (#262, #278, option C, en mesure) : la plage où la
+    // source dit que l'espèce pousse le mieux (`optimumPh`). **Les flancs** vont
+    // en ligne droite du bord du plateau (1) à la borne de présence
+    // (`VIGUEUR_A_LA_BORNE`), puis jusqu'à zéro un peu au-dehors : leur largeur est
+    // celle que les deux sources donnent, plus de rampe absolue. Le trapèze
+    // ci-dessous en est le cas particulier où chaque flanc fait
+    // `RAMPE_PH × (1 − VIGUEUR_A_LA_BORNE)`.
+    const [debut, fin] = optimum;
+    if (ph >= debut && ph <= fin) return 1;
+    const v = VIGUEUR_A_LA_BORNE;
+    if (ph < debut) {
+      const debord = (v * (debut - min)) / (1 - v);
+      return Math.min(1, Math.max(0, (ph - (min - debord)) / (debut - (min - debord))));
+    }
+    const debord = (v * (max - fin)) / (1 - v);
+    return Math.min(1, Math.max(0, (max + debord - ph) / (max + debord - fin)));
+  }
+  // Sans plage publiée, le plateau est celui que laisse la rampe absolue, centré
+  // sur le milieu de l'amplitude.
+  //
   // Le zéro est **dehors**, et c'est tout ce qui change par rapport à la version
   // qui le posait sur la borne. La rampe garde sa largeur, donc le plein régime
   // couvre presque la même plage qu'avant et la calibration bâtie dessus tient.

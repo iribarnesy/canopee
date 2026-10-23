@@ -102,6 +102,17 @@ export interface EspeceV0 {
    * coup sûr au pH exact qu'il annonçait tolérable.
    */
   ph: [number, number];
+  /**
+   * **En mesure, pas livré** (#262, #278, option C). La plage de pH, en pH eau de
+   * l'horizon de surface, où une source **de terrain** dit que l'espèce pousse le
+   * mieux. Elle devient le plateau de `facteurGammePh`, et les flancs vont de ses
+   * bords jusqu'aux bornes de présence (`ph`), sans rampe absolue. Absente, la
+   * réponse garde le trapèze centré sur le milieu de l'amplitude.
+   *
+   * Seules les plages issues de relevés ou de monographies sont lues ; les
+   * préférences horticoles (PFAF) restent écrites dans les fiches, non lues.
+   */
+  optimumPh?: [number, number];
   lumiere: {
     /**
      * Point de compensation ∈ [0,1] : part de la pleine lumière en dessous de
@@ -892,6 +903,9 @@ export const ESPECES_V0: readonly EspeceV0[] = [
     // pineraies décroît avec le pH, meilleur vers 4,5 en pH eau moyen du profil
     // (Sewerniak 2012). C'est #278.
     ph: [2.8, 7.5],
+    // Plateau (#278, en mesure) : « grows best on soils in the 4.5 to 6.0 range »
+    // (Skilling 1990, *Silvics of North America*, grandeur non précisée).
+    optimumPh: [4.5, 6.0],
     // Atlas : très héliophile ; houppier clair, persistant (ombrage toute l'année).
     // Aiguilles : 2 à 8 ans selon la latitude, plus longtemps au nord (Reich et al. 1996) ; le bas de la fourchette pour une plaine tempérée *(à confirmer)*.
     lumiere: {
@@ -1020,6 +1034,9 @@ export const ESPECES_V0: readonly EspeceV0[] = [
     // 2016), qui sert à #278. L'ancien « tolère 5,1-8,3 » ne disait pas d'où
     // venait chaque nombre.
     ph: [5, 8.3],
+    // Plateau (#278, en mesure) : « deep and rich soils, with pH values of
+    // between 6 and 7.5 » (de Rigo et al. 2016, Atlas européen).
+    optimumPh: [6.0, 7.5],
     lumiere: { compensation: 0.2, saturation: 0.75, lai: 2.6, houppierRatio: 0.5, caduc: true },
     // **Un pivot de 3,7 m**, mesuré dans une plantation de semis du nord de
     // l'Albanie, les racines latérales surtout entre 60 et 80 cm (Zeneli & Kola
@@ -2227,6 +2244,10 @@ export const ESPECES_V0: readonly EspeceV0[] = [
     // fort : rare sur calcaire, pas absente, et moins dense (même source).
     // Pas de fiche chez Landolt (hors de Suisse).
     ph: [3.4, 7.8],
+    // Plateau (#278, en mesure) : « most cork oak woodlands occur on moderately
+    // acidic to slightly acidic soils, with pH generally in the range of 4.7 to
+    // 6.5 » (Serrasolses et al. 2009, même tableau).
+    optimumPh: [4.7, 6.5],
     // Semi-héliophile : contrairement au pin, ses jeunes supportent le couvert
     // — c'est ainsi qu'une subéraie s'installe **sous** la pinède et prend le
     // relais, le pin ne se régénérant pas sous sa propre ombre.
@@ -2482,6 +2503,10 @@ export const ESPECES_V0: readonly EspeceV0[] = [
     // pas de fiche chez Landolt. La bonne croissance de 5 à 8 est un optimum
     // (#278).
     ph: [4, 8],
+    // Plateau (#278, en mesure) : « de 5 à 8, une bonne croissance » (Ehring
+    // 2011). Son bord haut tombe sur la borne de présence : le flanc haut n'a
+    // pas de largeur, et la réponse y fait une marche.
+    optimumPh: [5, 8],
     // Héliophile (fichier wallon : intolérant à l'ombre jeune, il « exige la
     // pleine lumière » adulte), un peu moins que le commun (MAA 2024 : le
     // phototropisme et la sensibilité à l'ombrage « semblent moins prononcés »).
