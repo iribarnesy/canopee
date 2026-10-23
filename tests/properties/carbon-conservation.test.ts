@@ -32,7 +32,7 @@ import { serieToWeeks, syntheticYear } from "../../src/engine/meteo";
 import { rngStateFromSeed } from "../../src/engine/rng";
 import { createGameState, type GameState, plantAt, plantScattered } from "../../src/engine/state";
 import { LANDE_SECHE, LIMON_RICHE } from "../../src/engine/stations";
-import { cnBois, diametreInitialCm, dureeChandelleSemaines } from "../../src/engine/trees";
+import { diametreInitialCm, dureeChandelleSemaines } from "../../src/engine/trees";
 
 const STATION = { ...LIMON_RICHE.station, coteM: 50 };
 const WEATHER = syntheticYear(LIMON_RICHE.climat);
@@ -545,15 +545,8 @@ describe("rabattre un arbre vivant ne détruit pas son carbone", () => {
     // Le carbone racinaire se déduit de la hauteur (#334) : rabattre un arbre en
     // verse l'essentiel au bois mort, et l'azote de ces racines doit l'y suivre.
     // Il partait avec la tige exportée. Le bois du charme porte l'azote de son
-    // espèce, que `plantAt` ne pose pas (#379).
-    const { state: nu, id } = charmeDe(12);
-    const state: GameState = {
-      ...nu,
-      trees: nu.trees.map((t) => ({
-        ...t,
-        azoteBoisG: (treeTotalCarbonKg(espece, t.diametreCm, t.heightM) * 1000) / cnBois(espece),
-      })),
-    };
+    // espèce, que `plantAt` pose depuis #379.
+    const { state, id } = charmeDe(12);
     const avant = state.trees.find((t) => t.id === id);
     if (!avant) throw new Error("charme manquant");
     const r = applyAction(

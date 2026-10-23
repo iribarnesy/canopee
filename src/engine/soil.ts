@@ -242,6 +242,11 @@ export function facteurSurviePh(gamme: readonly [number, number], ph: number): n
  *    étroite, et les deux questions sont couplées. C'est pourquoi le lot de
  *    forme ne peut pas se faire sans elle.
  *
+ *    **Ce qui le lui a rendu était la borne** (#279). Ces chiffres sont ceux
+ *    d'une borne basse à 4,0, l'USFS ; les relevés européens la mettent à 2,8,
+ *    et le genou du pin est passé sous le plancher du sol (4,1). Le genou
+ *    reste, ailleurs : le charme passe de 0,05 à 1,00 entre pH 4,5 et 5,2.
+ *
  * **Ce qui était faux**. La rampe touchait zéro **aux bornes** : mesuré sur les 26
  * espèces, `f(min) = 0` pour toutes — chacune en mort certaine au pH exact que
  * l'atlas lui donne pour tolérable, ce qui est le contraire de ce qu'une
@@ -250,10 +255,10 @@ export function facteurSurviePh(gamme: readonly [number, number], ph: number): n
  * `paysage.ts` avait écrit la conséquence en doctrine : « au bord exact de sa
  * gamme, une espèce ne pousse déjà plus du tout ».
  *
- * L'optimum est pris au **milieu** de l'amplitude, faute de mieux : les relevés
- * donnent des réponses souvent dissymétriques, mais aucune donnée par espèce
- * ici ne permettrait de placer un optimum décalé. Symétrique est l'hypothèse
- * honnête, pas la vraie *(à mesurer)*.
+ * L'optimum est pris au **milieu** de l'amplitude : les relevés donnent des
+ * réponses souvent dissymétriques, et neuf fiches citent maintenant une plage
+ * publiée où l'espèce pousse le mieux (#279), que cette fonction ne lit pas
+ * encore. Symétrique est l'hypothèse en place, pas la vraie *(à mesurer, #278)*.
  *
  * Elle vit ici, et pas dans `trees.ts`, parce que la strate herbacée la lit
  * aussi (`herbacees.ts`) : c'est une propriété du **sol** confrontée à une gamme,

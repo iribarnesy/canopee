@@ -21,7 +21,6 @@ import { rngStateFromSeed } from "../../src/engine/rng";
 import { ruHorizonMm } from "../../src/engine/soil";
 import { createGameState, type GameState, plantAt, type Station } from "../../src/engine/state";
 import { LIMON_RICHE } from "../../src/engine/stations";
-import { cnBois } from "../../src/engine/trees";
 
 const SERIE = serieMeteoPour("limon-riche");
 if (!SERIE) throw new Error("série manquante");
@@ -189,10 +188,11 @@ describe("la faim d'azote (C9)", () => {
     //
     // **L'essai a été réécrit sur son critère** (#328). Il comparait le broyage à
     // des aulnes restés debout, et il passait pour une autre raison que la faim :
-    // `plantAt` pose un arbre sans azote dans son bois (le moteur n'en met que
+    // `plantAt` posait un arbre sans azote dans son bois (le moteur n'en met que
     // dans le bois neuf), et ce bois au C/N infini prenait tout son azote au sol
-    // (−0,98 g/m² un mois après). L'essai donne donc à ses aulnes l'azote que
-    // le moteur assigne à leur bois (`cnBois`). Le témoin juste fait le même
+    // (−0,98 g/m² un mois après). L'essai donnait donc à ses aulnes l'azote que
+    // le moteur assigne à leur bois (`cnBois`) ; `plantAt` le pose maintenant
+    // lui-même (#379). Le témoin juste fait le même
     // geste moins ce qu'on mesure : une coupe **vendue**, mêmes arbres abattus,
     // mêmes racines laissées, seul le broyat diffère. Depuis que l'azote des
     // racines coupées reste au bois mort avec leur carbone (#328), la coupe
@@ -217,13 +217,13 @@ describe("la faim d'azote (C9)", () => {
         if (dernier) ids.push(dernier.id);
       }
       // Le bois porte l'azote qu'il aurait mis en poussant, au C/N de son
-      // espèce, ou celui qu'on lui impose.
+      // espèce (`plantAt` le pose depuis #379), ou celui qu'on lui impose.
+      if (cnBoisImpose === undefined) return { state, ids };
       const trees = state.trees.map((t) => {
         const espece = getEspece(t.especeId);
-        const cn = cnBoisImpose ?? cnBois(espece);
         return {
           ...t,
-          azoteBoisG: (treeTotalCarbonKg(espece, t.diametreCm, t.heightM) * 1000) / cn,
+          azoteBoisG: (treeTotalCarbonKg(espece, t.diametreCm, t.heightM) * 1000) / cnBoisImpose,
         };
       });
       const avecBois: GameState = { ...state, trees };

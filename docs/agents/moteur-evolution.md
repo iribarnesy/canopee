@@ -226,6 +226,113 @@ Le banc de #210 et la lande de #312 ne bougent pas (rapports à 0,016 près, auc
 - **La fermeture du couvert** : indice foliaire effectif de 1,2 sous des aulnes de douze ans qui couvrent 146 % du sol (4,8 sous une aulnaie adulte), 0,28 de lumière au sol sous la hêtraie de quarante ans (E9). Le recalage de l'extinction des houppiers touche tout le moteur.
 - **La règle d'imputation de #103**, à sens unique : un frêne que la chalarose a mené à neuf dixièmes du seuil meurt « de sécheresse » si l'été l'achève.
 
+## Ce qu'un lot précédent a appris (la conservation de l'azote : l'ébranchage, #345, le minage, #347, et le bois posé, #379)
+
+Trois issues de maintenance, instruites sur main avec des sondes hors dépôt. Les prédictions et les mesures sont dans les commits de la branche `claude/v06-azote`, avant chaque course.
+
+### Un bilan du sol ne voit pas ce qu'un arbre perd sans le verser
+
+La propriété du tick ferme le côté sol : ce qui en sort, ce qui y entre, la variation du stock. Elle comptait la litière versée par une tempête et ignorait la moitié retirée à l'arbre sans aller nulle part. Sur un banc de cent pins de douze mètres, son résidu restait à 1e-11 pendant que 5 kg N/ha disparaissaient en une semaine. Le bilan du **système entier** (sol, strate, arbres) se ferme à 1e-11 quand rien ne fixe l'azote de l'air, et c'est lui qui voit la fuite : il tombe dès la première tempête sur le moteur d'avant. **Une propriété ratifie ce qu'elle ne compte pas** : avant d'en conclure qu'un mécanisme conserve, vérifier que le stock qu'il vide est dans le bilan.
+
+### Une correction écrite avant un changement de règle se relit quand la règle change
+
+L'ébranchage avait été corrigé une première fois parce qu'il **créait** de l'azote. La correction retirait à l'arbre ce qu'il versait, à une époque où une feuille rendait tout au sol. Puis #247 a fait résorber la moitié avant la chute, dans trois chemins sur quatre ; la tempête n'a pas suivi. Une seule fonction de chute (`feuillesQuiTombent`) sert maintenant les quatre, et la règle ne peut plus diverger. **Quand une règle change, chercher toutes ses copies** ; mieux, n'en laisser qu'une.
+
+### Une propriété qui tourne là où le mécanisme est fermé ne vérifie rien
+
+La propriété du tick ne tournait que sur deux mulls, où le minage ectomycorhizien ne s'ouvre pas, et son équation ne le comptait pas. Ajouter le sable profond ne suffisait pas : le peuplement mixte des autres cas y mine quelques millièmes de kg N/ha par an. Le cas nouveau pose des pins de douze mètres qui minent 18 kg N/ha en trois ans, et il garde ce chiffre : sans minage réel, il échoue. **Un cas de propriété porte une garde qui prouve que son mécanisme a tourné.**
+
+### Un essai qui attend un tirage rare ne se rend pas robuste par le décor
+
+L'essai du feu des chandelles brûle sur une graine sur douze. L'espérance de départs de feu, mesurée dans `departDeFeu`, vaut 0,085 en cinq ans sur sa lande : 8 % de chances de brûler. Neuf ans, juste avant que les chandelles de charme ne tombent, donnent 0,12 ; la série réelle de 2018 à 2022, 0,18. Le plafond du départ (0,015 par semaine) n'en laisse espérer que 4,7 en cinq ans, à risque maximal chaque semaine de saison, ce qu'aucune météo réelle ne donne. Il en faudrait 4 pour que trois graines brûlent à 95 %. **Mesurer l'espérance d'un événement avant de chercher un décor qui le rende sûr** : ici, aucun ne le peut sans balayer les graines ou imposer le départ, et c'est une décision du propriétaire (options sur #379).
+
+### Ce que ça donne
+
+- **#345** : la pinède exposée du banc du volis ne perd plus 85 à 138 kg N/ha en soixante ans. Ses dominants gagnent 0,3 à 1,4 %, la litière cumulée 53 à 117 kg N/ha ; rien ne change avant le premier ébranchage. Le pin du sable de `hauteurs.test.ts` passe de 15,75 à 15,84 m à quarante ans.
+- **#347** : la propriété du tick compte le minage, et son cas du sable profond vérifie aussi le système entier. Elle tombe sur le moteur d'avant #345.
+- **#379, point 2** : un arbre posé porte l'azote de son bois. La suite reste verte, l'essai du feu brûle à la même semaine, les hauteurs ne bougent pas. Trois essais qui le posaient à la main le lisent sur l'arbre.
+- Le format ne bouge pas (14) : les deux champs existaient.
+
+### Les prédictions fausses
+
+- P1 : une perte à l'ébranchage dès les premières années ; aucune semaine d'ébranchage en vingt ans, les pins n'y sont pas assez grands.
+- P1' : 0,03 à 0,5 kg N/ha/an et 0,05 à 0,5 par tempête ; 1,4 à 2,3 et 1,7 à 2,4. Une pinède fermée porte beaucoup d'azote dans ses aiguilles, et une tempête prend tout le peuplement à la fois.
+- P2 : 0,01 à 0,5 kg N/ha/sem d'écart sans le minage ; 3e-4 et 2e-3 sur les peuplements de jeunes plants, qui minent à peine.
+- P5 : la série réelle de Mont-de-Marsan multiplierait les départs de feu (0,2 à 3 en cinq ans) ; 0,08 et 0,18.
+- P6 : la réserve garderait 85 à 138 kg N/ha de plus ; elle est remobilisée chaque printemps, et c'est la litière cumulée qui monte, de 53 à 117 kg N/ha en soixante ans.
+
+Justes : le bilan du sol aveugle à #345 (P1b), aucune fuite du minage (P2), une seule graine qui brûle sur douze (P3, P7), 1 240 kg N/ha dans le bois des chandelles (P4), les hauteurs à moins de 1 % hors pin à quarante ans (P7), une suite qui reste verte (P6, P7).
+
+### Ce qui reste ouvert
+
+- **L'essai du feu des chandelles** (#379, point 1) : décision du propriétaire entre balayer les graines et imposer le départ.
+- **Une feuille arrachée verte ne résorbe rien.** La tempête suit maintenant le chemin d'un arbre vivant (moitié en réserve), comme son commentaire le voulait. Verser tout l'azote à la litière serait plus juste pour une feuille verte, mais `depositLitter` lit le carbone sur le C/N d'une feuille sénescente, donc le doublerait ; il faudrait lui donner le C/N de la feuille verte (le même défaut touche les feuilles d'un arbre qui meurt en été). Jugement de modélisation, à trancher.
+- **Le feu volatilise l'azote sans flux publié** : la litière brûlée, l'aérien d'une chandelle. Une propriété avec feu ne fermerait pas le bilan du sol.
+- **Le geste de plantation du jeu** pose ses plants sans l'azote de leur bois (un centième de gramme à trente centimètres), et `plantAt` pose sans les bases du bois (`basesBoisEq`), le même défaut pour le calcium.
+- **La pluie de semis** apporte des aulnes, qui tirent leur azote de l'air sans flux publié : le bilan du système entier ne se ferme qu'en leur absence.
+
+## Ce qu'un lot précédent a appris (les bornes de pH de l'atlas, #279 ; instruction de #262, #278 et #172)
+
+Un lot de soin, puis une instruction. #279 est livré : chaque borne de pH de l'atlas porte sa source, sa grandeur et son horizon, ou *(à confirmer)*. #262, #278 et #172 sont des choix de modélisation : leurs options et la recommandation sont dans la PR (#441), rien n'en est codé. Les prédictions et les mesures sont dans les commits de la branche, avant chaque course. Le format de sauvegarde ne bouge pas (un trait d'atlas n'est pas sérialisé).
+
+### Une présence prouve, une absence ne prouve rien
+
+La règle de l'atlas tient en une phrase, et elle a évité deux erreurs. Leuschner et al. 2006 mesurent le hêtre de pH eau 3,2 à 7,3 dans cinquante hêtraies : lire 7,3 comme une borne aurait mis le hêtre à 0,48 sur le limon riche où il est calé, alors que c'est leur échantillon qui s'arrête là, pas l'espèce. L'USFS donne au pin « 4.0 to 7.0 » : lire 7,0 comme une borne aurait contredit sa classe de Landolt (indifférente) sans un relevé pour la porter. **Un relevé élargit une borne ; seule une absence écrite la resserre.** Huit bornes de six fiches s'élargissent, aucune ne se resserre.
+
+### Une borne non sourcée peut porter le poids d'un défaut de forme
+
+#262 accusait la rampe, puis #277 l'optimum deviné. Les huit mètres de pin tenaient d'abord à sa borne basse 4,0 : l'USFS, qui décrit le pin introduit en Amérique du Nord, contredite par deux jeux européens (215 pineraies polonaises dont l'horizon A descend à pH eau 2,8, Sewerniak 2012 ; quatorze pineraies RENECOFOR jusqu'à 3,65). À 2,8, le genou du pin passe sous le plancher du sol. **Avant de corriger une forme, vérifier les nombres qu'elle lit.**
+
+### Un facteur ne pèse que là où il est le minimum
+
+Le facteur de pH du pin passe de 0,76 à 1,00 sur la lande et de 0,34 à 1,00 sur le limon acidifié de `ph-survie`. Sur la lande, le pin gagne **0,8 %** à quarante ans ; sur le limon, **55 %** à cinquante. La prédiction disait +5 à +25 % sur la lande : elle supposait que le pH y bridait le pin, alors que l'eau, l'azote et le phosphore y sont plus courts que lui (#395). **Avant de prédire l'effet d'un facteur, vérifier qu'il est le minimum sur le banc.**
+
+### La même correction montre l'autre face
+
+Une borne de présence lointaine, sous une rampe absolue de 0,7, met une calcifuge à plein régime sur un sol neutre : le chêne-liège (3,4-7,8, Serrasolses et al. 2009, qui dit aussi sa surface terrière plus faible sur les sols les moins acides) vaut 1,00 à pH 7,0. Le trapèze ne sait pas dire « présent mais rare ». C'est la part de #262 et #278 que #279 ne règle pas, et elle est maintenant chiffrée au lieu d'être masquée par une borne fausse.
+
+### Une base de données relaie, elle ne garantit pas
+
+L'*Ecological Flora Database* donne pour chaque espèce un pH extrême et typique, chacun avec sa référence. Ouverte champ par champ : des communications personnelles et des données non publiées (callune, ronce), des plages de culture de la FAO (hêtre, pin, frêne), une erreur de saisie (un fusain de calcaire plafonné à pH 4,77), et quelques relevés publiés (aubépine, houx, arbousier). **Une base est une source pour ce qu'elle dit tenir d'ailleurs, et seulement pour ça.** C'est la règle de l'audit de #279 pour les citations entre guillemets, à l'échelle d'une base.
+
+### Une classe d'indicateur porte un nombre quand sa source le donne
+
+La valeur R d'Ellenberg n'a pas de pH ; celle de Landolt et al. 2010 en a un par classe (R 3 : 4,5 à 7,5). Quatre fiches sans source tombent exactement, deux bornes à la fois, sur leur classe de Landolt (l'aulne d'avant ce lot, 4,5-7,5 ; l'aubépine d'avant et le fusain, 5,5-8,5 ; l'ajonc, 3,5-6,5) : c'est sans doute de là qu'elles venaient. Mais une classe ne remplace pas une borne qu'elle contredit : sous la rampe actuelle, une espèce de classe 3 vaudrait 0,76 à pH 7, au milieu de sa propre classe.
+
+### Le plancher de 4,1 est près du terrain pour l'épaisseur que le moteur tient
+
+#172 comparait le plancher aux podzols « à 3,5-4,0, humus mor compris ». Sur 0-20 cm, les cent placettes RENECOFOR descendent à 3,86, et 4 à 9 % seulement passent sous 4,1 ; c'est l'humus et les dix premiers centimètres qui vont plus bas. **Comparer une borne du moteur à la couche que le moteur représente**, pas à la plus parlante.
+
+### Ce que ça donne
+
+Dispositif de `hauteurs-commun.ts`, graines 17, 43 et 71, moyenne des survivants. Sans voisinage, une course ne lit que le facteur de pH de l'espèce plantée ; là où il ne bouge pas, elle est identique au bit près.
+
+| station (pH), espèce | facteur main → soigné | main, 40 ans | soigné, 40 ans | bande sourcée |
+|---|---|---|---|---|
+| sable profond (4,8), pin | 1,00 → 1,00 | 16,21 · 15,28 · 14,64 | 16,24 · 15,29 · 14,67 (identique à 30 ans) | Jansen GK 8 : 13,2-17,8 |
+| lande (4,5), pin | 0,76 → 1,00 | 11,57 · 10,82 · 11,70 | 11,65 · 10,91 · 11,82 | aucune |
+| Sologne (5,0), châtaignier | 1,00 → 1,00 | 20,51 · 18,99 · 19,51 (25 ans : 13,50 de moyenne) | identique | Lemaire 2005 : 8,5-21 à 25 ans |
+| suberaie (5,2), chêne-liège | 1,00 → 1,00 | 13,87 · 13,04 · 13,48 | identique | Sánchez-González 2010 : 5,0 à ~11 |
+| limon acide de l'essai (5,2), châtaignier | 1,00 → 1,00 | 20,26 · 18,67 · 19,21 | identique | 18,7 ± 15 % |
+| limon acidifié de `ph-survie` (4,2), mélange, 50 ans | pin 0,34 → 1,00 | pin 8,40 · 7,21 · 6,93 ; charme 0,97 · 0,95 · 0,92 | pin 12,85 · 11,15 · 10,92 ; charme 0,97 · 0,95 · 0,91 | pin > 5 m, charme < 2 m |
+
+La suite complète passe sur l'atlas soigné, une fois `message-ph.test.ts` réécrit (il épinglait la gamme [4, 7,5] du pin). Le chêne-liège dépasse de 22 % le haut de sa bande sourcée, sur main comme sur la branche, à facteur de pH 1,00 : ce n'est pas le pH.
+
+### Les prédictions fausses
+
+- M3 : le pin de la lande sur main, 3 à 10 m à quarante ans et une graine amputée ; 11,36 m, aucune.
+- M4 : le chêne-liège de la suberaie sur main, 5 à 10 m ; 13,46.
+- S3 : le pin de la lande gagnerait 5 à 25 % avec son facteur de pH rendu ; +0,8 %.
+- S7 : le pin du mélange de `ph-survie` gagnerait 10 à 40 % ; +53 à +58 %.
+
+### Ce qui reste ouvert
+
+- **#262 et #278** : la recommandation est l'option C, un trait `optimumPh` sourcé qui devient le plateau, et des flancs tirés de ce plateau jusqu'aux bornes de présence, sans rampe absolue. À mesurer d'abord sur la suite complète (36 fichiers citent le pin et le limon riche).
+- **#172** : garder 4,1 (option A) ; la branche aluminium, avec sa toxicité, est le vrai manque.
+- **Trente-deux bornes sur cinquante-quatre restent *(à confirmer)***, dont celles du bouleau, du frêne, du noisetier et du charme, et les quatre herbacées (`herbacees.ts`) n'ont pas été reprises.
+- **Le pH de `SABLE_PROFOND`** (4,8, relevé pour franchir le genou du pin) n'a plus de raison d'être ; le redescendre au pH de terrain est une option de #262, à mesurer.
+- **Le chêne-liège** est au-dessus de sa bande à quarante ans : son calage sur la suberaie reste à faire.
+
 ## Ce qu'un lot précédent a appris (les essais qui frôlent leur délai, #378 et #423)
 
 Lot de maintenance des essais : aucune ligne du moteur, aucune borne, aucun critère ni aucune graine ne change. Huit essais tournaient en CI à moins de 1,5 fois leur délai, et deux étaient déjà tombés dessus sans une assertion fausse : `bois-en-travers` sur main (187 s pour 180), le brin dominé de `ph-survie` sur trois PR (jusqu'à 212 s). Les prédictions et les mesures sont dans les commits de la branche, avant chaque course.

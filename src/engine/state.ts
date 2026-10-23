@@ -13,7 +13,7 @@ import {
   saturationDepuisPh,
 } from "./bases";
 import type { CarbonState } from "./carbon";
-import { createCarbonState, T_HA_TO_G_M2 } from "./carbon";
+import { createCarbonState, T_HA_TO_G_M2, treeTotalCarbonKg } from "./carbon";
 import type { MemoireDeCrue } from "./crue";
 import type { EauDeSurface } from "./eau_surface";
 import { getEspece } from "./especes";
@@ -33,6 +33,7 @@ import type { Horizon, SoilProfile } from "./soil";
 import { profondeurPenetrableCm, ruHorizonMm } from "./soil";
 import { geometrieTranches } from "./tranches";
 import {
+  cnBois,
   diametreInitialCm,
   racinesDeDepartCm,
   type TreeState,
@@ -1031,6 +1032,19 @@ function racinesInitialesCm(especeId: string, heightM: number, station: Station)
   return racinesDeDepartCm(getEspece(especeId), heightM, profondeurPenetrableCm(station.profil));
 }
 
+/**
+ * L'azote du bois d'un arbre qu'on pose : celui que le moteur aurait mis dans
+ * ce bois en le construisant, au C/N du bois de son espèce (`cnBois`, #379).
+ * Le tick n'en met que dans le bois neuf : un arbre posé d'emblée à six ou
+ * quinze mètres avait un bois sans azote, qui ne rendait rien à sa mort et
+ * affamait le sol une fois broyé. La réserve reste vide : rien ne dit quelle
+ * taille d'équilibre lui donner.
+ */
+function azoteDuBoisPoseG(especeId: string, heightM: number): number {
+  const espece = getEspece(especeId);
+  return (treeTotalCarbonKg(espece, diametreInitialCm(heightM), heightM) * 1000) / cnBois(espece);
+}
+
 /** Proto-action : planter un plant à une position donnée (30 cm par défaut). */
 export function plantAt(
   state: GameState,
@@ -1065,6 +1079,7 @@ export function plantAt(
     protege: false,
     dommageHydraulique: 0,
     recepages: 0,
+    azoteBoisG: azoteDuBoisPoseG(especeId, heightM),
   };
   return {
     ...state,
@@ -1088,6 +1103,7 @@ export function plantScattered(
   const side = state.station.coteM;
   let rng = state.rng;
   const trees = [...state.trees];
+  const azoteBoisG = azoteDuBoisPoseG(especeId, heightM);
   for (let i = 0; i < count; i++) {
     const rx = rngFloat(rng);
     const ry = rngFloat(rx.state);
@@ -1115,6 +1131,7 @@ export function plantScattered(
       dommageHydraulique: 0,
       protege: false,
       recepages: 0,
+      azoteBoisG,
     });
   }
   return { ...state, trees, nextTreeId: state.nextTreeId + count, rng };
