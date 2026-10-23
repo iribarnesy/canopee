@@ -61,7 +61,33 @@ qu'un rapport (voir la note de maintenance).
 Séparer calibration et validation : caler un paramètre sur un âge, garder
 l'autre âge pour vérifier.
 
-## Ce que le dernier lot a appris (la conservation de l'azote : l'ébranchage, #345, le minage, #347, et le bois posé, #379)
+## Ce que le dernier lot a appris (le départ de feu imposé, #379)
+
+Décision du propriétaire sur l'instruction de #379 : l'essai du feu des chandelles ne pouvait pas tenir sur trois graines par son décor (0,085 départ attendu en cinq ans), et il fallait soit balayer les graines, soit imposer le départ. Le départ imposé est retenu. Les prédictions et les mesures sont dans les commits de la branche `claude/v06-feu-impose`, avant chaque course.
+
+### Un réglage d'essai remplace l'issue d'un tirage, pas le tirage
+
+`ReglagesDEssai.departDeFeuImpose` donne une semaine et une cellule. Le tirage du départ a lieu comme d'habitude, et seule son issue est remplacée : la cellule d'origine. La propagation, la combustion et leurs tirages sont ceux du moteur. Le flux aléatoire ne peut donc pas bouger tant que le réglage ne s'applique pas, et c'est vérifié à l'octet : quatre parties (les chandelles sur trois graines, cinq ans, dont le feu naturel de la graine 5 ; un limon planté, deux ans) rendent la même empreinte de l'état sérialisé, chaque semaine, sur main et sur la branche. `determinism.test.ts` le garde : un réglage pour une semaine jamais atteinte laisse la partie identique. **Un crochet d'essai qui sauterait le tirage aurait décalé tout ce qui suit**, et l'essai aurait mesuré une autre partie que celle du jeu.
+
+### Ce qui ne doit pas atteindre le jeu se garde par un script
+
+Le protocole du worker ne porte pas le réglage, et `check:boundaries` refuse toute mention de `ReglagesDEssai` ou de `departDeFeuImpose` hors de `src/engine` et de `src/lab`. La règle a été éprouvée en posant un fichier sonde dans `src/game` : la vérification tombe. **Une convention qu'aucun script ne vérifie finit par être franchie** ; celle-ci tient en une ligne.
+
+### Ce que ça donne
+
+- L'essai « un incendie qui emporte des chandelles » tourne sur les graines 1, 2 et 5, critères et bornes inchangés. Relevé sur les graines 1 à 12 : toutes brûlent 2 496 à 2 500 cellules et emportent les 120 chandelles, le résidu carbone reste à 7e-10. Chaque graine coûte ce que coûtait l'essai (16 s en local).
+- Le format ne bouge pas (14) : le réglage n'est pas dans l'état.
+
+### Les prédictions
+
+Toutes justes : l'identité à l'octet sans le réglage (P1), douze graines sur douze qui brûlent au moins 2 400 cellules et emportent les 120 chandelles (P2), la graine 5 identique à son feu naturel (P3), un coût multiplié par trois (P4).
+
+### Ce qui reste ouvert
+
+- Le réglage ne sert qu'au feu. Le laboratoire pourrait s'en servir (une expérience « un feu sur commande ») ; rien ne l'y oblige.
+- #449 (v0.7) : publier l'azote que le feu volatilise. Un cas de la propriété du tick avec un feu imposé le vérifierait.
+
+## Ce qu'un lot précédent a appris (la conservation de l'azote : l'ébranchage, #345, le minage, #347, et le bois posé, #379)
 
 Trois issues de maintenance, instruites sur main avec des sondes hors dépôt. Les prédictions et les mesures sont dans les commits de la branche `claude/v06-azote`, avant chaque course.
 
@@ -100,10 +126,10 @@ Justes : le bilan du sol aveugle à #345 (P1b), aucune fuite du minage (P2), une
 
 ### Ce qui reste ouvert
 
-- **L'essai du feu des chandelles** (#379, point 1) : décision du propriétaire entre balayer les graines et imposer le départ.
-- **Une feuille arrachée verte ne résorbe rien.** La tempête suit maintenant le chemin d'un arbre vivant (moitié en réserve), comme son commentaire le voulait. Verser tout l'azote à la litière serait plus juste pour une feuille verte, mais `depositLitter` lit le carbone sur le C/N d'une feuille sénescente, donc le doublerait ; il faudrait lui donner le C/N de la feuille verte (le même défaut touche les feuilles d'un arbre qui meurt en été). Jugement de modélisation, à trancher.
-- **Le feu volatilise l'azote sans flux publié** : la litière brûlée, l'aérien d'une chandelle. Une propriété avec feu ne fermerait pas le bilan du sol.
-- **Le geste de plantation du jeu** pose ses plants sans l'azote de leur bois (un centième de gramme à trente centimètres), et `plantAt` pose sans les bases du bois (`basesBoisEq`), le même défaut pour le calcium.
+- **L'essai du feu des chandelles** (#379, point 1) : le propriétaire a retenu le départ imposé, fait au lot suivant.
+- **Une feuille arrachée verte ne résorbe rien.** La tempête suit maintenant le chemin d'un arbre vivant (moitié en réserve), comme son commentaire le voulait. Verser tout l'azote à la litière serait plus juste pour une feuille verte, mais `depositLitter` lit le carbone sur le C/N d'une feuille sénescente, donc le doublerait ; il faudrait lui donner le C/N de la feuille verte (le même défaut touche les feuilles d'un arbre qui meurt en été). Le propriétaire garde le chemin actuel : #448 (v0.7).
+- **Le feu volatilise l'azote sans flux publié** : la litière brûlée, l'aérien d'une chandelle. Une propriété avec feu ne fermerait pas le bilan du sol (#449).
+- **Le geste de plantation du jeu** pose ses plants sans l'azote de leur bois (un centième de gramme à trente centimètres), et `plantAt` pose sans les bases du bois (`basesBoisEq`), le même défaut pour le calcium (#449).
 - **La pluie de semis** apporte des aulnes, qui tirent leur azote de l'air sans flux publié : le bilan du système entier ne se ferme qu'en leur absence.
 
 ## Ce qu'un lot précédent a appris (les bornes de pH de l'atlas, #279 ; instruction de #262, #278 et #172)
