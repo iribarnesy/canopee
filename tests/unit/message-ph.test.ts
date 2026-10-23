@@ -67,17 +67,23 @@ describe("la réponse au pH est unimodale, pas un plateau à falaise", () => {
 
   it("le pin sylvestre à pH 4,5 : le cas du journal, chiffré", () => {
     const pin = getEspece("pinus_sylvestris");
-    expect(pin.ph).toEqual([4, 7.5]);
-    // À 4,5 il souffre un peu — 0,76, bien au-dessus du seuil de stress (0,45),
-    // donc il ne peut **pas** mourir « hors gamme » à ce pH-là. C'est le message du
+    // **Réécrit en #279, et signalé.** L'essai épinglait la gamme [4, 7,5] et un
+    // facteur de 0,764 à pH 4,5. La borne basse 4,0 était l'USFS, que les relevés
+    // européens contredisent (l'horizon A de 215 pineraies polonaises descend à
+    // pH eau 2,8, Sewerniak 2012) : elle est passée à 2,8, et à 4,5 le pin est
+    // maintenant dans son plateau. Le critère reste le même et se lit sur la
+    // fiche au lieu d'un nombre recopié.
+    const [min] = pin.ph;
+    // À 4,5, le pH du journal, il ne peut **pas** mourir « hors gamme » : son
+    // facteur passe largement le seuil de stress (0,45). C'est le message du
     // journal qui trompait : il affichait le pH de la station au départ, pas
     // celui du sol sous l'arbre, qui avait dérivé plus bas.
-    expect(facteurGammePh(pin.ph, 4.5)).toBeCloseTo(0.764, 3);
+    expect(facteurGammePh(pin.ph, 4.5)).toBeGreaterThan(0.45);
     // Et à sa borne exacte il n'est plus à **zéro**. Il reste condamné à terme —
     // 0,05 est sous le seuil de stress — mais il n'est plus mort d'avance, et
     // c'est tout ce que ce paramètre corrige.
-    expect(facteurGammePh(pin.ph, 4)).toBeCloseTo(VIGUEUR_A_LA_BORNE, 10);
-    expect(facteurGammePh(pin.ph, 4)).toBeGreaterThan(0);
+    expect(facteurGammePh(pin.ph, min)).toBeCloseTo(VIGUEUR_A_LA_BORNE, 10);
+    expect(facteurGammePh(pin.ph, min)).toBeGreaterThan(0);
   });
 
   it("le pH trie toujours : un calcicole ne pousse pas sur un podzol", () => {

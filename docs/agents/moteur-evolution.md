@@ -106,6 +106,68 @@ Justes : le bilan du sol aveugle à #345 (P1b), aucune fuite du minage (P2), une
 - **Le geste de plantation du jeu** pose ses plants sans l'azote de leur bois (un centième de gramme à trente centimètres), et `plantAt` pose sans les bases du bois (`basesBoisEq`), le même défaut pour le calcium.
 - **La pluie de semis** apporte des aulnes, qui tirent leur azote de l'air sans flux publié : le bilan du système entier ne se ferme qu'en leur absence.
 
+## Ce qu'un lot précédent a appris (les bornes de pH de l'atlas, #279 ; instruction de #262, #278 et #172)
+
+Un lot de soin, puis une instruction. #279 est livré : chaque borne de pH de l'atlas porte sa source, sa grandeur et son horizon, ou *(à confirmer)*. #262, #278 et #172 sont des choix de modélisation : leurs options et la recommandation sont dans la PR (#441), rien n'en est codé. Les prédictions et les mesures sont dans les commits de la branche, avant chaque course. Le format de sauvegarde ne bouge pas (un trait d'atlas n'est pas sérialisé).
+
+### Une présence prouve, une absence ne prouve rien
+
+La règle de l'atlas tient en une phrase, et elle a évité deux erreurs. Leuschner et al. 2006 mesurent le hêtre de pH eau 3,2 à 7,3 dans cinquante hêtraies : lire 7,3 comme une borne aurait mis le hêtre à 0,48 sur le limon riche où il est calé, alors que c'est leur échantillon qui s'arrête là, pas l'espèce. L'USFS donne au pin « 4.0 to 7.0 » : lire 7,0 comme une borne aurait contredit sa classe de Landolt (indifférente) sans un relevé pour la porter. **Un relevé élargit une borne ; seule une absence écrite la resserre.** Huit bornes de six fiches s'élargissent, aucune ne se resserre.
+
+### Une borne non sourcée peut porter le poids d'un défaut de forme
+
+#262 accusait la rampe, puis #277 l'optimum deviné. Les huit mètres de pin tenaient d'abord à sa borne basse 4,0 : l'USFS, qui décrit le pin introduit en Amérique du Nord, contredite par deux jeux européens (215 pineraies polonaises dont l'horizon A descend à pH eau 2,8, Sewerniak 2012 ; quatorze pineraies RENECOFOR jusqu'à 3,65). À 2,8, le genou du pin passe sous le plancher du sol. **Avant de corriger une forme, vérifier les nombres qu'elle lit.**
+
+### Un facteur ne pèse que là où il est le minimum
+
+Le facteur de pH du pin passe de 0,76 à 1,00 sur la lande et de 0,34 à 1,00 sur le limon acidifié de `ph-survie`. Sur la lande, le pin gagne **0,8 %** à quarante ans ; sur le limon, **55 %** à cinquante. La prédiction disait +5 à +25 % sur la lande : elle supposait que le pH y bridait le pin, alors que l'eau, l'azote et le phosphore y sont plus courts que lui (#395). **Avant de prédire l'effet d'un facteur, vérifier qu'il est le minimum sur le banc.**
+
+### La même correction montre l'autre face
+
+Une borne de présence lointaine, sous une rampe absolue de 0,7, met une calcifuge à plein régime sur un sol neutre : le chêne-liège (3,4-7,8, Serrasolses et al. 2009, qui dit aussi sa surface terrière plus faible sur les sols les moins acides) vaut 1,00 à pH 7,0. Le trapèze ne sait pas dire « présent mais rare ». C'est la part de #262 et #278 que #279 ne règle pas, et elle est maintenant chiffrée au lieu d'être masquée par une borne fausse.
+
+### Une base de données relaie, elle ne garantit pas
+
+L'*Ecological Flora Database* donne pour chaque espèce un pH extrême et typique, chacun avec sa référence. Ouverte champ par champ : des communications personnelles et des données non publiées (callune, ronce), des plages de culture de la FAO (hêtre, pin, frêne), une erreur de saisie (un fusain de calcaire plafonné à pH 4,77), et quelques relevés publiés (aubépine, houx, arbousier). **Une base est une source pour ce qu'elle dit tenir d'ailleurs, et seulement pour ça.** C'est la règle de l'audit de #279 pour les citations entre guillemets, à l'échelle d'une base.
+
+### Une classe d'indicateur porte un nombre quand sa source le donne
+
+La valeur R d'Ellenberg n'a pas de pH ; celle de Landolt et al. 2010 en a un par classe (R 3 : 4,5 à 7,5). Quatre fiches sans source tombent exactement, deux bornes à la fois, sur leur classe de Landolt (l'aulne d'avant ce lot, 4,5-7,5 ; l'aubépine d'avant et le fusain, 5,5-8,5 ; l'ajonc, 3,5-6,5) : c'est sans doute de là qu'elles venaient. Mais une classe ne remplace pas une borne qu'elle contredit : sous la rampe actuelle, une espèce de classe 3 vaudrait 0,76 à pH 7, au milieu de sa propre classe.
+
+### Le plancher de 4,1 est près du terrain pour l'épaisseur que le moteur tient
+
+#172 comparait le plancher aux podzols « à 3,5-4,0, humus mor compris ». Sur 0-20 cm, les cent placettes RENECOFOR descendent à 3,86, et 4 à 9 % seulement passent sous 4,1 ; c'est l'humus et les dix premiers centimètres qui vont plus bas. **Comparer une borne du moteur à la couche que le moteur représente**, pas à la plus parlante.
+
+### Ce que ça donne
+
+Dispositif de `hauteurs-commun.ts`, graines 17, 43 et 71, moyenne des survivants. Sans voisinage, une course ne lit que le facteur de pH de l'espèce plantée ; là où il ne bouge pas, elle est identique au bit près.
+
+| station (pH), espèce | facteur main → soigné | main, 40 ans | soigné, 40 ans | bande sourcée |
+|---|---|---|---|---|
+| sable profond (4,8), pin | 1,00 → 1,00 | 16,21 · 15,28 · 14,64 | 16,24 · 15,29 · 14,67 (identique à 30 ans) | Jansen GK 8 : 13,2-17,8 |
+| lande (4,5), pin | 0,76 → 1,00 | 11,57 · 10,82 · 11,70 | 11,65 · 10,91 · 11,82 | aucune |
+| Sologne (5,0), châtaignier | 1,00 → 1,00 | 20,51 · 18,99 · 19,51 (25 ans : 13,50 de moyenne) | identique | Lemaire 2005 : 8,5-21 à 25 ans |
+| suberaie (5,2), chêne-liège | 1,00 → 1,00 | 13,87 · 13,04 · 13,48 | identique | Sánchez-González 2010 : 5,0 à ~11 |
+| limon acide de l'essai (5,2), châtaignier | 1,00 → 1,00 | 20,26 · 18,67 · 19,21 | identique | 18,7 ± 15 % |
+| limon acidifié de `ph-survie` (4,2), mélange, 50 ans | pin 0,34 → 1,00 | pin 8,40 · 7,21 · 6,93 ; charme 0,97 · 0,95 · 0,92 | pin 12,85 · 11,15 · 10,92 ; charme 0,97 · 0,95 · 0,91 | pin > 5 m, charme < 2 m |
+
+La suite complète passe sur l'atlas soigné, une fois `message-ph.test.ts` réécrit (il épinglait la gamme [4, 7,5] du pin). Le chêne-liège dépasse de 22 % le haut de sa bande sourcée, sur main comme sur la branche, à facteur de pH 1,00 : ce n'est pas le pH.
+
+### Les prédictions fausses
+
+- M3 : le pin de la lande sur main, 3 à 10 m à quarante ans et une graine amputée ; 11,36 m, aucune.
+- M4 : le chêne-liège de la suberaie sur main, 5 à 10 m ; 13,46.
+- S3 : le pin de la lande gagnerait 5 à 25 % avec son facteur de pH rendu ; +0,8 %.
+- S7 : le pin du mélange de `ph-survie` gagnerait 10 à 40 % ; +53 à +58 %.
+
+### Ce qui reste ouvert
+
+- **#262 et #278** : la recommandation est l'option C, un trait `optimumPh` sourcé qui devient le plateau, et des flancs tirés de ce plateau jusqu'aux bornes de présence, sans rampe absolue. À mesurer d'abord sur la suite complète (36 fichiers citent le pin et le limon riche).
+- **#172** : garder 4,1 (option A) ; la branche aluminium, avec sa toxicité, est le vrai manque.
+- **Trente-deux bornes sur cinquante-quatre restent *(à confirmer)***, dont celles du bouleau, du frêne, du noisetier et du charme, et les quatre herbacées (`herbacees.ts`) n'ont pas été reprises.
+- **Le pH de `SABLE_PROFOND`** (4,8, relevé pour franchir le genou du pin) n'a plus de raison d'être ; le redescendre au pH de terrain est une option de #262, à mesurer.
+- **Le chêne-liège** est au-dessus de sa bande à quarante ans : son calage sur la suberaie reste à faire.
+
 ## Ce qu'un lot précédent a appris (les essais qui frôlent leur délai, #378 et #423)
 
 Lot de maintenance des essais : aucune ligne du moteur, aucune borne, aucun critère ni aucune graine ne change. Huit essais tournaient en CI à moins de 1,5 fois leur délai, et deux étaient déjà tombés dessus sans une assertion fausse : `bois-en-travers` sur main (187 s pour 180), le brin dominé de `ph-survie` sur trois PR (jusqu'à 212 s). Les prédictions et les mesures sont dans les commits de la branche, avant chaque course.
