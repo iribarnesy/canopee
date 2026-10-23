@@ -883,24 +883,34 @@ export function cuireMorceau(
   const sous = sousDivisions(demiLargeur * 2 * pas);
   const finesse = pas / sous;
 
-  // ── **Le fond d'un seul tenant**, sous les quads (#362) ─────────────────────
+  // ── **Le fond, sous les quads** (#362, #450) ─────────────────────────────
   // Deux quads voisins remplis séparément laissent, à chaque sommet partagé,
   // un demi-pixel d'antialiasing par où passait le fond de page, clair : la
   // parcelle sortait parcourue de pointillés pâles, alignés en diagonales — la
   // grille de calcul lue à l'écran. Le trait de même couleur qui devait les
-  // fermer en ajoutait d'autres, dans l'ordre du peintre. Le fond est donc tracé
-  // d'abord, **un seul chemin** pour toute la surface du morceau, dans la teinte
-  // du champ au centre : la règle de remplissage fond les losanges en une nappe
-  // sans arête intérieure (la même astuce que l'eau libre, plus bas), et ce
-  // qu'un interstice laisse voir est un sol de la même couleur.
-  {
-    const fond = lireChamp(champ, (x0 + xFin) / 2, (y0 + yFin) / 2).teinte;
-    ctx.fillStyle = versCss(fond);
+  // fermer en ajoutait d'autres, dans l'ordre du peintre. Un fond est donc
+  // tracé d'abord, sous **tous** les quads : ce qu'un interstice laisse voir
+  // est un sol, pas la page.
+  //
+  // **Un fond par pavé, et non un seul pour le morceau** (#450). Il était d'une
+  // seule teinte, celle du centre du morceau, et c'est cette teinte que
+  // chaque interstice montrait : tant que le morceau était uniforme, rien ne
+  // se voyait ; sur une fauche ou un labour au milieu d'un pré vert, la tache
+  // sombre sortait quadrillée de vert pâle, et le trait de débordement posait
+  // le vert du centre en diagonale sur le bord du voisin. Chaque pavé a
+  // maintenant son fond, dans **sa** teinte : un seul chemin pour ses quads (la
+  // règle de remplissage les fond sans arête), et son trait recouvre le bord
+  // des pavés voisins. Ce qu'un interstice laisse voir est le sol d'à côté, à
+  // la nuance de grain près.
+  for (const { x, y } of paves) {
+    const largeurPave = Math.min(pas, xFin - x);
+    const hauteurPave = Math.min(pas, yFin - y);
+    ctx.fillStyle = versCss(lireChamp(champ, x + largeurPave / 2, y + hauteurPave / 2).teinte);
     ctx.beginPath();
-    for (let qy = y0; qy < yFin; qy += finesse) {
-      for (let qx = x0; qx < xFin; qx += finesse) {
-        const ql = Math.min(finesse, xFin - qx);
-        const qh = Math.min(finesse, yFin - qy);
+    for (let qy = y; qy < y + hauteurPave; qy += finesse) {
+      for (let qx = x; qx < x + largeurPave; qx += finesse) {
+        const ql = Math.min(finesse, x + largeurPave - qx);
+        const qh = Math.min(finesse, y + hauteurPave - qy);
         const coins = [
           [qx, qy],
           [qx + ql, qy],
@@ -917,9 +927,11 @@ export function cuireMorceau(
     }
     ctx.fill();
     // **Le trait du fond déborde d'un demi-pixel**, et c'est voulu : dedans, les
-    // quads le recouvrent ; dehors, il recouvre le bord du morceau voisin. Sans
-    // lui, chaque morceau s'arrêtait sur un demi-pixel d'antialiasing et la
-    // parcelle se lisait en damier de seize mètres, par des liserés clairs.
+    // quads le recouvrent ; dehors, il recouvre le bord du pavé voisin, ou du
+    // morceau voisin. Sans lui, chaque morceau s'arrêtait sur un demi-pixel
+    // d'antialiasing et la parcelle se lisait en damier de seize mètres, par
+    // des liserés clairs. Dans la teinte du pavé qui déborde, et non plus du
+    // centre du morceau : le liseré a la couleur du sol qu'il borde.
     ctx.strokeStyle = ctx.fillStyle;
     ctx.lineWidth = 1.5;
     ctx.stroke();

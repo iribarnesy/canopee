@@ -116,10 +116,11 @@ function vue(): Vue {
 }
 
 /**
- * Le fond d'un seul tenant tracé sous les quads (#362) : un remplissage de
- * plus par morceau, quel que soit le pavage.
+ * Le fond tracé sous les quads (#362) : un remplissage de plus **par pavé**,
+ * dans la teinte du pavé (#450). Il était d'un seul tenant pour le morceau, et
+ * sa teinte unique quadrillait une fauche au milieu d'un pré.
  */
-const FOND = 1;
+const FOND_PAR_PAVE = 1;
 
 describe("le découpage en morceaux", () => {
   it("couvre la parcelle, bord compris, même si le côté n'est pas un multiple", () => {
@@ -221,7 +222,7 @@ describe("le pavage : le niveau de détail du SOL", () => {
     const pas = cotePavage(0.25);
     const pavesParCote = COTE_MORCEAU_M / pas;
     const sous = sousDivisions(TUILE_LARGEUR_PX * 0.25 * pas);
-    expect(bouchon.compte.remplissages).toBe(pavesParCote ** 2 * sous ** 2 + FOND);
+    expect(bouchon.compte.remplissages).toBe(pavesParCote ** 2 * (sous ** 2 + FOND_PAR_PAVE));
     // Quatre échantillons de 8 m, mais bien plus de formes dessinées : c'est
     // exactement ce qu'on veut.
     expect(pavesParCote ** 2).toBe(4);
@@ -264,7 +265,7 @@ describe("la cuisson", () => {
     const pas = cotePavage(v.cam.zoom);
     const sous = sousDivisions(TUILE_LARGEUR_PX * v.cam.zoom * pas);
     const paves = (COTE_MORCEAU_M / pas) ** 2;
-    expect(compte.remplissages).toBe(paves * sous ** 2 + FOND);
+    expect(compte.remplissages).toBe(paves * (sous ** 2 + FOND_PAR_PAVE));
   });
 
   it("n'ourle PAS une pente régulière, si raide soit-elle", () => {
@@ -284,7 +285,7 @@ describe("la cuisson", () => {
     // Une pente à 50 cm par mètre — raide, et pourtant régulière.
     const altitudesM = new Array(COTE * COTE).fill(0).map((_, i) => -Math.floor(i / COTE) * 0.5);
     cuireMorceau(solPlat({ altitudesM }), 1, 1, 20, v, fabriquer);
-    expect(compte.remplissages).toBe(paves * sous ** 2 + FOND);
+    expect(compte.remplissages).toBe(paves * (sous ** 2 + FOND_PAR_PAVE));
   });
 
   it("ourle en revanche une VRAIE rupture, où il y a une paroi à montrer", () => {
@@ -298,7 +299,7 @@ describe("la cuisson", () => {
       .fill(0)
       .map((_, i) => (Math.floor(i / COTE) >= 24 ? -3 : 0));
     cuireMorceau(solPlat({ altitudesM }), 1, 1, 20, v, fabriquer);
-    expect(compte.remplissages).toBeGreaterThan(paves * sous ** 2 + FOND);
+    expect(compte.remplissages).toBeGreaterThan(paves * (sous ** 2 + FOND_PAR_PAVE));
   });
 
   it("ne trace aucun liseré VISIBLE sur le sol, à aucun zoom", () => {
