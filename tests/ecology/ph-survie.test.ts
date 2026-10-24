@@ -137,11 +137,18 @@ describe("le pH distingue enfin pousser mal et mourir", () => {
     // n'étant calée hors de sa gamme — le pin sylvestre est à pH 4,8 dans 2,8–7,5,
     // le châtaignier sur le limon acide où il vaut 1 — aucune table ne **peut**
     // bouger. Si cet essai tombe, c'est la calibration entière qui est en jeu.
+    //
+    // **Réécrit en #278, et signalé** : la courbe de croissance d'une fiche
+    // inclut maintenant son plateau d'optimum quand elle en déclare un
+    // (`optimumPh`). L'essai comparait `phFactor` à `facteurGammePh` sans ce
+    // plateau et tombait sur les trois fiches qui en ont un, sans qu'aucune
+    // queue soit en cause. Le critère reste le même : dans l'amplitude, la queue
+    // de survie ne change pas un iota à la courbe de croissance.
     const ecarts: string[] = [];
     for (const e of ESPECES_V0) {
       const [min, max] = e.ph;
       for (let ph = min; ph <= max + 1e-9; ph += 0.05) {
-        const avant = facteurGammePh(e.ph, ph);
+        const avant = facteurGammePh(e.ph, ph, e.optimumPh);
         const apres = phFactor(e, ph);
         if (Math.abs(avant - apres) > 1e-12) {
           ecarts.push(`${e.nom} à pH ${ph.toFixed(2)} : ${avant} → ${apres}`);
