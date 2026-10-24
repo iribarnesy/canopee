@@ -46,6 +46,15 @@ if grep -rnE "writeFileSync|appendFileSync|/tmp/" tests; then
   fail=1
 fi
 
+# Les **réglages d'essai** du tick (`ReglagesDEssai`, tick.ts) ne sont pas des
+# règles : un départ de feu imposé sert aux essais et au laboratoire, et le jeu
+# ne doit pas pouvoir y toucher (#379). Hors du moteur et du laboratoire, aucun
+# code ne les nomme, et le protocole du worker ne les porte pas.
+if grep -rlE "ReglagesDEssai|departDeFeuImpose" src --include='*.ts' --include='*.tsx' | grep -vE "^src/(engine|lab)/"; then
+  echo "ERREUR : les réglages d'essai du tick sont réservés aux essais et au laboratoire." >&2
+  fail=1
+fi
+
 if [ "$fail" -eq 0 ]; then
   echo "Frontières du moteur respectées."
 fi

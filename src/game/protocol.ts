@@ -375,6 +375,25 @@ export interface Snapshot {
    */
   soilBoisEnTravers: Float32Array;
   soilN: Float32Array;
+  /**
+   * Potassium **échangeable** par cellule, en teneur d'analyse de terre : mg K/kg
+   * de l'horizon de surface (#435). Multiplié par 1/`K_SUR_K2O` (≈ 1,2), c'est
+   * le mg K₂O/kg d'un bulletin de laboratoire français.
+   *
+   * Le stock du moteur (`soil.potassiumG`, g/m²) relu par sa propre conversion
+   * (`potassiumEchangeableGM2`, pk.ts) : la station déclare sa teneur dans
+   * cette unité depuis #395, et la carte du sol peut enfin la montrer comme une
+   * analyse — et montrer où une potasse a été épandue.
+   */
+  soilPotassiumMgKg: Float32Array;
+  /**
+   * Réserve de potassium **non échangeable**, moyenne de la parcelle, g/m²
+   * (`soil.potassiumReserveG`, #435). Coincée entre les feuillets des argiles,
+   * elle relargue quand les racines puisent : c'est elle qui paie quand le
+   * grain emporte plus que les apports ne rendent. Un scalaire et non une
+   * grille : elle se lit en une ligne.
+   */
+  potassiumReserveMoyenGM2: number;
   /** couverture herbacée par cellule ∈ [0,1] */
   soilHerbe: Float32Array;
   /**
@@ -655,6 +674,14 @@ export interface StationInfo {
    */
   epaisseurHorizonSurfaceCm: number;
   phInitial: number;
+  /**
+   * Potassium échangeable **déclaré** par la station, mg K/kg (#395) : la teneur
+   * d'analyse de terre qu'elle porte, sourcée station par station
+   * (`stations.ts`). C'est le point de départ de la parcelle, avant les années
+   * de vieillissement et avant le joueur ; la carte du sol le montre à côté de
+   * ce que la parcelle porte maintenant (#435).
+   */
+  potassiumEchangeableMgKg: number;
   meteoLabel: string;
   /** eau libre de la parcelle : l'UI la dessine (eau_surface.ts) */
   eau: EauDeSurface;
@@ -1006,8 +1033,16 @@ export type FromWorker =
   | { type: "facture"; facture: FactureHoraire }
   /** la consigne en vigueur, à chaque fois qu'elle change (y compris au rejeu) */
   | { type: "politiqueHoraire"; politique: PolitiqueHoraire }
-  /** la réponse à `prevoir` : les refus qu'aurait produits ce geste */
-  | { type: "prevision"; cle: string; refusals: ActionRefusal[] }
+  /**
+   * la réponse à `prevoir` : les refus qu'aurait produits ce geste — et, pour
+   * une moisson acceptée, **le grain qu'elle emporterait** (`grainT`, tonnes).
+   *
+   * `grainT` est `grainRecoltableT` sur la zone visée, la somme même que
+   * `moissonner` vend (#451). Le moteur ne publie pas de fenêtre de moisson —
+   * il moissonne à toute date ce qui est sur pied —, et c'est donc la seule
+   * chose honnête à dire avant le clic : ce qu'il y a là, maintenant.
+   */
+  | { type: "prevision"; cle: string; refusals: ActionRefusal[]; grainT?: number }
   /**
    * **où en est la relecture** (#128).
    *

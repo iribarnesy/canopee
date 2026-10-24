@@ -1,6 +1,21 @@
 import { useMemo } from "react";
+import type { ActionRefusal } from "../../engine/actions";
 import { getEspece } from "../../engine/especes";
 import { aireM2DeLaZone, type Zone } from "../../engine/zone";
+import {
+  auMoinsUnKilo,
+  CULTURES,
+  cultureDuMoteur,
+  fenetreDeSemisDite,
+  type GesteDuChamp,
+  grainLu,
+  LABOUR_EXPLIQUE,
+  MOISSON_EXPLIQUEE,
+  moissonExpliquee,
+  semaineDite,
+  semisExplique,
+} from "../cultures";
+import { DOSE_MIN, ENGRAIS, FORMES_ENGRAIS } from "../fertilisation";
 import { auFilDuTexte, capitale, de } from "../mots";
 import type { Snapshot } from "../protocol";
 import type { GameApi } from "../useGame";
@@ -19,6 +34,10 @@ const LEGENDE_RAYON: Partial<Record<Mode, string>> = {
   boisMort: "les troncs tombés partent au chauffage — plus d'humus ni d'abri dessous",
   brf: "le broyat est épandu, l'azote va où on le porte",
   cloturer: "le disque est mis hors d'atteinte du gibier",
+  fertiliser: "la dose est épandue sur toute la zone",
+  labourer: "le sol est retourné, mis à nu",
+  semer: "la culture est semée sur la place libre",
+  moissonner: "le grain part en vente, la paille reste",
 };
 
 /**
@@ -101,12 +120,230 @@ function FormeDuChantier({ geste, legende }: { geste: ReglagesDeGeste; legende?:
   );
 }
 
+/**
+ * **Fertiliser** (#435) : la forme, puis la dose **dans l'unité de la forme**.
+ *
+ * Le moteur sait épandre de l'ammonitrate et du fumier depuis #140, de la
+ * potasse depuis #395, et aucun bouton ne le lui demandait. Trois formes qui ne
+ * font pas la même chose — c'est l'intérêt du geste —, donc trois boutons et
+ * une phrase qui dit ce que chacune fait, avant le clic.
+ *
+ * Le curseur s'arrête au plafond du moteur (`doseMax`, la constante même qu'il
+ * lit pour refuser) : on ne peut pas armer une dose qu'il refuserait. Et
+ * l'unité change avec la forme — kg N/ha pour l'azote, kg K₂O/ha pour la
+ * potasse —, chaque forme gardant sa propre dose (`reglages.ts`).
+ */
+function ChoixDeLEngrais({ geste }: { geste: ReglagesDeGeste }) {
+  const { formeEngrais, setFormeEngrais, dosesEngrais, setDoseEngrais } = geste;
+  const fiche = ENGRAIS[formeEngrais];
+  const dose = dosesEngrais[formeEngrais];
+  return (
+    <div style={{ marginTop: 6 }}>
+      {FORMES_ENGRAIS.map((forme) => (
+        <button
+          key={forme}
+          type="button"
+          style={btn(formeEngrais === forme)}
+          onClick={() => setFormeEngrais(forme)}
+          title={ENGRAIS[forme].explication}
+        >
+          {ENGRAIS[forme].icone} {ENGRAIS[forme].nom}
+        </button>
+      ))}
+      <div style={{ marginTop: 2 }}>
+        Dose{" "}
+        <input
+          type="range"
+          min={DOSE_MIN}
+          max={fiche.doseMax}
+          step={1}
+          value={dose}
+          onChange={(e) => setDoseEngrais(formeEngrais, Number(e.target.value))}
+          style={{ verticalAlign: "middle", width: 110 }}
+          aria-label={`Dose ${de(auFilDuTexte(fiche.nom))}, ${fiche.unite}`}
+        />{" "}
+        <strong style={{ fontVariantNumeric: "tabular-nums" }}>
+          {dose} {fiche.unite}
+        </strong>
+        <span style={{ color: "var(--encre-douce)", fontSize: 13 }}>
+          {" "}
+          · au plus {fiche.doseMax}
+        </span>
+      </div>
+      <div style={{ color: "var(--encre-douce)", fontSize: 13, margin: "2px 0 6px" }}>
+        {fiche.explication}
+      </div>
+      <FormeDuChantier geste={geste} legende={LEGENDE_RAYON.fertiliser ?? ""} />
+    </div>
+  );
+}
+
+/**
+ * La réponse du moteur au geste du champ qu'on vise (#451), telle que `prevoir`
+ * la rend : ses refus, et pour une moisson qui passerait, le grain qu'elle
+ * emporterait.
+ */
+export interface PreavisDuChamp {
+  refusals: readonly ActionRefusal[];
+  /** tonnes de grain sur pied dans la zone — seulement pour une moisson acceptée */
+  grainT?: number | undefined;
+}
+
+/** Une ligne d'explication, à l'encre douce, comme celles des autres gestes. */
+const EXPLICATION = { color: "var(--encre-douce)", fontSize: 13, margin: "2px 0 6px" } as const;
+
+/**
+ * **Ce que le moteur répond, avant le clic** (#451).
+ *
+ * Le panneau ne décide pas si l'on est « dans la saison » : la fenêtre de semis
+ * est une règle du moteur, la place libre aussi, et ce qu'il y a à moissonner
+ * se lit sur pied. Au survol, le moteur répond par `prevoir` pour la zone
+ * visée et la semaine ouverte, et c'est cette réponse qui s'écrit ici — sa
+ * raison mot pour mot quand il refuserait, le grain qu'il vendrait quand on
+ * moissonne.
+ */
+function CeQueRepondLeMoteur({
+  geste,
+  zoneVisee,
+  traceBande,
+  preavis,
+}: {
+  geste: GesteDuChamp;
+  zoneVisee: Zone | undefined;
+  traceBande: boolean;
+  preavis: PreavisDuChamp | undefined;
+}) {
+  const ligne = { fontSize: 13, marginTop: 4 } as const;
+  if (!zoneVisee) {
+    return (
+      <div style={{ ...ligne, color: "var(--encre-douce)" }}>
+        {traceBande ? "Tracez la bande" : "Survolez la parcelle"} : le moteur dira si le geste passe
+        là, cette semaine.
+      </div>
+    );
+  }
+  // La réponse arrive en quelques millisecondes ; rien plutôt qu'une ligne qui
+  // clignoterait à chaque cellule survolée.
+  if (!preavis) return null;
+  if (preavis.refusals.length > 0) {
+    return (
+      <div style={{ ...ligne, color: "#8a4b2d" }}>
+        ⚠ Ici, cette semaine, le moteur refuserait :{" "}
+        {preavis.refusals.map((r) => r.reason).join(" ; ")}.
+      </div>
+    );
+  }
+  if (geste === "moissonner" && preavis.grainT !== undefined) {
+    return (
+      <div style={{ ...ligne, color: "var(--foret)" }}>
+        {auMoinsUnKilo(preavis.grainT) ? (
+          <>
+            ✓ Ici, cette semaine : <strong>{grainLu(preavis.grainT)} de grain</strong> sur pied, que
+            la moisson vendrait.
+          </>
+        ) : (
+          <>
+            ✓ Le moteur moissonnerait ici, mais il n'y a <strong>pas un kilo de grain</strong> sur
+            pied : l'engin serait payé pour rien, et la culture quitterait le champ.
+          </>
+        )}
+      </div>
+    );
+  }
+  return (
+    <div style={{ ...ligne, color: "var(--foret)" }}>
+      ✓ Ici, cette semaine, le moteur l'accepterait.
+    </div>
+  );
+}
+
+/**
+ * **Labourer, semer, moissonner** (#451) : les trois gestes du champ.
+ *
+ * Le moteur sait faire pousser une culture depuis #136, et aucun bouton ne le
+ * lui demandait. Chacun dit **avant le clic** ce que le moteur en publie — le
+ * prix et ce que le labour coûte au sol, la fenêtre de semis et la place libre,
+ * la date de moisson de la fiche et le prix du grain — puis, au survol, ce que
+ * le moteur répondrait là (`CeQueRepondLeMoteur`). Disque ou bande, comme les
+ * autres gestes de zone : une parcelle d'essai de blé est une bande.
+ */
+function GesteDuChampArme({
+  geste,
+  reglages,
+  semaineAnnee,
+  zoneVisee,
+  preavis,
+}: {
+  geste: GesteDuChamp;
+  reglages: ReglagesDeGeste;
+  /** la semaine de l'année ouverte, 0 à 51 — celle que le moteur compare */
+  semaineAnnee: number;
+  zoneVisee: Zone | undefined;
+  preavis: PreavisDuChamp | undefined;
+}) {
+  const { cultureId, setCultureId, traceBande } = reglages;
+  const choisie = cultureDuMoteur(cultureId);
+  /** « Nous sommes en semaine 12, en mars » : de quoi comparer à la fenêtre. */
+  const maintenant = <>Nous sommes en {semaineDite(semaineAnnee)}.</>;
+  return (
+    <div style={{ marginTop: 6 }}>
+      {geste === "labourer" && <div style={EXPLICATION}>{LABOUR_EXPLIQUE}</div>}
+      {geste === "semer" && (
+        <>
+          {/*
+            Les cultures du moteur, dans son ordre — aujourd'hui le seul blé
+            tendre d'hiver. Aucune liste tenue ici : le jour où il apprend
+            l'orge, le bouton apparaît.
+          */}
+          {CULTURES.length === 0 ? (
+            <div style={EXPLICATION}>Le moteur ne connaît aucune culture à semer.</div>
+          ) : (
+            CULTURES.map((c) => (
+              <button
+                key={c.id}
+                type="button"
+                style={btn(cultureId === c.id)}
+                onClick={() => setCultureId(c.id)}
+                title={c.nomLatin}
+              >
+                🌱 {c.nom}
+              </button>
+            ))
+          )}
+          {choisie && (
+            <div style={EXPLICATION}>
+              <strong>Fenêtre de semis</strong> du moteur : {fenetreDeSemisDite(choisie)}.{" "}
+              {maintenant} {semisExplique(choisie)}
+            </div>
+          )}
+        </>
+      )}
+      {geste === "moissonner" && (
+        <div style={EXPLICATION}>
+          {CULTURES.map((c) => (
+            <div key={c.id}>{moissonExpliquee(c)}</div>
+          ))}
+          {maintenant} {MOISSON_EXPLIQUEE}
+        </div>
+      )}
+      <FormeDuChantier geste={reglages} legende={LEGENDE_RAYON[geste] ?? ""} />
+      <CeQueRepondLeMoteur
+        geste={geste}
+        zoneVisee={zoneVisee}
+        traceBande={traceBande}
+        preavis={preavis}
+      />
+    </div>
+  );
+}
+
 export function PanneauAction({
   game,
   snapshot,
   geste,
   surChoisirEssence,
   zoneVisee,
+  preavis,
 }: {
   game: GameApi;
   snapshot: Snapshot;
@@ -126,6 +363,12 @@ export function PanneauAction({
    * qui les donne.
    */
   zoneVisee?: Zone | undefined;
+  /**
+   * Ce que le moteur répond au geste du champ armé, sur la zone visée (#451) :
+   * `prevoir`, plus le grain sur pied pour une moisson. Absent tant qu'on ne
+   * vise rien ou que la réponse n'est pas arrivée.
+   */
+  preavis?: PreavisDuChamp | undefined;
 }) {
   const {
     mode,
@@ -186,6 +429,43 @@ export function PanneauAction({
       </button>
       <button type="button" style={btn(mode === "chauler")} onClick={() => setMode("chauler")}>
         Chauler
+      </button>
+      <button
+        type="button"
+        style={btn(mode === "fertiliser")}
+        onClick={() => setMode("fertiliser")}
+        title="Épandre de l'ammonitrate, du fumier ou de la potasse sur une zone"
+      >
+        🧪 Fertiliser
+      </button>
+      {/*
+        **Les gestes du champ** (#451), dans l'ordre où on les fait : préparer le
+        lit, semer, récolter. Rangés après la fertilisation, avec laquelle ils
+        font les dispositifs des essais du blé.
+      */}
+      <button
+        type="button"
+        style={btn(mode === "labourer")}
+        onClick={() => setMode("labourer")}
+        title="Retourner le sol d'une zone : un lit de semence, au prix de l'humus et des mycorhizes"
+      >
+        🚜 Labourer
+      </button>
+      <button
+        type="button"
+        style={btn(mode === "semer")}
+        onClick={() => setMode("semer")}
+        title="Semer une culture sur la place libre d'une zone, dans sa fenêtre de semis"
+      >
+        🌱 Semer
+      </button>
+      <button
+        type="button"
+        style={btn(mode === "moissonner")}
+        onClick={() => setMode("moissonner")}
+        title="Moissonner une zone : le grain sur pied part en vente, la paille reste au champ"
+      >
+        🌾 Moissonner
       </button>
       <button
         type="button"
@@ -311,6 +591,18 @@ export function PanneauAction({
             Clic sur la parcelle = 1 plant (1 h, espacement ≥ 1 m).
           </div>
         </div>
+      )}
+
+      {mode === "fertiliser" && <ChoixDeLEngrais geste={geste} />}
+
+      {(mode === "labourer" || mode === "semer" || mode === "moissonner") && (
+        <GesteDuChampArme
+          geste={mode}
+          reglages={geste}
+          semaineAnnee={snapshot.week % 52}
+          zoneVisee={zoneVisee}
+          preavis={preavis}
+        />
       )}
 
       {mode === "eclaircir" && (

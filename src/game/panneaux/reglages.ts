@@ -7,6 +7,8 @@
  */
 
 import { useState } from "react";
+import { CULTURE_PAR_DEFAUT, type GesteDuChamp } from "../cultures";
+import { bornerLaDose, ENGRAIS, type FormeEngrais } from "../fertilisation";
 
 export type Mode =
   | "selection"
@@ -16,7 +18,10 @@ export type Mode =
   | "boisMort"
   | "eclaircir"
   | "brf"
-  | "cloturer";
+  | "cloturer"
+  | "fertiliser"
+  // Labourer, semer, moissonner : les trois gestes du champ (#451).
+  | GesteDuChamp;
 
 /**
  * Comment l'éclaircie choisit ses tiges — les trois critères du moteur.
@@ -69,6 +74,26 @@ export interface ReglagesDeGeste {
   setEspeceEclaircie: (id: string) => void;
   mainOuvertePanneau: boolean;
   setMainOuvertePanneau: (v: boolean) => void;
+  /** La forme d'engrais que le geste « Fertiliser » épand (#435). */
+  formeEngrais: FormeEngrais;
+  setFormeEngrais: (f: FormeEngrais) => void;
+  /**
+   * La dose de **chaque** forme, dans son unité (#435).
+   *
+   * Une par forme et non une seule : l'ammonitrate et le fumier se dosent en
+   * kg N/ha, la potasse en kg K₂O/ha. Garder un seul nombre aurait fait passer
+   * 170 kg N/ha de fumier en 170 kg K₂O/ha de potasse au changement de forme —
+   * plus de trois fois la dose proposée.
+   */
+  dosesEngrais: Readonly<Record<FormeEngrais, number>>;
+  /** Règle la dose d'une forme, ramenée dans ce que le moteur accepte. */
+  setDoseEngrais: (forme: FormeEngrais, dose: number) => void;
+  /**
+   * La culture que le geste « Semer » pose (#451) : un identifiant du catalogue
+   * du moteur (`CULTURES`), que `semer` reçoit tel quel en `cultureId`.
+   */
+  cultureId: string;
+  setCultureId: (id: string) => void;
   /** Le choix des essences est-il réduit à ce qui tient sur ce terrain ? */
   seulementTenables: boolean;
   setSeulementTenables: (v: boolean) => void;
@@ -89,6 +114,20 @@ export function useReglagesDeGeste(): ReglagesDeGeste {
   const [critereEclaircie, setCritereEclaircie] = useState<CritereEclaircie>("parLeBas");
   const [especeEclaircie, setEspeceEclaircie] = useState("");
   const [mainOuvertePanneau, setMainOuvertePanneau] = useState(false);
+  // L'ammonitrate d'abord, dans l'ordre des boutons. Armer le geste n'épand
+  // rien : c'est le clic sur la parcelle qui décide, comme pour le chaulage.
+  // Chaque forme part de sa dose sourcée (`fertilisation.ts`).
+  const [formeEngrais, setFormeEngrais] = useState<FormeEngrais>("mineral");
+  const [dosesEngrais, setDosesEngrais] = useState<Readonly<Record<FormeEngrais, number>>>(() => ({
+    mineral: ENGRAIS.mineral.doseParDefaut,
+    fumier: ENGRAIS.fumier.doseParDefaut,
+    potasse: ENGRAIS.potasse.doseParDefaut,
+  }));
+  const setDoseEngrais = (forme: FormeEngrais, dose: number) =>
+    setDosesEngrais((avant) => ({ ...avant, [forme]: bornerLaDose(forme, dose) }));
+  // La première culture du moteur — aujourd'hui la seule, le blé tendre
+  // d'hiver. Armer « Semer » ne sème rien : c'est le clic qui décide.
+  const [cultureId, setCultureId] = useState(CULTURE_PAR_DEFAUT);
   // Vrai au départ : sur une lande sèche, la moitié de la liste n'a aucun sens,
   // et c'est le filtre qui fait le gain de cette interface.
   const [seulementTenables, setSeulementTenables] = useState(true);
@@ -115,6 +154,12 @@ export function useReglagesDeGeste(): ReglagesDeGeste {
     setEspeceEclaircie,
     mainOuvertePanneau,
     setMainOuvertePanneau,
+    formeEngrais,
+    setFormeEngrais,
+    dosesEngrais,
+    setDoseEngrais,
+    cultureId,
+    setCultureId,
     seulementTenables,
     setSeulementTenables,
   };

@@ -22,6 +22,7 @@ import {
   type Calque,
   couleurDeLaCellule,
   enCss,
+  enK2O,
   etendueDuCalque,
   type FicheDeCalque,
   ficheDuCalque,
@@ -300,6 +301,16 @@ export function CarteDuSol({
     () => etendueDuCalque(fiche, snapshot, station, cellules),
     [fiche, snapshot, station, cellules],
   );
+  /**
+   * Le potassium de la parcelle, **quel que soit le calque affiché** (#435) : la
+   * ligne « Potassium » du diagnostic le lit toujours, et par la même fiche que
+   * la carte — même grille, même eau libre écartée —, pour que la moyenne
+   * écrite sous la carte soit celle que le calque montre.
+   */
+  const potassium = useMemo(
+    () => etendueDuCalque(ficheDuCalque("potassium"), snapshot, station, cellules),
+    [snapshot, station, cellules],
+  );
 
   // La plage de pH de l'essence choisie vient du catalogue du moteur ; on ne
   // la reconstitue pas, on la lit (docs/agents/jeu.md).
@@ -409,9 +420,17 @@ export function CarteDuSol({
                 eau libre
               </>
             ) : (
-              <strong>
-                {fiche.format(valeurSurvolee)} {fiche.unite}
-              </strong>
+              <>
+                <strong>
+                  {fiche.format(valeurSurvolee)} {fiche.unite}
+                </strong>
+                {fiche.auBulletin && (
+                  <span>
+                    {" "}
+                    · {fiche.auBulletin.format(valeurSurvolee)} {fiche.auBulletin.unite} au bulletin
+                  </span>
+                )}
+              </>
             )}
             <span style={{ color: "var(--encre-douce)" }}>
               {" "}
@@ -423,7 +442,10 @@ export function CarteDuSol({
             <span style={{ color: "var(--encre-douce)" }}>
               Sur la parcelle : de <strong>{fiche.format(etendue.bas)}</strong> à{" "}
               <strong>{fiche.format(etendue.haut)}</strong> {fiche.unite} · moyenne{" "}
-              {fiche.format(etendue.moyenne)} — survolez la carte pour lire une cellule
+              {fiche.format(etendue.moyenne)}
+              {fiche.auBulletin &&
+                ` (${fiche.auBulletin.format(etendue.moyenne)} ${fiche.auBulletin.unite} au bulletin)`}{" "}
+              — survolez la carte pour lire une cellule
             </span>
           )
         )}
@@ -440,10 +462,33 @@ export function CarteDuSol({
       <dl className="stats" style={{ marginTop: 12 }}>
         <dt>Sol</dt>
         <dd>
-          P {(snapshot.fluxes.phosphoreMoyenGM2 * 10).toFixed(1)} · K{" "}
-          {(snapshot.fluxes.potassiumMoyenGM2 * 10).toFixed(0)} kg/ha assimilables · mycorhizes{" "}
+          P {(snapshot.fluxes.phosphoreMoyenGM2 * 10).toFixed(1)} kg/ha assimilables · mycorhizes{" "}
           {(snapshot.fluxes.mycorhizesMoyen * 100).toFixed(0)} %
         </dd>
+        {/*
+          LE POTASSIUM, COMME UNE ANALYSE DE TERRE (#435). Il se lisait en
+          « kg/ha assimilables » : un stock moyen à l'hectare, qu'aucune
+          analyse ne permet de comparer. Une analyse donne une teneur, et c'est
+          dans cette unité que la station la déclare depuis #395 — la ligne
+          met donc côte à côte ce que porte la parcelle et ce que la station
+          déclarait. La réserve dit ce qui reste derrière, quand le grain
+          emporte plus que la potasse ne rend.
+        */}
+        {potassium && (
+          <>
+            <dt>Potassium</dt>
+            <dd>
+              <strong>{potassium.moyenne.toFixed(0)} mg K/kg</strong> échangeables, soit{" "}
+              {enK2O(potassium.moyenne).toFixed(0)} mg K₂O/kg au bulletin d'analyse
+              <span className="detail">
+                {" "}
+                · la station en déclarait {station.potassiumEchangeableMgKg.toFixed(0)} · réserve
+                non échangeable {(snapshot.potassiumReserveMoyenGM2 * 10).toFixed(0)} kg K/ha —
+                c'est elle qui paie quand le grain emporte plus que la potasse ne rend
+              </span>
+            </dd>
+          </>
+        )}
         <dt>Nappe</dt>
         <dd>
           à {(snapshot.fluxes.nappeProfondeurCm / 100).toFixed(2)} m sous la surface

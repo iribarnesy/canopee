@@ -61,7 +61,78 @@ qu'un rapport (voir la note de maintenance).
 Séparer calibration et validation : caler un paramètre sur un âge, garder
 l'autre âge pour vérifier.
 
-## Ce que le dernier lot a appris (les bornes de pH de l'atlas, #279 ; instruction de #262, #278 et #172)
+## Ce que le dernier lot a appris (le départ de feu imposé, #379)
+
+Décision du propriétaire sur l'instruction de #379 : l'essai du feu des chandelles ne pouvait pas tenir sur trois graines par son décor (0,085 départ attendu en cinq ans), et il fallait soit balayer les graines, soit imposer le départ. Le départ imposé est retenu. Les prédictions et les mesures sont dans les commits de la branche `claude/v06-feu-impose`, avant chaque course.
+
+### Un réglage d'essai remplace l'issue d'un tirage, pas le tirage
+
+`ReglagesDEssai.departDeFeuImpose` donne une semaine et une cellule. Le tirage du départ a lieu comme d'habitude, et seule son issue est remplacée : la cellule d'origine. La propagation, la combustion et leurs tirages sont ceux du moteur. Le flux aléatoire ne peut donc pas bouger tant que le réglage ne s'applique pas, et c'est vérifié à l'octet : quatre parties (les chandelles sur trois graines, cinq ans, dont le feu naturel de la graine 5 ; un limon planté, deux ans) rendent la même empreinte de l'état sérialisé, chaque semaine, sur main et sur la branche. `determinism.test.ts` le garde : un réglage pour une semaine jamais atteinte laisse la partie identique. **Un crochet d'essai qui sauterait le tirage aurait décalé tout ce qui suit**, et l'essai aurait mesuré une autre partie que celle du jeu.
+
+### Ce qui ne doit pas atteindre le jeu se garde par un script
+
+Le protocole du worker ne porte pas le réglage, et `check:boundaries` refuse toute mention de `ReglagesDEssai` ou de `departDeFeuImpose` hors de `src/engine` et de `src/lab`. La règle a été éprouvée en posant un fichier sonde dans `src/game` : la vérification tombe. **Une convention qu'aucun script ne vérifie finit par être franchie** ; celle-ci tient en une ligne.
+
+### Ce que ça donne
+
+- L'essai « un incendie qui emporte des chandelles » tourne sur les graines 1, 2 et 5, critères et bornes inchangés. Relevé sur les graines 1 à 12 : toutes brûlent 2 496 à 2 500 cellules et emportent les 120 chandelles, le résidu carbone reste à 7e-10. Chaque graine coûte ce que coûtait l'essai (16 s en local).
+- Le format ne bouge pas (14) : le réglage n'est pas dans l'état.
+
+### Les prédictions
+
+Toutes justes : l'identité à l'octet sans le réglage (P1), douze graines sur douze qui brûlent au moins 2 400 cellules et emportent les 120 chandelles (P2), la graine 5 identique à son feu naturel (P3), un coût multiplié par trois (P4).
+
+### Ce qui reste ouvert
+
+- Le réglage ne sert qu'au feu. Le laboratoire pourrait s'en servir (une expérience « un feu sur commande ») ; rien ne l'y oblige.
+- #449 (v0.7) : publier l'azote que le feu volatilise. Un cas de la propriété du tick avec un feu imposé le vérifierait.
+
+## Ce qu'un lot précédent a appris (la conservation de l'azote : l'ébranchage, #345, le minage, #347, et le bois posé, #379)
+
+Trois issues de maintenance, instruites sur main avec des sondes hors dépôt. Les prédictions et les mesures sont dans les commits de la branche `claude/v06-azote`, avant chaque course.
+
+### Un bilan du sol ne voit pas ce qu'un arbre perd sans le verser
+
+La propriété du tick ferme le côté sol : ce qui en sort, ce qui y entre, la variation du stock. Elle comptait la litière versée par une tempête et ignorait la moitié retirée à l'arbre sans aller nulle part. Sur un banc de cent pins de douze mètres, son résidu restait à 1e-11 pendant que 5 kg N/ha disparaissaient en une semaine. Le bilan du **système entier** (sol, strate, arbres) se ferme à 1e-11 quand rien ne fixe l'azote de l'air, et c'est lui qui voit la fuite : il tombe dès la première tempête sur le moteur d'avant. **Une propriété ratifie ce qu'elle ne compte pas** : avant d'en conclure qu'un mécanisme conserve, vérifier que le stock qu'il vide est dans le bilan.
+
+### Une correction écrite avant un changement de règle se relit quand la règle change
+
+L'ébranchage avait été corrigé une première fois parce qu'il **créait** de l'azote. La correction retirait à l'arbre ce qu'il versait, à une époque où une feuille rendait tout au sol. Puis #247 a fait résorber la moitié avant la chute, dans trois chemins sur quatre ; la tempête n'a pas suivi. Une seule fonction de chute (`feuillesQuiTombent`) sert maintenant les quatre, et la règle ne peut plus diverger. **Quand une règle change, chercher toutes ses copies** ; mieux, n'en laisser qu'une.
+
+### Une propriété qui tourne là où le mécanisme est fermé ne vérifie rien
+
+La propriété du tick ne tournait que sur deux mulls, où le minage ectomycorhizien ne s'ouvre pas, et son équation ne le comptait pas. Ajouter le sable profond ne suffisait pas : le peuplement mixte des autres cas y mine quelques millièmes de kg N/ha par an. Le cas nouveau pose des pins de douze mètres qui minent 18 kg N/ha en trois ans, et il garde ce chiffre : sans minage réel, il échoue. **Un cas de propriété porte une garde qui prouve que son mécanisme a tourné.**
+
+### Un essai qui attend un tirage rare ne se rend pas robuste par le décor
+
+L'essai du feu des chandelles brûle sur une graine sur douze. L'espérance de départs de feu, mesurée dans `departDeFeu`, vaut 0,085 en cinq ans sur sa lande : 8 % de chances de brûler. Neuf ans, juste avant que les chandelles de charme ne tombent, donnent 0,12 ; la série réelle de 2018 à 2022, 0,18. Le plafond du départ (0,015 par semaine) n'en laisse espérer que 4,7 en cinq ans, à risque maximal chaque semaine de saison, ce qu'aucune météo réelle ne donne. Il en faudrait 4 pour que trois graines brûlent à 95 %. **Mesurer l'espérance d'un événement avant de chercher un décor qui le rende sûr** : ici, aucun ne le peut sans balayer les graines ou imposer le départ, et c'est une décision du propriétaire (options sur #379).
+
+### Ce que ça donne
+
+- **#345** : la pinède exposée du banc du volis ne perd plus 85 à 138 kg N/ha en soixante ans. Ses dominants gagnent 0,3 à 1,4 %, la litière cumulée 53 à 117 kg N/ha ; rien ne change avant le premier ébranchage. Le pin du sable de `hauteurs.test.ts` passe de 15,75 à 15,84 m à quarante ans.
+- **#347** : la propriété du tick compte le minage, et son cas du sable profond vérifie aussi le système entier. Elle tombe sur le moteur d'avant #345.
+- **#379, point 2** : un arbre posé porte l'azote de son bois. La suite reste verte, l'essai du feu brûle à la même semaine, les hauteurs ne bougent pas. Trois essais qui le posaient à la main le lisent sur l'arbre.
+- Le format ne bouge pas (14) : les deux champs existaient.
+
+### Les prédictions fausses
+
+- P1 : une perte à l'ébranchage dès les premières années ; aucune semaine d'ébranchage en vingt ans, les pins n'y sont pas assez grands.
+- P1' : 0,03 à 0,5 kg N/ha/an et 0,05 à 0,5 par tempête ; 1,4 à 2,3 et 1,7 à 2,4. Une pinède fermée porte beaucoup d'azote dans ses aiguilles, et une tempête prend tout le peuplement à la fois.
+- P2 : 0,01 à 0,5 kg N/ha/sem d'écart sans le minage ; 3e-4 et 2e-3 sur les peuplements de jeunes plants, qui minent à peine.
+- P5 : la série réelle de Mont-de-Marsan multiplierait les départs de feu (0,2 à 3 en cinq ans) ; 0,08 et 0,18.
+- P6 : la réserve garderait 85 à 138 kg N/ha de plus ; elle est remobilisée chaque printemps, et c'est la litière cumulée qui monte, de 53 à 117 kg N/ha en soixante ans.
+
+Justes : le bilan du sol aveugle à #345 (P1b), aucune fuite du minage (P2), une seule graine qui brûle sur douze (P3, P7), 1 240 kg N/ha dans le bois des chandelles (P4), les hauteurs à moins de 1 % hors pin à quarante ans (P7), une suite qui reste verte (P6, P7).
+
+### Ce qui reste ouvert
+
+- **L'essai du feu des chandelles** (#379, point 1) : le propriétaire a retenu le départ imposé, fait au lot suivant.
+- **Une feuille arrachée verte ne résorbe rien.** La tempête suit maintenant le chemin d'un arbre vivant (moitié en réserve), comme son commentaire le voulait. Verser tout l'azote à la litière serait plus juste pour une feuille verte, mais `depositLitter` lit le carbone sur le C/N d'une feuille sénescente, donc le doublerait ; il faudrait lui donner le C/N de la feuille verte (le même défaut touche les feuilles d'un arbre qui meurt en été). Le propriétaire garde le chemin actuel : #448 (v0.7).
+- **Le feu volatilise l'azote sans flux publié** : la litière brûlée, l'aérien d'une chandelle. Une propriété avec feu ne fermerait pas le bilan du sol (#449).
+- **Le geste de plantation du jeu** pose ses plants sans l'azote de leur bois (un centième de gramme à trente centimètres), et `plantAt` pose sans les bases du bois (`basesBoisEq`), le même défaut pour le calcium (#449).
+- **La pluie de semis** apporte des aulnes, qui tirent leur azote de l'air sans flux publié : le bilan du système entier ne se ferme qu'en leur absence.
+
+## Ce qu'un lot précédent a appris (les bornes de pH de l'atlas, #279 ; instruction de #262, #278 et #172)
 
 Un lot de soin, puis une instruction. #279 est livré : chaque borne de pH de l'atlas porte sa source, sa grandeur et son horizon, ou *(à confirmer)*. #262, #278 et #172 sont des choix de modélisation : leurs options et la recommandation sont dans la PR (#441), rien n'en est codé. Les prédictions et les mesures sont dans les commits de la branche, avant chaque course. Le format de sauvegarde ne bouge pas (un trait d'atlas n'est pas sérialisé).
 
@@ -118,7 +189,7 @@ La suite complète passe sur l'atlas soigné, une fois `message-ph.test.ts` ré�
 ### Ce qui reste ouvert
 
 - **#262 et #278** : la recommandation est l'option C, un trait `optimumPh` sourcé qui devient le plateau, et des flancs tirés de ce plateau jusqu'aux bornes de présence, sans rampe absolue. À mesurer d'abord sur la suite complète (36 fichiers citent le pin et le limon riche).
-- **#172** : garder 4,1 (option A) ; la branche aluminium, avec sa toxicité, est le vrai manque.
+- **#172** : tranché, option A — le plancher de 4,1 est gardé et écrit avec sa source (`bases.ts`) ; la branche aluminium, avec sa toxicité, est le vrai manque (#443, v0.7).
 - **Trente-deux bornes sur cinquante-quatre restent *(à confirmer)***, dont celles du bouleau, du frêne, du noisetier et du charme, et les quatre herbacées (`herbacees.ts`) n'ont pas été reprises.
 - **Le pH de `SABLE_PROFOND`** (4,8, relevé pour franchir le genou du pin) n'a plus de raison d'être ; le redescendre au pH de terrain est une option de #262, à mesurer.
 - **Le chêne-liège** est au-dessus de sa bande à quarante ans : son calage sur la suberaie reste à faire.

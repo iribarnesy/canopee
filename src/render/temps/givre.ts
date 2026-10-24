@@ -56,13 +56,13 @@ export const VOILE_SOUS_LES_BRINS = 0.45;
  */
 export const VOILE_SANS_BRINS = 1;
 /**
- * **La hauteur d'un brin givré, m** (#357) — celle des touffes du tapis
- * (`terrain.ts`, une trentaine de centimètres).
+ * **La hauteur d'un brin givré, m, quand la scène ne porte pas celle du
+ * tapis** (#357) : le banc et ses scènes cuites.
  *
- * Le moteur ne publie pas la hauteur du tapis herbacé : il en donne la
- * couverture, la biomasse et l'humidité, pas la taille. C'est donc une
- * convention de dessin, la même pour toute la parcelle — mais en mètres, à
- * l'échelle des arbres, et un semis de 0,7 m dépasse franchement l'herbe gelée.
+ * C'était une convention de dessin pour toute la parcelle, faute de mieux : le
+ * moteur ne publiait pas la hauteur du tapis. Il la publie depuis #370
+ * (`soilHerbeHauteursCm`), et les brins prennent maintenant celle de leur
+ * cellule (`DonneesSol.herbeHauteurM`, #436).
  */
 export const HAUTEUR_DU_BRIN_GIVRE_M = 0.25;
 /**

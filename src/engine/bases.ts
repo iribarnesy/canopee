@@ -80,7 +80,25 @@ import { densiteApparente } from "./soil";
  * d'aluminium qui consomment les protons, le complexe n'a plus de bases à
  * céder, et une acidification supplémentaire ne fait presque plus bouger le
  * pH — elle libère de l'aluminium, ce qui est un autre problème (toxique pour
- * les racines) que ce fichier ne modélise pas.
+ * les racines) que ce fichier ne modélise pas. Le relais du tampon d'échange
+ * à celui de l'aluminium se fait vers 4,2 (Meiwes et al. 1986, d'après la
+ * compilation de Serrasolses et al. 2009, *Cork Oak Woodlands on the Edge*,
+ * tableau 8.1).
+ *
+ * **Confronté au terrain, et gardé** (#172). Le plancher porte sur l'horizon de
+ * surface que le moteur tient, épais de 20 à 35 cm selon la station ; c'est à
+ * cette couche qu'il faut le comparer. Sur 0-20 cm, en pH eau, les cent
+ * placettes du réseau RENECOFOR descendent à 3,87 (1993-1995) et 3,86
+ * (2007-2012), et seules 4 % puis 9 % d'entre elles passent sous 4,1 ; les
+ * quatre podzols du réseau titrent 4,08 à 4,47 (Saenger et al. 2023, Zenodo
+ * 8391353). Ce qui descend plus bas est l'humus (médiane 4,0 à 4,1, minimum
+ * 3,61 sur 24 placettes) et les dix premiers centimètres (15 à 25 % sous 4,1),
+ * que le moteur ne tient pas à part. Le plancher coupe donc au plus 0,25 pH, sur
+ * moins d'une placette sur dix.
+ *
+ * Le descendre sans l'aluminium rendrait un sol très acide plus hospitalier
+ * qu'il n'est ; la branche qui manque est celle de l'aluminium et de sa
+ * toxicité, sous ce pH, et elle a son propre lot (#443).
  */
 export const PH_PLANCHER = 4.1;
 

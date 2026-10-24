@@ -23,6 +23,7 @@ import type {
   IncendieResult,
   MortDeLaSemaine,
   NaissanceDeLaSemaine,
+  ReglagesDEssai,
   TempeteResult,
 } from "./tick";
 import { tick } from "./tick";
@@ -75,11 +76,15 @@ export function beginWeek(state: GameState): GameState {
   };
 }
 
-/** Avance d'une semaine : ouverture, actions de la semaine courante, tick. */
+/**
+ * Avance d'une semaine : ouverture, actions de la semaine courante, tick. Les
+ * réglages d'essai passent au tick tels quels ; le jeu ne les donne jamais.
+ */
 export function advanceWeek(
   state: GameState,
   weather: WeekWeather,
   actions: readonly GameAction[],
+  essai?: ReglagesDEssai,
 ): {
   state: GameState;
   refusals: ActionRefusal[];
@@ -124,7 +129,7 @@ export function advanceWeek(
     refusals.push(...result.refusals);
     gestes.push(...(result.gestes ?? []));
   }
-  const ticked = tick(s, weather);
+  const ticked = tick(s, weather, essai);
   return {
     state: ticked.state,
     refusals,

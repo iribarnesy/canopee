@@ -17,12 +17,14 @@
  * calcul est la position dans le dégradé, qui est un fait d'affichage.
  */
 
+import { K_SUR_K2O } from "../../engine/pk";
 import type { Snapshot, StationInfo } from "../protocol";
 
 export type Calque =
   | "eau"
   | "ph"
   | "azote"
+  | "potassium"
   | "herbe"
   | "nappe"
   | "engorgement"
@@ -66,6 +68,12 @@ export interface FicheDeCalque {
   format: (valeur: number) => string;
   /** Une phrase qui dit ce que la couleur raconte, des deux côtés. */
   sens: string;
+  /**
+   * La même valeur dans **l'unité d'un bulletin d'analyse**, quand ce n'est pas
+   * celle du moteur — le cas du potassium (#435) : le moteur compte en mg K/kg,
+   * un laboratoire français écrit des mg K₂O/kg. Absente partout ailleurs.
+   */
+  auBulletin?: { unite: string; format: (valeur: number) => string };
   /**
    * La borne haute est-elle un **seuil** et non un maximum ?
    *
@@ -116,6 +124,28 @@ export const TEINTE_EAU_LIBRE: Teinte = [200, 55, 45];
 
 /** Au delà de cette profondeur, la nappe ne concerne plus la parcelle, cm. */
 const NAPPE_HORS_DE_PORTEE_CM = 300;
+
+/**
+ * Une teneur en potassium, mg K/kg, dite comme un laboratoire français l'écrit :
+ * en mg K₂O/kg. Le rapport est celui du moteur (`K_SUR_K2O`, 2 × 39,10 / 94,20),
+ * soit environ 1,2 de K₂O par K.
+ */
+export function enK2O(mgKKg: number): number {
+  return mgKKg / K_SUR_K2O;
+}
+
+/**
+ * Le haut du dégradé du potassium, mg K/kg : **300 mg K₂O/kg**, le haut de la
+ * classe la plus riche que relèvent les médianes cantonales de la Base de
+ * Données d'Analyses de Terre — « 100-200 mg/kg » sur les plateaux de limon du
+ * Nord, « avec des taches à 200-300 » (Gis Sol 2011, cité par le moteur sous
+ * `K_ECHANGEABLE_TERRE_DE_LIMON_MG_KG`). Exprimé en K₂O comme une analyse
+ * française, donc ramené en K ici.
+ *
+ * C'est un **seuil** et non un maximum : des potasses répétées sur un limon déjà
+ * riche passent au-dessus. La teinte s'y arrête, le curseur donne le chiffre.
+ */
+const POTASSIUM_HAUT_MG_KG = 300 * K_SUR_K2O;
 
 /**
  * De combien la courbe de l'érosion étale son bas.
@@ -202,6 +232,34 @@ export const CALQUES: readonly FicheDeCalque[] = [
     // arrondir à l'entier rendait « 0 » partout.
     format: (v) => (v * 10 < 10 ? (v * 10).toFixed(1) : (v * 10).toFixed(0)),
     sens: "du sol épuisé au sol riche",
+  },
+  {
+    // **Le potassium se lit comme une analyse de terre** (#435). Le volet
+    // l'écrivait en kg/ha « assimilables », une moyenne de parcelle dans une
+    // unité qu'aucun bulletin n'emploie, alors que la station déclare depuis
+    // #395 une teneur de laboratoire. L'instantané la donne par cellule, relue
+    // par la conversion du moteur (`potassiumEnTeneurDAnalyse`, snapshot.ts) :
+    // rien n'est pesé ici.
+    id: "potassium",
+    libelle: "Potassium",
+    titre: "Potassium échangeable de l'horizon de surface",
+    unite: "mg K/kg",
+    bornes: () => [0, POTASSIUM_HAUT_MG_KG],
+    // **Courbe, pour la même raison que l'azote.** Les stations forestières
+    // déclarent 20 à 34 mg K/kg (RENECOFOR, `stations.ts`), les terres de
+    // limon 125 : sur une échelle droite, toutes les landes et les pinèdes
+    // tiendraient dans le premier huitième et se ressembleraient. La racine
+    // carrée les met au tiers du dégradé, le limon aux sept dixièmes.
+    courbe: { vers: Math.sqrt, depuis: (t) => t * t },
+    lire: (snapshot, _station, i) => snapshot.soilPotassiumMgKg[i] ?? 0,
+    // Du gris rosé au lie-de-vin : la teinte du chlorure de potassium tel qu'on
+    // l'épand, et aucun autre calque ne l'occupe — le violet de l'engorgement
+    // est plus bleu, le rouge des ravageurs plus orangé.
+    teinte: (part) => [330, 8 + 42 * part, 90 - 45 * part],
+    format: (v) => v.toFixed(0),
+    sens: "du sol épuisé au sol bien pourvu",
+    borneHauteOuverte: true,
+    auBulletin: { unite: "mg K₂O/kg", format: (v) => enK2O(v).toFixed(0) },
   },
   {
     id: "herbe",
