@@ -205,7 +205,7 @@ export function facteurSurviePh(gamme: readonly [number, number], ph: number): n
 
 /**
  * Tolérance d'une espèce au pH ∈ [0,1] : un **plateau** à bords en rampe, plein à
- * l'optimum, réduit au cinquième aux bornes de l'atlas, nul peu après.
+ * l'optimum, réduit à `VIGUEUR_A_LA_BORNE` aux bornes de l'atlas, nul peu après.
  *
  * **La forme qu'il faudrait**, **et celle qu'on a**. Les modèles de Huisman-Olff-
  * Fresco, l'étalon pour une réponse d'espèce le long d'un gradient, retiennent
@@ -255,10 +255,15 @@ export function facteurSurviePh(gamme: readonly [number, number], ph: number): n
  * `paysage.ts` avait écrit la conséquence en doctrine : « au bord exact de sa
  * gamme, une espèce ne pousse déjà plus du tout ».
  *
- * L'optimum est pris au **milieu** de l'amplitude : les relevés donnent des
- * réponses souvent dissymétriques, et neuf fiches citent maintenant une plage
- * publiée où l'espèce pousse le mieux (#279), que cette fonction ne lit pas
- * encore. Symétrique est l'hypothèse en place, pas la vraie *(à mesurer, #278)*.
+ * **L'optimum déclaré, quand il existe** (#278). Une fiche qui porte
+ * `optimumPh` — la plage où une source de terrain dit que l'espèce pousse le
+ * mieux — en fait le plateau, et les flancs vont de ses bords aux bornes de
+ * présence, de la largeur que les deux sources leur donnent : plus de rampe
+ * absolue, et une réponse dissymétrique quand la source l'est. Le chêne-liège
+ * (4,7-6,5 dans 3,4-7,8) tombe ainsi à 0,63 sur un sol neutre, au lieu d'y être
+ * plein. Sans `optimumPh`, l'optimum reste au **milieu** de l'amplitude et la
+ * réponse est l'ancien trapèze, au bit près : symétrique est l'hypothèse en
+ * place pour vingt-quatre fiches, pas la vraie *(à mesurer)*.
  *
  * Elle vit ici, et pas dans `trees.ts`, parce que la strate herbacée la lit
  * aussi (`herbacees.ts`) : c'est une propriété du **sol** confrontée à une gamme,
@@ -271,7 +276,7 @@ export function facteurGammePh(
 ): number {
   const [min, max] = gamme;
   if (optimum) {
-    // **Le plateau publié** (#262, #278, option C, en mesure) : la plage où la
+    // **Le plateau publié** (#262, #278) : la plage où la
     // source dit que l'espèce pousse le mieux (`optimumPh`). **Les flancs** vont
     // en ligne droite du bord du plateau (1) à la borne de présence
     // (`VIGUEUR_A_LA_BORNE`), puis jusqu'à zéro un peu au-dehors : leur largeur est

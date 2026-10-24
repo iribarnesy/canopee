@@ -56,9 +56,10 @@ export interface EspeceV0 {
    * aujourd'hui, où une généraliste à large amplitude est pleine presque
    * partout et une spécialiste presque nulle part.
    *
-   * **Ce qui manque** : l'**optimum**. Le moteur le devine au milieu de
-   * l'amplitude *(hypothèse, pas mesure)*. Les fiches qui en citent un le
-   * disent maintenant dans leur commentaire, à part de la borne (#278).
+   * **L'optimum a son propre champ** (`optimumPh`, #278) : trois fiches le
+   * déclarent depuis une source de terrain ; les autres gardent l'optimum deviné
+   * au milieu de l'amplitude *(hypothèse, pas mesure)*, et celles qui citent une
+   * préférence horticole le disent dans leur commentaire, à part de la borne.
    *
    * **La grandeur** (#279). Les deux nombres sont lus en **pH eau de
    * l'horizon minéral de surface**, la grandeur que le moteur suit pour le sol :
@@ -103,14 +104,20 @@ export interface EspeceV0 {
    */
   ph: [number, number];
   /**
-   * **En mesure, pas livré** (#262, #278, option C). La plage de pH, en pH eau de
-   * l'horizon de surface, où une source **de terrain** dit que l'espèce pousse le
-   * mieux. Elle devient le plateau de `facteurGammePh`, et les flancs vont de ses
-   * bords jusqu'aux bornes de présence (`ph`), sans rampe absolue. Absente, la
-   * réponse garde le trapèze centré sur le milieu de l'amplitude.
+   * La plage de pH, en pH eau de l'horizon de surface, où une source **de
+   * terrain** dit que l'espèce pousse le mieux (#278). C'est le premier
+   * paramètre de la réponse unimodale de ter Braak et Looman — l'optimum —, que
+   * `ph` (la tolérance) ne disait pas. Elle devient le **plateau** de
+   * `facteurGammePh`, et les flancs vont en ligne droite de ses bords jusqu'aux
+   * bornes de présence, sans rampe absolue : leur largeur est celle que les deux
+   * sources donnent (#262).
    *
-   * Seules les plages issues de relevés ou de monographies sont lues ; les
-   * préférences horticoles (PFAF) restent écrites dans les fiches, non lues.
+   * Absente, la réponse garde le trapèze centré sur le milieu de l'amplitude,
+   * au bit près. Trois fiches la déclarent : le chêne-liège, le noyer, le noyer
+   * hybride. **Ne sont pas lues** : les préférences horticoles (PFAF), écrites
+   * dans les fiches comme telles, et la plage du pin, mesurée et reportée faute
+   * d'une source européenne de croissance au-dessus de pH 6 (sa fiche dit
+   * pourquoi).
    */
   optimumPh?: [number, number];
   lumiere: {
@@ -903,9 +910,20 @@ export const ESPECES_V0: readonly EspeceV0[] = [
     // pineraies décroît avec le pH, meilleur vers 4,5 en pH eau moyen du profil
     // (Sewerniak 2012). C'est #278.
     ph: [2.8, 7.5],
-    // Plateau (#278, en mesure) : « grows best on soils in the 4.5 to 6.0 range »
-    // (Skilling 1990, *Silvics of North America*, grandeur non précisée).
-    optimumPh: [4.5, 6.0],
+    // **Pas de plateau d'optimum, et c'est un report, pas un oubli** (#278). La
+    // plage existe — « grows best on soils in the 4.5 to 6.0 range » (Skilling
+    // 1990, pour le pin introduit en Amérique du Nord) —, et elle a été mesurée
+    // (#445) : en plateau, elle met le pin à 0,37 sur le limon riche (pH 7,0) et
+    // lui retire la moitié de sa hauteur à quarante ans (15,9 → 8,4 m), ce qui
+    // fait tomber dix essais qui le plantent sur un sol neutre. Le terrain ne
+    // soutient pas cette chute : sur 348 pineraies du sud-ouest de la Pologne,
+    // l'indice de station (hauteur à cent ans) vaut 19,0 m sur podzol vrai et
+    // **25,1 m sur les sols bruns et lessivés riches**, autant que le meilleur sol
+    // sableux (25,2 m) — le pin plafonne sur un sol riche, il ne s'y effondre pas
+    // (Sewerniak 2013, *Sylwan* 157 : 516 ; l'article ne publie pas le pH de ces
+    // sols). Et la pente du flanc haut tiendrait à la borne 7,5, sans source. Le
+    // pin garde donc le trapèze **jusqu'à ce qu'une source européenne de
+    // croissance au-dessus de pH 6 soit trouvée**.
     // Atlas : très héliophile ; houppier clair, persistant (ombrage toute l'année).
     // Aiguilles : 2 à 8 ans selon la latitude, plus longtemps au nord (Reich et al. 1996) ; le bas de la fourchette pour une plaine tempérée *(à confirmer)*.
     lumiere: {
@@ -1034,7 +1052,7 @@ export const ESPECES_V0: readonly EspeceV0[] = [
     // 2016), qui sert à #278. L'ancien « tolère 5,1-8,3 » ne disait pas d'où
     // venait chaque nombre.
     ph: [5, 8.3],
-    // Plateau (#278, en mesure) : « deep and rich soils, with pH values of
+    // Plateau (#278) : « deep and rich soils, with pH values of
     // between 6 and 7.5 » (de Rigo et al. 2016, Atlas européen).
     optimumPh: [6.0, 7.5],
     lumiere: { compensation: 0.2, saturation: 0.75, lai: 2.6, houppierRatio: 0.5, caduc: true },
@@ -2244,7 +2262,7 @@ export const ESPECES_V0: readonly EspeceV0[] = [
     // fort : rare sur calcaire, pas absente, et moins dense (même source).
     // Pas de fiche chez Landolt (hors de Suisse).
     ph: [3.4, 7.8],
-    // Plateau (#278, en mesure) : « most cork oak woodlands occur on moderately
+    // Plateau (#278) : « most cork oak woodlands occur on moderately
     // acidic to slightly acidic soils, with pH generally in the range of 4.7 to
     // 6.5 » (Serrasolses et al. 2009, même tableau).
     optimumPh: [4.7, 6.5],
@@ -2503,7 +2521,7 @@ export const ESPECES_V0: readonly EspeceV0[] = [
     // pas de fiche chez Landolt. La bonne croissance de 5 à 8 est un optimum
     // (#278).
     ph: [4, 8],
-    // Plateau (#278, en mesure) : « de 5 à 8, une bonne croissance » (Ehring
+    // Plateau (#278) : « de 5 à 8, une bonne croissance » (Ehring
     // 2011). Son bord haut tombe sur la borne de présence : le flanc haut n'a
     // pas de largeur, et la réponse y fait une marche.
     optimumPh: [5, 8],
