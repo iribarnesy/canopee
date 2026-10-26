@@ -327,6 +327,8 @@ const AHDB_RB209_2023 =
   "AHDB, Nutrient Management Guide (RB209), section 4 Arable crops, juin 2023, table 4.12 : blé d'hiver, grain seul 5,5 kg K2O par tonne de matière fraîche (15 % d'humidité), grain et paille 10,5 ; le potassium de la paille peut baisser nettement entre la maturité et la récolte";
 const AHDB_2025 =
   "AHDB, Wheat growth guide, mise à jour de juin 2025 : du semis à la levée 150 °C·j base 0 (quinze jours en octobre) ; « GAI rarely exceeds 1 before March » ; blé de référence semé début octobre, GAI 1,6 au 31 mars (45 % de la lumière interceptée), GAI 2,0 au premier nœud (la moitié), 81 kg N/ha absorbés du semis au premier nœud ; « soil nitrogen is particularly prone to leaching when uptake is low due to slow canopy expansion over winter »";
+const GREN_PI_CEREALES =
+  "Arrêté régional GREN Auvergne-Rhône-Alpes, annexe 2, céréales à paille (méthode du bilan du Comifer ; drome.gouv.fr) : azote absorbé par la culture à l'ouverture du bilan, Pi = 10 kg N/ha + 5 kg N/ha par talle — 0 non levée, 10 de une à trois feuilles, 30 à quatre talles et plus";
 const TAYLOR_2001 =
   "Taylor, Rowland & Jones 2001, Biological Flora of the British Isles: Molinia caerulea (L.) Moench, Journal of Ecology 89:126-144 (Grande-Bretagne)";
 const LEDA_2008 =
@@ -548,14 +550,18 @@ export const HERBACEES: readonly HerbaceeV0[] = [
       // **La rosette d'hiver** (#346). Le blé lève une quinzaine de jours après
       // un semis d'octobre (150 °C·j base 0), talle à l'automne et en hiver, et
       // garde ses feuilles jusqu'à la reprise ; mais son couvert reste petit :
-      // « GAI rarely exceeds 1 before March » (AHDB_2025). Un GAI de 1
-      // intercepte 30 % de la lumière, à l'extinction que donnent les deux
-      // repères de printemps du même guide (GAI 1,6 : 45 % ; GAI 2,0 : la
-      // moitié ; k ≈ 0,36). C'est un **plafond** : la rosette réelle part de
-      // rien à la levée et n'y arrive qu'à la fin de l'hiver (GAI 0,5 à quatre
-      // talles, 0,9 à six), quand le moteur l'atteint deux semaines après le
-      // semis *(à calibrer sur un relevé de couverture hivernale)*.
-      partPersistante: 0.3,
+      // « GAI rarely exceeds 1 before March », GAI 0,5 à quatre talles, au
+      // cœur de l'hiver du blé de référence (AHDB_2025). 0,16 est ce
+      // qu'intercepte un GAI de 0,5, à l'extinction que donnent les deux
+      // repères de printemps du même guide (GAI 1,6 : 45 % de la lumière ;
+      // GAI 2,0 : la moitié ; k ≈ 0,36). Le moteur tient cette rosette dès la
+      // levée, quand la vraie part de rien et finit l'hiver vers un GAI de 1
+      // (0,3) : c'est une moyenne d'hiver, pas une courbe *(à calibrer sur un
+      // relevé de couverture hivernale)*. Le plafond de 0,3 tenu tout l'automne
+      // faisait prendre au blé 54 kg N/ha avant mars, quand la grille du
+      // bilan azoté prête 10 à 30 kg N/ha à une céréale en sortie d'hiver
+      // (GREN_PI_CEREALES) ; 0,16 en fait 30 sur le limon riche.
+      partPersistante: 0.16,
     },
     tBaseCroissanceC: 3,
     // Elle ne conquiert **rien** : son emprise est posée par le semis.
@@ -609,6 +615,7 @@ export const HERBACEES: readonly HerbaceeV0[] = [
       COMIFER_2007_PKMG,
       AHDB_RB209_2023,
       AHDB_2025,
+      GREN_PI_CEREALES,
       LEDA_2008,
     ],
   },
