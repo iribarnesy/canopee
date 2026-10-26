@@ -252,6 +252,33 @@ interface Scene {
  * `sol`, l'instantané les porte à plat — et pas une règle.
  */
 function donneesDe(scene: Scene): DonneesSol {
+  return { ...solDeLaScene(scene), ...tapisDuBanc(scene) };
+}
+
+/**
+ * `?herbe-cm=36` : la hauteur du tapis, cm, et `?paille=0.5` : sa part morte
+ * (#436). Les scènes cuites ne portent ni l'une ni l'autre ; le banc les pose
+ * pareilles partout, pour voir une touffe ou un brin givré à une hauteur
+ * donnée. Faites une fois : le givre se repose quand la grille change.
+ */
+let tapisFixe: Pick<DonneesSol, "herbeHauteurM" | "herbePartMorte"> | undefined;
+function tapisDuBanc(scene: Scene): Pick<DonneesSol, "herbeHauteurM" | "herbePartMorte"> {
+  if (!tapisFixe) {
+    const q = new URLSearchParams(location.search);
+    const n = scene.coteM * scene.coteM;
+    tapisFixe = {
+      ...(q.has("herbe-cm")
+        ? { herbeHauteurM: new Float32Array(n).fill(Number(q.get("herbe-cm")) / 100) }
+        : {}),
+      ...(q.has("paille")
+        ? { herbePartMorte: new Float32Array(n).fill(Number(q.get("paille"))) }
+        : {}),
+    };
+  }
+  return tapisFixe;
+}
+
+function solDeLaScene(scene: Scene): DonneesSol {
   return donneesSolDe({
     coteM: scene.coteM,
     ruMm: scene.sol.ruMm,

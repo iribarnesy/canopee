@@ -174,8 +174,11 @@ export interface GameApi {
    * plusieurs fois par seconde et les réponses peuvent se doubler.
    */
   prevoir: (cle: string, action: ActionSansSemaine) => void;
-  /** La dernière réponse du moteur à `prevoir`. */
-  prevision?: { cle: string; refusals: ActionRefusal[] };
+  /**
+   * La dernière réponse du moteur à `prevoir` — avec, pour une moisson, le
+   * grain qu'elle emporterait (#451).
+   */
+  prevision?: { cle: string; refusals: ActionRefusal[]; grainT?: number };
   /**
    * Combien d'instantanés sont arrivés. Ce n'est pas un compteur de semaines :
    * une action en pause en produit un aussi.
@@ -313,7 +316,11 @@ export function useGame(): GameApi {
   });
   const [events, setEvents] = useState<WithUid<GameEvent>[]>([]);
   const [autoHarvest, setAutoHarvestState] = useState(true);
-  const [prevision, setPrevision] = useState<{ cle: string; refusals: ActionRefusal[] }>();
+  const [prevision, setPrevision] = useState<{
+    cle: string;
+    refusals: ActionRefusal[];
+    grainT?: number;
+  }>();
   const [revision, setRevision] = useState(0);
   /** La dernière question posée : les réponses en retard sont jetées. */
   const cleDemandee = useRef("");
@@ -499,7 +506,7 @@ export function useGame(): GameApi {
           // Une réponse qui ne concerne plus la position survolée est périmée :
           // la garder ferait clignoter le fantôme entre rouge et normal.
           if (msg.cle === cleDemandee.current)
-            setPrevision({ cle: msg.cle, refusals: msg.refusals });
+            setPrevision({ cle: msg.cle, refusals: msg.refusals, grainT: msg.grainT });
           break;
         case "histoire":
           setHistoires((prev) => new Map(prev).set(msg.id, msg.evenements));

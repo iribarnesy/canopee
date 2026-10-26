@@ -399,3 +399,46 @@ export function direLeDepart(
   const quoi = hote ? lEssence(hote) : "la parcelle";
   return `${capitale(laFaune(faune))} quitte ${quoi} : ${departDit(cause)}`;
 }
+
+// ── **la date dite** (#451) ─────────────────────────────────────────────────────
+
+/**
+ * Semaines dans un mois : 52 / 12.
+ *
+ * Un mois de jeu n'est pas un mois de calendrier, c'est un douzième d'année :
+ * le bandeau nomme le mois avec ce nombre, et « +1 mois » avance d'autant. Les
+ * deux doivent dire la même chose sous peine d'annoncer « un mois plus tard »
+ * sur un bandeau qui n'a pas changé de nom.
+ *
+ * Il vivait dans le bandeau ; il en sort parce qu'un second endroit nomme des
+ * mois — le panneau des gestes du champ, qui dit en quel mois tombe la fenêtre
+ * de semis que le moteur publie en semaines. Deux tables de mois finiraient
+ * par ne plus tomber d'accord, et le joueur lirait « octobre » au panneau sous
+ * un bandeau qui dit « septembre ».
+ */
+export const SEMAINES_PAR_MOIS = 52 / 12;
+
+const MOIS = [
+  "janvier",
+  "février",
+  "mars",
+  "avril",
+  "mai",
+  "juin",
+  "juillet",
+  "août",
+  "septembre",
+  "octobre",
+  "novembre",
+  "décembre",
+];
+
+/**
+ * Le mois d'une semaine de l'année (0 à 51), tel que le bandeau le nomme :
+ * « octobre » pour la semaine 41. Une semaine hors de l'année y est ramenée,
+ * comme le moteur ramène la sienne (`week % 52`).
+ */
+export function moisDeLaSemaine(semaine: number): string {
+  const s = ((Math.floor(semaine) % 52) + 52) % 52;
+  return MOIS[Math.min(11, Math.floor(s / SEMAINES_PAR_MOIS))] ?? "";
+}

@@ -43,6 +43,8 @@ export interface ArbreSuivable {
   id: number;
   especeId: string;
   bloomFrosted: boolean;
+  /** la semaine où le gel a grillé ses jeunes pousses (#424), dans le compte du joueur */
+  gelPousseSemaine?: number;
   causeLente?: CauseMort;
   stressLent?: number;
 }
@@ -93,6 +95,8 @@ export interface EvenementSuivi {
 /** Ce qu'on a déjà vu d'un arbre, pour ne pas le redire à chaque semaine. */
 export interface EtatVu {
   gel: boolean;
+  /** la date du gel des pousses qu'on a déjà vue (#424) */
+  gelPousse?: number;
   /** la souffrance **déjà annoncée**, et non celle qu'on lit : voir plus bas */
   causeDite?: CauseMort;
   /** l'arbre était-il encore là au dernier instantané ? */
@@ -173,6 +177,14 @@ export function accumulerLesSuivis(
     if (arbre.bloomFrosted && !vu?.gel) {
       dire(arbre.id, "gel", "fleurs grillées par un gel tardif");
     }
+    // **Le gel des jeunes pousses** (#424) : le moteur le date
+    // (`gelPousseSemaine`), une fois par an au plus, et une date nouvelle est un
+    // gel nouveau. Un arbre qu'on voit pour la première fois garde la sienne
+    // sans la redire : c'est une mémoire qu'on reprend, pas une nouvelle.
+    const gelPousse = arbre.gelPousseSemaine;
+    if (gelPousse !== undefined && vu !== undefined && gelPousse !== vu.gelPousse) {
+      dire(arbre.id, "gel", "jeunes pousses grillées par un gel de printemps");
+    }
     // **Une souffrance s'annonce une fois par cause, et pas une fois par été.**
     // Mesuré dans le navigateur : `stressLent` redescend l'hiver et remonte en
     // juillet, si bien qu'oublier la cause dès qu'elle repasse sous le seuil
@@ -189,6 +201,7 @@ export function accumulerLesSuivis(
     }
     suite.set(arbre.id, {
       gel: arbre.bloomFrosted,
+      ...(gelPousse === undefined ? {} : { gelPousse }),
       ...(dite === undefined ? {} : { causeDite: dite }),
       present: true,
     });

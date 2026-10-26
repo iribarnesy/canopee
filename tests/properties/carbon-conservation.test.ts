@@ -376,81 +376,95 @@ describe("un incendie qui emporte des chandelles", () => {
   // Une lande sèche, sans gibier ni pluie de semis du voisinage : il ne reste
   // sur la parcelle que les chandelles, et le feu qui finit par passer.
   const LANDE = { ...LANDE_SECHE.station, coteM: 50, gibierParHa: 0, voisinage: [] };
-  const METEO_SECHE = meteoDeLaLande();
+  const METEO_SECHE = syntheticYear(LANDE_SECHE.climat);
+  // **L'essai a été réécrit sur sa précondition** (#379), critères et bornes
+  // inchangés. Il lui faut un feu, et il le devait à sa graine : dans ce décor,
+  // un départ ne tombe qu'une partie sur douze (0,085 départ attendu en cinq
+  // ans, mesuré dans `departDeFeu`), et seule la graine 5 brûlait parmi les
+  // graines 1 à 12. Aucun décor n'y changeait rien : le départ plafonne à
+  // 0,015 par semaine. Le feu est donc **imposé** (`ReglagesDEssai`), en semaine
+  // 131, celle où la graine 5 brûlait d'elle-même, à la cellule centrale. Le
+  // tirage du départ, la propagation, la combustion et les bilans restent ceux
+  // du moteur. Relevé sur les graines 1 à 12 : toutes brûlent 2 496 à 2 500
+  // cellules et emportent les 120 chandelles.
+  const ALLUMAGE = { departDeFeuImpose: { semaine: 131, cellule: 25 * 50 + 25 } };
 
-  it("le bois brûlé sort du pool, et un arbre mort ne rejette pas de souche", () => {
-    let state = createGameState(LANDE, rngStateFromSeed(5));
-    // Le charme rejette de souche : c'est l'essence qui déclenchait la
-    // résurrection d'une chandelle, et donc la création de carbone.
-    //
-    // Le peuplement est **dense**, et il faut qu'il le soit. La propagation est une
-    // percolation : sous le seuil de probabilité par cellule (≈ 0,59 sur un
-    // réseau carré à quatre voisins), un départ s'éteint sur place au lieu de
-    // parcourir la parcelle. Quarante chandelles éparses sur 2 500 m² tombaient
-    // exactement sur cette arête, et l'essai basculait au moindre changement de
-    // charge. Ce qu'on veut éprouver ici est le **bilan carbone** d'un feu de
-    // chandelles, pas la statistique des départs : on se donne donc de quoi
-    // brûler franchement.
-    state = plantScattered(state, "carpinus_betulus", 120, 15);
-    state = {
-      ...state,
-      trees: state.trees.map((t) => ({ ...t, alive: false, causeMort: "secheresse" })),
-    };
+  it.each([1, 2, 5])(
+    "graine %i : le bois brûlé sort du pool, et un arbre mort ne rejette pas de souche",
+    (graine) => {
+      let state = createGameState(LANDE, rngStateFromSeed(graine));
+      // Le charme rejette de souche : c'est l'essence qui déclenchait la
+      // résurrection d'une chandelle, et donc la création de carbone.
+      //
+      // Le peuplement est **dense**, et il faut qu'il le soit. La propagation est une
+      // percolation : sous le seuil de probabilité par cellule (≈ 0,59 sur un
+      // réseau carré à quatre voisins), un départ s'éteint sur place au lieu de
+      // parcourir la parcelle. Quarante chandelles éparses sur 2 500 m² tombaient
+      // exactement sur cette arête, et l'essai basculait au moindre changement de
+      // charge. Ce qu'on veut éprouver ici est le **bilan carbone** d'un feu de
+      // chandelles, pas la statistique des départs : on se donne donc de quoi
+      // brûler franchement.
+      state = plantScattered(state, "carpinus_betulus", 120, 15);
+      state = {
+        ...state,
+        trees: state.trees.map((t) => ({ ...t, alive: false, causeMort: "secheresse" })),
+      };
 
-    let feux = 0;
-    let chandellesEmportees = 0;
-    let boisEmporteKgC = 0;
-    for (let i = 0; i < 5 * 52; i++) {
-      const w = METEO_SECHE[i % METEO_SECHE.length];
-      if (!w) throw new Error("météo manquante");
-      const stockAvant = totalStockKgC(state);
-      const avant = state;
-      const step = advanceWeek(state, w, []);
-      state = step.state;
-      expect(residuKgC(avant, state, stockAvant)).toBeCloseTo(0, 4);
-      expect(residuAfficheKgC(avant, state)).toBeCloseTo(0, 4);
-      if (step.incendie) {
-        // On **accumule** au lieu de garder le dernier feu. La parcelle en connaît
-        // maintenant plusieurs — les chandelles portent le feu, et l'ombre
-        // n'amortit plus leur charge (feu.ts) — et le dernier, qui ne trouve
-        // plus rien à brûler, écrasait le compte du premier par un zéro.
-        feux++;
-        // **Ce qui a brûlé de bois, compté sur le bois** (#247). L'essai lisait le
-        // bois brûlé sur la hausse des émissions de la semaine du feu, qui compte
-        // aussi la litière brûlée et la respiration du sol. Tant que la lande ne
-        // portait presque pas de litière, l'écart tenait dans la décomposition
-        // des années suivantes ; depuis que la strate fabrique de la matière, la
-        // litière brûlée pèse 343 kg C et l'inégalité tombait de 2 kg C. Le bois
-        // emporté est l'aérien des chandelles qui quittent la carte, borné par
-        // le pool comme dans le moteur.
-        const restants = new Set(state.trees.map((t) => t.id));
-        let aerienKgC = 0;
-        for (const t of avant.trees) {
-          if (restants.has(t.id)) continue;
-          aerienKgC += treeAboveCarbonKg(getEspece(t.especeId), t.diametreCm, t.heightM);
+      let feux = 0;
+      let chandellesEmportees = 0;
+      let boisEmporteKgC = 0;
+      for (let i = 0; i < 5 * 52; i++) {
+        const w = METEO_SECHE[i % 52];
+        if (!w) throw new Error("météo manquante");
+        const stockAvant = totalStockKgC(state);
+        const avant = state;
+        const step = advanceWeek(state, w, [], ALLUMAGE);
+        state = step.state;
+        expect(residuKgC(avant, state, stockAvant)).toBeCloseTo(0, 4);
+        expect(residuAfficheKgC(avant, state)).toBeCloseTo(0, 4);
+        if (step.incendie) {
+          // On **accumule** au lieu de garder le dernier feu. La parcelle en connaît
+          // maintenant plusieurs — les chandelles portent le feu, et l'ombre
+          // n'amortit plus leur charge (feu.ts) — et le dernier, qui ne trouve
+          // plus rien à brûler, écrasait le compte du premier par un zéro.
+          feux++;
+          // **Ce qui a brûlé de bois, compté sur le bois** (#247). L'essai lisait le
+          // bois brûlé sur la hausse des émissions de la semaine du feu, qui compte
+          // aussi la litière brûlée et la respiration du sol. Tant que la lande ne
+          // portait presque pas de litière, l'écart tenait dans la décomposition
+          // des années suivantes ; depuis que la strate fabrique de la matière, la
+          // litière brûlée pèse 343 kg C et l'inégalité tombait de 2 kg C. Le bois
+          // emporté est l'aérien des chandelles qui quittent la carte, borné par
+          // le pool comme dans le moteur.
+          const restants = new Set(state.trees.map((t) => t.id));
+          let aerienKgC = 0;
+          for (const t of avant.trees) {
+            if (restants.has(t.id)) continue;
+            aerienKgC += treeAboveCarbonKg(getEspece(t.especeId), t.diametreCm, t.heightM);
+          }
+          const emporte = Math.min(aerienKgC, avant.carbon.deadWoodKgC);
+          boisEmporteKgC += emporte;
+          // Le pool perd au moins ce bois-là : il ne le garde pas en plus de
+          // l'avoir émis. La décomposition de la semaine ne fait que l'abaisser.
+          expect(state.carbon.deadWoodKgC).toBeLessThan(avant.carbon.deadWoodKgC - emporte + 1e-6);
+          chandellesEmportees += avant.trees.length - state.trees.length;
+          // Aucun arbre vivant sur la parcelle : le feu ne tue personne, et
+          // surtout ne fait rejeter aucun mort.
+          expect(step.incendie.arbresTues).toBe(0);
+          expect(step.incendie.rejets).toBe(0);
         }
-        const emporte = Math.min(aerienKgC, avant.carbon.deadWoodKgC);
-        boisEmporteKgC += emporte;
-        // Le pool perd au moins ce bois-là : il ne le garde pas en plus de
-        // l'avoir émis. La décomposition de la semaine ne fait que l'abaisser.
-        expect(state.carbon.deadWoodKgC).toBeLessThan(avant.carbon.deadWoodKgC - emporte + 1e-6);
-        chandellesEmportees += avant.trees.length - state.trees.length;
-        // Aucun arbre vivant sur la parcelle : le feu ne tue personne, et
-        // surtout ne fait rejeter aucun mort.
-        expect(step.incendie.arbresTues).toBe(0);
-        expect(step.incendie.rejets).toBe(0);
       }
-    }
 
-    expect(feux).toBeGreaterThan(0);
-    // Les chandelles ont brûlé : elles quittent la carte, et le bois parti en
-    // fumée a été **pris** au pool, pas émis en plus de lui.
-    expect(chandellesEmportees).toBeGreaterThan(60);
-    expect(state.trees).toEqual([]);
-    expect(boisEmporteKgC).toBeGreaterThan(0);
-    // Il reste les racines : le feu emporte l'aérien, pas ce qui est en terre.
-    expect(state.carbon.deadWoodKgC).toBeGreaterThan(0);
-  });
+      expect(feux).toBeGreaterThan(0);
+      // Les chandelles ont brûlé : elles quittent la carte, et le bois parti en
+      // fumée a été **pris** au pool, pas émis en plus de lui.
+      expect(chandellesEmportees).toBeGreaterThan(60);
+      expect(state.trees).toEqual([]);
+      expect(boisEmporteKgC).toBeGreaterThan(0);
+      // Il reste les racines : le feu emporte l'aérien, pas ce qui est en terre.
+      expect(state.carbon.deadWoodKgC).toBeGreaterThan(0);
+    },
+  );
 });
 
 /**

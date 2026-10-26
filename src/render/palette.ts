@@ -273,9 +273,10 @@ export function phaseAnnuelle(semaineAnnee: number): number {
  * Couleur de l'herbe à une saison donnée, pour une biomasse et une sécheresse
  * données.
  *
- * Deux commandes : la **saison** dit vers quoi la teinte tire, la **biomasse** dit si
- * l'herbe est verte ou couchée en foin. Une prairie rase de juillet est verte,
- * un foin de juillet est blond — même semaine, même station.
+ * Deux commandes : la **saison** dit vers quoi la teinte tire, la **part morte**
+ * de ce qui est sur pied dit si l'herbe est verte ou en foin (#436). Une
+ * prairie rase de juillet est verte, un foin de juillet est blond — même
+ * semaine, même station.
  *
  * **Il en faudrait une troisième, et ce n'est pas au rendu de la fabriquer.**
  * « Là où elle sèche on devrait voir une pelouse sèche » : c'est juste, et le
@@ -309,6 +310,7 @@ export function couleurHerbe(
   biomasse: number,
   herbeHumidite = 1,
   tapis?: MelangeDuTapis,
+  partMorte?: number,
 ): Teinte {
   const phase = phaseAnnuelle(semaineAnnee);
   // **L'identité de l'espèce porte les deux verts, la saison porte l'écart.**
@@ -331,10 +333,20 @@ export function couleurHerbe(
   else if (phase < 0.55) saisonniere = melange(printemps, ete, (phase - 0.35) / 0.2);
   else if (phase < 0.8) saisonniere = melange(ete, HERBE_HIVER, (phase - 0.55) / 0.25);
   else saisonniere = HERBE_HIVER;
-  // La biomasse tire vers le foin : c'est la matière sur pied qui a séché, et
-  // elle se voit surtout quand il y en a beaucoup.
-  const foin = Math.min(1, Math.max(0, biomasse)) ** 2;
-  const surPied = melange(saisonniere, HERBE_PAILLE, 0.55 * foin);
+  // **La paille est la part morte de ce qui est sur pied** (#436), que le
+  // moteur publie depuis #370 : le foin d'été, la paille d'hiver. Un tapis mort
+  // à moitié est à moitié blond, à hauteur égale ; la molinie de décembre l'est
+  // aux trois quarts.
+  //
+  // Sans elle (une scène qui ne la porte pas), la biomasse en tenait lieu :
+  // « beaucoup de matière, donc du foin ». C'était une supposition du rendu —
+  // une prairie de juin, haute et verte, sortait aussi blonde qu'un foin de
+  // juillet —, gardée seulement pour ne pas changer ces scènes-là.
+  const paille =
+    partMorte === undefined
+      ? 0.55 * Math.min(1, Math.max(0, biomasse)) ** 2
+      : Math.min(1, Math.max(0, partMorte));
+  const surPied = melange(saisonniere, HERBE_PAILLE, paille);
   // Puis la soif, par-dessus : elle grille ce qui reste, foin comme gazon. Un
   // pré déjà blond qui grille ne blondit pas davantage, il brunit.
   // **Le seuil de soif est celui des espèces présentes**, pondéré par leur
@@ -357,6 +369,22 @@ export interface CelluleSol {
   herbeBiomasse: number;
   /** litière au sol, gC/m² : `soilLitiereCG` */
   litiereCG: number;
+  /**
+   * La **hauteur du tapis**, m (#436) : `soilHerbeHauteursCm` composée sur
+   * l'emprise des espèces (`composerLeTapis`). Elle ne colore rien : elle
+   * dit la taille des touffes.
+   *
+   * Absente = la scène ne la porte pas, et les touffes gardent leur taille de
+   * dessin d'avant.
+   */
+  hauteurM?: number;
+  /**
+   * La **part morte** de ce qui est sur pied ∈ [0,1] (#436) :
+   * `soilHerbePartsMortes` composée de même. C'est elle qui blondit le tapis.
+   *
+   * Absente = la biomasse en tient lieu, comme avant.
+   */
+  partMorte?: number;
   /**
    * Humidité **vécue** par le tapis herbacé ∈ [0,1] : `soilHerbeHumidite`.
    *
@@ -421,6 +449,42 @@ export interface CelluleQuantifiee {
    * le cache de cuisson à chaque semaine.
    */
   tapis?: MelangeDuTapis;
+  /** la hauteur du tapis, en palier de `palierDeHauteur` (#436) */
+  hauteur?: number;
+  /** la part morte du tapis, en palier (#436) */
+  paille?: number;
+}
+
+/**
+ * La hauteur au-delà de laquelle tout tapis tombe dans le dernier palier, m.
+ *
+ * Le moteur plafonne chaque espèce à sa hauteur de canopée (LEDA) : 0,78 m pour
+ * le blé, le plus haut des herbacées du dépôt. Un mètre les tient toutes.
+ */
+export const HAUTEUR_DU_TAPIS_PLEINE_M = 1;
+/**
+ * Paliers de hauteur : deux fois plus que pour une couleur, et **en racine**.
+ *
+ * Une couleur se contente de huit paliers ; une hauteur à l'écran, non. Au
+ * pas de 12,5 cm, un pré fauché (3 à 6 cm) et une pelouse de février (12 cm)
+ * tombaient dans la même tranche, et la fauche ne se voyait pas. La racine
+ * resserre les paliers en bas, là où l'œil compare une touffe au sol : 0,4 cm,
+ * 1,6, 3,5, 6, 10, 14, 19, 25… jusqu'au mètre.
+ */
+export const PALIERS_DE_HAUTEUR = 16;
+
+/** La hauteur du tapis, m, ramenée à son palier. */
+export function palierDeHauteur(hauteurM: number): number {
+  return palier(Math.sqrt(Math.max(0, hauteurM) / HAUTEUR_DU_TAPIS_PLEINE_M), PALIERS_DE_HAUTEUR);
+}
+
+/**
+ * Le palier ramené à une hauteur, m : le milieu de la tranche en racine. Le
+ * premier palier rend zéro — un tapis sans matière sur pied n'a pas de touffe.
+ */
+export function hauteurDuPalier(p: number): number {
+  if (p <= 0) return 0;
+  return HAUTEUR_DU_TAPIS_PLEINE_M * valeurDuPalier(p, PALIERS_DE_HAUTEUR) ** 2;
 }
 
 export function quantifier(c: CelluleSol): CelluleQuantifiee {
@@ -432,6 +496,8 @@ export function quantifier(c: CelluleSol): CelluleQuantifiee {
     lumiere: palier(c.lumiere ?? 1),
     herbeHumidite: palier(c.herbeHumidite ?? 1),
     ...(c.tapis ? { tapis: { ids: c.tapis.ids, parts: c.tapis.parts.map((p) => palier(p)) } } : {}),
+    ...(c.hauteurM === undefined ? {} : { hauteur: palierDeHauteur(c.hauteurM) }),
+    ...(c.partMorte === undefined ? {} : { paille: palier(c.partMorte) }),
   };
 }
 
@@ -623,6 +689,9 @@ export function matieresDuSol(
     // molinie, les deux autres pesaient encore douze pour cent du mélange et
     // délavaient sa teinte.
     q.tapis ? { ids: q.tapis.ids, parts: q.tapis.parts.map((p) => partDuPalier(p)) } : undefined,
+    // La part morte aussi : un tapis tout vert ne doit pas sortir blondi d'une
+    // demi-tranche, ni une paille d'hiver rester verte d'autant.
+    q.paille === undefined ? undefined : partDuPalier(q.paille),
   );
   // Puis l'**ombre du couvert**, qui n'est pas une matière mais une lumière : elle
   // ne mélange pas une couleur, elle assombrit celle qui est là. C'est ce qui
@@ -727,5 +796,10 @@ export function signatureCellule(q: CelluleQuantifiee): number {
   // renseignement qu'on a déjà. C'est `signatureMorceau` qui la prend en
   // compte, une fois par morceau.
   for (const part of q.tapis?.parts ?? []) h = h * NIVEAUX + part;
+  // La hauteur décide de la taille des touffes, la paille de leur teinte : une
+  // fauche, qui ne change qu'elles, doit recuire le morceau (#436). Décalées
+  // d'un cran pour qu'« absente » ne se confonde pas avec le palier zéro.
+  h = h * (PALIERS_DE_HAUTEUR + 1) + (q.hauteur === undefined ? 0 : q.hauteur + 1);
+  h = h * (NIVEAUX + 1) + (q.paille === undefined ? 0 : q.paille + 1);
   return h;
 }

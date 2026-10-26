@@ -248,6 +248,32 @@ describe("ce qui est un état ne se dit qu'une fois", () => {
     expect(encore.evenements.map((e) => e.quoi)).toEqual(["gel"]);
   });
 
+  it("le gel des jeunes pousses s'écrit une fois, à sa date nouvelle (#424)", () => {
+    const vu = depouiller(VIDE, semaine(14, [arbre()]));
+    const gele = depouiller(vu.memoire, semaine(16, [arbre({ gelPousseSemaine: 15 })]));
+    expect(gele.evenements).toEqual([
+      {
+        semaine: 16,
+        idArbre: 1,
+        quoi: "gel",
+        texte: "jeunes pousses grillées par un gel de printemps",
+      },
+    ]);
+    // La même date : rien de neuf, même cinq semaines plus tard.
+    const nu = depouiller(gele.memoire, semaine(20, [arbre({ gelPousseSemaine: 15 })]));
+    expect(nu.evenements).toEqual([]);
+    // L'année suivante, une autre date : un autre gel.
+    const encore = depouiller(nu.memoire, semaine(68, [arbre({ gelPousseSemaine: 67 })]));
+    expect(encore.evenements.map((e) => e.quoi)).toEqual(["gel"]);
+  });
+
+  it("… mais un arbre vu pour la première fois ne redit pas un gel déjà passé", () => {
+    // Une sauvegarde relue repart d'une mémoire vide : l'arbre gelé il y a un
+    // an ne doit pas s'écrire gelé aujourd'hui.
+    const relu = depouiller(VIDE, semaine(70, [arbre({ gelPousseSemaine: 15 })]));
+    expect(relu.evenements).toEqual([]);
+  });
+
   it("une souffrance sous le seuil ne dit rien — et ne se fait pas oublier non plus", () => {
     const petiteSoif = semaine(20, [
       arbre({ causeLente: "secheresse", stressLent: SEUIL_SOUFFRANCE / 2 }),

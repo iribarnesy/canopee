@@ -8,37 +8,15 @@
 
 import { coutDuDepassement, depassementHoraire } from "../../engine/actions";
 import type { FenetreDuChangement } from "../ceQuiAChange";
+// Le mois se nomme par la même table que le panneau des gestes du champ, qui
+// dit en quel mois tombe la fenêtre de semis (#451) : `mots.ts` la tient.
+import { moisDeLaSemaine, SEMAINES_PAR_MOIS } from "../mots";
 import type { Snapshot } from "../protocol";
 import type { ReglagesDuSon } from "../son/useSon";
 import { degresDuGel } from "../useAvisDuGel";
 import type { CeQuiAChange } from "../useCeQuiAChange";
 import type { GameApi } from "../useGame";
 import { btn } from "./styles";
-
-/**
- * Semaines dans un mois : 52 / 12.
- *
- * Le même nombre que celui qui nomme le mois deux lignes plus bas — un mois de
- * jeu n'est pas un mois de calendrier, c'est un douzième d'année, et les deux
- * doivent dire la même chose sous peine d'annoncer « un mois plus tard » sur
- * un bandeau qui n'a pas changé de nom.
- */
-const SEMAINES_PAR_MOIS = 52 / 12;
-
-const MOIS = [
-  "janvier",
-  "février",
-  "mars",
-  "avril",
-  "mai",
-  "juin",
-  "juillet",
-  "août",
-  "septembre",
-  "octobre",
-  "novembre",
-  "décembre",
-];
 
 export function Bandeau({
   game,
@@ -57,7 +35,7 @@ export function Bandeau({
   const depassement = snapshot.economy.active ? depassementHoraire(snapshot.economy) : 0;
   const annee = Math.floor(snapshot.week / 52) + 1;
   const semaine = snapshot.week % 52;
-  const mois = MOIS[Math.min(11, Math.floor(semaine / SEMAINES_PAR_MOIS))];
+  const mois = moisDeLaSemaine(semaine);
   const tresorerie = snapshot.economy.treasuryEur;
   const relecture = game.rembobinage.enCours;
   // La part parcourue, bornée : une relecture qui démarre a `semaine` égale à
