@@ -356,15 +356,16 @@ describe("couper une chandelle brûlée passé le délai de récupération", () 
  */
 /**
  * **La série réelle de Mont-de-Marsan, depuis 1964**, et non plus l'année
- * synthétique, pour les deux scénarios qui ont besoin d'un feu (#391). Le feu
- * part quand la surface est sèche **et** qu'il fait chaud. Dans l'année
+ * synthétique, pour le scénario du rejet, qui a besoin d'un feu naturel (#391).
+ * Le feu part quand la surface est sèche **et** qu'il fait chaud. Dans l'année
  * synthétique, la pluie lissée tombe chaque semaine ; depuis qu'un sol découvert
  * n'évapore plus que son eau évaporable (FAO-56), la surface de la lande y
- * reste au-dessus du seuil pendant les semaines chaudes, et ces deux scénarios
- * ne brûlaient plus. Sur la série réelle, avec ses semaines sèches, la lande a
- * autant de semaines à risque qu'avant, et ces deux scénarios brûlent (semaine
- * 189 pour les chandelles, 83 pour le rejet). Ce que les essais vérifient — le
- * bilan carbone d'un feu — ne change pas.
+ * reste au-dessus du seuil pendant les semaines chaudes, et le rejet ne brûlait
+ * plus. Sur la série réelle, avec ses semaines sèches, la lande a autant de
+ * semaines à risque qu'avant, et il brûle (semaine 83). L'essai des chandelles
+ * avait reçu le même remède ; depuis #447, son feu est imposé, et il garde
+ * l'année synthétique de main. Ce que les essais vérifient — le bilan carbone
+ * d'un feu — ne change pas.
  */
 function meteoDeLaLande() {
   const serie = serieMeteoPour("lande-seche");
