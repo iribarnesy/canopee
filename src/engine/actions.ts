@@ -2151,11 +2151,11 @@ function applyMoissonner(
   state: GameState,
   action: Extract<GameAction, { type: "moissonner" }>,
 ): ApplyResult {
-  // La surface dans la parcelle, pas l'aire du disque demandé (#456).
-  const areaM2 = aireDansLaParcelleM2(state.station.coteM, action);
+  const cellules = cellulesDeLaZone(state.station.coteM, action);
+  // La surface dans la parcelle, ses cellules, pas l'aire du disque demandé (#456).
+  const areaM2 = cellules.length;
   const areaHa = areaM2 / 10_000;
   const part = partMecanisable(state.trees, action);
-  const cellules = cellulesDeLaZone(state.station.coteM, action);
   const herbeEmprise = state.soil.herbeEmprise.slice();
   const herbeFeuillage = state.soil.herbeFeuillage.slice();
   const herbeMatiereSecheG = state.soil.herbeMatiereSecheG.slice();
