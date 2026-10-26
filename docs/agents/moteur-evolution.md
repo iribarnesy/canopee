@@ -61,7 +61,57 @@ qu'un rapport (voir la note de maintenance).
 Séparer calibration et validation : caler un paramètre sur un âge, garder
 l'autre âge pour vérifier.
 
-## Ce que le dernier lot a appris (le départ de feu imposé, #379)
+## Ce que le dernier lot a appris (le plateau d'optimum de pH, #278 et #262)
+
+La suite de #279. L'instruction de #441 recommandait l'option C : un trait `optimumPh` sourcé devient le plateau de la réponse au pH, et les flancs vont jusqu'aux bornes de présence, sans rampe absolue. L'utilisateur a demandé de la mesurer avant d'y croire (#445), puis a tranché sur la mesure : **l'option C sans le pin**. Les prédictions et les mesures sont dans les commits des deux branches, avant chaque course. Le format ne bouge pas : un trait d'atlas n'est pas sérialisé.
+
+### Une option recommandée sur le papier se mesure avant de s'écrire
+
+L'instruction disait l'option C « sans recaler une seule table » : c'était vrai, aucune table n'a bougé. Elle disait aussi « 36 fichiers citent le pin et le limon riche » sans dire lesquels tomberaient : la CI en a fait tomber dix essais, tous pour une seule cause, un pin à la moitié de sa hauteur sur un sol neutre (15,9 → 8,4 m à quarante ans). **Le coût d'une option est dans les essais qu'elle fait tomber, et on ne le connaît qu'en la faisant tourner.**
+
+### Une plage de plantation n'est pas une courbe de croissance
+
+La plage du pin (« grows best on soils in the 4.5 to 6.0 range ») vient de l'USFS, pour le pin introduit en Amérique du Nord. Le seul relevé européen de croissance trouvé sur sol riche dit autre chose : 25,1 m d'indice de station sur les sols bruns et lessivés riches de 348 pineraies polonaises, autant que le meilleur sable (Sewerniak 2013). Un plateau publié se lit sur ce qu'il mesure : une préférence de plantation peut tenir lieu d'optimum de présence, pas de facteur de croissance. Le pin attend une source européenne au-dessus de pH 6.
+
+### La pente d'un flanc hérite de la borne qui le ferme
+
+Sans rampe absolue, la largeur d'un flanc va du bord du plateau à la borne de présence. Le 0,37 du pin à pH 7 tenait donc à sa borne haute 7,5, restée *(à confirmer)* depuis #279 ; avec le 7,0 de l'USFS, il serait tombé à 0,05. **Un plateau sourcé ne suffit pas : les deux bornes qui ferment ses flancs doivent l'être aussi.** Des trois fiches retenues, seul le chêne-liège a ses deux bornes de relevé (Serrasolses et al. 2009). Le noyer hybride a sa borne basse de relevé, et sa borne haute se confond avec le plateau : son flanc haut n'a pas de largeur et fait une marche, hors d'atteinte sous pH 7,5. Le noyer commun a ses deux bornes *(à confirmer)*, et ses flancs en héritent ; il ne bouge qu'à pH 5,2 (0,34 → 0,24), sur aucune station de calage.
+
+### Un facteur qui n'est plus le minimum ne coûte rien
+
+Dans le mélange de `ph-survie` (pH 4,2), le plateau mettait le pin à 0,83 au lieu de 1,00. La prédiction disait −5 à −20 % ; il a perdu 0,1 %. C'est la leçon de la lande de #279 vue de l'autre côté : sous 0,8 environ le pH cesse d'être le minimum de ce pin, et le rabaisser jusque-là ne change rien. **Le seuil où un facteur cesse de compter dépend du banc ; le chercher avant de prédire.**
+
+### Un champ absent rend l'ancien code au bit près, ou il casse en silence
+
+La nouvelle formule contient l'ancien trapèze comme cas particulier, mais la refaire passer par elle aurait changé des derniers bits (0,665 + 0,035 ≠ 0,7 en virgule flottante), et des essais vérifient `toBe(0)` au pied de la rampe. Sans `optimumPh`, la fonction garde donc son ancien chemin, et vingt-quatre fiches rendent exactement les mêmes nombres.
+
+### Ce que ça donne
+
+Mesure de #445 (le pin avec son plateau), graines 17, 43, 71, moteur feb75da : pin sur le limon riche 16,35 · 15,37 · 16,05 → 8,81 · 7,87 · 8,50 m à quarante ans ; 11 essais à terre dans 7 fichiers, dont 10 pour le seul pin du limon riche ou de la friche ; aucune table à recaler.
+
+Vérification de la variante retenue (sans le pin), mêmes graines, contre main 1cf0e51 :
+
+| course | facteur | main, 40 ans | branche, 40 ans |
+|---|---|---|---|
+| pin, limon riche (7,0) | 0,76 → 0,76 | 16,38 · 15,39 · 16,08 | identique au bit près |
+| chêne-liège, suberaie (5,2) | 1,00 → 1,00 | 13,87 · 13,04 · 13,48 | identique au bit près |
+| chêne-liège, limon riche (7,0) | 1,00 → 0,63 | 12,20 · 11,26 · 11,71 | 9,06 · 8,25 · 8,78 (−26 %) |
+| noyer hybride, sable profond (4,8), 20 ans | 1,00 → 0,81 | 9,94 · 8,70 · 9,18 | 9,44 · 8,34 · 8,84 (−4 %) |
+
+La suite complète est verte en CI, une fois la garantie structurelle de `ph-survie` réécrite sur le même critère.
+
+### Les prédictions fausses
+
+- C4 (#445) : le pin du mélange de `ph-survie` devait perdre 5 à 20 % sous le plateau ; −0,1 %.
+- V4 : le noyer hybride du sable profond devait perdre 5 à 20 % à vingt ans sous un facteur de 0,81 ; 3,7 à 5,0 %.
+
+### Ce qui reste ouvert
+
+- **#262, pour vingt-quatre fiches** : la rampe absolue et son genou (le charme passe de 0,05 à 1,00 entre pH 4,5 et 5,2), et une part de plateau qui varie de 30 à 72 % de l'amplitude. Un plateau sourcé ne vient qu'avec une plage de terrain et des bornes sourcées.
+- **Le pin** : une source européenne de croissance au-dessus de pH 6, et sa borne haute (7,5, *(à confirmer)*).
+- **Les préférences horticoles** (pommier, abricotier, bouleau, frêne) et l'optimum de nodulation de l'aulne restent écrits dans les fiches, non lus.
+
+## Ce qu'un lot précédent a appris (le départ de feu imposé, #379)
 
 Décision du propriétaire sur l'instruction de #379 : l'essai du feu des chandelles ne pouvait pas tenir sur trois graines par son décor (0,085 départ attendu en cinq ans), et il fallait soit balayer les graines, soit imposer le départ. Le départ imposé est retenu. Les prédictions et les mesures sont dans les commits de la branche `claude/v06-feu-impose`, avant chaque course.
 
