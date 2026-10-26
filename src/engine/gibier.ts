@@ -261,14 +261,16 @@ export const FROTTIS_RAYON_VOISINAGE_M = 3;
  * ans). Elle déformait aussi les autres budgets, en marches d'escalier : une
  * décimale de 0,9 rendait 7 tiges sur 13 semaines au lieu de 11,7.
  *
- * Ce qui est rendu est la différence de deux arrondis du budget cumulé : sur
- * tout intervalle, le total est le budget cumulé à moins d'une tige près, et
- * l'espérance annuelle sourcée est tenue. Le report ne demande ni état ni
- * tirage : le rang de la semaine suffit, et le flux aléatoire ne bouge pas.
+ * Le budget s'accumule de semaine de brame en semaine de brame, d'une saison à
+ * l'autre, et une tige est frottée chaque fois que le cumul franchit un
+ * entier : sur tout intervalle, le total est le budget cumulé à moins d'une
+ * tige près, et l'espérance annuelle (`FROTTIS_PAR_CERVIDE_AN`) est tenue. Ce
+ * report ne demande ni état ni tirage : le cumul se lit sur le rang de la
+ * semaine, et le flux aléatoire ne bouge pas.
  */
 export function tigesDeLaSemaine(budget: number, rang: number): number {
   if (!(budget > 0)) return 0;
-  return Math.max(0, Math.round((rang + 1) * budget) - Math.round(rang * budget));
+  return Math.max(0, Math.floor((rang + 1) * budget) - Math.floor(rang * budget));
 }
 
 /**

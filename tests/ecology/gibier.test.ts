@@ -450,7 +450,7 @@ describe("les frottis : passer la hauteur de dent ne met pas à l'abri", () => {
         frottes += frottisDeLaSemaine(tige, densite, surfaceHa, w, semaine, () => 0.15).length;
       }
     }
-    const attendu = (10 * densite * surfaceHa * FROTTIS_PAR_CERVIDE_AN) / semaines;
+    const attendu = 10 * densite * surfaceHa * FROTTIS_PAR_CERVIDE_AN;
     expect(frottes).toBeGreaterThan(0);
     expect(Math.abs(frottes - attendu)).toBeLessThanOrEqual(1);
     // Et pour tout budget, le total suit le budget cumulé à moins d'une tige
