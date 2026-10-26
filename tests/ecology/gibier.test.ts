@@ -21,9 +21,12 @@ import {
   aPorteeDeDent,
   attraitFrottis,
   brouter,
+  FROTTIS_PAR_CERVIDE_AN,
   FROTTIS_REPIT_SEMAINES,
+  FROTTIS_SEMAINES,
   frottisDeLaSemaine,
   HAUTEUR_BROUTAGE_M,
+  tigesDeLaSemaine,
 } from "../../src/engine/gibier";
 import { serieToWeeks } from "../../src/engine/meteo";
 import { rngStateFromSeed } from "../../src/engine/rng";
@@ -428,6 +431,36 @@ describe("les frottis : passer la hauteur de dent ne met pas à l'abri", () => {
       if (tard.some((f) => premier.some((p) => p.treeId === f.treeId))) repereRefrotte = true;
     }
     expect(repereRefrotte).toBe(true);
+  });
+
+  it("la décimale du budget se reporte : une petite parcelle peu giboyeuse est frottée (#415)", () => {
+    // Cinquante mètres de friche en bocage : 0,136 cervidé/ha sur 0,25 ha,
+    // 0,41 frottis attendu par an. La règle d'avant n'ajoutait la tige décimale
+    // qu'aux semaines multiples de round(1 / 0,031) = 32 : aucune semaine de
+    // brame ne l'est, et la parcelle n'était jamais frottée.
+    const [debut, fin] = FROTTIS_SEMAINES;
+    const semaines = fin - debut + 1;
+    const densite = 0.136;
+    const surfaceHa = 0.25;
+    const tige = [{ ...arbreNu(2.5), id: 1 }];
+    let frottes = 0;
+    for (let an = 0; an < 10; an++) {
+      for (let w = debut; w <= fin; w++) {
+        const semaine = an * 52 + w;
+        frottes += frottisDeLaSemaine(tige, densite, surfaceHa, w, semaine, () => 0.15).length;
+      }
+    }
+    const attendu = (10 * densite * surfaceHa * FROTTIS_PAR_CERVIDE_AN) / semaines;
+    expect(frottes).toBeGreaterThan(0);
+    expect(Math.abs(frottes - attendu)).toBeLessThanOrEqual(1);
+    // Et pour tout budget, le total suit le budget cumulé à moins d'une tige
+    // près : la décimale de 0,9, qui rendait 7 tiges sur 13 semaines, en rend
+    // 11 ou 12.
+    for (const budget of [0.031, 0.46, 0.9, 1, 1.37, 4.5]) {
+      let total = 0;
+      for (let rang = 0; rang < 10 * semaines; rang++) total += tigesDeLaSemaine(budget, rang);
+      expect(Math.abs(total - 10 * semaines * budget)).toBeLessThanOrEqual(1);
+    }
   });
 
   it("hors saison, les bois sont faits : plus de frottis", () => {

@@ -228,6 +228,28 @@ export interface ResultatBroutage {
 export const FROTTIS_RAYON_VOISINAGE_M = 3;
 
 /**
+ * Tiges frottées la semaine de brame de rang `rang` (compté d'une saison à
+ * l'autre), pour un budget fractionnaire de `budget` tiges par semaine.
+ *
+ * **La décimale se reporte, elle ne se perd plus** (#415). La règle d'avant
+ * ajoutait la tige décimale les semaines multiples de `round(1 / décimale)` :
+ * passé un module de 24, aucune semaine de brame (12 à 24) n'en était un
+ * multiple, et une petite parcelle peu giboyeuse ne voyait jamais un frottis
+ * (0,41 attendu par an sur 50 m de friche en bocage, zéro en quarante-cinq
+ * ans). Elle déformait aussi les autres budgets, en marches d'escalier : une
+ * décimale de 0,9 rendait 7 tiges sur 13 semaines au lieu de 11,7.
+ *
+ * Ce qui est rendu est la différence de deux arrondis du budget cumulé : sur
+ * tout intervalle, le total est le budget cumulé à moins d'une tige près, et
+ * l'espérance annuelle sourcée est tenue. Le report ne demande ni état ni
+ * tirage : le rang de la semaine suffit, et le flux aléatoire ne bouge pas.
+ */
+export function tigesDeLaSemaine(budget: number, rang: number): number {
+  if (!(budget > 0)) return 0;
+  return Math.max(0, Math.round((rang + 1) * budget) - Math.round(rang * budget));
+}
+
+/**
  * Désigne les tiges frottées de la semaine. Entièrement déterministe : les
  * brocards vont aux tiges les plus exposées, dans l'ordre.
  */
@@ -304,11 +326,11 @@ export function frottisDeLaSemaine(
     if (attrait > 0) candidats.push({ tree, attrait });
   }
   candidats.sort((a, b) => b.attrait - a.attrait || a.tree.id - b.tree.id);
-  // Le budget est fractionnaire : la partie décimale décide s'il y a une tige
-  // de plus cette semaine, sans tirage au sort (la semaine suffit à varier).
-  const nombre =
-    Math.floor(budget) + (week % Math.max(2, Math.round(1 / (budget % 1 || 1))) === 0 ? 1 : 0);
-  return candidats.slice(0, Math.max(0, nombre)).map(({ tree }) => ({
+  const nombre = tigesDeLaSemaine(
+    budget,
+    Math.floor(semaineAbsolue / 52) * semaines + week - debut,
+  );
+  return candidats.slice(0, nombre).map(({ tree }) => ({
     treeId: tree.id,
     mort: tree.heightM < FROTTIS_HAUTEUR_LETALE_M,
   }));
