@@ -39,6 +39,7 @@ import {
   entourageDeLaStation,
   resumeBordures,
 } from "../engine/paysage";
+import { reservePotassiumInitialeGM2 } from "../engine/pk";
 import {
   ALTITUDE_SERIE_M,
   altitudeParCellule,
@@ -2130,6 +2131,9 @@ function stationInfo(): StationInfo {
     // La teneur que la station déclare, telle que le moteur la lit (#395) :
     // le repère de la ligne « Potassium » de la carte du sol (#435).
     potassiumEchangeableMgKg: sc.station.potassiumEchangeableMgKg,
+    // Et la réserve non échangeable que le moteur en tire à la création, par sa
+    // propre règle (#452) : le jeu n'a pas à recopier le rapport.
+    potassiumReserveInitialeGM2: reservePotassiumInitialeGM2(sc.station.potassiumInitialGM2),
     meteoLabel: serie
       ? `${serie.stationMeteo} ${serie.periode[0]}-${serie.periode[1]} (Météo-France)`
       : "année synthétique répétée",

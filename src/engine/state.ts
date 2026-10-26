@@ -24,7 +24,7 @@ import { empriseInitiale, N_HERBACEES } from "./herbacees";
 import { stockEquilibreMm, stocksEquilibreParCellule } from "./nappe";
 import { KG_PER_HA_TO_G_PER_M2 } from "./nitrogen";
 import type { Bordures } from "./paysage";
-import { RESERVE_K_SUR_ECHANGEABLE } from "./pk";
+import { reservePotassiumInitialeGM2 } from "./pk";
 import type { Relief } from "./relief";
 import { altitudeParCellule } from "./relief";
 import type { RngState } from "./rng";
@@ -971,7 +971,7 @@ export function createGameState(
       // La réserve non échangeable, au rapport des sols cultivés de Balík et
       // al. 2020 (pk.ts).
       potassiumReserveG: new Float64Array(n).fill(
-        station.potassiumInitialGM2 * RESERVE_K_SUR_ECHANGEABLE,
+        reservePotassiumInitialeGM2(station.potassiumInitialGM2),
       ),
       // Une parcelle nue au départ : la strate s'installe d'elle-même. Qui la
       // compose au premier jour, c'est l'atlas qui le dit, d'après le pH de la

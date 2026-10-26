@@ -879,8 +879,8 @@ describe("un chantier se paie sur la surface qu'il travaille dans la parcelle (#
     // au coin, il faisait payer quatre fois ce qu'il travaillait.
     expect(partDedans).toBeLessThan(0.3);
     for (const type of ["labourer", "chauler", "faucher"] as const) {
-      const centre = cout(state, applyAction(state, { type, week: 0, ...AU_CENTRE }));
-      const coin = cout(state, applyAction(state, { type, week: 0, ...AU_COIN }));
+      const centre = cout(state, applyAction(state, { type, week: 0, ...AU_CENTRE } as GameAction));
+      const coin = cout(state, applyAction(state, { type, week: 0, ...AU_COIN } as GameAction));
       expect(centre, type).toBeGreaterThan(0);
       expect(coin / centre, type).toBeCloseTo(partDedans, 9);
     }

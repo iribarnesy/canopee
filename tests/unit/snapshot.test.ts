@@ -13,7 +13,11 @@ import { applyAction, estGesteSurArbres } from "../../src/engine/actions";
 import { HERBACEES, hauteurDuTapisM, N_HERBACEES } from "../../src/engine/herbacees";
 import { syntheticYear } from "../../src/engine/meteo";
 import { contextePhenologique } from "../../src/engine/phenologie";
-import { potassiumEchangeableGM2 } from "../../src/engine/pk";
+import {
+  potassiumEchangeableGM2,
+  reservePotassiumInitialeGM2,
+  teneurPotassiumMgKg,
+} from "../../src/engine/pk";
 import { rngStateFromSeed } from "../../src/engine/rng";
 import { createGameState, plantAt, type Station } from "../../src/engine/state";
 import { LIMON_RICHE, STATIONS_V0 } from "../../src/engine/stations";
@@ -706,12 +710,12 @@ describe("les semaines de crue (#288)", () => {
  * **Le potassium, en teneur d'analyse de terre** (#435).
  *
  * Le moteur tient son potassium échangeable en g/m², et la station le déclare
- * en mg K/kg depuis #395. L'instantané le relit par la conversion même du
- * moteur (`potassiumEchangeableGM2`) : ce que ces épreuves tiennent est qu'il
+ * en mg K/kg depuis #395. L'instantané le relit par la conversion inverse du
+ * moteur (`teneurPotassiumMgKg`, #452) : ce que ces épreuves tiennent est qu'il
  * ne pèse rien lui-même — une cellule intacte relit la teneur déclarée, sur
  * toutes les stations livrées, quel que soit leur horizon de surface.
  */
-describe("le potassium de chaque cellule, comme une analyse de terre (#435)", () => {
+describe("le potassium de chaque cellule, comme une analyse de terre (#435, #452)", () => {
   it("une parcelle neuve relit la teneur que sa station déclare, sur chaque station", () => {
     for (const { station } of STATIONS_V0) {
       const etat = createGameState(
@@ -769,5 +773,28 @@ describe("le potassium de chaque cellule, comme une analyse de terre (#435)", ()
     // Une réserve, et non l'échangeable une seconde fois : elle le dépasse de
     // loin (dix fois au départ, `RESERVE_K_SUR_ECHANGEABLE`).
     expect(snapshot.potassiumReserveMoyenGM2).toBeGreaterThan(e.fluxes.potassiumMoyenGM2 * 2);
+  });
+
+  it("la conversion inverse est celle du moteur, sur chaque station (#452)", () => {
+    // Le jeu divisait par ce que pèse 1 mg K/kg : juste tant que la conversion
+    // est linéaire. Le moteur exporte maintenant l'inverse, et c'en est un.
+    for (const { station } of STATIONS_V0) {
+      for (const mgKg of [0, 20, station.potassiumEchangeableMgKg, 400]) {
+        const g = potassiumEchangeableGM2(station.profil, mgKg);
+        expect(teneurPotassiumMgKg(station.profil, g), station.id).toBeCloseTo(mgKg, 9);
+      }
+    }
+    expect(teneurPotassiumMgKg([], 5)).toBe(0);
+  });
+
+  it("la réserve de départ que le jeu reçoit est celle que l'état pose, sur chaque station (#452)", () => {
+    for (const { station } of STATIONS_V0) {
+      const etat = createGameState(
+        { ...station, coteM: 6, voisinage: [], gibierParHa: 0 },
+        rngStateFromSeed(7),
+      );
+      const depart = reservePotassiumInitialeGM2(station.potassiumInitialGM2);
+      for (const v of etat.soil.potassiumReserveG) expect(v, station.id).toBe(depart);
+    }
   });
 });
