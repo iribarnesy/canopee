@@ -28,6 +28,7 @@ import { createGameState, plantAt } from "../../src/engine/state";
 import { LIMON_RICHE } from "../../src/engine/stations";
 import { stateHash, tick } from "../../src/engine/tick";
 import { diametreInitialCm, volumeTigeM3 } from "../../src/engine/trees";
+import { cellulesDeLaZone } from "../../src/engine/zone";
 
 const WEATHER = syntheticYear(LIMON_RICHE.climat);
 const STATION = { ...LIMON_RICHE.station, coteM: 50 };
@@ -853,5 +854,75 @@ describe("les gestes qui n'ont pas d'arbre pour cible", () => {
     // perdu, et le rendu n'a pas à les animer.
     expect(cellulesDe(r, "ramasserBoisMort")).toEqual([10 * cote + 10]);
     expect(r.state.soil.boisAuSolCG[10 * cote + 10]).toBe(0);
+  });
+});
+
+describe("un chantier se paie sur la surface qu'il travaille dans la parcelle (#456)", () => {
+  // Parcelle de cinquante mètres où rien n'est planté : l'engin passe partout.
+  const state = createGameState(STATION, rngStateFromSeed(2));
+  const cote = STATION.coteM;
+  const AU_CENTRE = { x: 25, y: 25, rayonM: 8 };
+  /** Centré sur le coin : un quart du disque est dans la parcelle. */
+  const AU_COIN = { x: 0, y: 0, rayonM: 8 };
+  const SEMIS = 41;
+  const cout = (avant: typeof state, r: ReturnType<typeof applyAction>) =>
+    avant.economy.treasuryEur - r.state.economy.treasuryEur;
+  const partDedans =
+    cellulesDeLaZone(cote, AU_COIN).length / cellulesDeLaZone(cote, AU_CENTRE).length;
+  function cellulesDe(r: ReturnType<typeof applyAction>, type: string): number[] {
+    const geste = (r.gestes ?? []).filter(estGesteSurZone).find((g) => g.type === type);
+    return [...(geste?.cellules ?? [])].sort((a, b) => a - b);
+  }
+
+  it("au coin, un disque ne fait payer que ce qui est dans la parcelle", () => {
+    // Le labour, le chaulage et la fauche facturaient l'aire du disque : posé
+    // au coin, il faisait payer quatre fois ce qu'il travaillait.
+    expect(partDedans).toBeLessThan(0.3);
+    for (const type of ["labourer", "chauler", "faucher"] as const) {
+      const centre = cout(state, applyAction(state, { type, week: 0, ...AU_CENTRE }));
+      const coin = cout(state, applyAction(state, { type, week: 0, ...AU_COIN }));
+      expect(centre, type).toBeGreaterThan(0);
+      expect(coin / centre, type).toBeCloseTo(partDedans, 9);
+    }
+  });
+
+  it("le semis et la moisson aussi, semence comprise", () => {
+    const semerSur = (zone: typeof AU_CENTRE) => {
+      const laboure = applyAction(state, { type: "labourer", week: SEMIS, ...zone }).state;
+      const seme = applyAction(laboure, {
+        type: "semer",
+        week: SEMIS,
+        ...zone,
+        cultureId: "triticum_aestivum",
+      });
+      expect(seme.refusals).toEqual([]);
+      // Moissonné aussitôt : pas un grain, mais la moissonneuse est passée.
+      const moisson = applyAction(seme.state, { type: "moissonner", week: SEMIS, ...zone });
+      expect(moisson.refusals).toEqual([]);
+      return { semis: cout(laboure, seme), moisson: cout(seme.state, moisson) };
+    };
+    const centre = semerSur(AU_CENTRE);
+    const coin = semerSur(AU_COIN);
+    expect(coin.semis / centre.semis).toBeCloseTo(partDedans, 9);
+    expect(coin.moisson / centre.moisson).toBeCloseTo(partDedans, 9);
+  });
+
+  it("le semis rapporte les cellules semées, la moisson celles qu'elle a prises", () => {
+    // Le rendu n'avait rien où accrocher ces deux gestes : ni animation, ni
+    // ligne de bilan, ni son.
+    const laboure = applyAction(state, { type: "labourer", week: SEMIS, ...AU_CENTRE }).state;
+    const seme = applyAction(laboure, {
+      type: "semer",
+      week: SEMIS,
+      ...AU_CENTRE,
+      cultureId: "triticum_aestivum",
+    });
+    const semees = [...cellulesDeLaZone(cote, AU_CENTRE)].sort((a, b) => a - b);
+    expect(cellulesDe(seme, "semer")).toEqual(semees);
+    // Une moisson plus large que le semis ne prend que ce qui était semé : son
+    // geste dit où la culture a quitté le champ, pas où l'engin a roulé.
+    const large = { ...AU_CENTRE, rayonM: 12 };
+    const moisson = applyAction(seme.state, { type: "moissonner", week: SEMIS, ...large });
+    expect(cellulesDe(moisson, "moissonner")).toEqual(semees);
   });
 });
