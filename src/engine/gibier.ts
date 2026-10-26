@@ -107,7 +107,29 @@ export const DIGESTIBILITE = 0.6;
  */
 export const EFFET_CHASSE = 0.25;
 
-/** Part du vide qui se comble chaque semaine par immigration des voisins. */
+/**
+ * Part du vide qui se comble chaque semaine par le retour des voisins : une
+ * demi-vie de 23 semaines *(à calibrer)*.
+ *
+ * Aucune source trouvée ne chiffre la vitesse à laquelle le gibier revient sur
+ * une parcelle après un prélèvement (#373). Celles qui en parlent la bornent
+ * par le bas, sans la fixer :
+ *  - un vide de prélèvement se comble : 51 cerfs de Virginie retirés de
+ *    1,1 km², et 31 de nouveau au même endroit trois ans plus tard (Miller et
+ *    al. 2010, Journal of Wildlife Management 74). Le second prélèvement
+ *    trouve plus de 60 % du premier : si le premier avait vidé la zone, le
+ *    vide s'est comblé à plus de 0,6 % par semaine, et le 3 % est au-dessus
+ *    de ce plancher ;
+ *  - ce sont les voisins qui l'occupent : chez le chevreuil, le domaine vital
+ *    se resserre quand la densité monte et s'étend quand la chasse la fait
+ *    baisser (Kjellander et al. 2004, Oecologia 139, deux populations dont la
+ *    densité a varié du simple au quadruple) ;
+ *  - les jeunes, eux, ne courent pas vers les vides : leur dispersion ne
+ *    dépend pas de la densité (Gaillard et al. 2008, Proceedings of the Royal
+ *    Society B 275), et ils s'installent à 2 km médians de leur lieu de
+ *    naissance, à un ou deux ans (Wahlström et Liberg 1995, Journal of
+ *    Zoology 235).
+ */
 export const RETOUR_IMMIGRATION = 0.03;
 
 /** Un plant plusieurs fois rabattu et resté minuscule finit par mourir. */
