@@ -104,7 +104,7 @@ Pour publier la réserve de potassium de départ (#452), il fallait savoir si el
 | feuillage du blé, semaines 42 à 8 | 0 | 0,12 à 0,14 |
 | azote du blé en semaine 8, sans apport | 0 | 29,7 kg N/ha |
 | lessivage annuel, sans apport / 192 kg N | 38,9 / 47 kg N/ha | 21,2 / 27 |
-| grain, sans apport / 192 kg N | 3,4 / 9,3 t/ha | 4,4 / 9,8 |
+| grain, sans apport / 192 kg N | 3,4 / 9,3 t/ha | 4,4 / 9,9 |
 | C16, tranches de vingt ans | 3,24 / 2,46 / 1,85 / 1,41 / 1,09 / 0,87 | 4,42 / 3,85 / 3,33 / 2,88 / 2,51 / 2,18 |
 | LER, graines 4 / 11 / 23 | 1,443 / 1,388 / 1,367 | 1,451 / 1,396 / 1,375 |
 
