@@ -5,14 +5,15 @@
  * par des champignons dont le mycélium explore un volume de terre sans commune
  * mesure avec celui des racines, et lui livre eau et nutriments en échange de
  * sucres. Ce réseau ne s'installe pas en un jour — il se construit sur des
- * années, à partir des hôtes présents — et il ne survit pas au labour.
+ * années, à partir des hôtes présents — et chaque labour en retire un quart.
  *
  * Deux choses en découlent, qui manquaient au jeu :
  *  - **planter dans un sol forestier ancien n'a rien à voir avec planter dans
  *    un labour** : le premier offre un réseau déjà tissé, le second oblige le
  *    plant à attendre que le sien se fasse ;
- *  - **le labour coûte pendant des années**, pas seulement l'année où on le
- *    passe. C'est le vrai prix qu'on ne voit pas sur la facture.
+ *  - **le labour se paie tant qu'on laboure** : chaque passage retranche ce
+ *    que le réseau mettra des années à refaire. C'est le vrai prix qu'on ne
+ *    voit pas sur la facture.
  *
  * La compatibilité compte : trois grands types qui ne se remplacent pas. Un
  * chêne ne profite pas du réseau d'une lande à bruyères, et réciproquement.
@@ -48,8 +49,35 @@ export const TYPES_MYCORHIZE: readonly TypeMycorhize[] = ["ecto", "arbusculaire"
  */
 export const VITESSE_INSTALLATION = 0.004;
 
-/** Ce qui subsiste d'un réseau après un labour : les hyphes sont tranchées. */
-export const SURVIE_APRES_LABOUR = 0.05;
+/**
+ * Ce qui subsiste d'un réseau après un labour : les hyphes sont tranchées,
+ * détachées de leurs hôtes et enfouies, mais **le labour réduit le réseau, il
+ * ne l'efface pas** (#384).
+ *
+ * Le seul relevé trouvé qui mesure la grandeur que ce réseau représente — le
+ * mycélium extraracinaire dans le sol, avant et après le soc — est celui de
+ * Kabir, O'Halloran, Fyles et Hamel 1997 (Plant and Soil 192 : 285-293) : au
+ * printemps, sur 0-15 cm, après onze ans de maïs, le labour d'automne a retiré
+ * **26 et 27 %** de la densité totale d'hyphes arbusculaires du limon sableux
+ * (deux années) et **20 %** de celle de l'argile, contre les parcelles qui ne
+ * sont pas labourées à l'automne. La moyenne des trois, 24 %, laisse 0,76.
+ *
+ * Ce que ce nombre est, et ce qu'il n'est pas :
+ *  - une densité d'hyphes, pas une colonisation des racines : le labour ne
+ *    change pas la seconde sous le maïs (Kabir et al. 1998, Mycorrhiza 8) ;
+ *  - un champ sans hôte pendant l'hiver : sous un arbre vivant, des hyphes
+ *    restées attachées à leurs racines survivent mieux (Kabir, O'Halloran et
+ *    Hamel 1997, Mycorrhiza 7), et le nombre est plutôt un plancher ;
+ *  - un sol **brassé à fond** fait pire : des sachets de terre mélangés à
+ *    l'automne perdent 67 % de leurs hyphes contre 20 % par le seul hiver
+ *    (même source), soit 0,41 de survie. C'est un brassage d'expérience, pas
+ *    une charrue ;
+ *  - mesuré sur les arbusculaires seulement : *(à confirmer)* pour l'ecto et
+ *    l'éricoïde, qu'aucun relevé de labour trouvé ne chiffre.
+ *
+ * L'ancien 5 % ne portait aucune source.
+ */
+export const SURVIE_APRES_LABOUR = 0.76;
 
 /**
  * Ce que le réseau **n'apporte pas**, et pourquoi.
