@@ -380,8 +380,8 @@ export interface Snapshot {
    * de l'horizon de surface (#435). Multiplié par 1/`K_SUR_K2O` (≈ 1,2), c'est
    * le mg K₂O/kg d'un bulletin de laboratoire français.
    *
-   * Le stock du moteur (`soil.potassiumG`, g/m²) relu par sa propre conversion
-   * (`potassiumEchangeableGM2`, pk.ts) : la station déclare sa teneur dans
+   * Le stock du moteur (`soil.potassiumG`, g/m²) relu par sa conversion inverse
+   * (`teneurPotassiumMgKg`, pk.ts, #452) : la station déclare sa teneur dans
    * cette unité depuis #395, et la carte du sol peut enfin la montrer comme une
    * analyse — et montrer où une potasse a été épandue.
    */
@@ -682,6 +682,16 @@ export interface StationInfo {
    * ce que la parcelle porte maintenant (#435).
    */
   potassiumEchangeableMgKg: number;
+  /**
+   * Réserve de potassium **non échangeable** de départ, g/m² (#452) : celle que
+   * le moteur pose dans chaque cellule à la création de la partie
+   * (`reservePotassiumInitialeGM2`, pk.ts). C'est le point de départ de
+   * `potassiumReserveMoyenGM2`, de quoi dire ce que la réserve a perdu sans
+   * recopier la règle du moteur. Comme la teneur déclarée, il précède les
+   * années de vieillissement : sur une parcelle vieillie, la réserve trouvée à
+   * l'arrivée est celle du premier instantané.
+   */
+  potassiumReserveInitialeGM2: number;
   meteoLabel: string;
   /** eau libre de la parcelle : l'UI la dessine (eau_surface.ts) */
   eau: EauDeSurface;

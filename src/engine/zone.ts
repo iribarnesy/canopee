@@ -150,11 +150,36 @@ export function cellulesDeLaZone(coteM: number, zone: Zone): number[] {
   return out;
 }
 
-/** L'aire de la zone, m² — celle qui facture les heures de chantier. */
+/**
+ * L'aire **géométrique** de la zone, m², bord de parcelle compris : celle d'une
+ * densité visée (l'éclaircie) et du devis du panneau. Elle ne facture plus un
+ * chantier : voir `aireDansLaParcelleM2`.
+ */
 export function aireM2DeLaZone(zone: Zone): number {
   return zone.zone === "bande"
     ? zone.longueurM * zone.largeurM
     : Math.PI * zone.rayonM * zone.rayonM;
+}
+
+/**
+ * **La surface de la zone dans la parcelle**, m² : ses cellules, d'un mètre
+ * carré chacune (#456). C'est elle qui facture un chantier, ses heures et son
+ * engin.
+ *
+ * Le labour, le semis, la moisson, la fauche et le chaulage facturaient l'aire
+ * géométrique, y compris la part d'un disque qui déborde du bord : posé au
+ * coin, un disque de huit mètres faisait payer quatre fois ce qu'il
+ * travaillait. La fertilisation (#435) comptait déjà ses cellules ; tous les
+ * chantiers de zone le font maintenant. Sur une zone tout entière dedans,
+ * l'écart avec l'aire géométrique est celui de la grille au mètre — quelques
+ * pour cent sur un petit disque, rien sur une bande alignée.
+ */
+export function aireDansLaParcelleM2(coteM: number, zone: Zone): number {
+  let n = 0;
+  pourChaqueCelluleDeLaZone({ widthM: coteM, heightM: coteM }, zone, () => {
+    n++;
+  });
+  return n;
 }
 
 /** Le périmètre de la zone, m — celui qu'on clôture. */

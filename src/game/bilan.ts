@@ -337,6 +337,9 @@ const GESTE_DIT: Record<
   labourer: { quoi: "surface", participe: "labouré" },
   ramasserBoisMort: { quoi: "surface", participe: "débarrassé", complement: " de son bois mort" },
   cloturer: { quoi: "surface", participe: "clôturé" },
+  // Rapportés par le moteur depuis #456 ; le `Record` complet les exigeait.
+  semer: { quoi: "surface", participe: "semé" },
+  moissonner: { quoi: "surface", participe: "moissonné" },
 };
 
 /**
