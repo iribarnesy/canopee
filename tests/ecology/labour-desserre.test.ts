@@ -43,6 +43,7 @@ import {
 } from "../../src/engine/tassement";
 import { tick } from "../../src/engine/tick";
 import { cellulesDeLaZone } from "../../src/engine/zone";
+import { CHAMP_LABOURE_AVANT_BROADBALK_ANS } from "../helpers";
 
 const FICHE = HERBACEES.find((h) => h.id === "triticum_aestivum");
 if (!FICHE?.culture) throw new Error("fiche du blé manquante");
@@ -144,7 +145,7 @@ describe("la même charrue desserre ou tasse, selon ce qu'elle trouve", () => {
 });
 
 describe("le point zéro, mesuré sur l'échelle de temps de Broadbalk", () => {
-  it("un blé continu sans apport rejoint la bande de Broadbalk, et il met un siècle", () => {
+  it("un blé continu sans apport rejoint la bande de Broadbalk, et il met plus d'un siècle", () => {
     // **c'est le point délicat du lot, et il avait été annoncé comme un
     // risque.** Neutraliser complètement le tassement faisait passer la
     // parcelle nue de 1,07 à 1,70 t/ha sur trente ans, là où Broadbalk tient
@@ -176,7 +177,16 @@ describe("le point zéro, mesuré sur l'échelle de temps de Broadbalk", () => {
     // trésorerie : 2,96 / 1,25 / 0,84 / 0,78 / 0,79 / 0,70. Le passage dans la gamme avait lieu vers les
     // années 20 à 40 parce que l'humus était brûlé en trente ans ; c'était une
     // date du moteur, pas une date de Broadbalk, et elle n'est plus assertée.
-    const r = bleContinuSansApport(120);
+    //
+    // **Et la descente se suit sur l'âge du champ de Broadbalk** (#324) : deux
+    // siècles de labour avant 1843 (`CHAMP_LABOURE_AVANT_BROADBALK_ANS`), puis
+    // les soixante ans que l'essai lisait. Les cent vingt premières années
+    // étaient la descente d'un sol neuf, riche comme une prairie, et la parcelle
+    // Nil ne l'était pas. Sur ce champ-là, main rend 0,35 / 0,30 / 0,26 t/ha
+    // aux ans 201-260 et finit sous le facteur deux (sonde du blé continu,
+    // déterministe) : il passait dans la bande, il ne s'y posait pas.
+    const N = CHAMP_LABOURE_AVANT_BROADBALK_ANS / 20 + 3;
+    const r = bleContinuSansApport(N * 20);
     const tranche = (d: number) => {
       const t = r.slice(d * 20, (d + 1) * 20);
       return t.reduce((a, b) => a + b, 0) / t.length;
@@ -193,12 +203,14 @@ describe("le point zéro, mesuré sur l'échelle de temps de Broadbalk", () => {
     // donne pour les parcelles Nil (e-RA, jeu 03-OAWWYields), pas une mesure.
     //
     // Il descend, sans jamais remonter.
-    for (let d = 1; d < 6; d++) expect(tranche(d)).toBeLessThan(tranche(d - 1));
+    for (let d = 1; d < N; d++) expect(tranche(d), `tranche ${d}`).toBeLessThan(tranche(d - 1));
     // Il passe par la gamme de l'essai à un moment de sa descente…
-    const dansLaGamme = [1, 2, 3, 4, 5].filter((d) => tranche(d) > 0.8 && tranche(d) < 1.6);
+    const dansLaGamme = Array.from({ length: N - 1 }, (_, i) => i + 1).filter(
+      (d) => tranche(d) > 0.8 && tranche(d) < 1.6,
+    );
     expect(dansLaGamme.length).toBeGreaterThan(0);
     // …et il finit dans le facteur deux de l'essai, comme C16 le demande.
-    expect(tranche(5)).toBeGreaterThan(0.5);
-    expect(tranche(5)).toBeLessThan(2);
+    expect(tranche(N - 1)).toBeGreaterThan(0.5);
+    expect(tranche(N - 1)).toBeLessThan(2);
   }, 1_800_000);
 });
