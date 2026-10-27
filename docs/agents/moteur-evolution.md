@@ -276,6 +276,10 @@ La lande de #312 et le banc des tables ne bougent pas.
 - **Le rendu ne montre pas la défeuillaison** : `defeuillaisonSemaine` n'est pas lu côté jeu.
 - **La fermeture du couvert** : indice foliaire effectif de 1,2 sous des aulnes de douze ans qui couvrent 146 % du sol (4,8 sous une aulnaie adulte), 0,28 de lumière au sol sous la hêtraie de quarante ans (E9). Le recalage de l'extinction des houppiers touche tout le moteur.
 - **La règle d'imputation de #103**, à sens unique : un frêne que la chalarose a mené à neuf dixièmes du seuil meurt « de sécheresse » si l'été l'achève.
+- **Deux lectures d'essai tranchées par le propriétaire.**
+  - `gibier` : « rattraper », c'est ne plus être en retard. La borne de 5 % ne se lit que d'un côté, et un plant brouté qui dépasse l'intact reste dans le critère.
+  - `succession`, « le peuplement s'auto-éclaircit » : la borne de 2 000 tiges/ha à deux cents ans, sans source, est retirée (U1). De l'an 100 à l'an 200, la friche oscille entre 1 600 et 2 500 tiges/ha, sur main comme sur la branche. Le frottis de #458 en a déplacé la phase, et la graine 2026 rendait 2 048 à l'an 200, à embolie et défeuillaison nulles. L'essai garde l'assertion relative que son commentaire désignait : la densité a fondu par rapport au fourré.
+  - **Leçon** : une borne absolue posée sur un système qui oscille se lit à une phase, pas à un état. Un lot qui ne touche que la phase (un frottis, un tirage de plus) la fait tomber sans rien changer au critère.
 
 ## Ce qu'un lot précédent a appris (la faune et le sol : le frottis perdu, #415 ; le labour et les mycorhizes, #384 ; le retour du gibier, #373)
 
