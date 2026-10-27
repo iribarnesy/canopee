@@ -370,3 +370,32 @@ export function potassiumEchangeableGM2(profil: readonly Horizon[], mgKg: number
   if (!surface) return 0;
   return (mgKg * masseHorizonKgM2(surface)) / 1000;
 }
+
+/**
+ * **La conversion inverse** : la teneur d'analyse de terre, mg K/kg, d'un stock
+ * de potassium échangeable de l'horizon de surface, g/m² (#452).
+ *
+ * C'est elle que lit la carte du sol, et elle vit ici pour la même raison que
+ * la conversion directe : la façon de peser un horizon appartient au moteur.
+ * Le jeu la refaisait en divisant par ce que pèse 1 mg K/kg, ce qui n'était
+ * juste que parce que la conversion est linéaire ; le jour où elle ne le sera
+ * plus (une pierrosité qui varie, un horizon qui suit le labour), les deux
+ * changeront ensemble. Un profil sans horizon de surface rend 0.
+ */
+export function teneurPotassiumMgKg(profil: readonly Horizon[], gM2: number): number {
+  const surface = profil[0];
+  const masse = surface ? masseHorizonKgM2(surface) : 0;
+  if (!(masse > 0)) return 0;
+  return (gM2 * 1000) / masse;
+}
+
+/**
+ * **La réserve non échangeable de départ**, g/m² : celle que le moteur pose
+ * dans chaque cellule à la création d'une partie, `RESERVE_K_SUR_ECHANGEABLE`
+ * fois l'échangeable que la station déclare (#452). Une seule règle, que
+ * l'état lit à la création et que le jeu reçoit avec la station, pour dire
+ * ce que la réserve a perdu sans recopier le rapport.
+ */
+export function reservePotassiumInitialeGM2(potassiumInitialGM2: number): number {
+  return potassiumInitialGM2 * RESERVE_K_SUR_ECHANGEABLE;
+}

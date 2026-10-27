@@ -27,7 +27,7 @@ import { rngStateFromSeed } from "../../src/engine/rng";
 import { createGameState, type GameState } from "../../src/engine/state";
 import { LIMON_RICHE } from "../../src/engine/stations";
 import { tick } from "../../src/engine/tick";
-import { aireM2DeLaZone, cellulesDeLaZone, type Zone } from "../../src/engine/zone";
+import { cellulesDeLaZone, type Zone } from "../../src/engine/zone";
 import {
   actionDuChamp,
   auMoinsUnKilo,
@@ -304,7 +304,10 @@ describe("ce que les lignes disent est ce que le moteur a fait", () => {
     datee(actionDuChamp("semer", DISQUE, BLE.id), labour.state.week),
   );
   const cellules = cellulesDeLaZone(COTE, DISQUE);
-  const aireHa = aireM2DeLaZone(DISQUE) / 10_000;
+  // **Le moteur facture ses cellules** (#456), d'un mètre carré chacune : la
+  // surface que la ligne du journal écrit est celle qu'il fait payer. Il
+  // facturait l'aire du disque, bord de parcelle compris.
+  const aireHa = cellules.length / 10_000;
 
   it("le labour : la surface est celle de son geste, le prix celui que le panneau affiche", () => {
     expect(labour.refusals).toEqual([]);
@@ -312,8 +315,8 @@ describe("ce que les lignes disent est ce que le moteur a fait", () => {
     if (!geste || !estGesteSurZone(geste)) throw new Error("le labour ne rapporte plus son geste");
     expect(geste.cellules).toHaveLength(cellules.length);
     const cout = avantLabour.economy.treasuryEur - labour.state.economy.treasuryEur;
-    // Le panneau dit « 200 €/ha » : `LABOUR_EUR_M2`, sur l'aire que le moteur facture.
-    expect(cout).toBeCloseTo(aireM2DeLaZone(DISQUE) * LABOUR_EUR_M2, 9);
+    // Le panneau dit « 200 €/ha » : `LABOUR_EUR_M2`, sur la surface que le moteur facture.
+    expect(cout).toBeCloseTo(cellules.length * LABOUR_EUR_M2, 9);
   });
 
   it("le semis : la semence et l'engin du panneau, et toute la place sur un sol labouré", () => {
@@ -354,10 +357,7 @@ describe("ce que les lignes disent est ce que le moteur a fait", () => {
     // « net de la moissonneuse » : la recette au prix de la fiche, moins
     // l'engin au prix que le panneau affiche. Si le moteur changeait l'un ou
     // l'autre, la ligne et le panneau mentiraient, et c'est ici qu'on le verrait.
-    expect(dEur).toBeCloseTo(
-      grain * BLE.culture.prixEurT - aireM2DeLaZone(DISQUE) * COUT_ENGIN_EUR_M2,
-      6,
-    );
+    expect(dEur).toBeCloseTo(grain * BLE.culture.prixEurT - cellules.length * COUT_ENGIN_EUR_M2, 6);
     expect(direLaMoisson(grain, dEur, 0.02)).toContain(`${grainLu(grain)} de grain vendu`);
     // Et la place est rendue : rien à moissonner une seconde fois.
     const encore = prevoirAction(moisson.state, datee(actionDuChamp("moissonner", DISQUE, ""), 0));

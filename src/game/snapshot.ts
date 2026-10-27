@@ -27,7 +27,7 @@ import {
   partFloraison,
   partFoliaireOmbrageanteDans,
 } from "../engine/phenologie";
-import { potassiumEchangeableGM2 } from "../engine/pk";
+import { teneurPotassiumMgKg } from "../engine/pk";
 import { porositeDrainageMm } from "../engine/soil";
 import type { GameState, TickFluxes } from "../engine/state";
 import { gridDims, weekOfYear } from "../engine/state";
@@ -247,18 +247,15 @@ export function nappeParCellule(state: GameState): Float32Array {
  * de terre (`potassiumEchangeableMgKg`), et le moteur la rapporte à la masse de
  * l'horizon de surface par une seule fonction, `potassiumEchangeableGM2`.
  *
- * **On la lit à l'envers, et c'est la même fonction qui donne la conversion** :
- * elle est linéaire en la teneur, donc ce qu'elle rend pour 1 mg K/kg est ce
- * que pèse 1 mg K/kg dans l'horizon de surface de cette station. Rien n'est
- * supposé ici — ni densité apparente, ni épaisseur, ni pierrosité : le moteur
- * les tient, et le jour où il change sa façon de peser un horizon, la carte
- * suit. Une cellule qui n'a reçu ni perdu aucun potassium relit donc la teneur
- * déclarée par la station.
+ * **La conversion inverse est celle du moteur** (`teneurPotassiumMgKg`, #452).
+ * La carte divisait le stock par ce que pèse 1 mg K/kg, ce qui ne valait que
+ * parce que la conversion est linéaire ; rien n'est plus supposé ici, ni
+ * densité apparente, ni épaisseur, ni pierrosité, ni linéarité. Une cellule qui
+ * n'a reçu ni perdu aucun potassium relit la teneur déclarée par la station.
  */
 export function potassiumEnTeneurDAnalyse(state: GameState): Float32Array {
-  const gM2ParMgKg = potassiumEchangeableGM2(state.station.profil, 1);
-  if (!(gM2ParMgKg > 0)) return new Float32Array(state.soil.potassiumG.length);
-  return Float32Array.from(state.soil.potassiumG, (g) => g / gM2ParMgKg);
+  const profil = state.station.profil;
+  return Float32Array.from(state.soil.potassiumG, (g) => teneurPotassiumMgKg(profil, g));
 }
 
 /**

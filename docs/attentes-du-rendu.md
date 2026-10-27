@@ -62,6 +62,8 @@ issue au passage suivant.
 **Une fois, au lancement** (`StationInfo`) : `altitudesM` (le relief, maille du
 tick), `nappeCm` (champ figé), `enEau`, `eau`, `coteM`, `ruMm`, `phInitial`,
 `potassiumEchangeableMgKg` (la teneur d'analyse que la station déclare, #395),
+`potassiumReserveInitialeGM2` (la réserve non échangeable que le moteur en tire
+à la création, g/m², #452 : voir plus bas),
 `nappeEquilibreCm`, `ventExposition`, `meteoLabel`.
 
 **À chaque instantané** (`Snapshot`) : la semaine, la météo, la neige, l'année
@@ -69,6 +71,30 @@ civile, le CO₂, l'économie, l'inventaire carbone, la biodiversité, les `flux
 pression de gibier, le stock de BRF, le paysage, le contexte phénologique
 (`pheno`), et la réserve de potassium non échangeable en moyenne de parcelle
 (`potassiumReserveMoyenGM2`, g/m², #435).
+
+**Le potassium, et ce que le jeu n'a plus à recopier** (#452) :
+
+| Champ ou fonction | Ce qu'il porte |
+|---|---|
+| `soilPotassiumMgKg` | la teneur de chaque cellule, mg K/kg, par la conversion inverse du moteur, `teneurPotassiumMgKg(profil, gM2)` (pk.ts) |
+| `StationInfo.potassiumReserveInitialeGM2` | la réserve non échangeable de départ, g/m², celle que `createGameState` pose dans chaque cellule (`reservePotassiumInitialeGM2`, pk.ts) |
+
+Deux choses à savoir avant d'écrire « la réserve a perdu X kg K/ha » :
+
+1. **Le départ est celui de la création, pas de l'arrivée.** Comme
+   `potassiumEchangeableMgKg`, il précède les années de vieillissement, et la
+   réserve bouge pendant ces années : sur la friche du limon riche laissée à
+   elle-même (graines 3, 7, 11, année synthétique), elle passe de 543,6 g/m² à
+   551,0 en cinq ans (+1,4 %), 579 en quinze (+6,5 %), 688 à 702 en trente
+   (+27 %), parce qu'elle absorbe l'échangeable que l'altération et la litière
+   portent au-dessus de sa teneur déclarée (#452). Un « depuis votre arrivée »
+   se lit donc sur la réserve du **premier instantané** de la partie
+   (`potassiumReserveMoyenGM2`), pas sur ce départ. Le moteur ne fige pas encore
+   cette valeur d'arrivée comme il fige le point zéro du carbone
+   (`carboneDeReferenceTHa`) ; ce serait un champ d'état de plus.
+2. **g/m² × 10 = kg/ha.** La réserve vaut dix fois l'échangeable au départ
+   (`RESERVE_K_SUR_ECHANGEABLE`, Balík et al. 2020) : le rapport est une règle
+   du moteur, et le jeu n'a plus besoin de le connaître.
 
 La météo (`weather`, un `WeekWeather` entier) porte depuis peu **le vent** :
 
@@ -161,7 +187,7 @@ fabriquent pas.
 | `soilWater` | eau de l'horizon de surface, mm |
 | `soilPh` | pH |
 | `soilN` | azote minéral, g/m² |
-| `soilPotassiumMgKg` | potassium **échangeable** de l'horizon de surface, en teneur d'analyse de terre, mg K/kg (×1/`K_SUR_K2O` ≈ 1,2 pour les mg K₂O/kg d'un bulletin français). Le stock du moteur (`soil.potassiumG`) relu par sa propre conversion, `potassiumEchangeableGM2` : l'instantané ne pèse rien lui-même, et une cellule intacte relit la teneur que la station déclare (#395, #435). Une potasse épandue se voit à sa place |
+| `soilPotassiumMgKg` | potassium **échangeable** de l'horizon de surface, en teneur d'analyse de terre, mg K/kg (×1/`K_SUR_K2O` ≈ 1,2 pour les mg K₂O/kg d'un bulletin français). Le stock du moteur (`soil.potassiumG`) relu par sa conversion inverse, `teneurPotassiumMgKg` (#452) : l'instantané ne pèse rien lui-même, ne suppose plus la conversion linéaire, et une cellule intacte relit la teneur que la station déclare (#395, #435). Une potasse épandue se voit à sa place |
 | `soilHerbe` | couverture herbacée ∈ [0,1] |
 | `soilHerbeBiomasse` | herbe **sur pied** — elle reste quand l'herbe jaunit |
 | `soilHerbeHumidite` | humidité **vécue** du tapis ∈ [0,1] : la surface, lissée sur ~6 semaines — la pelouse grillée |
@@ -421,8 +447,19 @@ et `gestes`, qui ont **deux** mailles :
 - `{ type, ids }` pour ce qui désigne des arbres — `couper`, `eclaircir`,
   `elaguer`, `trogner`, `receper`, `brouter`, `frotter` ;
 - `{ type, cellules }` pour ce qui désigne du sol — `chauler`, `faucher`,
-  `epandreBrf`, `labourer`, `ramasserBoisMort`, `cloturer`. Indices de cellule
-  identiques à ceux des grilles.
+  `epandreBrf`, `labourer`, `ramasserBoisMort`, `cloturer`, `semer` et
+  `moissonner`. Indices de cellule identiques à ceux des grilles.
+
+**Le semis et la moisson se rapportent depuis #456.** `semer` nomme les cellules
+semées, celles que le moteur fait payer ; `moissonner`, celles où la culture a
+été prise — une moisson plus large que le champ semé ne nomme que le champ.
+Leur teinte de voile (`voile.ts`) et leur phrase de bilan (`bilan.ts`) sont des
+premières valeurs posées par le moteur parce que les deux `Record` les
+exigeaient ; elles sont à retoucher côté rendu, comme le son. **La surface
+facturée est celle des cellules de la zone dans la parcelle**
+(`aireDansLaParcelleM2`, zone.ts), pour les cinq chantiers de zone qui se paient
+à la surface (labourer, semer, moissonner, faucher, chauler), heures comprises :
+une ligne de journal qui écrit « 197 m² » écrit ce qui a été payé.
 
 Dans les deux cas, ce qui est nommé est ce qui a **réellement** été touché : le
 plafond horaire arrête souvent un chantier en cours de route, et une pelouse

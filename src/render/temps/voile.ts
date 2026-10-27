@@ -56,6 +56,12 @@ export const TEINTE_DU_GESTE: Record<GesteTypeZone, Teinte> = {
   // vif, ocre-rouge. Deux premières valeurs, à retoucher côté rendu.
   planter: { r: 96, g: 74, b: 56 },
   leverEcorce: { r: 168, g: 96, b: 64 },
+  // Le semis et la moisson, que le moteur rapporte depuis #456 et que le
+  // `Record` exigeait. Le semoir passe sur une terre déjà travaillée, dont il
+  // affine le lit : la famille du labour, plus claire. La moisson laisse un
+  // chaume couleur paille. Deux premières valeurs, à retoucher côté rendu.
+  semer: { r: 112, g: 88, b: 66 },
+  moissonner: { r: 214, g: 188, b: 120 },
 };
 
 /**
