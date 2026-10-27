@@ -63,7 +63,7 @@ l'autre âge pour vérifier.
 
 ## Ce que le dernier lot a appris (la faune et le sol : le frottis perdu, #415 ; le labour et les mycorhizes, #384 ; le retour du gibier, #373)
 
-Trois réglages de maintenance. #415 et #384 sont corrigés ; #373 est instruit et attend une décision, comme l'essai de la succession que #415 fait tomber (options dans la PR #458). Les prédictions et les mesures sont dans les commits de la branche `claude/v06-faune-sol`, avant chaque course. Le format ne bouge pas (14) : le report du frottis se lit sur le compteur de la partie, aucun champ ne s'ajoute.
+Trois réglages de maintenance. #415 et #384 sont corrigés ; #373 est instruit, et le propriétaire a tranché sur les options de la PR #458 : la loi et le 3 % restent, *(à calibrer)* avec leurs bornes (option A). L'essai de la succession que #415 faisait tomber est réécrit sur sa décision (option S1) : la ligne sans source est retirée, et l'an 60 se lit sur trois graines. Les prédictions et les mesures sont dans les commits de la branche `claude/v06-faune-sol`, avant chaque course. Le format ne bouge pas (14) : le report du frottis se lit sur le compteur de la partie, aucun champ ne s'ajoute.
 
 ### Une règle déterministe a une phase, et un essai peut s'y accrocher
 
@@ -75,7 +75,7 @@ Deux frottis, en semaines 438 et 903, ont suffi à ce que la graine 21 de la lan
 
 ### Corriger un excès fait aussi tomber un essai
 
-La règle d'avant frottait la friche du limon, en lisière, une fois par an pour 0,55 attendu. Corrigée, elle frotte 31 tiges en soixante ans au lieu de 58, et l'essai de la succession tombe : à la graine 2026, le hêtre médian passe de 0,689 à 0,708 de la dominante, pour un plafond de 0,7. Ce n'est pas le frottis qui touche le hêtre (aucune tige de hêtre frottée à cette graine, sur main comme sur la branche) : c'est la trajectoire qui change. Sur cinq graines, **main dépasse déjà le plafond sur deux** (0,769 et 0,729 aux graines 1 et 3), la branche sur deux aussi (0,708 et 0,806), et la moyenne baisse (0,700 → 0,676) ; les deux autres lignes de l'essai, une canopée majoritairement pionnière et moins de 40 % de hêtre dans la canopée, tiennent sur les dix parties. **Un plafond sans source, posé sur une seule graine et atteint par main lui-même deux fois sur cinq, n'attendait que la première trajectoire qui bouge.** Le réécrire sur un critère sourcé ou le changer de forme est une décision : options dans la PR #458.
+La règle d'avant frottait la friche du limon, en lisière, une fois par an pour 0,55 attendu. Corrigée, elle frotte 31 tiges en soixante ans au lieu de 58, et l'essai de la succession tombe : à la graine 2026, le hêtre médian passe de 0,689 à 0,708 de la dominante, pour un plafond de 0,7. Ce n'est pas le frottis qui touche le hêtre (aucune tige de hêtre frottée à cette graine, sur main comme sur la branche) : c'est la trajectoire qui change. Sur cinq graines, **main dépasse déjà le plafond sur deux** (0,769 et 0,729 aux graines 1 et 3), la branche sur deux aussi (0,708 et 0,806), et la moyenne baisse (0,700 → 0,676) ; les deux autres lignes de l'essai, une canopée majoritairement pionnière et moins de 40 % de hêtre dans la canopée, tiennent sur les dix parties. **Un plafond sans source, posé sur une seule graine et atteint par main lui-même deux fois sur cinq, n'attendait que la première trajectoire qui bouge.** Le propriétaire a tranché (option S1) : la ligne du hêtre médian est retirée, « sous-étage » reste porté par la part du hêtre dans la canopée (< 0,4), et l'essai de l'an 60 se lit sur trois graines, 2026, 1 et 2, une règle fixée avant de les lancer. Les deux lignes restantes gardent leurs bornes et tiennent sur chacune : canopée pionnière à 0,570 / 0,566 / 0,679 (> 0,5), hêtre à 0,228 / 0,224 / 0,196 de la canopée (< 0,4). **Retirer une ligne sans source ne desserre aucune des bornes qui restent, et passer à trois graines exige chacune trois fois.** Le prix est dans la durée : une friche de soixante ans coûte 181 à 191 s en local, et l'essai en joue deux de plus.
 
 ### Un nombre sourcé fait voir le mécanisme qui manque
 
@@ -83,7 +83,7 @@ Le 5 % de survie au labour n'avait pas de source ; Kabir et al. 1997 mesurent 73
 
 ### Une borne par le bas ne fixe pas une valeur
 
-#373 demandait de remplacer les 3 % du retour du gibier par un nombre ou une loi sourcés. Aucune source trouvée ne chiffre la vitesse du retour sur une parcelle ; celles qui en parlent la bornent par le bas (Miller et al. 2010 : plus de 0,6 % par semaine, sur le cerf de Virginie) et disent qui comble le vide : les voisins, dont le domaine vital s'étend quand la densité baisse (Kjellander et al. 2004), pas les jeunes, dont la dispersion ne dépend pas de la densité (Gaillard et al. 2008). Le 3 % est au-dessus du plancher ; le choisir, ou en choisir un autre, est un jugement, rapporté avec ses options. Le « quinze fois le prélèvement national » de l'issue répète l'erreur que #349 avait écrite : il compare une parcelle-puits, qui suit la densité de sa station, à une moyenne nationale.
+#373 demandait de remplacer les 3 % du retour du gibier par un nombre ou une loi sourcés. Aucune source trouvée ne chiffre la vitesse du retour sur une parcelle ; celles qui en parlent la bornent par le bas (Miller et al. 2010 : plus de 0,6 % par semaine, sur le cerf de Virginie) et disent qui comble le vide : les voisins, dont le domaine vital s'étend quand la densité baisse (Kjellander et al. 2004), pas les jeunes, dont la dispersion ne dépend pas de la densité (Gaillard et al. 2008). Le 3 % est au-dessus du plancher ; le choisir, ou en choisir un autre, est un jugement, rapporté avec ses options. **Le propriétaire a gardé la loi et le 3 %** (option A), marqués *(à calibrer)* avec leurs bornes : le plancher ne remplace pas la valeur, parce que c'est une borne, d'une autre espèce, et qu'il ferait passer la demi-vie du vide de 23 à 115 semaines, une chasse qui protège sa parcelle au lieu d'être compensée. **Une borne écrite à côté d'un nombre *(à calibrer)* dit jusqu'où il peut aller ; elle ne devient pas le nombre faute de mieux.** Le « quinze fois le prélèvement national » de l'issue répète l'erreur que #349 avait écrite : il compare une parcelle-puits, qui suit la densité de sa station, à une moyenne nationale.
 
 ### Ce que ça donne
 
@@ -113,8 +113,7 @@ Fausses :
 
 ### Ce qui reste ouvert
 
-- **#373** : un autre nombre ou une autre loi pour le retour du gibier, options et recommandation dans la PR #458. Le sanglier ne se chasse toujours pas (il lui faudrait une pression à lui).
-- **L'essai de la succession** (an 60) : décision demandée dans la PR #458.
+- **Le retour du gibier** (#373, fermée sur l'option A) : le 3 % reste *(à calibrer)*. Une source qui chiffre le retour sur une parcelle, par la taille des domaines vitaux et la densité des voisins, le remplacerait. Le sanglier ne se chasse toujours pas (il lui faudrait une pression à lui).
 - **Une culture hôte de son réseau** (#384, option 2) : un mécanisme qui toucherait toutes les prairies et tous les champs.
 - **Trois essais accrochés à la phase du frottis** (deux de `gibier.test.ts`, le recépage de `sylviculture.test.ts`) : ils passent, et ils retomberont au prochain changement de budget si on ne les détache pas de leur semaine.
 
