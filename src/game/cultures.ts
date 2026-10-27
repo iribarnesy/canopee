@@ -148,11 +148,13 @@ export function fenetreDeSemisDite(c: CultureDuMoteur): string {
 /**
  * Ce que la fiche dit de la moisson : « semaine 28, en juillet ».
  *
- * **Une date, pas une fenêtre**, et c'est tout ce que le moteur publie : la
- * fiche déclare `recolteWeek`, mais `moissonner` ne la lit pas — il vend le
- * grain sur pied, à toute date. Le panneau ne dit donc pas « hors saison » de
- * lui-même : il montre la date de la fiche, et, au survol, le grain que la
- * moisson emporterait là (`grainRecoltableT`).
+ * **Une date, pas une fenêtre** : la fiche déclare `recolteWeek`, la date de sa
+ * station de calage. Ce que `moissonner` lit, depuis #455, c'est la maturité de
+ * la culture sur le calendrier de la parcelle, qui suit l'année et la station :
+ * avant, il refuse (« … n'est pas mûr »). Le panneau ne dit donc pas « hors
+ * saison » de lui-même : il montre la date de la fiche, au survol le grain que
+ * la moisson emporterait là (`grainRecoltableT`), et le refus du moteur tel
+ * quel quand il y en a un.
  */
 export function moissonDite(c: CultureDuMoteur): string {
   return semaineDite(c.culture.recolteWeek);

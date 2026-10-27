@@ -778,8 +778,9 @@ function partAvantRetrait(h: HerbaceeV0, cumul: number): number {
  * La règle lit la fiche (ses semaines de semis et de moisson), pas une espèce :
  * une culture de printemps, semée et moissonnée dans l'année, n'est pas
  * concernée. Elle lit la fenêtre de semis et non le semis réel, que l'état ne
- * garde pas : un blé qu'on n'a pas moissonné en juillet reverdit à la rosette
- * dès l'ouverture de la fenêtre suivante (#455).
+ * garde pas. Un blé qu'on n'a pas moissonné en juillet n'en profite pas pour
+ * reverdir : il est passé en paille sur pied la semaine d'avant
+ * (`finDeCycleCulture`, #455).
  */
 function cumulDuCycle(h: HerbaceeV0, ctx: ContextePhenologique): number {
   const c = h.culture;
@@ -792,6 +793,41 @@ function cumulDuCycle(h: HerbaceeV0, ctx: ContextePhenologique): number {
     return 0;
   }
   return ctx.ddYearBase5;
+}
+
+/**
+ * **Une culture est mûre quand son retrait programmé a commencé** (#455) : son
+ * cumul de cycle a atteint `finDJ`, la maturité physiologique. Avant, la moisson
+ * se refuse (`actions.ts`). Une espèce sans retrait programmé n'a pas d'horloge
+ * de maturité, et rien ne lui refuse sa moisson.
+ *
+ * Elle ne lit que le calendrier : une seule réponse par espèce pour toute la
+ * parcelle, qui suit l'année et la station comme le retrait lui-même.
+ */
+export function cultureMure(h: HerbaceeV0, ctx: ContextePhenologique): boolean {
+  const fin = h.phenologie.finDJ;
+  return fin === undefined || cumulDuCycle(h, ctx) >= fin;
+}
+
+/**
+ * **La semaine où une culture mûre qu'on n'a pas moissonnée finit** (#455) : la
+ * dernière avant l'ouverture de sa fenêtre de semis suivante. Le tick la passe
+ * alors en paille sur pied, le mort sur pied de #370, qui tombe en litière à sa
+ * vitesse avec son azote, grain compris ; sa place se libère. Aucune perte de
+ * grain n'est comptée avant, faute d'un taux sourcé : l'égrenage, la verse et la
+ * germination sur pied existent, mais aucun relevé trouvé ne les chiffre.
+ *
+ * La semaine d'avant l'ouverture, et non l'ouverture même, pour deux raisons
+ * qui tiennent à la fiche : aucun semis ne peut encore y avoir eu lieu (il est
+ * refusé hors de sa fenêtre), donc ce qui est sur pied est la culture d'avant ;
+ * et le cumul de cycle d'une culture d'hiver y est encore celui de l'été, qui
+ * la dit mûre — il repart de zéro la semaine suivante (`cumulDuCycle`).
+ */
+export function finDeCycleCulture(h: HerbaceeV0, ctx: ContextePhenologique): boolean {
+  const c = h.culture;
+  if (c === undefined) return false;
+  const veille = (((c.semisWeek - FENETRE_SEMIS_SEMAINES - 1) % 52) + 52) % 52;
+  return Math.floor(ctx.semaineAnnee) === veille && cultureMure(h, ctx);
 }
 
 /**
