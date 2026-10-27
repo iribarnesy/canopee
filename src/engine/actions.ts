@@ -24,7 +24,13 @@ import type { EspeceV0 } from "./especes";
 import { getEspece } from "./especes";
 import { EFFET_CHASSE, HAUTEUR_BROUTAGE_M } from "./gibier";
 import { cellIndexAt, type Grille, type GrilleLongue } from "./grid";
-import { HERBACEES, INDEX_CULTURES, N_HERBACEES, rabattreParEspece } from "./herbacees";
+import {
+  FENETRE_SEMIS_SEMAINES,
+  HERBACEES,
+  INDEX_CULTURES,
+  N_HERBACEES,
+  rabattreParEspece,
+} from "./herbacees";
 import { crownRadiusM } from "./light";
 import { decoteEngorgement, indiceDuMarche } from "./marche";
 import { partMecanisable } from "./mecanisation";
@@ -1837,11 +1843,10 @@ function applyChauler(
 }
 
 /**
- * Fenêtre de semis, en semaines de part et d'autre de la date de la fiche. Un
- * blé d'hiver se sème en octobre ; on laisse la latitude d'une arrière-saison
- * pluvieuse, pas celle de le semer au printemps *(à calibrer)*.
+ * Fenêtre de semis : elle vit avec la fiche des cultures (`herbacees.ts`), dont
+ * le calendrier la lit aussi (#346). Réexportée ici, où le jeu la cherche.
  */
-export const FENETRE_SEMIS_SEMAINES = 4;
+export { FENETRE_SEMIS_SEMAINES };
 
 /**
  * Place libre moyenne en dessous de laquelle le semis est refusé. Un dixième :
