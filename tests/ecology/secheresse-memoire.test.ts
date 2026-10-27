@@ -18,6 +18,7 @@ import { describe, expect, it } from "vitest";
 import { getEspece } from "../../src/engine/especes";
 import {
   ANS_D_INSTALLATION,
+  EMBOLIE_LETALE_FEUILLU,
   embolieLetale,
   prochainDommageHydraulique,
   type TreeEnvironment,
@@ -50,17 +51,33 @@ describe("la cavitation s'installe vite et se dilue lentement", () => {
   });
 
   it("la seconde sécheresse trouve un arbre déjà entamé", () => {
-    // Premier épisode.
-    let dommage = 0;
-    for (let i = 0; i < 6; i++) dommage = prochainDommageHydraulique(dommage, 0.02, seuilSurvie);
-    const apresPremier = dommage;
-    // Une année de répit.
+    // **Réécrit sur son critère (#391, G1).** Les épisodes duraient six
+    // semaines, et l'assertion demandait 1,4 fois le dommage du premier : deux
+    // nombres dimensionnés sur une vitesse de cavitation de 0,03 *(à
+    // calibrer)*. À la vitesse de Walthert et al. 2021 (0,16), six semaines à
+    // 0,02 portent déjà l'embolie à 0,88, le seuil qui tue un feuillu, et un
+    // dommage plafonné à 1 ne peut plus valoir 1,4 fois le premier. Le critère
+    // ne change pas : la seconde sécheresse trouve un arbre déjà entamé, et
+    // c'est ce qui tue à la deuxième. L'épisode dure un mois, la durée que
+    // Walthert et al. mesurent du début de l'embolie à 65-80 % chez les hêtres
+    // de 2018, et l'arbre est un feuillu (seuil d'Urli et al. 2013).
+    const unMois = (d: number) => {
+      let dommage = d;
+      for (let i = 0; i < 4; i++) dommage = prochainDommageHydraulique(dommage, 0.02, seuilSurvie);
+      return dommage;
+    };
+    // Premier épisode : l'arbre en sort marqué, mais vivant.
+    const apresPremier = unMois(0);
+    expect(apresPremier).toBeGreaterThan(0.15);
+    expect(apresPremier).toBeLessThan(EMBOLIE_LETALE_FEUILLU);
+    // Une année de répit : la marque s'estompe à peine.
+    let dommage = apresPremier;
     for (let i = 0; i < 52; i++) dommage = prochainDommageHydraulique(dommage, 1, seuilSurvie);
-    // Second épisode, identique au premier.
-    for (let i = 0; i < 6; i++) dommage = prochainDommageHydraulique(dommage, 0.02, seuilSurvie);
-    // L'arbre en sort plus abîmé qu'après le premier : c'est le cumul, et
-    // c'est ce qui tue à la deuxième ou troisième sécheresse.
-    expect(dommage).toBeGreaterThan(apresPremier * 1.4);
+    // Second épisode, identique au premier : l'arbre en sort plus abîmé, et il
+    // passe le seuil que le premier n'avait pas atteint. C'est le cumul.
+    dommage = unMois(dommage);
+    expect(dommage).toBeGreaterThan(apresPremier);
+    expect(dommage).toBeGreaterThanOrEqual(EMBOLIE_LETALE_FEUILLU);
   });
 });
 
@@ -124,21 +141,32 @@ describe("l'embolie tue à son seuil, et seul le plant meurt du compteur (#391)"
     expect(resineux.causeMort).toBe("secheresse");
   });
 
-  it("dix semaines à 0,05 de satisfaction tuent un plant, pas un arbre installé", () => {
+  it("la soif qui tue un plant au compteur laisse vivre un arbre installé", () => {
     // Le compteur immédiat menait un aulne de douze ans au seuil en sept
     // semaines, comme un plant de l'année. Il ne vaut plus que pour un plant :
     // en 1976, les plantations de l'année et de deux à trois ans sont mises à
     // part, celles de cinq à dix ans ont souffert « moins sérieusement »
     // (Aussenac 1978, p. 104).
-    const dixSemaines = (t: TreeState) => {
-      let a = t;
-      for (let s = 0; s < 10; s++) a = tickTree(a, sousLaSoif(0.05)).tree;
-      return a;
-    };
-    const plant = dixSemaines(hetre(1));
+    //
+    // **Réécrit sur son critère (#391, G1).** L'épisode durait dix semaines :
+    // une durée dimensionnée sur une vitesse de cavitation de 0,03 *(à
+    // calibrer)*. À 0,16 (Walthert et al. 2021), dix semaines à 0,05 portent
+    // l'embolie d'un hêtre au-delà de 0,88, et l'arbre installé meurt par son
+    // bois, à son seuil, comme il le doit. Le critère ne change pas : la même
+    // soif qui tue un plant au compteur ne tue pas un arbre installé dans le
+    // même temps. L'épisode dure donc jusqu'à la mort du plant.
+    let plant = hetre(1);
+    let installe = hetre(ANS_D_INSTALLATION + 1);
+    let semaines = 0;
+    while (plant.alive && semaines < 52) {
+      plant = tickTree(plant, sousLaSoif(0.05)).tree;
+      installe = tickTree(installe, sousLaSoif(0.05)).tree;
+      semaines++;
+    }
     expect(plant.alive).toBe(false);
     expect(plant.causeMort).toBe("secheresse");
-    const installe = dixSemaines(hetre(ANS_D_INSTALLATION + 1));
+    // C'est le compteur qui l'a tué, pas son bois.
+    expect(plant.dommageHydraulique).toBeLessThan(embolieLetale(getEspece("fagus_sylvatica")));
     expect(installe.alive).toBe(true);
     // Il ne s'en tire pas pour rien : son bois a commencé à casser.
     expect(installe.dommageHydraulique).toBeGreaterThan(0.1);

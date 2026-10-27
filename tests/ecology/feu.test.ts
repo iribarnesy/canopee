@@ -541,7 +541,8 @@ describe("un incendie sur la lande, en conditions de jeu", () => {
   const semainesDIncendie: {
     victimes: readonly { id: number; hauteurAvantM: number; rejet: boolean }[];
     arbresTues: number;
-    mortsFeuLaMemeSemaine: number;
+    /** Les ids des morts « feu » que `morts` rapporte la semaine de l'incendie. */
+    mortsFeuLaMemeSemaine: readonly number[];
     idsEnJeu: ReadonlySet<number>;
   }[] = [];
   const celluleDe = (x: number, y: number) =>
@@ -571,6 +572,8 @@ describe("un incendie sur la lande, en conditions de jeu", () => {
   // `tests/properties/carbon-conservation.test.ts`.
   for (const graine of GRAINES) {
     let state = landePlantee(graine);
+    /** Les ids de la lande de départ, la même à chaque graine (le tri se lit sur elle). */
+    const plantes = new Set(state.trees.map((t) => t.id));
     let nGraine = 0;
     for (let i = 0; i < 40 * 52; i++) {
       const w = WEATHER[i % WEATHER.length];
@@ -586,11 +589,15 @@ describe("un incendie sur la lande, en conditions de jeu", () => {
         nGraine++;
         arbresTues += r.incendie.arbresTues;
         dernier = r.incendie;
-        // Le **dénominateur** du tri : qui était sur le passage du front, relevé
-        // **avant** le tick, donc avant que le feu n'en retire personne.
+        // Le **dénominateur** du tri : qui, de la lande plantée, était sur le
+        // passage du front, relevé **avant** le tick, donc avant que le feu n'en
+        // retire personne. Un arbre mort d'autre chose dans le même tick (la
+        // soif, la semaine sèche où le feu part) était déjà mort quand le front
+        // est passé : il n'y est pas compté (#391, G1).
         const brulees = new Set(r.incendie.brulees);
+        const mortsAvantLeFront = new Set(r.morts.map((m) => m.id));
         for (const t of avant.trees) {
-          if (!t.alive) continue;
+          if (!t.alive || !plantes.has(t.id) || mortsAvantLeFront.has(t.id)) continue;
           if (brulees.has(celluleDe(t.x, t.y))) {
             dansLeFront[t.especeId] = (dansLeFront[t.especeId] ?? 0) + 1;
           }
@@ -602,14 +609,14 @@ describe("un incendie sur la lande, en conditions de jeu", () => {
         // mettre au numérateur.
         const especeDe = new Map(avant.trees.map((t) => [t.id, t.especeId]));
         for (const v of r.incendie.victimes) {
-          if (v.rejet) continue;
+          if (v.rejet || !plantes.has(v.id)) continue;
           const especeId = especeDe.get(v.id);
           if (especeId) tuesParLeFeu[especeId] = (tuesParLeFeu[especeId] ?? 0) + 1;
         }
         semainesDIncendie.push({
           victimes: r.incendie.victimes,
           arbresTues: r.incendie.arbresTues,
-          mortsFeuLaMemeSemaine: r.morts.filter((m) => m.cause === "feu").length,
+          mortsFeuLaMemeSemaine: r.morts.filter((m) => m.cause === "feu").map((m) => m.id),
           // Après le tick : c'est là que le rendu ferait la jointure.
           idsEnJeu: new Set(state.trees.map((t) => t.id)),
         });
@@ -708,6 +715,27 @@ describe("un incendie sur la lande, en conditions de jeu", () => {
     // n'a pas bougé, la mesure si. Relevé sur main, sept graines, prédit avant
     // la mesure (pin au moins 0,95, liège entre 0,20 et 0,45) : pin 230 sur 230,
     // liège 26 sur 68, soit 0,38.
+    //
+    // **Réécrit sur son critère (#391, G1) : le taux se lit sur la lande
+    // plantée**, vingt pins et dix lièges, les mêmes à chaque graine. À la
+    // vitesse de cavitation de Walthert (0,16), l'essai tombait (pin 226 sur
+    // 246, liège 41 sur 68), et ce n'était pas l'écorce. Deux choses avaient
+    // bougé, relevées graine par graine sur les sept :
+    // - **qui était sur le front.** Un semis de moins de 0,6 m ne rejette pas,
+    //   et dans les cellules saturées, où passent tous ces feux, il meurt quelle
+    //   que soit son espèce : 27 lièges sur 33 et 167 pins sur 167 sans G1, 37
+    //   sur 38 et 32 sur 32 avec. Le taux de l'espèce suivait donc la part de
+    //   semis dans son effectif, c'est-à-dire ce qui avait levé les années
+    //   d'avant : à 0,16, le front trouve moins de jeunes pins (227 sur deux
+    //   feux, contre 1 005 sur quatre), et la graine 33 brûle sur 35 semis de
+    //   liège de moins de trois ans ;
+    // - **qui était encore vivant quand le front est passé.** Vingt jeunes pins
+    //   de la graine 5 sont morts de soif dans le tick même du feu, avant lui :
+    //   au dénominateur, jamais au numérateur.
+    // Sur la lande plantée, l'écorce trie comme avant : sans G1, pin 48 sur 48,
+    // liège 0 sur 39 (onze rejets) ; avec, pin 19 sur 19, liège 4 sur 30. Ces
+    // quatre lièges sont des rejets de 0,5 m qu'un second feu, un an après le
+    // premier, a trouvés trop petits pour rejeter encore. La borne ne bouge pas.
     const taux = (id: string) => (tuesParLeFeu[id] ?? 0) / (dansLeFront[id] ?? 1);
     // Les deux espèces ont bien été exposées : sans ça, un taux ne veut rien dire.
     expect(dansLeFront.pinus_sylvestris ?? 0).toBeGreaterThan(0);
@@ -719,7 +747,8 @@ describe("un incendie sur la lande, en conditions de jeu", () => {
     // Le grief de l'issue #52. `arbresTues` donnait le nombre, jamais les
     // identités, et `TickResult.morts` ne pouvait pas suppléer : un arbre tué
     // par le feu reste debout, récupérable en coupe sanitaire, et n'entre dans
-    // `morts` qu'un an plus tard — une semaine où `incendie` est `undefined`.
+    // `morts` qu'un an plus tard — d'ordinaire une semaine où `incendie` est
+    // `undefined`.
     // L'incendie et ses victimes ne pouvaient donc jamais figurer dans le même
     // journal, et une mise en scène du torchage n'avait rien à animer.
     expect(semainesDIncendie.length).toBeGreaterThan(0);
@@ -735,10 +764,20 @@ describe("un incendie sur la lande, en conditions de jeu", () => {
         expect(v.hauteurAvantM).toBeGreaterThan(0);
       }
       // Et voici **pourquoi** le champ existe : la même semaine, `morts` ne
-      // rapporte aucune mort par le feu. Si un jour cette ligne casse, c'est
-      // que le rapport de mortalité a changé — et que `victimes` mérite d'être
-      // rediscuté, pas rafistolé.
-      expect(s.mortsFeuLaMemeSemaine).toBe(0);
+      // rapporte aucune des victimes de cet incendie. Si un jour cette ligne
+      // casse, c'est que le rapport de mortalité a changé — et que `victimes`
+      // mérite d'être rediscuté, pas rafistolé.
+      //
+      // **Réécrit sur son critère (#391, G1).** L'essai demandait qu'aucune mort
+      // par le feu n'arrive la semaine d'un incendie. À la vitesse de
+      // cavitation de Walthert (0,16), la graine 5 brûle deux fois à
+      // cinquante-deux semaines d'écart (semaines 1328 et 1380) : les 128
+      // arbres tués par le premier feu entrent dans `morts` un an après, la
+      // semaine même du second, et aucun n'est une victime du second. Le
+      // rapport de mortalité n'a pas changé ; c'est la coïncidence des deux
+      // feux qui faisait tomber la ligne, d'où le critère lu sur les identités.
+      const victimesDeLaSemaine = new Set(s.victimes.map((v) => v.id));
+      expect(s.mortsFeuLaMemeSemaine.filter((id) => victimesDeLaSemaine.has(id))).toEqual([]);
     }
     expect(victimesEnTout).toBeGreaterThan(0);
   });
