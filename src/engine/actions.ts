@@ -43,6 +43,7 @@ import {
   volumeTigeM3,
 } from "./trees";
 import {
+  aireDansLaParcelleM2,
   aireM2DeLaZone,
   cellulesDeLaZone,
   perimetreMDeLaZone,
@@ -897,9 +898,13 @@ export type GesteTypeArbre =
   | "recolter"
   | "leverEcorce";
 
-/** Gestes qui désignent une zone de sol. */
 /**
  * Gestes qui désignent une zone de sol.
+ *
+ * **Le semis et la moisson** se rapportent depuis #456 : ils changeaient le sol
+ * sans rien dire, et le rendu n'avait ni animation, ni ligne de bilan, ni son
+ * à leur donner. Le semis rapporte les cellules semées (et payées), la moisson
+ * celles où la culture a été prise.
  *
  * **Les deux derniers portent le même nom que des gestes sur arbres**, et ce n'est
  * pas une collision : c'est un seul geste qui touche les **deux** mailles (#124). Le
@@ -916,6 +921,8 @@ export type GesteTypeZone =
   | "labourer"
   | "ramasserBoisMort"
   | "cloturer"
+  | "semer"
+  | "moissonner"
   | "planter"
   | "leverEcorce";
 
@@ -1787,7 +1794,8 @@ function applyChauler(
   state: GameState,
   action: Extract<GameAction, { type: "chauler" }>,
 ): ApplyResult {
-  const areaM2 = aireM2DeLaZone(action);
+  // La surface dans la parcelle, pas l'aire du disque demandé (#456).
+  const areaM2 = aireDansLaParcelleM2(state.station.coteM, action);
   const part = partMecanisable(state.trees, action);
   const cost = areaM2 * (LIME_EUR_M2 + part * COUT_ENGIN_EUR_M2);
   const hours = areaM2 * (part * LIME_HOURS_M2_ENGIN + (1 - part) * LIME_HOURS_M2_MAIN);
@@ -1973,7 +1981,11 @@ function applySemer(state: GameState, action: Extract<GameAction, { type: "semer
       ],
     };
   }
-  const areaM2 = aireM2DeLaZone(action);
+  const cellules = cellulesDeLaZone(state.station.coteM, action);
+  // **On paie ce qu'on sème** (#456) : les cellules de la zone, d'un mètre carré
+  // chacune. L'aire du disque demandé facturait aussi la part qui déborde de
+  // la parcelle.
+  const areaM2 = cellules.length;
   const areaHa = areaM2 / 10_000;
   // Le semis est un chantier d'engin : ce qui n'est pas mécanisable ne se sème
   // pas au combiné, et le moteur sait déjà dire quelle part l'est.
@@ -1981,7 +1993,6 @@ function applySemer(state: GameState, action: Extract<GameAction, { type: "semer
   const hours = areaHa * culture.heuresSemisHa * (part + (1 - part) * 20);
   const cost = areaHa * culture.semenceEurHa + areaM2 * part * COUT_ENGIN_EUR_M2;
   const herbeEmprise = state.soil.herbeEmprise.slice();
-  const cellules = cellulesDeLaZone(state.station.coteM, action);
   // **ce que le semis pose, c'est la place libre.** Un blé semé dans une
   // friche n'occupe que ce que les adventices lui laissent, et la règle
   // « préparer le lit de semence avant de semer » n'est écrite nulle part :
@@ -2032,6 +2043,9 @@ function applySemer(state: GameState, action: Extract<GameAction, { type: "semer
       },
     },
     refusals: [],
+    // **Le geste se rapporte** (#456) : les cellules semées, celles qu'on a
+    // payées. Sans lui, le rendu n'avait rien où accrocher le passage du semoir.
+    gestes: [{ type: "semer", cellules }],
   };
 }
 
@@ -2137,10 +2151,11 @@ function applyMoissonner(
   state: GameState,
   action: Extract<GameAction, { type: "moissonner" }>,
 ): ApplyResult {
-  const areaM2 = aireM2DeLaZone(action);
+  const cellules = cellulesDeLaZone(state.station.coteM, action);
+  // La surface dans la parcelle, ses cellules, pas l'aire du disque demandé (#456).
+  const areaM2 = cellules.length;
   const areaHa = areaM2 / 10_000;
   const part = partMecanisable(state.trees, action);
-  const cellules = cellulesDeLaZone(state.station.coteM, action);
   const herbeEmprise = state.soil.herbeEmprise.slice();
   const herbeFeuillage = state.soil.herbeFeuillage.slice();
   const herbeMatiereSecheG = state.soil.herbeMatiereSecheG.slice();
@@ -2153,6 +2168,9 @@ function applyMoissonner(
   let recolteEur = 0;
   let pailleKgC = 0;
   let cellulesRecoltees = 0;
+  // Les cellules où la moissonneuse a pris quelque chose, une fois chacune.
+  const moissonnees: number[] = [];
+  const dejaMoissonnee = new Set<number>();
   for (const s of INDEX_CULTURES) {
     const culture = HERBACEES[s]?.culture;
     if (!culture) continue;
@@ -2195,6 +2213,10 @@ function applyMoissonner(
       herbeEmprise[k] = 0;
       herbeFeuillage[k] = 0;
       cellulesRecoltees++;
+      if (!dejaMoissonnee.has(i)) {
+        dejaMoissonnee.add(i);
+        moissonnees.push(i);
+      }
     }
   }
   if (cellulesRecoltees === 0) {
@@ -2234,6 +2256,9 @@ function applyMoissonner(
       },
     },
     refusals: [],
+    // **Le geste se rapporte** (#456) : les cellules où la culture a été
+    // moissonnée, comme la fauche rapporte celles où l'outil a mordu.
+    gestes: [{ type: "moissonner", cellules: moissonnees }],
   };
 }
 
@@ -2241,7 +2266,8 @@ function applyFaucher(
   state: GameState,
   action: Extract<GameAction, { type: "faucher" }>,
 ): ApplyResult {
-  const areaM2 = aireM2DeLaZone(action);
+  // La surface dans la parcelle, pas l'aire du disque demandé (#456).
+  const areaM2 = aireDansLaParcelleM2(state.station.coteM, action);
   // Ce que l'engin peut atteindre dépend de la façon dont c'est planté : le
   // reste se fait à la débroussailleuse, vingt fois plus lentement.
   const part = partMecanisable(state.trees, action);
@@ -2662,7 +2688,8 @@ function applyLabourer(
       refusals: [refuse(action.week, "labourer", "l'engin ne peut pas manœuvrer ici")],
     };
   }
-  const areaM2 = aireM2DeLaZone(action) * part;
+  // La surface dans la parcelle, pas l'aire du disque demandé (#456).
+  const areaM2 = aireDansLaParcelleM2(state.station.coteM, action) * part;
   const hours = areaM2 * LABOUR_HOURS_M2;
   const cost = areaM2 * LABOUR_EUR_M2;
 

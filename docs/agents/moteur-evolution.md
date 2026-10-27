@@ -61,7 +61,75 @@ qu'un rapport (voir la note de maintenance).
 Séparer calibration et validation : caler un paramètre sur un âge, garder
 l'autre âge pour vérifier.
 
-## Ce que le dernier lot a appris (le plateau d'optimum de pH, #278 et #262)
+## Ce que le dernier lot a appris (le champ : #456, #452 ; #346 instruit, non livré ; instruction de #455)
+
+Deux publications que le rendu attendait (#456, #452), une correction instruite, mesurée et retirée de la PR parce qu'elle fait tomber une borne sourcée (#346), et une instruction (#455). Les prédictions et les mesures sont dans les commits de la branche `claude/v06-champ`, avant chaque course ; la correction de #346 y reste, retirée par un commit qui se défait. Le format ne bouge pas (14) : aucun champ d'état n'est ajouté.
+
+### Une horloge commune ne part pas quand un cycle part
+
+Le blé d'hiver lit sa maturation (1 250 °C·j) sur le cumul de l'année civile, l'horloge des herbacées et des arbres. Semé en semaine 41, il trouve 2 164 °C·j : mûr en levant, sans feuillage d'octobre à février. Ce cumul convient à toute plante dont le cycle tient dans l'année ; il ment à celle dont le cycle passe le 1er janvier, entre son semis et la fin de l'année. **Avant de lire une horloge, vérifier qu'elle part quand le cycle part.** La correction mesurée ne demandait ni date de semis par cellule ni format neuf : de l'ouverture de la fenêtre de semis à la fin de l'année, le cumul du nouveau cycle vaut zéro, l'horloge sur laquelle `finDJ` était déjà calé.
+
+### Un plafond sourcé n'est pas une moyenne
+
+La rosette d'hiver est une part persistante, que le moteur tient dès la levée. Le premier jet prenait le plafond sourcé (« GAI rarely exceeds 1 before March », AHDB : 30 % de lumière interceptée) ; tenu tout l'automne, quand le vrai couvert part de rien, il faisait prendre au blé 54 kg N/ha avant mars, deux fois la grille du bilan azoté (10 à 30). La valeur du cœur de l'hiver (GAI 0,5, quatre talles : 0,16) en fait 30. **Quand le moteur tient constant ce que la plante fait croître, c'est la valeur du milieu de la saison qui le représente, pas celle de sa fin.**
+
+### Un petit couvert pèse lourd en hiver
+
+0,14 de feuillage d'octobre à février, sur le blé continu du limon riche : le lessivage annuel passe de 38,9 à 21,2 kg N/ha sans apport, le grain de 3,4 à 4,4 t/ha, et la terre arrachée baisse d'un tiers. Toutes les prédictions d'ampleur étaient trop basses, de deux à trois fois. L'automne est la saison où le sol minéralise et où rien ne prend : **le premier preneur de l'hiver change le bilan de l'année.**
+
+### Un défaut peut tenir un critère sourcé
+
+Le blé sans apport de C16 se posait dans le facteur deux de la parcelle Nil de Broadbalk. Avec la rosette, il descend bien moins vite (2,88 / 2,51 / 2,18 t/ha sur les trois tranches jugées, pour une borne de 2), parce que l'azote que le sol nu d'automne lessivait (12 kg N/ha/an à l'équilibre) reste au sol. L'accord tenait donc en partie au défaut. La borne est sourcée : elle ne se desserre pas, et la correction ne se règle pas pour la faire passer. Ce qui est en cause est le dispositif, que #324 nommait déjà : l'essai lit le transitoire d'un sol neuf riche comme une prairie. **Quand une correction juste fait tomber un critère sourcé, chercher d'abord le défaut qui le tenait, puis le dispositif qui le laissait tenir ; ne livrer ni l'un sans l'autre, ni un essai rouge.** La correction est retirée de la PR en attendant que #324 donne à C16 un sol à l'équilibre.
+
+### Deux horloges qui disent « mûr » doivent dire la même date
+
+En instruisant #455 : le blé du moteur achève sa maturation en semaine 35-36 sur l'année synthétique du limon riche, sept semaines après la date de moisson de sa fiche (28). Moissonner à cette date vend 73 % de ce qu'il fait mûrir, et c'est toute la raison du « plus de grain en semaine 32 qu'en 28 » de l'issue. Une fenêtre datée garderait l'écart ; une fenêtre lue sur la maturité du moteur demande d'abord de recaler `finDJ` sur une source.
+
+### Ce qu'un essai du jeu tient du moteur se réécrit sur le même critère
+
+`cultures.test.ts` (jeu) vérifiait que le prix écrit au journal est celui que le moteur facture, et le calculait sur l'aire du disque : il tenait le défaut de #456. Réécrit sur la surface que le moteur facture maintenant (ses cellules), le critère reste le sien : la ligne dit ce que la caisse a perdu.
+
+### Une publication peut révéler ce qu'on croyait immobile
+
+Pour publier la réserve de potassium de départ (#452), il fallait savoir si elle bouge avant l'arrivée du joueur. La prédiction la disait en légère baisse sous la friche ; elle monte de 27 % en trente ans, parce qu'elle absorbe l'échangeable que l'altération et la litière poussent au-dessus de la teneur déclarée. Le contrat le dit : un « depuis votre arrivée » se lit sur le premier instantané.
+
+### Ce que ça donne
+
+- **#456** : labourer, semer, moissonner, faucher et chauler se paient sur les cellules de la zone dans la parcelle (`aireDansLaParcelleM2`) ; posé au coin, un disque paie son quart (`actions.test.ts`). `semer` et `moissonner` rapportent leurs cellules ; les deux `Record` du jeu qui les exigeaient ont une première valeur, à retoucher côté rendu. Aucun flux écologique ne bouge : la sonde du blé continu rend main ligne à ligne.
+- **#452** : `teneurPotassiumMgKg` (l'inverse de `potassiumEchangeableGM2`) et `reservePotassiumInitialeGM2` (pk.ts) ; la carte du sol lit la première, `StationInfo.potassiumReserveInitialeGM2` porte la seconde.
+- **#346**, mesuré sur la correction retirée (blé continu du limon riche, année synthétique, déterministe ; LER sur trois graines) :
+
+| | main | rosette 0,16 |
+|---|---|---|
+| feuillage du blé, semaines 42 à 8 | 0 | 0,12 à 0,14 |
+| azote du blé en semaine 8, sans apport | 0 | 29,7 kg N/ha |
+| lessivage annuel, sans apport / 192 kg N | 38,9 / 47 kg N/ha | 21,2 / 27 |
+| grain, sans apport / 192 kg N | 3,4 / 9,3 t/ha | 4,4 / 9,9 |
+| C16, tranches de vingt ans | 3,24 / 2,46 / 1,85 / 1,41 / 1,09 / 0,87 | 4,42 / 3,85 / 3,33 / 2,88 / 2,51 / 2,18 |
+| LER, graines 4 / 11 / 23 | 1,443 / 1,388 / 1,367 | 1,451 / 1,396 / 1,375 |
+
+### Les prédictions fausses
+
+- D2 : le cumul en semaine 41 entre 1 700 et 2 000 °C·j ; 2 164 sur l'année synthétique.
+- D3 : moins de 2 kg N/ha pris par la strate de l'automne à février ; 17,7, par l'herbe revenue entre le labour et le semis (le blé, lui, ne prenait rien).
+- F2, F3, F4 (rosette 0,3) : l'azote d'automne (54 kg N/ha, prédit 10-40), le lessivage (7,5, prédit 15-28), le drainage (+10 mm au lieu d'une baisse : le couvert infiltre ce qui débordait), le grain (+58 %, prédit +3 à +15).
+- B1 (rosette 0,16) : feuillage 0,12 à 0,14, prédit 0,13-0,15.
+- C1, sur l'ampleur : C16 monte de 67 % à la tranche 61-80 (prédit 15 à 40) ; T1 et T2, même sens.
+- C4 : `labour-desserre.test.ts` devait passer ; il tombe avec C16.
+- R1, R2 : la réserve de potassium sous la friche monte (+1,4 % à cinq ans, +27 % à trente), au lieu de baisser.
+- M1 : le grain de la semaine 32 dépasse celui de la semaine 28 de 26 % (prédit 5 à 15).
+
+Justes : D1, D4, F1, B2 à B5, L1, L2, C2, C3, R3, M2 sur le fond, M3.
+
+### Ce qui reste ouvert
+
+- **#346** : la correction est dans l'historique de la branche, retirée par un commit qui se défait (14221f5). Elle attend que **#324** donne à C16 et à `labour-desserre` un sol de départ à l'équilibre d'un champ labouré ; sans lui, aucune des deux bornes ne départage la rosette.
+- **#455** : options et recommandation dans la PR (#459) ; c'est un mécanisme.
+- **La réserve de potassium d'arrivée** : figer sa valeur comme le point zéro du carbone serait un champ d'état ; le jeu peut lire le premier instantané.
+- **La réserve qui monte sous la friche** (+27 % en trente ans) n'a pas de cible mesurée : l'altération accélérée par les mycorhizes (jusqu'à cinq fois) en est la source probable.
+- **L'éclaircie** lit encore l'aire géométrique pour sa densité visée : un disque qui déborde garde trop de tiges.
+
+## Ce qu'un lot précédent a appris (le plateau d'optimum de pH, #278 et #262)
 
 La suite de #279. L'instruction de #441 recommandait l'option C : un trait `optimumPh` sourcé devient le plateau de la réponse au pH, et les flancs vont jusqu'aux bornes de présence, sans rampe absolue. L'utilisateur a demandé de la mesurer avant d'y croire (#445), puis a tranché sur la mesure : **l'option C sans le pin**. Les prédictions et les mesures sont dans les commits des deux branches, avant chaque course. Le format ne bouge pas : un trait d'atlas n'est pas sérialisé.
 
