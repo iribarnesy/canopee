@@ -461,6 +461,12 @@ export interface TreeEnvironment {
    */
   feuillageTombe?: number;
   /**
+   * L'arbre a-t-il lâché ses feuilles à la soif depuis moins d'un an
+   * (`reservesEntamees`, reserves.ts) ? Ses réserves ne se refont pas avant, et
+   * son stress ne cicatrise pas (#391). Absent, elles se refont.
+   */
+  reservesEntamees?: boolean;
+  /**
    * Effet fertilisant du CO₂ sur le potentiel de croissance (climat.ts).
    * 1 = concentration d'aujourd'hui. Il agit sur le **potentiel**, donc la loi du
    * minimum le borne : un arbre qui a soif n'en profite pas.
@@ -471,10 +477,19 @@ export interface TreeEnvironment {
 export const STRESS_LETHAL = 10;
 
 /**
- * Vitesse à laquelle la cavitation s'installe quand la satisfaction en eau
- * tombe sous le seuil de survie de l'espèce *(à calibrer)*.
+ * Part de la conductivité que la cavitation emporte par semaine, à pleine
+ * sévérité (satisfaction en eau nulle) : 0,16.
+ *
+ * Walthert et al. 2021 (*Sci. Total Environ.* 753 : 141792) ont suivi neuf
+ * hêtraies suisses pendant la sécheresse de 2018 : du début de l'embolie et de
+ * la défeuillaison (mi-juillet) jusqu'à 65 à 80 % d'embolie native, il s'écoule
+ * « environ un mois », soit 0,13 à 0,20 par semaine. La valeur était de 0,03
+ * *(à calibrer)* : posée avant que l'embolie ne tue (#391), elle ne mordait
+ * pas, et elle est devenue celle qui décide de la mort de soif d'un arbre
+ * installé. Une seule vitesse pour toutes les essences et tous les âges :
+ * aucune source ne donne celle d'un plant.
  */
-export const CAVITATION_PAR_SEMAINE = 0.03;
+export const CAVITATION_PAR_SEMAINE = 0.16;
 
 /**
  * Part du seuil de survie en dessous de laquelle la cavitation s'installe
@@ -1767,7 +1782,11 @@ export function tickTree(tree: TreeState, env: TreeEnvironment): TreeTickResult 
     survivalFactor < STRESS_ONSET ? (STRESS_ONSET - survivalFactor) * 5 : 0;
   stress += parLeManqueSemaine + usure;
   stressLent += parLeManqueSemaine + usure;
-  if (survivalFactor > STRESS_RECOVERY) {
+  // Un arbre que la soif a défeuillé ne refait pas ses réserves avant un an
+  // (#391, `reservesEntamees`) : la cicatrisation, qui est leur remplissage vu
+  // par l'autre bout, reste fermée, et une seconde défeuillaison le trouve
+  // avec le déficit de la première.
+  if (survivalFactor > STRESS_RECOVERY && !env.reservesEntamees) {
     const apres = Math.max(0, stress - RECUPERATION_STRESS * season * (1 - puisementDesReserves));
     // **Au prorata** : la cicatrisation efface du stress sans savoir d'où il
     // venait, donc elle en efface la même proportion de chaque origine. Sans

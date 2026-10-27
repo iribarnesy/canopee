@@ -219,6 +219,7 @@ import {
   RUISSELLEMENT_AMONT,
   voisineAval,
 } from "./relief";
+import { reservesEntamees } from "./reserves";
 import {
   attraitCellule,
   effortSemaine,
@@ -2752,6 +2753,8 @@ export function tick(state: GameState, weather: WeekWeather, essai?: ReglagesDEs
       feuillageTombe:
         partFoliaireActiveDans(getEspece(tree.especeId), pheno) *
         Math.max(0, revenuApresLeGel(tree) - revenuApresLaSoif(tree)),
+      // Et un an durant, ses réserves ne se refont pas (reserves.ts, #391).
+      reservesEntamees: reservesEntamees(tree.defeuillaisonSemaine, state.week),
       facteurCo2,
     });
     const next = result.tree;

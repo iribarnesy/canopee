@@ -116,6 +116,39 @@ export const HAUTEUR_FUTAIE_ADULTE_M = 25;
 export const RESERVES_ANS = 2.5;
 
 /**
+ * Semaines pendant lesquelles un arbre que la soif a défeuillé ne refait pas
+ * ses réserves : 52.
+ *
+ * Bréda et al. 2006 (*Ann. For. Sci.* 63 : 625, § 4) : après une sécheresse,
+ * « the storage compartments are not fully refilled at the end of the growing
+ * season », et « a deficiency in stored reserves may last one or several years
+ * after a stress event ». En octobre 2003, à Hesse, les hêtres défeuillés en
+ * août avaient 0,74 g d'amidon pour 100 g de bois, leurs voisins feuillés 1,56
+ * (tableau I). Un an est la plus courte des durées que la source donne.
+ *
+ * Rien de nouveau n'est tenu : la date de la défeuillaison est déjà dans l'état
+ * (`defeuillaisonSemaine`). Et la mort à la deuxième ou troisième défoliation
+ * consécutive, l'ancre de `RESERVES_ANS`, en tombe sans être écrite : un arbre
+ * défeuillé deux étés de suite entre dans le second avec le déficit du premier,
+ * au lieu de l'avoir effacé pendant l'hiver.
+ */
+export const RESERVES_ENTAMEES_SEMAINES = 52;
+
+/**
+ * Les réserves de cet arbre sont-elles encore entamées par une défeuillaison de
+ * soif ? Vrai pendant `RESERVES_ENTAMEES_SEMAINES` après la chute.
+ */
+export function reservesEntamees(
+  defeuillaisonSemaine: number | undefined,
+  semaine: number,
+): boolean {
+  return (
+    defeuillaisonSemaine !== undefined &&
+    semaine - defeuillaisonSemaine < RESERVES_ENTAMEES_SEMAINES
+  );
+}
+
+/**
  * Ce que l'entretien coûte à **cet** arbre, en part de ce qu'il gagnerait sous une
  * lumière saturante. Croît avec la hauteur (modèle du tube) : le volume
  * d'aubier à entretenir par unité de feuille est proportionnel à la longueur
