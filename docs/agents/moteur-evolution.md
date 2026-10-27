@@ -75,7 +75,7 @@ Deux frottis, en semaines 438 et 903, ont suffi à ce que la graine 21 de la lan
 
 ### Corriger un excès fait aussi tomber un essai
 
-La règle d'avant frottait la friche du limon, en lisière, une fois par an pour 0,55 attendu. Corrigée, elle frotte 31 tiges en soixante ans au lieu de 58, et l'essai de la succession tombe : à la graine 2026, le hêtre médian passe de 0,689 à 0,708 de la dominante, pour un plafond de 0,7. Ce n'est pas le frottis qui touche le hêtre (aucune tige de hêtre frottée à cette graine, sur main comme sur la branche) : c'est la trajectoire qui change. Sur cinq graines, **main dépasse déjà le plafond sur deux** (0,769 et 0,729 aux graines 1 et 3), la branche sur deux aussi (0,708 et 0,806), et la moyenne baisse (0,700 → 0,676) ; les deux autres lignes de l'essai, une canopée majoritairement pionnière et moins de 40 % de hêtre dans la canopée, tiennent sur les dix parties. **Un plafond sans source, posé sur une seule graine et atteint par main lui-même deux fois sur cinq, n'attendait que la première trajectoire qui bouge.** Le propriétaire a tranché (option S1) : la ligne du hêtre médian est retirée, « sous-étage » reste porté par la part du hêtre dans la canopée (< 0,4), et l'essai de l'an 60 se lit sur trois graines, 2026, 1 et 2, une règle fixée avant de les lancer. Les deux lignes restantes gardent leurs bornes et tiennent sur chacune : canopée pionnière à 0,570 / 0,566 / 0,679 (> 0,5), hêtre à 0,228 / 0,224 / 0,196 de la canopée (< 0,4). **Retirer une ligne sans source ne desserre aucune des bornes qui restent, et passer à trois graines exige chacune trois fois.** Le prix est dans la durée : une friche de soixante ans coûte 181 à 191 s en local, et l'essai en joue deux de plus.
+La règle d'avant frottait la friche du limon, en lisière, une fois par an pour 0,55 attendu. Corrigée, elle frotte 31 tiges en soixante ans au lieu de 58, et l'essai de la succession tombe : à la graine 2026, le hêtre médian passe de 0,689 à 0,708 de la dominante, pour un plafond de 0,7. Ce n'est pas le frottis qui touche le hêtre (aucune tige de hêtre frottée à cette graine, sur main comme sur la branche) : c'est la trajectoire qui change. Sur cinq graines, **main dépasse déjà le plafond sur deux** (0,769 et 0,729 aux graines 1 et 3), la branche sur deux aussi (0,708 et 0,806), et la moyenne baisse (0,700 → 0,676) ; les deux autres lignes de l'essai, une canopée majoritairement pionnière et moins de 40 % de hêtre dans la canopée, tiennent sur les dix parties. **Un plafond sans source, posé sur une seule graine et atteint par main lui-même deux fois sur cinq, n'attendait que la première trajectoire qui bouge.** Le propriétaire a tranché (option S1) : la ligne du hêtre médian est retirée, « sous-étage » reste porté par la part du hêtre dans la canopée (< 0,4), et l'essai de l'an 60 se lit sur trois graines, 2026, 1 et 2, une règle fixée avant de les lancer. Les deux lignes restantes gardent leurs bornes et tiennent sur chacune : canopée pionnière à 0,570 / 0,566 / 0,679 (> 0,5), hêtre à 0,228 / 0,224 / 0,196 de la canopée (< 0,4). **Retirer une ligne sans source ne desserre aucune des bornes qui restent, et passer à trois graines exige chacune trois fois.** Le prix est dans la durée : une friche de soixante ans coûte 135 à 139 s en CI, et l'essai en joue deux de plus. Le fichier rejoint les plus lourds de la suite, ce que le propriétaire accepte en attendant l'équilibre des tranches (#442).
 
 ### Un nombre sourcé fait voir le mécanisme qui manque
 
@@ -102,6 +102,16 @@ Le flux aléatoire ne bouge pas : sur six parties (bocage et massif, trois grain
 
 Les deux ensemble contre main, même essai : LER 1,443 / 1,388 / 1,367 → 1,446 / 1,388 / 1,373 ; arbre d'allée / même rang sans blé 0,927 / 0,987 / 0,977 → 0,927 / 0,986 / 1,019 (à la graine 23, un noyer de plus survit dans le témoin sans blé) ; frottis par bras en soixante ans : 0 partout sur main, 2 ou 3 dans le bras agroforestier et 13 ou 14 dans les bras sans blé sur la branche.
 
+**L'essai de la succession**, an 60, sur la branche fusionnée avec main (#459 ne touche pas le tick d'une friche), graines fixées avant de les lancer :
+
+| graine | canopée pionnière (> 0,5) | hêtre dans la canopée (< 0,4) | tiges en canopée (> 15) | hêtres vivants (> 3) | hêtre médian / dominante (retiré) |
+|---|---|---|---|---|---|
+| 2026 | 0,570 | 0,228 | 79 | 22 | 0,708 |
+| 1 | 0,566 | 0,224 | 76 | 33 | 0,644 |
+| 2 | 0,679 | 0,196 | 56 | 13 | 0,646 |
+
+Durées : graines 1 et 2 en 139 et 135 s à la première course de CI (205 et 208 s en local), d'où un délai de 360 s pour ces essais (2,5 fois 139, arrondi à la minute). La friche de deux siècles, jouée à la collecte, prend 755 s en local ; le fichier passe de 755 à 1 169 s en local. La tranche de CI qui le porte (5/6) passe de 29 min 58 s (main, #445) à 31 min 25 s : les autres ouvriers absorbent la plus grande part.
+
 ### Les prédictions
 
 Justes : zéro frottis sur main en bocage (P1) ; 2 frottis en cinq ans de jeu dans chaque partie, 2, 8, 16 pendant le vieillissement (P2) ; 4 à 5 en massif (P3) ; aucun tirage ajouté, la divergence commence au premier frottis (P4) ; LER total à moins de 0,03 (P5, en partie) ; les deux essais de mycorhizes qui tombent, avec les valeurs prédites, 0,970 et 1,27 contre 1,412 (P7) ; le réseau des allées multiplié par 2,5 à 3,5 (P8 : 2,7) ; pk, sol-vivant, culture, labour-desserre et tassement passent (P10).
@@ -111,11 +121,16 @@ Fausses :
 - P6 : « aucune autre suite ne tombe » ; quatre essais tombaient avec la première version du report, deux avec la seconde (le potassium de la lande, la succession).
 - P9 : +0,00 à +0,04 sur le rapport allée / rang sans blé, +0,00 à +0,05 sur le LER ; juste par la borne basse seulement (moins d'un millième) : je supposais le réseau responsable d'une part des 1 à 7 % qui restent, et il ne l'est pas.
 
+Après les deux décisions (règle des graines et prédictions dans `d69c8c7`, avant toute course) :
+- justes : les trois parties de l'an 60 redonnent au millième les nombres de l'instruction (P11) ; la canopée majoritairement pionnière sur les trois graines, entre 0,55 et 0,68 (P12) ; plus de quinze tiges en canopée et plus de trois hêtres sur chacune (P13) ; aucun autre essai ne bouge, la CI est verte (P15) ;
+- fausse : P14. Une partie de soixante ans devait coûter 25 à 45 % de la friche de deux siècles : 27 et 28 % sous vitest, juste à la borne basse (24 et 25 % sous tsx). Et chacune des deux parties ajoutées devait prendre 30 à 100 s en CI : 139 et 135 s. J'avais pris la friche de soixante ans pour un fourré bon marché ; ce sont ses décennies les plus chères.
+
 ### Ce qui reste ouvert
 
 - **Le retour du gibier** (#373, fermée sur l'option A) : le 3 % reste *(à calibrer)*. Une source qui chiffre le retour sur une parcelle, par la taille des domaines vitaux et la densité des voisins, le remplacerait. Le sanglier ne se chasse toujours pas (il lui faudrait une pression à lui).
 - **Une culture hôte de son réseau** (#384, option 2) : un mécanisme qui toucherait toutes les prairies et tous les champs.
 - **Trois essais accrochés à la phase du frottis** (deux de `gibier.test.ts`, le recépage de `sylviculture.test.ts`) : ils passent, et ils retomberont au prochain changement de budget si on ne les détache pas de leur semaine.
+- **Le poids du fichier de la succession**, accepté pour l'instant par le propriétaire : 1 169 s en local. En CI, ses essais prennent 274 s, et la friche de deux siècles se joue à la collecte, que le rapporteur ne chiffre pas par fichier : au rapport CI / local des deux friches de l'an 60 (0,66), autour de 500 s, soit un fichier vers 780 s *(estimé)*, au rang des plus lourds avec `naivete-vent` (844 s d'essais) et `fruticee` (695 s d'essais, plus sa collecte). Les deux friches de l'an 60 ont leur délai ; celle de deux siècles se joue toujours à la collecte, sans délai. Les deux points relèvent de #442 (v0.7) : l'équilibre des tranches par durée, et les campagnes de collecte à mettre dans un `beforeAll`. Le fichier n'est pas découpé : la moitié coupée tomberait là où son nom la place.
 
 ## Ce qu'un lot précédent a appris (le champ : #456, #452 ; #346 instruit, non livré ; instruction de #455)
 

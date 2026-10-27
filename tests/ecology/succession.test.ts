@@ -80,11 +80,12 @@ const GRAINES_AN60 = [2026, 1, 2] as const;
 
 /**
  * Le délai d'un essai de l'an 60 qui joue sa propre friche de soixante ans
- * (graines 1 et 2) : mesuré en CI, DUREE_CI. Il fait 2,5 fois la plus longue
- * course, arrondi à la minute : c'est un délai de calcul, pas une borne de
- * réalisme.
+ * (graines 1 et 2). Mesuré en CI à la première course de #458 : 139 et 135 s
+ * (205 et 208 s en local). Il fait 2,5 fois la plus longue course de CI,
+ * arrondi à la minute : c'est un délai de calcul, pas une borne de réalisme.
+ * Les soixante ans ne se raccourcissent pas : c'est l'âge que l'essai juge.
  */
-const DELAI_AN60_MS = 480_000;
+const DELAI_AN60_MS = 360_000;
 
 /** Ce que l'an 60 doit montrer, sur chacune des graines de `GRAINES_AN60`. */
 function canopeePionniereHetresDessous(an60: ReturnType<typeof snapshotStats>) {
