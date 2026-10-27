@@ -766,6 +766,17 @@ function imputer(tree: TreeState, coup: CauseMort, stressFinal: number): CauseMo
 const POLLINISATION_PLANCHER = 0.35;
 
 /**
+ * La part de sa nouaison qu'un arbre garde, selon les pollinisateurs de sa
+ * cellule (`pollinisateursParCellule`) : le plancher, plus ce que les insectes
+ * y ajoutent. C'est le service de pollinisation que la récolte multiplie ; il
+ * est nommé pour que les essais qui jugent la nouaison le lisent au lieu de le
+ * déduire de la récolte, qui suit aussi la taille de l'arbre (#391).
+ */
+export function servicePollinisation(pollinisateursIci: number): number {
+  return POLLINISATION_PLANCHER + (1 - POLLINISATION_PLANCHER) * pollinisateursIci;
+}
+
+/**
  * Où sont les insectes pollinisateurs, cellule par cellule ∈ [0,1] : il leur
  * faut un gîte (`habitat`, la carte des auxiliaires de `carteBiotique`) **et**
  * une table (`ressourceFlorale`, la mémoire de ce qu'ils ont eu à manger), et
@@ -3057,15 +3068,14 @@ export function tick(state: GameState, weather: WeekWeather, essai?: ReglagesDEs
         // moteur : un abri sans fleurs ne fait pas un pollinisateur, des
         // fleurs sans abri non plus. Ce minimum est la carte des
         // pollinisateurs de la semaine (`pollinisateursParCellule`).
-        const servicePollinisation =
-          POLLINISATION_PLANCHER + (1 - POLLINISATION_PLANCHER) * (pollinisateurs[cellArbre] ?? 0);
+        const nouaison = servicePollinisation(pollinisateurs[cellArbre] ?? 0);
         fruitsKg =
           fruits.rendementMaxKg *
           sizeFactor *
           fruitProgress *
           (bloomFrosted ? 0 : 1) *
           (pollinated ? 1 : 0.2) *
-          servicePollinisation;
+          nouaison;
       }
       if (week === fruits.recolteWeek + fruits.fenetreRecolteWeeks) {
         fruitsKg = 0; // récolte non faite = perdue (§10)
