@@ -160,15 +160,58 @@ describe("le labour tranche les hyphes", () => {
     expect(apres.soil.mycorhizes.ecto[dehors] ?? 0).toBeCloseTo(avant[dehors] ?? 0, 6);
   });
 
-  it("et le coût dure : dix ans après, le réseau n'est pas revenu", () => {
-    let reseau = 1 * SURVIE_APRES_LABOUR;
-    for (let i = 0; i < 52 * 10; i++) reseau = prochainReseau(reseau, 1);
-    expect(reseau).toBeLessThan(0.9);
+  /**
+   * **Réécrit sur sa source** (#384). L'essai disait « dix ans après un seul
+   * labour, le réseau n'est pas revenu », sur un labour qui en effaçait 95 %
+   * sans source. Le relevé de Kabir et al. 1997 (Plant and Soil 192) dit autre
+   * chose, et c'est ce que l'essai affirme maintenant : un passage retire 20 à
+   * 27 % des hyphes, pas 95 % ; et onze ans de labour d'automne laissent chaque
+   * printemps un réseau plus maigre que celui d'un sol qu'on ne laboure pas.
+   * Le coût ne dure pas après un labour : il dure tant qu'on laboure.
+   */
+  it("un passage retire un quart du réseau, pas tout (Kabir et al. 1997)", () => {
+    expect(SURVIE_APRES_LABOUR).toBeGreaterThanOrEqual(1 - 0.27);
+    expect(SURVIE_APRES_LABOUR).toBeLessThanOrEqual(1 - 0.2);
   });
 
-  it("un arbre planté dans un labour absorbe moins bien qu'un arbre en sol forestier", () => {
+  it("et le coût dure tant qu'on laboure : chaque printemps, le réseau est plus maigre", () => {
+    // Un hôte installé (cible 1), un labour chaque automne pendant onze ans,
+    // comme dans l'essai de longue durée de Kabir et al. 1997 ; on relève le
+    // réseau juste avant chaque labour, quand il a eu toute l'année pour se
+    // refaire. Sans labour, il serait à sa cible.
+    let reseau = 1;
+    let avantLabour = 1;
+    for (let an = 0; an < 11; an++) {
+      avantLabour = reseau;
+      reseau *= SURVIE_APRES_LABOUR;
+      for (let s = 0; s < 52; s++) reseau = prochainReseau(reseau, 1);
+    }
+    // Au moins les 20 % du relevé le plus clément. Le moteur en retire bien
+    // plus (le réseau ne garde qu'environ la moitié de sa cible), parce que
+    // rien ne le refait entre deux labours hormis l'arbre : la culture, qui
+    // reconstitue les hyphes sous le maïs de Kabir, n'entretient aucun réseau
+    // dans le moteur (#384, option écrite dans la PR).
+    expect(avantLabour).toBeLessThan(1 - 0.2);
+  });
+
+  /**
+   * **La parcelle labourée de l'essai est devenue un champ** (#384). L'essai
+   * remplissait la grille de `SURVIE_APRES_LABOUR`, c'est-à-dire d'un sol
+   * forestier qu'on vient de labourer une fois : tant qu'un labour effaçait
+   * 95 % du réseau, c'était la même chose qu'un champ. Ce ne l'est plus. Un
+   * champ, c'est dix ans de labour sans un hôte ectomycorhizien : le réseau
+   * reflue faute d'hôte et le soc le coupe chaque automne. Le critère n'a pas
+   * bougé, ni sa marge.
+   */
+  it("un arbre planté dans un champ labouré absorbe moins bien qu'un arbre en sol forestier", () => {
     const foret = arbre(1, "quercus_pubescens", 15, 15, 3);
-    const laboure = new Array(900).fill(SURVIE_APRES_LABOUR);
+    const cibleChamp = cibleReseau([], "ecto", DIMS);
+    let reseauChamp = 0.9;
+    for (let an = 0; an < 10; an++) {
+      reseauChamp *= SURVIE_APRES_LABOUR;
+      for (let s = 0; s < 52; s++) reseauChamp = prochainReseau(reseauChamp, cibleChamp[0] ?? 0);
+    }
+    const laboure = new Array(900).fill(reseauChamp);
     const ancien = new Array(900).fill(0.9);
     const gainLaboure = facteurAbsorption(
       reseauSousArbre(laboure, foret, getEspece("quercus_pubescens"), DIMS),

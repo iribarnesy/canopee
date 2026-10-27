@@ -107,7 +107,29 @@ export const DIGESTIBILITE = 0.6;
  */
 export const EFFET_CHASSE = 0.25;
 
-/** Part du vide qui se comble chaque semaine par immigration des voisins. */
+/**
+ * Part du vide qui se comble chaque semaine par le retour des voisins : une
+ * demi-vie de 23 semaines *(à calibrer)*.
+ *
+ * Aucune source trouvée ne chiffre la vitesse à laquelle le gibier revient sur
+ * une parcelle après un prélèvement (#373). Celles qui en parlent la bornent
+ * par le bas, sans la fixer :
+ *  - un vide de prélèvement se comble : 51 cerfs de Virginie retirés de
+ *    1,1 km², et 31 de nouveau au même endroit trois ans plus tard (Miller et
+ *    al. 2010, Journal of Wildlife Management 74). Le second prélèvement
+ *    trouve plus de 60 % du premier : si le premier avait vidé la zone, le
+ *    vide s'est comblé à plus de 0,6 % par semaine, et le 3 % est au-dessus
+ *    de ce plancher ;
+ *  - ce sont les voisins qui l'occupent : chez le chevreuil, le domaine vital
+ *    se resserre quand la densité monte et s'étend quand la chasse la fait
+ *    baisser (Kjellander et al. 2004, Oecologia 139, deux populations dont la
+ *    densité a varié du simple au quadruple) ;
+ *  - les jeunes, eux, ne courent pas vers les vides : leur dispersion ne
+ *    dépend pas de la densité (Gaillard et al. 2008, Proceedings of the Royal
+ *    Society B 275), et ils s'installent à 2 km médians de leur lieu de
+ *    naissance, à un ou deux ans (Wahlström et Liberg 1995, Journal of
+ *    Zoology 235).
+ */
 export const RETOUR_IMMIGRATION = 0.03;
 
 /** Un plant plusieurs fois rabattu et resté minuscule finit par mourir. */
@@ -228,6 +250,30 @@ export interface ResultatBroutage {
 export const FROTTIS_RAYON_VOISINAGE_M = 3;
 
 /**
+ * Tiges frottées la semaine de brame de rang `rang` (compté d'une saison à
+ * l'autre), pour un budget fractionnaire de `budget` tiges par semaine.
+ *
+ * **La décimale se reporte, elle ne se perd plus** (#415). La règle d'avant
+ * ajoutait la tige décimale les semaines multiples de `round(1 / décimale)` :
+ * passé un module de 24, aucune semaine de brame (12 à 24) n'en était un
+ * multiple, et une petite parcelle peu giboyeuse ne voyait jamais un frottis
+ * (0,41 attendu par an sur 50 m de friche en bocage, zéro en quarante-cinq
+ * ans). Elle déformait aussi les autres budgets, en marches d'escalier : une
+ * décimale de 0,9 rendait 7 tiges sur 13 semaines au lieu de 11,7.
+ *
+ * Le budget s'accumule de semaine de brame en semaine de brame, d'une saison à
+ * l'autre, et une tige est frottée chaque fois que le cumul franchit un
+ * entier : sur tout intervalle, le total est le budget cumulé à moins d'une
+ * tige près, et l'espérance annuelle (`FROTTIS_PAR_CERVIDE_AN`) est tenue. Ce
+ * report ne demande ni état ni tirage : le cumul se lit sur le rang de la
+ * semaine, et le flux aléatoire ne bouge pas.
+ */
+export function tigesDeLaSemaine(budget: number, rang: number): number {
+  if (!(budget > 0)) return 0;
+  return Math.max(0, Math.floor((rang + 1) * budget) - Math.floor(rang * budget));
+}
+
+/**
  * Désigne les tiges frottées de la semaine. Entièrement déterministe : les
  * brocards vont aux tiges les plus exposées, dans l'ordre.
  */
@@ -304,11 +350,11 @@ export function frottisDeLaSemaine(
     if (attrait > 0) candidats.push({ tree, attrait });
   }
   candidats.sort((a, b) => b.attrait - a.attrait || a.tree.id - b.tree.id);
-  // Le budget est fractionnaire : la partie décimale décide s'il y a une tige
-  // de plus cette semaine, sans tirage au sort (la semaine suffit à varier).
-  const nombre =
-    Math.floor(budget) + (week % Math.max(2, Math.round(1 / (budget % 1 || 1))) === 0 ? 1 : 0);
-  return candidats.slice(0, Math.max(0, nombre)).map(({ tree }) => ({
+  const nombre = tigesDeLaSemaine(
+    budget,
+    Math.floor(semaineAbsolue / 52) * semaines + week - debut,
+  );
+  return candidats.slice(0, nombre).map(({ tree }) => ({
     treeId: tree.id,
     mort: tree.heightM < FROTTIS_HAUTEUR_LETALE_M,
   }));

@@ -56,19 +56,83 @@ function snapshotStats(state: GameState) {
   };
 }
 
-describe("succession émergente sur friche (200 ans, rien n'est planté)", () => {
-  // Une seule longue simulation, snapshots aux années 15, 60 et 120.
+/** La friche laissée à elle-même `annees` ans depuis une graine, relevée aux années demandées. */
+function friche(graine: number, annees: number, releves: readonly number[]) {
   const weather = syntheticYear(FRICHE_LIMON.climat);
-  let state = createGameState(FRICHE_LIMON.station, rngStateFromSeed(2026));
+  let state = createGameState(FRICHE_LIMON.station, rngStateFromSeed(graine));
   const snapshots = new Map<number, ReturnType<typeof snapshotStats>>();
-  for (let i = 0; i < 200 * 52; i++) {
+  for (let i = 0; i < annees * 52; i++) {
     const w = weather[i % 52];
     if (!w) throw new Error("météo manquante");
     state = tick(state, w).state;
     const year = (i + 1) / 52;
-    if (year === 15 || year === 60 || year === 120 || year === 200)
-      snapshots.set(year, snapshotStats(state));
+    if (releves.includes(year)) snapshots.set(year, snapshotStats(state));
   }
+  return snapshots;
+}
+
+/**
+ * Les graines de l'an 60 (#458) : celle de la friche de deux siècles, puis 1
+ * et 2. La règle a été fixée avant de les lancer, et aucune n'a été choisie
+ * sur son résultat.
+ */
+const GRAINES_AN60 = [2026, 1, 2] as const;
+
+/**
+ * Le délai d'un essai de l'an 60 qui joue sa propre friche de soixante ans
+ * (graines 1 et 2). Mesuré en CI sur trois courses de #458 : 139 et 135 s,
+ * 77 et 62 s, 146 et 137 s (205 et 208 s en local). Il fait 2,5 fois la plus
+ * longue, arrondi à la minute : c'est un délai de calcul, pas une borne de
+ * réalisme. Les soixante ans ne se raccourcissent pas : c'est l'âge que
+ * l'essai juge.
+ */
+const DELAI_AN60_MS = 420_000;
+
+/** Ce que l'an 60 doit montrer, sur chacune des graines de `GRAINES_AN60`. */
+function canopeePionniereHetresDessous(an60: ReturnType<typeof snapshotStats>) {
+  expect(an60.canopy.length).toBeGreaterThan(15);
+  // **ce seuil a descendu trois fois, et il devient l'énoncé.** 0,70 → 0,65
+  // avec l'effet de bord (lisiere.ts), puis 0,68 → 0,57 avec le port serré
+  // (#105) : les pionniers sont des essences **élancées**, le bouleau le premier,
+  // et leur houppier suit désormais leur diamètre — un bouleau a bel et bien
+  // une couronne étroite quand un chêne de même hauteur l'a large. La canopée
+  // pionnière ombrage donc moins, et les intermédiaires y montent plus tôt.
+  //
+  // Trois descentes du même seuil, c'est le signe que le chiffre enregistrait
+  // le moteur au lieu de contraindre le monde (docs/realisme.md, « ce qu'un
+  // test écologique a le droit d'affirmer »). On le remplace donc par
+  // l'affirmation du titre elle-même — la canopée est **majoritairement**
+  // pionnière — qui ne se renégocie pas : c'est 0,5, mesuré à 0,57.
+  expect(an60.canopyPioneerShare).toBeGreaterThan(0.5);
+  expect(an60.fagusAlive.length).toBeGreaterThan(3);
+  // « Attendre dans le sous-étage » ne se mesure plus par la hauteur du hêtre
+  // médian (#458). La ligne qui le faisait l'exigeait sous 0,7 de la dominante
+  // (les dix plus hauts), et elle est retirée : **le seuil n'avait pas de
+  // source**. Il avait été posé quand le hêtre médian était à la moitié de la
+  // dominante, comme une marge autour d'un chiffre mesuré, et le moteur l'a
+  // rejoint depuis : **main le dépassait déjà sur deux graines sur cinq**
+  // (0,769 et 0,729 aux graines 1 et 3) quand le frottis corrigé de #415 l'a
+  // fait passer à la graine 2026 (0,689 → 0,708), sans qu'aucun hêtre y soit
+  // frotté. « Sous-étage » reste porté par la ligne qui le mesure : le hêtre
+  // tient moins de 40 % de la canopée, sur chacune des trois graines.
+  //
+  // **16 % avant #263, 30,4 % après**, et le sens est instructif plutôt
+  // qu'inquiétant. Le correctif de vidange a retiré l'engorgement permanent de
+  // l'horizon de fond — 50 à 62 % de saturation en régime établi — et **le
+  // hêtre est l'essence de cet atlas que l'engorgement pénalise le plus**. Il
+  // gagne donc davantage que les pionnières, ce qui est exactement la
+  // signature qu'on attend quand on retire une anoxie qui n'avait pas lieu
+  // d'être.
+  //
+  // Le fait que l'essai porte est tenu par cette ligne et par celle de la
+  // canopée **majoritairement pionnière**. Ce plafond-ci n'était qu'une marge
+  // autour d'un chiffre mesuré ; il en garde une, autour du nouveau.
+  expect(an60.canopyFagusShare).toBeLessThan(0.4);
+}
+
+describe("succession émergente sur friche (200 ans, rien n'est planté)", () => {
+  // Une seule longue simulation, snapshots aux années 15, 60, 120 et 200.
+  const snapshots = friche(2026, 200, [15, 60, 120, 200]);
   const an15 = snapshots.get(15);
   const an60 = snapshots.get(60);
   const an120 = snapshots.get(120);
@@ -85,54 +149,21 @@ describe("succession émergente sur friche (200 ans, rien n'est planté)", () =>
     expect(an15.pioneerShare).toBeGreaterThan(0.75);
   });
 
-  it("an 60 : canopée pionnière, les hêtres attendent dans le sous-étage", () => {
-    expect(an60.canopy.length).toBeGreaterThan(15);
-    // **ce seuil a descendu trois fois, et il devient l'énoncé.** 0,70 → 0,65
-    // avec l'effet de bord (lisiere.ts), puis 0,68 → 0,57 avec le port serré
-    // (#105) : les pionniers sont des essences **élancées**, le bouleau le premier,
-    // et leur houppier suit désormais leur diamètre — un bouleau a bel et bien
-    // une couronne étroite quand un chêne de même hauteur l'a large. La canopée
-    // pionnière ombrage donc moins, et les intermédiaires y montent plus tôt.
-    //
-    // Trois descentes du même seuil, c'est le signe que le chiffre enregistrait
-    // le moteur au lieu de contraindre le monde (docs/realisme.md, « ce qu'un
-    // test écologique a le droit d'affirmer »). On le remplace donc par
-    // l'affirmation du titre elle-même — la canopée est **majoritairement**
-    // pionnière — qui ne se renégocie pas : c'est 0,5, mesuré à 0,57.
-    expect(an60.canopyPioneerShare).toBeGreaterThan(0.5);
-    expect(an60.fagusAlive.length).toBeGreaterThan(3);
-    // « Attendre dans le sous-étage » est une position **relative**, et il a fallu
-    // recalibrer les vitesses de croissance pour s'en apercevoir : la version
-    // précédente comptait les hêtres sous **dix mètres**, un seuil qui ne voulait
-    // dire « sous-étage » que dans une forêt dont la canopée plafonnait à
-    // douze. Avec des hauteurs calées sur les tables, la friche de soixante ans
-    // monte à vingt-quatre mètres et le hêtre médian à treize — il est toujours
-    // à la moitié de la dominante, et ne tient que 16 % de la canopée. Le
-    // sous-étage n'a pas bougé ; c'est la règle qui le mesurait mal.
-    const dominante =
-      an60.alive
-        .map((t) => t.heightM)
-        .sort((a, b) => b - a)
-        .slice(0, 10)
-        .reduce((s, h) => s + h, 0) / 10;
-    const hetres = an60.fagusAlive.map((t) => t.heightM).sort((a, b) => a - b);
-    const medianeHetre = hetres[Math.floor(hetres.length / 2)] ?? 0;
-    expect(medianeHetre).toBeLessThan(0.7 * dominante);
-    // **16 % avant #263, 30,4 % après**, et le sens est instructif plutôt
-    // qu'inquiétant. Le correctif de vidange a retiré l'engorgement permanent de
-    // l'horizon de fond — 50 à 62 % de saturation en régime établi — et **le
-    // hêtre est l'essence de cet atlas que l'engorgement pénalise le plus**. Il
-    // gagne donc davantage que les pionnières, ce qui est exactement la
-    // signature qu'on attend quand on retire une anoxie qui n'avait pas lieu
-    // d'être.
-    //
-    // Le fait que l'essai porte ne bouge pas, et il est tenu par les deux
-    // lignes qui précèdent : la canopée reste **majoritairement pionnière**, et
-    // le hêtre médian reste **sous les sept dixièmes de la dominante**. Ce
-    // plafond-ci n'était qu'une marge autour d'un chiffre mesuré ; il en garde
-    // une, autour du nouveau.
-    expect(an60.canopyFagusShare).toBeLessThan(0.4);
-  });
+  // L'an 60 se lit sur trois graines : une partie n'est pas une mesure. La
+  // graine 2026 lit la friche de deux siècles ; les deux autres jouent leurs
+  // soixante ans dans leur essai, sous leur propre délai. Chaque ligne est
+  // exigée sur chacune des trois.
+  for (const graine of GRAINES_AN60) {
+    it(
+      `an 60 (graine ${graine}) : canopée pionnière, les hêtres attendent dans le sous-étage`,
+      () => {
+        const an = graine === 2026 ? an60 : friche(graine, 60, [60]).get(60);
+        if (!an) throw new Error("snapshot manquant");
+        canopeePionniereHetresDessous(an);
+      },
+      DELAI_AN60_MS,
+    );
+  }
 
   it("an 120 : la cohorte pionnière initiale s'est éteinte (longévité du bouleau ~90 ans)", () => {
     // On compte ce que le titre annonce : les **vieux** bouleaux, ceux de la

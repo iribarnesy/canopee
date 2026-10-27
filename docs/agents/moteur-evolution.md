@@ -276,6 +276,77 @@ La lande de #312 et le banc des tables ne bougent pas.
 - **La fermeture du couvert** : indice foliaire effectif de 1,2 sous des aulnes de douze ans qui couvrent 146 % du sol (4,8 sous une aulnaie adulte), 0,28 de lumière au sol sous la hêtraie de quarante ans (E9). Le recalage de l'extinction des houppiers touche tout le moteur.
 - **La règle d'imputation de #103**, à sens unique : un frêne que la chalarose a mené à neuf dixièmes du seuil meurt « de sécheresse » si l'été l'achève.
 
+## Ce qu'un lot précédent a appris (la faune et le sol : le frottis perdu, #415 ; le labour et les mycorhizes, #384 ; le retour du gibier, #373)
+
+Trois réglages de maintenance. #415 et #384 sont corrigés ; #373 est instruit, et le propriétaire a tranché sur les options de la PR #458 : la loi et le 3 % restent, *(à calibrer)* avec leurs bornes (option A). L'essai de la succession que #415 faisait tomber est réécrit sur sa décision (option S1) : la ligne sans source est retirée, et l'an 60 se lit sur trois graines. Les prédictions et les mesures sont dans les commits de la branche `claude/v06-faune-sol`, avant chaque course. Le format ne bouge pas (14) : le report du frottis se lit sur le compteur de la partie, aucun champ ne s'ajoute.
+
+### Une règle déterministe a une phase, et un essai peut s'y accrocher
+
+Le report de la décimale (#415) a d'abord été écrit en arrondissant le budget cumulé, ce qui fait partir le cumul de 0,5. La CI a fait tomber quatre essais ; trois tenaient à la **phase** de la règle, pas au mécanisme. Deux essais de frottis appellent la seule semaine 16, qui n'était plus une semaine à tige ; le noisetier seul de `sylviculture.test.ts` (« recéper ») était frotté à 1,37 m en semaine 487, donc annelé, au lieu de 1,86 m en semaine 590. Le cumul part maintenant de zéro et une tige tombe quand il franchit un entier, ce qui est le report tel que l'issue le décrit, et les quatre passent. **Un essai qui lit une semaine précise d'une règle discrétisée vérifie sa phase** : ces trois-là peuvent retomber au prochain changement de budget, et pour une raison qui ne sera pas la leur.
+
+### Un départ de feu tient à la trajectoire entière
+
+Deux frottis, en semaines 438 et 903, ont suffi à ce que la graine 21 de la lande ne brûle plus en vingt-cinq ans ; elle brûlait en semaine 1 170 sur main, en 237 quand l'essai a été écrit. L'essai du potassium de la lande le devait à sa graine ; il impose maintenant son départ, comme celui des chandelles (#379), et tourne en neuf secondes au lieu de vingt-deux ans de tick. **Un essai qui attend un événement rare l'impose** : c'est la deuxième fois, et le réglage existe pour ça.
+
+### Corriger un excès fait aussi tomber un essai
+
+La règle d'avant frottait la friche du limon, en lisière, une fois par an pour 0,55 attendu. Corrigée, elle frotte 31 tiges en soixante ans au lieu de 58, et l'essai de la succession tombe : à la graine 2026, le hêtre médian passe de 0,689 à 0,708 de la dominante, pour un plafond de 0,7. Ce n'est pas le frottis qui touche le hêtre (aucune tige de hêtre frottée à cette graine, sur main comme sur la branche) : c'est la trajectoire qui change. Sur cinq graines, **main dépasse déjà le plafond sur deux** (0,769 et 0,729 aux graines 1 et 3), la branche sur deux aussi (0,708 et 0,806), et la moyenne baisse (0,700 → 0,676) ; les deux autres lignes de l'essai, une canopée majoritairement pionnière et moins de 40 % de hêtre dans la canopée, tiennent sur les dix parties. **Un plafond sans source, posé sur une seule graine et atteint par main lui-même deux fois sur cinq, n'attendait que la première trajectoire qui bouge.** Le propriétaire a tranché (option S1) : la ligne du hêtre médian est retirée, « sous-étage » reste porté par la part du hêtre dans la canopée (< 0,4), et l'essai de l'an 60 se lit sur trois graines, 2026, 1 et 2, une règle fixée avant de les lancer. Les deux lignes restantes gardent leurs bornes et tiennent sur chacune : canopée pionnière à 0,570 / 0,566 / 0,679 (> 0,5), hêtre à 0,228 / 0,224 / 0,196 de la canopée (< 0,4). **Retirer une ligne sans source ne desserre aucune des bornes qui restent, et passer à trois graines exige chacune trois fois.** Le prix est dans la durée : une friche de soixante ans coûte jusqu'à 146 s en CI, et l'essai en joue deux de plus. Le fichier rejoint les plus lourds de la suite, ce que le propriétaire accepte en attendant l'équilibre des tranches (#442).
+
+### Un nombre sourcé fait voir le mécanisme qui manque
+
+Le 5 % de survie au labour n'avait pas de source ; Kabir et al. 1997 mesurent 73 à 80 % de densité d'hyphes au printemps après un labour d'automne, contre les parcelles qu'on ne laboure pas à l'automne. Sous un labour annuel, le maïs de Kabir refait ses hyphes chaque été. Dans le moteur, rien ne les refait entre deux labours hormis l'arbre, parce que la culture n'est l'hôte d'aucun réseau : les allées labourées de l'essai LER gardent la moitié du réseau des mêmes allées sans labour (18 % avant), et non les trois quarts. Le nombre est juste ; ce qu'il laisse voir, une culture hôte de son réseau, est l'option 2 de #384, un mécanisme à décider. **Et le réseau n'était pas ce que le blé coûtait à l'arbre d'allée** : multiplié par 2,7 dans les allées, il donne 0,07 à 0,09 % de volume à l'arbre et laisse le rapport allée / rang sans blé à moins d'un millième de ce qu'il était. #384 le désignait comme premier suspect des 1 à 7 % qui restent ; il est écarté.
+
+### Une borne par le bas ne fixe pas une valeur
+
+#373 demandait de remplacer les 3 % du retour du gibier par un nombre ou une loi sourcés. Aucune source trouvée ne chiffre la vitesse du retour sur une parcelle ; celles qui en parlent la bornent par le bas (Miller et al. 2010 : plus de 0,6 % par semaine, sur le cerf de Virginie) et disent qui comble le vide : les voisins, dont le domaine vital s'étend quand la densité baisse (Kjellander et al. 2004), pas les jeunes, dont la dispersion ne dépend pas de la densité (Gaillard et al. 2008). Le 3 % est au-dessus du plancher ; le choisir, ou en choisir un autre, est un jugement, rapporté avec ses options. **Le propriétaire a gardé la loi et le 3 %** (option A), marqués *(à calibrer)* avec leurs bornes : le plancher ne remplace pas la valeur, parce que c'est une borne, d'une autre espèce, et qu'il ferait passer la demi-vie du vide de 23 à 115 semaines, une chasse qui protège sa parcelle au lieu d'être compensée. **Une borne écrite à côté d'un nombre *(à calibrer)* dit jusqu'où il peut aller ; elle ne devient pas le nombre faute de mieux.** Le « quinze fois le prélèvement national » de l'issue répète l'erreur que #349 avait écrite : il compare une parcelle-puits, qui suit la densité de sa station, à une moyenne nationale.
+
+### Ce que ça donne
+
+**#415**, friche du limon de 50 m, graines 1, 2, 3 (moteur 49cf2ac contre la branche) :
+
+| course | attendu par an | main | branche |
+|---|---|---|---|
+| bocage, cinq ans de jeu après 5, 20 ou 40 ans de vieillissement | 0,41 | 0 frottis sur les neuf parties | 2 dans chacune |
+| bocage, pendant le vieillissement (5, 20, 40 ans) | 0,41 | 0 | 2, 8, 16 |
+| massif, cinq ans de jeu après 5 ou 20 ans | 0,95 | 5 | 4 |
+| friche de la succession (lisière), soixante ans, graines 2026, 1, 2 | 0,55 | 58, 58, 59 | 31 |
+
+Le flux aléatoire ne bouge pas : sur six parties (bocage et massif, trois graines, six ans), la première semaine où l'état sérialisé de la branche diffère de celui de main est exactement la semaine du premier frottis différent (121 en bocage, 274 en massif). Avant, les deux états sont identiques au bit près.
+
+**#384**, essai LER, graines 4, 11, 23 (la branche #415 seule contre #415 et #384) : réseau arbusculaire moyen des allées, relevé chaque année en semaine 30, 0,099 / 0,099 / 0,091 → 0,267 / 0,267 / 0,246, contre 0,51 à 0,56 dans les mêmes allées sans labour ; volume par arbre d'allée +0,07 / +0,07 / +0,09 % ; LER 1,446 / 1,388 / 1,372 → 1,446 / 1,388 / 1,373.
+
+Les deux ensemble contre main, même essai : LER 1,443 / 1,388 / 1,367 → 1,446 / 1,388 / 1,373 ; arbre d'allée / même rang sans blé 0,927 / 0,987 / 0,977 → 0,927 / 0,986 / 1,019 (à la graine 23, un noyer de plus survit dans le témoin sans blé) ; frottis par bras en soixante ans : 0 partout sur main, 2 ou 3 dans le bras agroforestier et 13 ou 14 dans les bras sans blé sur la branche.
+
+**L'essai de la succession**, an 60, sur la branche fusionnée avec main (#459 ne touche pas le tick d'une friche), graines fixées avant de les lancer :
+
+| graine | canopée pionnière (> 0,5) | hêtre dans la canopée (< 0,4) | tiges en canopée (> 15) | hêtres vivants (> 3) | hêtre médian / dominante (retiré) |
+|---|---|---|---|---|---|
+| 2026 | 0,570 | 0,228 | 79 | 22 | 0,708 |
+| 1 | 0,566 | 0,224 | 76 | 33 | 0,644 |
+| 2 | 0,679 | 0,196 | 56 | 13 | 0,646 |
+
+Durées des graines 1 et 2 sur trois courses de CI : 139 et 135 s, 77 et 62 s, 146 et 137 s (205 et 208 s en local). Le délai de ces essais fait 420 s, 2,5 fois 146 arrondi à la minute ; posé à 360 s sur la première course, il a été relevé à la troisième, comme #440 l'avait appris : **une course seule ne dimensionne pas un délai**. La friche de deux siècles, jouée à la collecte, prend 755 s en local ; le fichier passe de 755 à 1 169 s en local. La tranche de CI qui le porte (5/6) prend 31 min 25 s, 16 min 37 s et 31 min 4 s sur ces trois courses, contre 29 min 58 s sur main (#445) : les autres ouvriers absorbent la plus grande part du surcoût.
+
+### Les prédictions
+
+Justes : zéro frottis sur main en bocage (P1) ; 2 frottis en cinq ans de jeu dans chaque partie, 2, 8, 16 pendant le vieillissement (P2) ; 4 à 5 en massif (P3) ; aucun tirage ajouté, la divergence commence au premier frottis (P4) ; LER total à moins de 0,03 (P5, en partie) ; les deux essais de mycorhizes qui tombent, avec les valeurs prédites, 0,970 et 1,27 contre 1,412 (P7) ; le réseau des allées multiplié par 2,5 à 3,5 (P8 : 2,7) ; pk, sol-vivant, culture, labour-desserre et tassement passent (P10).
+
+Fausses :
+- P5 : 10 à 20 frottis par bras planté ; 2 ou 3 dans le bras agroforestier, dont les noyers sortent vite de la fourchette de 1,2 à 5 m et où le labour empêche les semis (13 ou 14 ailleurs). Et le rapport allée / rang sans blé devait bouger de moins de 0,03 : +0,041 à la graine 23, par la survie d'un noyer du témoin.
+- P6 : « aucune autre suite ne tombe » ; quatre essais tombaient avec la première version du report, deux avec la seconde (le potassium de la lande, la succession).
+- P9 : +0,00 à +0,04 sur le rapport allée / rang sans blé, +0,00 à +0,05 sur le LER ; juste par la borne basse seulement (moins d'un millième) : je supposais le réseau responsable d'une part des 1 à 7 % qui restent, et il ne l'est pas.
+
+Après les deux décisions (règle des graines et prédictions dans `d69c8c7`, avant toute course) :
+- justes : les trois parties de l'an 60 redonnent au millième les nombres de l'instruction (P11) ; la canopée majoritairement pionnière sur les trois graines, entre 0,55 et 0,68 (P12) ; plus de quinze tiges en canopée et plus de trois hêtres sur chacune (P13) ; aucun autre essai ne bouge, la CI est verte (P15) ;
+- fausse : P14. Une partie de soixante ans devait coûter 25 à 45 % de la friche de deux siècles : 27 et 28 % sous vitest, juste à la borne basse (24 et 25 % sous tsx). Et chacune des deux parties ajoutées devait prendre 30 à 100 s en CI : 62 à 146 s sur trois courses, au-dessus sur deux d'entre elles. J'avais pris la friche de soixante ans pour un fourré bon marché ; ce sont ses décennies les plus chères.
+
+### Ce qui reste ouvert
+
+- **Le retour du gibier** (#373, fermée sur l'option A) : le 3 % reste *(à calibrer)*. Une source qui chiffre le retour sur une parcelle, par la taille des domaines vitaux et la densité des voisins, le remplacerait. Le sanglier ne se chasse toujours pas (il lui faudrait une pression à lui).
+- **Une culture hôte de son réseau** (#384, option 2) : un mécanisme qui toucherait toutes les prairies et tous les champs.
+- **Trois essais accrochés à la phase du frottis** (deux de `gibier.test.ts`, le recépage de `sylviculture.test.ts`) : ils passent, et ils retomberont au prochain changement de budget si on ne les détache pas de leur semaine.
+- **Le poids du fichier de la succession**, accepté pour l'instant par le propriétaire : 1 169 s en local. En CI, ses essais prennent 140 à 282 s selon la machine, et la friche de deux siècles se joue à la collecte, que le rapporteur ne chiffre pas par fichier : au rapport CI / local des friches de l'an 60 sur la même course (0,30 à 0,70), 230 à 530 s, soit un fichier de 370 à 810 s *(estimé)*. C'est le rang des plus lourds : `naivete-vent` prend 457 à 844 s d'essais sur les mêmes courses. Les deux friches de l'an 60 ont leur délai ; celle de deux siècles se joue toujours à la collecte, sans délai. Les deux points relèvent de #442 (v0.7) : l'équilibre des tranches par durée, et les campagnes de collecte à mettre dans un `beforeAll`. Le fichier n'est pas découpé : la moitié coupée tomberait là où son nom la place.
+
 ## Ce qu'un lot précédent a appris (le champ : #456, #452 ; #346 instruit, non livré ; instruction de #455)
 
 Deux publications que le rendu attendait (#456, #452), une correction instruite, mesurée et retirée de la PR parce qu'elle fait tomber une borne sourcée (#346), et une instruction (#455). Les prédictions et les mesures sont dans les commits de la branche `claude/v06-champ`, avant chaque course ; la correction de #346 y reste, retirée par un commit qui se défait. Le format ne bouge pas (14) : aucun champ d'état n'est ajouté.
