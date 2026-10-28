@@ -34,6 +34,7 @@ const casArb = fc
     // Jusqu'à 250 mm : un orage cévenol, ou l'apport d'un bassin d'amont.
     rainMm: fc.double({ min: 0, max: 250, noNaN: true }),
     evapDemandMm: fc.double({ min: 0, max: 30, noNaN: true }),
+    eauEvaporableMm: fc.double({ min: 0, max: 40, noNaN: true }),
     nappeMm: fc.double({ min: 0, max: 25, noNaN: true }),
     drainageExterneMm: fc.double({ min: 0, max: 60, noNaN: true }),
     nappeProfondeurCm: fc.oneof(
@@ -96,6 +97,7 @@ describe("bilan hydrique d'un profil stratifié", () => {
       excesMm: [30, 45],
       rainMm: 200,
       evapDemandMm: 0,
+      eauEvaporableMm: 0,
       nappeMm: 0,
       drainageExterneMm: 5,
     });
@@ -129,6 +131,7 @@ describe("un fond mince ne bouche pas le profil (#263)", () => {
           excesMm: r.excesMm,
           rainMm: pluieMm,
           evapDemandMm: 0,
+          eauEvaporableMm: 0,
           nappeMm: 0,
           drainageExterneMm: Number.POSITIVE_INFINITY,
         },
@@ -202,6 +205,7 @@ describe("un fond mince ne bouche pas le profil (#263)", () => {
           excesMm: r.excesMm,
           rainMm: 20,
           evapDemandMm: 0,
+          eauEvaporableMm: 0,
           nappeMm: 0,
           drainageExterneMm: 5,
         },
@@ -244,6 +248,7 @@ describe("l'eau qui emporte les solutés est celle qui traverse (#291)", () => {
           excesMm: r.excesMm,
           rainMm: pluieMm,
           evapDemandMm: 0,
+          eauEvaporableMm: 0,
           nappeMm: 0,
           drainageExterneMm: Number.POSITIVE_INFINITY,
           nappeProfondeurCm,
@@ -309,6 +314,7 @@ describe("l'eau qui emporte les solutés est celle qui traverse (#291)", () => {
           excesMm: r.excesMm,
           rainMm: 20,
           evapDemandMm: 0,
+          eauEvaporableMm: 0,
           nappeMm: 0,
           drainageExterneMm: 1.1,
           nappeProfondeurCm: 19,

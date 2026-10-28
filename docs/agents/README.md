@@ -111,8 +111,8 @@ que si le jeu l'affiche porte son label moteur **et** `rendu`.
 
 ## Où en est le projet
 
-Le **moteur** est largement en avance sur ce que le jeu sait montrer : 135
-critères de réalisme sur 162 sont acquis et 26 partiels (le score fait foi dans
+Le **moteur** est largement en avance sur ce que le jeu sait montrer : 134
+critères de réalisme sur 162 sont acquis et 27 partiels (le score fait foi dans
 `docs/realisme.md`, recompté par `npm run check:realisme`), et les issues
 ouvertes portent des mécanismes de plus en plus fins.
 

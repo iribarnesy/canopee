@@ -13,6 +13,7 @@
  */
 
 import { describe, expect, it } from "vitest";
+import { serieMeteoPour } from "../../src/data/meteo";
 import type { GameAction } from "../../src/engine/actions";
 import { applyAction, RECEPAGE_HAUTEUR_M } from "../../src/engine/actions";
 import {
@@ -27,7 +28,7 @@ import {
 } from "../../src/engine/carbon";
 import { getEspece } from "../../src/engine/especes";
 import { advanceWeek } from "../../src/engine/game";
-import { syntheticYear } from "../../src/engine/meteo";
+import { serieToWeeks, syntheticYear } from "../../src/engine/meteo";
 import { rngStateFromSeed } from "../../src/engine/rng";
 import { createGameState, type GameState, plantAt, plantScattered } from "../../src/engine/state";
 import { LANDE_SECHE, LIMON_RICHE } from "../../src/engine/stations";
@@ -353,6 +354,25 @@ describe("couper une chandelle brûlée passé le délai de récupération", () 
  * pour une essence qui rejette de souche, il faisait « repartir » un arbre
  * mort : 40 charmes morts de 15 m fabriquaient 51 840 kgC en une semaine.
  */
+/**
+ * **La série réelle de Mont-de-Marsan, depuis 1964**, et non plus l'année
+ * synthétique, pour le scénario du rejet, qui a besoin d'un feu naturel (#391).
+ * Le feu part quand la surface est sèche **et** qu'il fait chaud. Dans l'année
+ * synthétique, la pluie lissée tombe chaque semaine ; depuis qu'un sol découvert
+ * n'évapore plus que son eau évaporable (FAO-56), la surface de la lande y
+ * reste au-dessus du seuil pendant les semaines chaudes, et le rejet ne brûlait
+ * plus. Sur la série réelle, avec ses semaines sèches, la lande a autant de
+ * semaines à risque qu'avant, et il brûle (semaine 83). L'essai des chandelles
+ * avait reçu le même remède ; depuis #447, son feu est imposé, et il garde
+ * l'année synthétique de main. Ce que les essais vérifient — le bilan carbone
+ * d'un feu — ne change pas.
+ */
+function meteoDeLaLande() {
+  const serie = serieMeteoPour("lande-seche");
+  if (!serie) throw new Error("série manquante");
+  return serieToWeeks(serie);
+}
+
 describe("un incendie qui emporte des chandelles", () => {
   // Une lande sèche, sans gibier ni pluie de semis du voisinage : il ne reste
   // sur la parcelle que les chandelles, et le feu qui finit par passer.
@@ -588,7 +608,7 @@ describe("rabattre un arbre vivant ne détruit pas son carbone", () => {
  */
 describe("un feu qui fait rejeter de souche", () => {
   const LANDE = { ...LANDE_SECHE.station, coteM: 40, gibierParHa: 0, voisinage: [] };
-  const METEO_SECHE = syntheticYear(LANDE_SECHE.climat);
+  const METEO_SECHE = meteoDeLaLande();
 
   it("le rejet ne crée ni ne détruit de carbone, semaine après semaine", () => {
     let state = createGameState(LANDE, rngStateFromSeed(12));

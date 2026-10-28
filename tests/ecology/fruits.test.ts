@@ -10,23 +10,30 @@ import { describe, expect, it } from "vitest";
 import { serieMeteoPour } from "../../src/data/meteo";
 import type { GameAction } from "../../src/engine/actions";
 import { advanceWeek } from "../../src/engine/game";
+import { cellIndexAt } from "../../src/engine/grid";
 import { serieToWeeks } from "../../src/engine/meteo";
 import { rngStateFromSeed } from "../../src/engine/rng";
 import { createGameState, type GameState } from "../../src/engine/state";
 import { FRICHE_LIMON } from "../../src/engine/stations";
+import { servicePollinisation, type TickResult } from "../../src/engine/tick";
 
 const STATION = { ...FRICHE_LIMON.station, coteM: 40, voisinage: [], phInitial: 7 };
 const serie = serieMeteoPour("friche-limon");
 if (!serie) throw new Error("série Dijon manquante");
 const WEATHER = serieToWeeks(serie);
 
-function run(actions: GameAction[], years: number, onWeek: (s: GameState, i: number) => void) {
+function run(
+  actions: GameAction[],
+  years: number,
+  onWeek: (s: GameState, i: number, r: TickResult) => void,
+) {
   let state = createGameState(STATION, rngStateFromSeed(3));
   for (let i = 0; i < years * 52; i++) {
     const w = WEATHER[i % WEATHER.length];
     if (!w) throw new Error("météo manquante");
-    state = advanceWeek(state, w, actions).state;
-    onWeek(state, i);
+    const r = advanceWeek(state, w, actions);
+    state = r.state;
+    onWeek(state, i, r);
   }
   return state;
 }
@@ -205,35 +212,56 @@ describe("service de pollinisation (§7.4, critère G4)", () => {
       positions: (EMPLACEMENTS[i] ?? []).map(([x, y]) => ({ x, y })),
     }));
 
-  const recolte = (accompagnement: GameAction[]): number => {
+  const DIMS = { widthM: STATION.coteM, heightM: STATION.coteM };
+  /** Semaine de récolte du pommier : c'est là que le service multiplie la récolte. */
+  const RECOLTE_POMMIER = 38;
+  /**
+   * La meilleure récolte d'un pommier, et le meilleur service de pollinisation
+   * qu'ils aient eu une semaine de récolte : la nouaison que le moteur applique,
+   * lue là où il la lit (`servicePollinisation`).
+   */
+  const recolte = (accompagnement: GameAction[]): { kg: number; nouaison: number } => {
     const actions: GameAction[] = [
       { type: "planter", week: 0, especeId: "malus_domestica", positions },
       { type: "proteger", week: 1, treeIds: [1, 2] },
       ...accompagnement,
     ];
-    let best = 0;
-    run(actions, 12, (state) => {
+    let kg = 0;
+    let nouaison = 0;
+    run(actions, 12, (state, i, r) => {
       for (const t of state.trees) {
-        if (t.especeId === "malus_domestica") best = Math.max(best, t.fruitsKg);
+        if (t.especeId !== "malus_domestica") continue;
+        kg = Math.max(kg, t.fruitsKg);
+        if (i % 52 === RECOLTE_POMMIER && t.alive) {
+          const ici = r.pollinisateurs[cellIndexAt(DIMS, t.x, t.y)] ?? 0;
+          nouaison = Math.max(nouaison, servicePollinisation(ici));
+        }
       }
     });
-    return best;
+    return { kg, nouaison };
   };
 
-  const nu = recolte([]);
+  const nuBras = recolte([]);
   // Noisetier, chêne, bouleau : trois essences, trois strates, zéro nectar.
-  const anemophile = recolte(haie(["corylus_avellana", "quercus_pubescens", "betula_pendula"]));
+  const anemophileBras = recolte(haie(["corylus_avellana", "quercus_pubescens", "betula_pendula"]));
   // Prunellier (mars), aubépine (mai), ronce (juin à août) : même nombre de
   // tiges, mêmes emplacements, et de quoi manger d'un bout à l'autre de la
   // saison. Les trois mûrissent en deux à huit ans, donc elles fleurissent
   // avant la fin du banc.
-  const mellifere = recolte(haie(["prunus_spinosa", "crataegus_monogyna", "rubus_fruticosus"]));
+  const mellifereBras = recolte(haie(["prunus_spinosa", "crataegus_monogyna", "rubus_fruticosus"]));
+  const nu = nuBras.kg;
+  const anemophile = anemophileBras.kg;
+  const mellifere = mellifereBras.kg;
 
   it("une haie qui NOURRIT fait mieux nouer le verger", () => {
     // Relevé : nu 11,52 kg, anémophile 11,62 kg (+0,9 %), mellifère 14,74 kg
     // (+28,0 %). Le banc du verger de `floraison.test.ts`, dispositif tout
     // différent — quarante mètres de côté, deux haies complètes, vingt-deux
     // ans —, donne +28,2 %. Deux bancs indépendants, le même chiffre.
+    // Relevé après G1 (#391), graine 3 : nu 4,79 kg, anémophile 5,12 kg,
+    // mellifère 6,96 kg (+45 %) ; les pommiers se défeuillent à la soif six
+    // étés sur neuf, et les récoltes baissent dans les trois bras (8,63 /
+    // 8,74 / 11,54 kg sans G1, sur la tête du lot).
     expect(mellifere).toBeGreaterThan(1.15 * nu);
   });
 
@@ -241,7 +269,21 @@ describe("service de pollinisation (§7.4, critère G4)", () => {
     // Elle abrite autant — même nombre de tiges, mêmes strates, même richesse
     // en essences — et elle ne nourrit rien. Le service étant le minimum du
     // gîte et de la table, c'est la table qui décide ici.
-    expect(anemophile).toBeLessThan(1.05 * nu);
+    //
+    // **Réécrit sur son critère (#391, G1) : la nouaison se lit sur le service
+    // de pollinisation, pas sur la récolte.** La récolte suit aussi la taille
+    // du pommier, et le gîte de la haie loge des auxiliaires qui freinent les
+    // ravageurs (G2, G3). Depuis que la soif défeuille les pommiers six étés
+    // sur neuf sur cette série (vitesse de cavitation de Walthert, 0,16) et
+    // qu'un arbre défeuillé ne refait pas ses réserves pendant un an (Bréda et
+    // al. 2006), le stress des ravageurs ne cicatrise plus entre deux
+    // défeuillaisons : à onze ans, graine 3, 1,95 point sur les pommiers du
+    // verger nu, 0,62 près de la haie anémophile, 2,45 m contre 2,54, et
+    // 4,79 kg contre 5,12 (+7 %), pour un service de pollinisation identique
+    // (0,001 d'insectes dans les deux bras). La haie anémophile protège
+    // mieux le verger ; elle ne le fait pas mieux nouer, et c'est ce que le
+    // témoin dit. La borne ne bouge pas.
+    expect(anemophileBras.nouaison).toBeLessThan(1.05 * nuBras.nouaison);
     expect(mellifere).toBeGreaterThan(1.1 * anemophile);
   });
 });

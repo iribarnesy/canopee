@@ -31,6 +31,16 @@ export interface EspeceV0 {
     seuilStressSecheresse: number;
     /** engorgement toléré ∈ [0,1] (waterloggingRatio sans dégât) */
     toleranceEngorgement: number;
+    /**
+     * **Un résineux** : un bois fait de trachéides, sans vaisseaux. Ce n'est pas
+     * un trait d'espèce mais un trait de grand groupe, et il ne sert qu'à une
+     * chose, le seuil d'embolie au-delà duquel l'arbre ne se relève pas
+     * (`embolieLetale`, trees.ts) : la moitié de la conductivité chez un
+     * conifère (Brodribb et Cochard 2009), 88 % chez un feuillu (Urli et al.
+     * 2013). Absent, l'espèce est un feuillu. Seul le pin sylvestre le porte :
+     * c'est le seul conifère de l'atlas.
+     */
+    resineux?: boolean;
   };
   /**
    * Amplitude de pH où l'atlas signale l'espèce [min, max] (nuancier
@@ -891,7 +901,12 @@ export const ESPECES_V0: readonly EspeceV0[] = [
      */
     pousseMaxMAn: 0.4,
     // Atlas : xérophile, oligotrophe, « rustique, large amplitude ».
-    eau: { seuilConfortSecheresse: 0.3, seuilStressSecheresse: 0.1, toleranceEngorgement: 0.2 },
+    eau: {
+      seuilConfortSecheresse: 0.3,
+      seuilStressSecheresse: 0.1,
+      toleranceEngorgement: 0.2,
+      resineux: true,
+    },
     // pH (#279). Bas 2,8 : relevé, l'horizon A ou AE de 215 pineraies sur
     // sable du sud-ouest de la Pologne titre de 2,8 à 6,1 en pH eau, 4,1 en
     // moyenne (Sewerniak 2012, *Sylwan* 156 : 427, tableau 1) ; les quatorze
