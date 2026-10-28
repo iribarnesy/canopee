@@ -199,7 +199,10 @@ beforeAll(() => {
     rayonM: 12,
     cultureId: "triticum_aestivum",
   }).state;
-  const mur = avance(seme, 30, meteo);
+  // Mûr pour de bon : semé en semaine 41, il l'est à la semaine de sa fiche,
+  // la 28 de l'an d'après. Trente semaines le menaient en mai, où la moisson
+  // est maintenant refusée (#455) : le cas « un blé mûr » n'en était pas un.
+  const mur = avance(seme, 39, meteo);
 
   // Un fourré **voulu**, plutôt que l'endroit où le semis dispersé est tombé :
   // vingt-cinq tiges à 1,3 m, sous les 2,2 m de large de l'engin, donc aucun

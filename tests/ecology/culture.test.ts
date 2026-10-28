@@ -17,6 +17,7 @@ import { createGameState, type GameState, plantAt } from "../../src/engine/state
 import { LIMON_RICHE } from "../../src/engine/stations";
 import { tick } from "../../src/engine/tick";
 import { cellulesDeLaZone } from "../../src/engine/zone";
+import { CHAMP_LABOURE_AVANT_BROADBALK_ANS } from "../helpers";
 
 const S_BLE = HERBACEES.findIndex((h) => h.id === "triticum_aestivum");
 const FICHE_BLE = HERBACEES[S_BLE];
@@ -202,7 +203,25 @@ describe("ce que le blé rend, contre une source extérieure au moteur", () => {
     // il ralentit encore à cent vingt ans. La fraction d'humus stable des
     // jachères nues de longue durée (Barré et al. 2010) n'en est pas la cause
     // (#317, voir plus bas).
-    const r = culture({ ans: 121, cote: 30, rayonM: 14 });
+    //
+    // **La fenêtre se lit maintenant sur un champ labouré depuis deux siècles**
+    // (#324). L'essai comparait le transitoire d'un sol neuf, 74 t C/ha d'humus
+    // comme une prairie, à une parcelle qui était en culture depuis plusieurs
+    // siècles en 1843 (`CHAMP_LABOURE_AVANT_BROADBALK_ANS`). Les ans 61 à 120
+    // étaient encore la descente de ce sol neuf. La parcelle passe donc deux
+    // cents ans sous la conduite de l'essai avant les trois tranches jugées, et
+    // les bornes ne bougent pas. Le moteur n'a pas d'équilibre à atteindre :
+    // sur quatre cents ans (sonde du blé continu, déterministe), le grain de
+    // main baisse de 13 à 19 % tous les vingt ans jusqu'au bout, et l'azote de la
+    // litière monte sans arrêt, 114 kg N/ha à l'an 0, 432 à l'an 400 — la paille,
+    // à C/N 90, ne se décompose plus faute d'azote minéral. Sur ce champ-là,
+    // main rend 0,35 / 0,30 / 0,26 t/ha (ans 201-260) : il sort du facteur deux
+    // par le bas. L'accord des ans 61 à 120 tenait au passage dans la bande.
+    // Partir des stocks de 1843 (1,00 % de carbone, Poulton et al. 2018) ne
+    // suffisait pas : le moteur les perd comme ceux du sol neuf, et les
+    // tranches jugées ne baissaient que de 6 à 9 %.
+    const VIEUX = CHAMP_LABOURE_AVANT_BROADBALK_ANS;
+    const r = culture({ ans: VIEUX + 61, cote: 30, rayonM: 14 });
     const an2 = r[2] ?? 0;
     const tranche = (debut: number) => {
       const t = r.slice(debut, debut + 20);
@@ -216,9 +235,10 @@ describe("ce que le blé rend, contre une source extérieure au moteur", () => {
     expect(tranche(21)).toBeLessThan(tranche(1));
     expect(tranche(41)).toBeLessThan(tranche(21));
     // Il atterrit dans la bande de la parcelle nue, à un facteur deux près, sur
-    // chacune des trois dernières tranches : on ne prétend pas mesurer Broadbalk,
-    // on prétend ne pas en être loin une fois le sol à l'équilibre.
-    for (const debut of [61, 81, 101]) {
+    // chacune des trois tranches qui suivent les deux siècles de labour : on ne
+    // prétend pas mesurer Broadbalk, on prétend ne pas en être loin sur un champ
+    // qui a l'âge du sien.
+    for (const debut of [VIEUX + 1, VIEUX + 21, VIEUX + 41]) {
       expect(tranche(debut), `ans ${debut}-${debut + 19}`).toBeGreaterThan(0.5);
       expect(tranche(debut), `ans ${debut}-${debut + 19}`).toBeLessThan(2);
     }
@@ -234,7 +254,7 @@ describe("ce que le blé rend, contre une source extérieure au moteur", () => {
     // au carbone, pas à l'azote, et le blé descend plus vite (0,63 au lieu de
     // 0,89). Ce qui reste est le transitoire d'un sol neuf mis en blé, et c'est
     // le dispositif qui est repris (#324) ; C16 le dit.
-  }, 900_000);
+  }, 1_800_000);
 });
 
 describe("l'ombre des arbres coûte du rendement", () => {

@@ -107,6 +107,7 @@ import {
   evoluerEmprises,
   facteurEauHerbacee,
   facteurThermique,
+  finDeCycleCulture,
   HERBACEES,
   INERTIE_RESSOURCE_FLORALE,
   N_HERBACEES,
@@ -2314,6 +2315,9 @@ export function tick(state: GameState, weather: WeekWeather, essai?: ReglagesDEs
   let herbeLitiereNG = 0;
   const vigueurs = HERBACEES.map((h) => vigueurHerbacee(h, pheno));
   const saisonnieres = HERBACEES.map((h) => partSaisonniere(h, pheno));
+  // Les cultures mûres qu'on n'a pas moissonnées, et qui finissent cette semaine
+  // (`finDeCycleCulture`, #455).
+  const finsDeCycle = HERBACEES.map((h) => finDeCycleCulture(h, pheno));
   const thermiques = HERBACEES.map((h) => facteurThermique(h, weather.tMean));
   // Ce qui tombe du mort sur pied cette semaine : la même part pour toutes les
   // espèces et toutes les cellules, puisqu'elle ne lit que la température.
@@ -2417,6 +2421,22 @@ export function tick(state: GameState, weather: WeekWeather, essai?: ReglagesDEs
           herbeMorteG[k] = (herbeMorteG[k] ?? 0) + matiereMorte;
           herbeMorteAzoteG[k] = (herbeMorteAzoteG[k] ?? 0) + azoteQuitte;
         }
+      }
+      // **Une culture mûre qu'on n'a pas moissonnée finit en paille sur pied**,
+      // la semaine qui précède l'ouverture de son semis suivant (#455). Sans
+      // cela, un blé laissé sur pied repartait au printemps, et sa matière
+      // s'ajoutait à celle de l'année d'avant. Tout passe au mort sur pied,
+      // grain compris, avec tout son azote : une plante morte entière n'a rien
+      // résorbé. Son potassium revient au sol, rincé comme celui de tout tissu
+      // mort (#370). Et la place se libère, comme après une moisson.
+      if (finsDeCycle[s] && (matiere > 0 || (herbeEmprise[k] ?? 0) > 0)) {
+        herbeMorteG[k] = (herbeMorteG[k] ?? 0) + matiere;
+        herbeMorteAzoteG[k] = (herbeMorteAzoteG[k] ?? 0) + azote;
+        azoteQuitteCellule += azote;
+        matiere = 0;
+        azote = 0;
+        herbeEmprise[k] = 0;
+        herbeFeuillage[k] = 0;
       }
       herbeMatiereSecheG[k] = matiere;
       herbeAzoteG[k] = azote;

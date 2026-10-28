@@ -24,12 +24,20 @@ import type { EspeceV0 } from "./especes";
 import { getEspece } from "./especes";
 import { EFFET_CHASSE, HAUTEUR_BROUTAGE_M } from "./gibier";
 import { cellIndexAt, type Grille, type GrilleLongue } from "./grid";
-import { HERBACEES, INDEX_CULTURES, N_HERBACEES, rabattreParEspece } from "./herbacees";
+import {
+  cultureMure,
+  FENETRE_SEMIS_SEMAINES,
+  HERBACEES,
+  INDEX_CULTURES,
+  N_HERBACEES,
+  rabattreParEspece,
+} from "./herbacees";
 import { crownRadiusM } from "./light";
 import { decoteEngorgement, indiceDuMarche } from "./marche";
 import { partMecanisable } from "./mecanisation";
 import { SURVIE_APRES_LABOUR, TYPES_MYCORHIZE } from "./mycorhizes";
 import { KG_PER_HA_TO_G_PER_M2, litterDecayRate } from "./nitrogen";
+import { contextePhenologique } from "./phenologie";
 import { K_SUR_K2O, potassiumDeLaStrateG } from "./pk";
 import { altitudeParCellule } from "./relief";
 import { profondeurPenetrableCm } from "./soil";
@@ -713,8 +721,9 @@ export type GameAction =
   | ({
       /**
        * **moissonner** : le grain accumulé depuis le semis part en vente, et la
-       * culture libère la place. Hors de sa fenêtre de récolte, il n'y a rien
-       * à prendre — un blé moissonné en mai n'a pas fini de remplir.
+       * culture libère la place. Avant sa maturité, la moisson est refusée — un
+       * blé moissonné en mai n'a pas fini de remplir (#455) ; une culture mûre
+       * qu'on laisse sur pied passe en paille à l'ouverture du semis suivant.
        */
       type: "moissonner";
       week: number;
@@ -1837,11 +1846,10 @@ function applyChauler(
 }
 
 /**
- * Fenêtre de semis, en semaines de part et d'autre de la date de la fiche. Un
- * blé d'hiver se sème en octobre ; on laisse la latitude d'une arrière-saison
- * pluvieuse, pas celle de le semer au printemps *(à calibrer)*.
+ * Fenêtre de semis : elle vit avec la fiche des cultures (`herbacees.ts`), dont
+ * le calendrier la lit aussi (#346). Réexportée ici, où le jeu la cherche.
  */
-export const FENETRE_SEMIS_SEMAINES = 4;
+export { FENETRE_SEMIS_SEMAINES };
 
 /**
  * Place libre moyenne en dessous de laquelle le semis est refusé. Un dixième :
@@ -2171,13 +2179,32 @@ function applyMoissonner(
   // Les cellules où la moissonneuse a pris quelque chose, une fois chacune.
   const moissonnees: number[] = [];
   const dejaMoissonnee = new Set<number>();
+  // **La moisson attend la maturité** (#455). Une culture se moissonne quand son
+  // retrait programmé a commencé, à la maturité physiologique (`cultureMure`) :
+  // avant, le grain se remplit encore, et le moteur le vendait au poids du jour,
+  // jusqu'à moissonner en mars une culture sans grain. La maturité se lit sur le
+  // calendrier de la parcelle, donc elle suit l'année et la station ; la date de
+  // la fiche n'est que celle de la station de calage.
+  const pheno = contextePhenologique(
+    state.station.latitudeDeg,
+    state.week % 52,
+    state.ddYearBase5,
+    state.semainesDeFroid,
+  );
+  let pasMure: string | undefined;
   for (const s of INDEX_CULTURES) {
-    const culture = HERBACEES[s]?.culture;
-    if (!culture) continue;
+    const fiche = HERBACEES[s];
+    const culture = fiche?.culture;
+    if (!fiche || !culture) continue;
+    const mure = cultureMure(fiche, pheno);
     for (const i of cellules) {
       const k = i * N_HERBACEES + s;
       const matiere = herbeMatiereSecheG[k] ?? 0;
       if ((herbeEmprise[k] ?? 0) <= 0 && matiere <= 0) continue;
+      if (!mure) {
+        pasMure = fiche.nom;
+        continue;
+      }
       recolteEur += grainDeLaCelluleT(matiere, culture) * culture.prixEurT;
       // **La moisson partage la plante** (#247). Le grain part avec sa part de
       // la matière (`indiceRecolte`) et de l'azote (`azoteDansLeGrain`) ; la
@@ -2220,7 +2247,10 @@ function applyMoissonner(
     }
   }
   if (cellulesRecoltees === 0) {
-    return { state, refusals: [refuse(action.week, "moissonner", "rien à moissonner ici")] };
+    // Une culture sur pied mais pas mûre n'est pas « rien » : le refus le dit,
+    // et le panneau l'affiche tel quel (`prevoirAction`).
+    const raison = pasMure === undefined ? "rien à moissonner ici" : `${pasMure} n'est pas mûr`;
+    return { state, refusals: [refuse(action.week, "moissonner", raison)] };
   }
   const heuresHa = HERBACEES[INDEX_CULTURES[0] ?? 0]?.culture?.heuresRecolteHa ?? 1;
   const hours = areaHa * heuresHa * (part + (1 - part) * 20);

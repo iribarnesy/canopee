@@ -150,6 +150,9 @@ export interface HerbaceeV0 {
      * le sol soit encore éclairé ou non. C'est la signature des géophytes
      * vernales — elles ne se retirent pas parce que la canopée les prive de
      * lumière, elles se retirent parce que leur cycle est fini.
+     *
+     * Le retrait emporte **tout** l'appareil aérien, part persistante comprise :
+     * une plante qui a fini son cycle ne garde rien de vert (#346).
      */
     finDJ?: number;
     /**
@@ -166,7 +169,8 @@ export interface HerbaceeV0 {
     /**
      * Part de l'appareil **couvrant** qui reste en place hors saison de croissance
      * ∈ [0,1]. Une touffe de dactyle reste verte l'hiver ; une molinie ne
-     * laisse que sa touradon sèche ; une anémone ne laisse rien.
+     * laisse que sa touradon sèche ; une anémone ne laisse rien ; un blé
+     * d'hiver garde la rosette qu'il a faite à l'automne.
      */
     partPersistante: number;
   };
@@ -321,6 +325,12 @@ const COMIFER_2007_PKMG =
   "Comifer, groupe PKMg 2007, Teneurs en P, K et Mg des organes végétaux récoltés pour les cultures de plein champ et les principaux fourrages : blé tendre, grain à 85 % MS, 0,65 kg P2O5, 0,50 kg K2O et 0,12 kg MgO par quintal ; paille à 88 % MS, 12,3 kg K2O par tonne";
 const AHDB_RB209_2023 =
   "AHDB, Nutrient Management Guide (RB209), section 4 Arable crops, juin 2023, table 4.12 : blé d'hiver, grain seul 5,5 kg K2O par tonne de matière fraîche (15 % d'humidité), grain et paille 10,5 ; le potassium de la paille peut baisser nettement entre la maturité et la récolte";
+const AHDB_2025 =
+  "AHDB, Wheat growth guide, mise à jour de juin 2025 : du semis à la levée 150 °C·j base 0 (quinze jours en octobre) ; « GAI rarely exceeds 1 before March » ; blé de référence semé début octobre, GAI 1,6 au 31 mars (45 % de la lumière interceptée), GAI 2,0 au premier nœud (la moitié), 81 kg N/ha absorbés du semis au premier nœud ; « soil nitrogen is particularly prone to leaching when uptake is low due to slow canopy expansion over winter » ; GS87 (grain pâteux dur, remplissage arrêté vers 45 % d'humidité) le 29 juillet, mûr à récolter le 9 août";
+const BSV_NORMANDIE_2023 =
+  "Bulletin de santé du végétal Céréales Normandie n° 21-23, 8 juin 2023 (DRAAF Normandie ; Arvalis, chambres d'agriculture et coopératives) : « Le stade maturité physiologique est atteint environ 750-800 °C jours après le stade épiaison, soit environ 45 jours » (blé tendre d'hiver ; base 0, l'usage des céréales, non écrite dans le bulletin)";
+const GREN_PI_CEREALES =
+  "Arrêté régional GREN Auvergne-Rhône-Alpes, annexe 2, céréales à paille (méthode du bilan du Comifer ; drome.gouv.fr) : azote absorbé par la culture à l'ouverture du bilan, Pi = 10 kg N/ha + 5 kg N/ha par talle — 0 non levée, 10 de une à trois feuilles, 30 à quatre talles et plus";
 const TAYLOR_2001 =
   "Taylor, Rowland & Jones 2001, Biological Flora of the British Isles: Molinia caerulea (L.) Moench, Journal of Ecology 89:126-144 (Grande-Bretagne)";
 const LEDA_2008 =
@@ -535,10 +545,45 @@ export const HERBACEES: readonly HerbaceeV0[] = [
       seuilJourH: 8,
       // Elle **mûrit**, elle ne sénesce pas : le retrait est programmé, comme chez
       // une vernale, sauf qu'il s'appelle la maturation et qu'il finit à la
-      // moisson.
-      finDJ: 1250,
+      // moisson. Son cumul part du 1ᵉʳ janvier qui suit le semis : les
+      // degrés-jours de l'automne n'y comptent pas (`cumulDuCycle`).
+      //
+      // **Le retrait commence à la maturité physiologique** (#455), quand le
+      // grain cesse de se remplir, vers 45 % d'humidité, et il dure le séchage
+      // du grain jusqu'à la moisson. L'AHDB compte onze jours entre les deux
+      // pour son blé de référence (GS87 le 29 juillet, mûr à récolter le 9 août,
+      // AHDB_2025) ; les 150 °C·j du retrait (`ETALEMENT_RETRAIT_DJ`) en font
+      // onze en juillet sur le limon riche. Le retrait finit donc à la date de
+      // la fiche (semaine 28) sur la station de calage, l'année synthétique du
+      // limon riche, qui y a cumulé 1 049 °C·j : 1 049 − 150 ≈ 900. La maturité
+      // tombe alors début juillet, vers 2 460 °C·j base 0 après un semis de
+      // mi-octobre, soit 750 à 800 °C·j après une épiaison de mi-mai : c'est
+      // l'intervalle que le réseau d'observation normand donne
+      // (BSV_NORMANDIE_2023). Les 1 250 °C·j d'avant n'avaient pas de source,
+      // et mûrissaient le blé sept semaines après la date de sa fiche.
+      //
+      // Le moteur garde un défaut que ce calage ne règle pas : le feuillage
+      // recule à sa vitesse de repli (`REGRESSION_PAR_SEMAINE`), si bien que le
+      // blé fabrique encore du grain cinq semaines après sa maturité — un quart
+      // de plus sur un blé qu'on ne moissonne pas, sur le limon riche —, quand
+      // le vrai n'en fait plus.
+      finDJ: 900,
       senescenceAutomnale: false,
-      partPersistante: 0,
+      // **La rosette d'hiver** (#346). Le blé lève une quinzaine de jours après
+      // un semis d'octobre (150 °C·j base 0), talle à l'automne et en hiver, et
+      // garde ses feuilles jusqu'à la reprise ; mais son couvert reste petit :
+      // « GAI rarely exceeds 1 before March », GAI 0,5 à quatre talles, au
+      // cœur de l'hiver du blé de référence (AHDB_2025). 0,16 est ce
+      // qu'intercepte un GAI de 0,5, à l'extinction que donnent les deux
+      // repères de printemps du même guide (GAI 1,6 : 45 % de la lumière ;
+      // GAI 2,0 : la moitié ; k ≈ 0,36). Le moteur tient cette rosette dès la
+      // levée, quand la vraie part de rien et finit l'hiver vers un GAI de 1
+      // (0,3) : c'est une moyenne d'hiver, pas une courbe *(à calibrer sur un
+      // relevé de couverture hivernale)*. Le plafond de 0,3 tenu tout l'automne
+      // faisait prendre au blé 54 kg N/ha avant mars, quand la grille du
+      // bilan azoté prête 10 à 30 kg N/ha à une céréale en sortie d'hiver
+      // (GREN_PI_CEREALES) ; 0,16 en fait 30 sur le limon riche.
+      partPersistante: 0.16,
     },
     tBaseCroissanceC: 3,
     // Elle ne conquiert **rien** : son emprise est posée par le semis.
@@ -591,6 +636,9 @@ export const HERBACEES: readonly HerbaceeV0[] = [
       DUPRAZ_CAPILLON,
       COMIFER_2007_PKMG,
       AHDB_RB209_2023,
+      AHDB_2025,
+      BSV_NORMANDIE_2023,
+      GREN_PI_CEREALES,
       LEDA_2008,
     ],
   },
@@ -598,6 +646,16 @@ export const HERBACEES: readonly HerbaceeV0[] = [
 
 /** Combien d'espèces : la longueur d'un « paquet » dans les tableaux à plat. */
 export const N_HERBACEES = HERBACEES.length;
+
+/**
+ * Fenêtre de semis, en semaines de part et d'autre de la date de la fiche. Un
+ * blé d'hiver se sème en octobre ; on laisse la latitude d'une arrière-saison
+ * pluvieuse, pas celle de le semer au printemps *(à calibrer)*.
+ *
+ * Le semis la lit pour refuser (`actions.ts`), et le calendrier d'une culture
+ * d'hiver pour savoir quand son cycle repart (`cumulDuCycle`, #346).
+ */
+export const FENETRE_SEMIS_SEMAINES = 4;
 
 /**
  * Sur combien de degrés-jours l'appareil végétatif se déploie, une fois parti.
@@ -677,19 +735,99 @@ const borne = (x: number) => Math.min(1, Math.max(0, x));
  */
 export function vigueurHerbacee(h: HerbaceeV0, ctx: ContextePhenologique): number {
   const p = h.phenologie;
-  let v = borne((ctx.ddYearBase5 - p.debutDJ) / ETALEMENT_DEPART_DJ);
+  const cumul = cumulDuCycle(h, ctx);
+  let v = borne((cumul - p.debutDJ) / ETALEMENT_DEPART_DJ);
   // La porte ne vaut qu'au printemps : onze heures de jour en mars ne veulent
   // pas dire la même chose qu'en octobre (phenologie.ts).
   if (!ctx.automne) v = Math.min(v, borne((ctx.jourH - p.seuilJourH) / LARGEUR_PORTE_H));
   if (p.finDJ !== undefined) {
-    v = Math.min(
-      v,
-      borne((p.finDJ + ETALEMENT_RETRAIT_DJ - ctx.ddYearBase5) / ETALEMENT_RETRAIT_DJ),
-    );
+    v = Math.min(v, partAvantRetrait(h, cumul));
   } else if (p.senescenceAutomnale && ctx.automne && ctx.jourH <= SEUIL_SENESCENCE_H) {
     v = Math.min(v, borne(1 - ctx.semainesDepuisSenescence / ETALEMENT_CHUTE_SEMAINES));
   }
   return v;
+}
+
+/**
+ * Ce que le retrait programmé laisse de l'appareil aérien ∈ [0,1] : 1 tant que
+ * le cumul n'a pas atteint `finDJ`, 0 une fois le retrait achevé, et 1 pour une
+ * espèce qui n'en a pas.
+ */
+function partAvantRetrait(h: HerbaceeV0, cumul: number): number {
+  const fin = h.phenologie.finDJ;
+  if (fin === undefined) return 1;
+  return borne((fin + ETALEMENT_RETRAIT_DJ - cumul) / ETALEMENT_RETRAIT_DJ);
+}
+
+/**
+ * **Le cumul de degrés-jours que l'espèce lit cette semaine** (#346).
+ *
+ * C'est celui de l'année civile, l'horloge commune des herbacées et des
+ * arbres, sauf dans un cas : une culture dont le cycle **passe le 1ᵉʳ janvier**,
+ * entre l'ouverture de sa fenêtre de semis et la fin de l'année. Le cumul de
+ * l'année civile y est celui de l'été qui vient de finir — celui du cycle
+ * précédent. Lu tel quel, il disait mûr un blé d'hiver qui venait de lever :
+ * son retrait était dépassé depuis juillet, et le blé n'avait aucun feuillage
+ * d'octobre à février, sol nu sous culture tout l'automne.
+ *
+ * Le cumul du nouveau cycle vaut donc zéro jusqu'au 1ᵉʳ janvier. C'est
+ * l'horloge sur laquelle `finDJ` est calé : les degrés-jours de l'automne n'y
+ * ont jamais compté. Ce qui tient la culture d'ici là est sa part persistante,
+ * la rosette d'hiver, et ce qu'elle fabrique se lit sur ce feuillage-là.
+ *
+ * La règle lit la fiche (ses semaines de semis et de moisson), pas une espèce :
+ * une culture de printemps, semée et moissonnée dans l'année, n'est pas
+ * concernée. Elle lit la fenêtre de semis et non le semis réel, que l'état ne
+ * garde pas. Un blé qu'on n'a pas moissonné en juillet n'en profite pas pour
+ * reverdir : il est passé en paille sur pied la semaine d'avant
+ * (`finDeCycleCulture`, #455).
+ */
+function cumulDuCycle(h: HerbaceeV0, ctx: ContextePhenologique): number {
+  const c = h.culture;
+  if (
+    c !== undefined &&
+    c.semisWeek > c.recolteWeek &&
+    ctx.semaineAnnee > c.recolteWeek &&
+    ctx.semaineAnnee >= c.semisWeek - FENETRE_SEMIS_SEMAINES
+  ) {
+    return 0;
+  }
+  return ctx.ddYearBase5;
+}
+
+/**
+ * **Une culture est mûre quand son retrait programmé a commencé** (#455) : son
+ * cumul de cycle a atteint `finDJ`, la maturité physiologique. Avant, la moisson
+ * se refuse (`actions.ts`). Une espèce sans retrait programmé n'a pas d'horloge
+ * de maturité, et rien ne lui refuse sa moisson.
+ *
+ * Elle ne lit que le calendrier : une seule réponse par espèce pour toute la
+ * parcelle, qui suit l'année et la station comme le retrait lui-même.
+ */
+export function cultureMure(h: HerbaceeV0, ctx: ContextePhenologique): boolean {
+  const fin = h.phenologie.finDJ;
+  return fin === undefined || cumulDuCycle(h, ctx) >= fin;
+}
+
+/**
+ * **La semaine où une culture mûre qu'on n'a pas moissonnée finit** (#455) : la
+ * dernière avant l'ouverture de sa fenêtre de semis suivante. Le tick la passe
+ * alors en paille sur pied, le mort sur pied de #370, qui tombe en litière à sa
+ * vitesse avec son azote, grain compris ; sa place se libère. Aucune perte de
+ * grain n'est comptée avant, faute d'un taux sourcé : l'égrenage, la verse et la
+ * germination sur pied existent, mais aucun relevé trouvé ne les chiffre.
+ *
+ * La semaine d'avant l'ouverture, et non l'ouverture même, pour deux raisons
+ * qui tiennent à la fiche : aucun semis ne peut encore y avoir eu lieu (il est
+ * refusé hors de sa fenêtre), donc ce qui est sur pied est la culture d'avant ;
+ * et le cumul de cycle d'une culture d'hiver y est encore celui de l'été, qui
+ * la dit mûre — il repart de zéro la semaine suivante (`cumulDuCycle`).
+ */
+export function finDeCycleCulture(h: HerbaceeV0, ctx: ContextePhenologique): boolean {
+  const c = h.culture;
+  if (c === undefined) return false;
+  const veille = (((c.semisWeek - FENETRE_SEMIS_SEMAINES - 1) % 52) + 52) % 52;
+  return Math.floor(ctx.semaineAnnee) === veille && cultureMure(h, ctx);
 }
 
 /**
@@ -699,11 +837,19 @@ export function vigueurHerbacee(h: HerbaceeV0, ctx: ContextePhenologique): numbe
  * celui des semi-persistants chez les arbres : il vaut en mars comme en
  * décembre.
  *
+ * Le retrait programmé l'emporte sur lui (#346) : un blé mûr n'a plus de
+ * feuilles d'hiver, il a de la paille. Sans cette borne, la rosette du blé
+ * l'aurait gardé vert après sa maturation. Elle ne change rien à l'anémone,
+ * dont la part persistante est nulle.
+ *
  * Elle ne dépend que du calendrier : une seule valeur par espèce pour toute la
  * parcelle, que l'appelant calcule une fois par semaine.
  */
 export function partSaisonniere(h: HerbaceeV0, ctx: ContextePhenologique): number {
-  return Math.max(h.phenologie.partPersistante, vigueurHerbacee(h, ctx));
+  return Math.min(
+    partAvantRetrait(h, cumulDuCycle(h, ctx)),
+    Math.max(h.phenologie.partPersistante, vigueurHerbacee(h, ctx)),
+  );
 }
 
 /**

@@ -8,6 +8,28 @@ import { createGameState, type GameState, plantScattered } from "../src/engine/s
 import type { StationClimat } from "../src/engine/stations";
 import { tick } from "../src/engine/tick";
 
+/**
+ * **Combien de temps la parcelle Nil de Broadbalk avait été labourée avant
+ * 1843**, en années (#324) : le vieillissement des essais qui la prennent pour
+ * point zéro (C16, `culture.test.ts` et `labour-desserre.test.ts`).
+ *
+ * Broadbalk n'est pas parti d'un sol neuf. « Both experiments started with low
+ * stocks of SOC: 30.1 t/ha (1.15% C) in Hoosfield and 28.8 t/ha (1.00% C) in
+ * Broadbalk. This is because the fields had been in arable cropping for several
+ * hundred years before the start of the experiments » (Poulton et al. 2018,
+ * *Global Change Biology* 24 : 2563). Deux cents ans est le plus court de ces
+ * « plusieurs siècles ».
+ *
+ * Ces siècles-là ne sont pas ceux du moteur : le même article les donne en
+ * assolement, avec du fumier une année sur cinq. Le vieillissement des essais
+ * se fait sous leur propre conduite, blé continu sans apport, labouré chaque
+ * automne : c'est le plus simple, et il n'ajoute aucun mécanisme. Il ne met
+ * pas le sol à l'équilibre, parce que le moteur n'en a pas : mesuré sur
+ * quatre cents ans, le blé sans apport baisse encore de 13 % tous les vingt
+ * ans sur main, de 8 % avec la rosette d'hiver (#324, #346).
+ */
+export const CHAMP_LABOURE_AVANT_BROADBALK_ANS = 200;
+
 export interface RunOptions {
   /** densité de cervidés ; 0 par défaut pour isoler ce qu'on mesure */
   gibierParHa?: number;

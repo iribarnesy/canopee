@@ -461,6 +461,21 @@ facturée est celle des cellules de la zone dans la parcelle**
 à la surface (labourer, semer, moissonner, faucher, chauler), heures comprises :
 une ligne de journal qui écrit « 197 m² » écrit ce qui a été payé.
 
+**La moisson attend la maturité depuis #455.** Avant que le retrait programmé
+de la culture ait commencé (`cultureMure`, herbacees.ts), `moissonner` refuse
+avec la raison « Blé tendre d'hiver n'est pas mûr » — le nom de la fiche — et
+ne fait rien payer ; une zone sans culture garde « rien à moissonner ici ».
+`prevoirAction` rend ce refus comme les autres : le panneau l'affiche tel quel,
+sans fenêtre recalculée côté jeu, et c'est voulu, parce que la maturité suit
+l'année et la station (la semaine 28 de la fiche n'est que celle de la station
+de calage, l'année synthétique du limon riche). Une culture mûre qu'on ne
+moissonne pas passe en **paille sur pied** la semaine qui précède l'ouverture de
+sa fenêtre de semis suivante (semaine 36 pour le blé) : sa matière, grain
+compris, rejoint le mort sur pied (`herbeMorteG`, la hauteur du tapis la lit
+déjà), sa place se libère, et la moisson d'après dit « rien à moissonner ici ».
+Aucun geste n'est rapporté pour ce passage : c'est le moteur qui le fait, pas le
+joueur.
+
 Dans les deux cas, ce qui est nommé est ce qui a **réellement** été touché : le
 plafond horaire arrête souvent un chantier en cours de route, et une pelouse
 déjà rase ne se fauche pas. `estGesteSurArbres` et `estGesteSurZone` discriminent
