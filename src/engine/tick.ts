@@ -1401,8 +1401,17 @@ export function tick(state: GameState, weather: WeekWeather, essai?: ReglagesDEs
 
     waterloggingSum += bilan.engorgementParHorizon[0] ?? 0;
 
-    // La vie du sol se joue en surface : c'est l'horizon 0 qui pilote.
-    const moistureRatio = ruSurface > 0 ? (waterMm[base] ?? 0) / ruSurface : 0;
+    // La vie du sol se joue en surface : c'est l'horizon 0 qui pilote. Son
+    // humidité se lit sur **sa** réserve utile, celle de la cellule (#461) :
+    // celle qui suit son humus (A12) et l'épaisseur que l'érosion lui a
+    // laissée, comme l'eau qu'il peut évaporer. Elle se lisait sur la réserve
+    // du profil de départ : un horizon aminci, plein d'eau, passait pour sec.
+    // Sur le blé continu de C16 (4 % de pente, bassin amont), les décomposeurs
+    // des cellules décapées s'arrêtaient et la paille s'y entassait : 18 t C/ha
+    // de litière au bout de quatre siècles, sans qu'aucun azote ne lui ait
+    // jamais manqué.
+    const ruCellule = horizonsCellule[0]?.ruMm ?? ruSurface;
+    const moistureRatio = ruCellule > 0 ? (waterMm[base] ?? 0) / ruCellule : 0;
     const climate = decompositionClimateFactor(
       weather.tMean,
       moistureRatio,
