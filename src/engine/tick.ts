@@ -1584,22 +1584,29 @@ export function tick(state: GameState, weather: WeekWeather, essai?: ReglagesDEs
   // ── 2 ter. La nappe s'écoule vers l'aval ─────────────────────────────────
   // Même réseau que le ruissellement, mais bien plus lentement : c'est le
   // débit de base, celui qui fait les bas de pente frais et les sources.
+  //
+  // **Une voisine pleine ne reçoit rien, et ce qu'elle refuse reste en
+  // amont** (#381). La cellule le cédait quand même et l'eau ressortait chez
+  // elle : un aquifère plein perdait chaque semaine sa part de vidange, et sa
+  // nappe, qu'on lit après, ne remontait jamais plus haut que la vidange
+  // d'une semaine — 4,6 cm sur le sable à plat, à 0,4 cm du seuil
+  // d'affleurement. La source n'est pas perdue : une cellule pleine qui reste
+  // pleine rend en surface, la semaine suivante, ce que la pluie y ajoute.
   for (const i of descente) {
     const stock = nappeStockMm[i] ?? 0;
     if (stock <= 0) continue;
     const part = stock * tauxDeVidange(station.profil, pentes[i] ?? 0);
     if (part <= 0) continue;
-    nappeStockMm[i] = stock - part;
     const j = aval[i] ?? -1;
     if (j < 0) {
+      nappeStockMm[i] = stock - part;
       vidangeNappeMm += part;
       continue;
     }
     const place = Math.max(0, capaciteNappeMm - (nappeStockMm[j] ?? 0));
     const recu = Math.min(part, place);
+    nappeStockMm[i] = stock - recu;
     nappeStockMm[j] = (nappeStockMm[j] ?? 0) + recu;
-    // Si l'aval est plein, l'eau ressort : c'est une source de rupture de pente.
-    if (part > recu) debordementParCellule[i] = (debordementParCellule[i] ?? 0) + (part - recu);
   }
 
   // L'eau qui court emporte la terre : ce qui suit descend avec elle, cellule
