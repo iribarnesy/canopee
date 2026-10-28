@@ -204,11 +204,42 @@ export function partHouppier(heightM: number, baseHouppierM: number): number {
   return Math.max(0, Math.min(1, (heightM - base) / profondeurMax));
 }
 
+/**
+ * ─── **la pénombre répartit le feuillage d'une couronne**, **elle ne l'enlève pas** ───
+ *
+ * L'ombre d'un houppier est pleine à l'aplomb du tronc et s'estompe vers le
+ * bord, en `1 − d²/r²` (B3) : c'est l'épaisseur qu'on traverse à la verticale
+ * d'une couronne en paraboloïde, de feuillage uniforme. Sur le disque entier,
+ * ce profil vaut **un demi** en moyenne.
+ *
+ * Le trait `lai` dit le feuillage d'une couronne rapporté à sa projection au
+ * sol : un point sous deux ou trois couronnes retrouve le LAI de peuplement
+ * (especes.ts). Posée telle quelle sur `k · lai`, la pénombre retirait donc à
+ * chaque couronne la moitié de ses feuilles. Une aulnaie de douze ans dont les
+ * houppiers couvraient 141 à 148 % du sol laissait 63 à 65 % de la lumière au
+ * sol l'été, un LAI effectif de 0,9 ; à vingt ans encore 41 %, là où une
+ * aulnaie adulte porte 4,8 m² de feuilles par m² de sol (Eschenbach et Kappen
+ * 1996). Une couronne isolée n'interceptait que 55 à 64 % de ce que son
+ * feuillage intercepte réparti uniformément (#438).
+ *
+ * Le profil est donc rapporté à sa moyenne : au centre l'extinction vaut deux
+ * fois `k · lai`, au bord zéro, et sur le disque la couronne porte exactement
+ * le feuillage que l'atlas lui prête. Le deux n'est pas un réglage, c'est
+ * l'inverse de la moyenne du profil : il conserve la surface foliaire. Ce
+ * qu'une couronne isolée intercepte remonte à 88-93 % de celle qui aurait le
+ * même feuillage réparti uniformément ; le reste est l'agrégation du feuillage
+ * au centre du houppier, que les mesures optiques retrouvent aussi (les
+ * méthodes indirectes sous-estiment le LAI de 25 à 50 % pour cette raison,
+ * Bréda 2003).
+ */
+const MOYENNE_PENOMBRE = 0.5;
+
 interface Shadow {
   cx: number;
   cy: number;
   r2: number;
   heightM: number;
+  /** extinction à l'aplomb du tronc : `k · lai`, rapportée à la moyenne de la pénombre */
   extinction: number;
 }
 
@@ -247,12 +278,15 @@ function buildShadowIndex(
       heightM: tree.heightM,
       // L'indice foliaire suit le déploiement : c'est là que la phénologie
       // entre dans la loi de Beer-Lambert. Et l'élagage y entre aussi : une
-      // couronne dont on a retiré la tranche basse intercepte moins.
+      // couronne dont on a retiré la tranche basse intercepte moins. La
+      // pénombre répartit ensuite ce feuillage du centre au bord sans en
+      // changer la somme (`MOYENNE_PENOMBRE`).
       extinction:
-        BEER_LAMBERT_K *
-        espece.lumiere.lai *
-        feuillage *
-        partHouppier(tree.heightM, tree.baseHouppierM ?? 0),
+        (BEER_LAMBERT_K *
+          espece.lumiere.lai *
+          feuillage *
+          partHouppier(tree.heightM, tree.baseHouppierM ?? 0)) /
+        MOYENNE_PENOMBRE,
     };
     const bx0 = Math.floor((shadow.cx - r) / BUCKET_M);
     const bx1 = Math.floor((shadow.cx + r) / BUCKET_M);
@@ -316,6 +350,7 @@ function extinctionAt(
       // son bord (couronne moins épaisse, lumière latérale). C'est ce dégradé
       // qui crée les micro-situations d'abri — un sujet planté **en lisière** d'une
       // nurse est protégé du vent et du rayonnement sans être étouffé (ch1-A).
+      // Il est rapporté à sa moyenne dans `buildShadowIndex`.
       extinction += weight * s.extinction * (1 - d2 / s.r2);
     }
   }
