@@ -213,13 +213,21 @@ describe("ce que le blé rend, contre une source extérieure au moteur", () => {
     // les bornes ne bougent pas. Le moteur n'a pas d'équilibre à atteindre :
     // sur quatre cents ans (sonde du blé continu, déterministe), le grain de
     // main baisse de 13 à 19 % tous les vingt ans jusqu'au bout, et l'azote de la
-    // litière monte sans arrêt, 114 kg N/ha à l'an 0, 432 à l'an 400 — la paille,
-    // à C/N 90, ne se décompose plus faute d'azote minéral. Sur ce champ-là,
+    // litière monte sans arrêt, 114 kg N/ha à l'an 0, 432 à l'an 400. Sur ce champ-là,
     // main rend 0,35 / 0,30 / 0,26 t/ha (ans 201-260) : il sort du facteur deux
     // par le bas. L'accord des ans 61 à 120 tenait au passage dans la bande.
     // Partir des stocks de 1843 (1,00 % de carbone, Poulton et al. 2018) ne
     // suffisait pas : le moteur les perd comme ceux du sol neuf, et les
     // tranches jugées ne baissaient que de 6 à 9 %.
+    //
+    // **La litière ne manquait pas d'azote** (#461). Sur ce disque, la borne
+    // d'azote de la décomposition ne mord sur aucune cellule-semaine en quatre
+    // siècles. La paille s'entassait parce que ses décomposeurs lisaient leur
+    // humidité sur la réserve du profil de départ, quand l'érosion amincit
+    // l'horizon : 18 t C/ha de litière à l'an 400 depuis le partage de l'eau de
+    // #391. Lue sur la réserve de la cellule, elle reste à 3 t C/ha, et le grain
+    // ne bouge pas (1,458 / 1,339 / 1,240 t/ha contre 1,461 / 1,341 / 1,244) :
+    // le blé baisse encore de 5 à 6 % tous les vingt ans à l'an 400.
     const VIEUX = CHAMP_LABOURE_AVANT_BROADBALK_ANS;
     const r = culture({ ans: VIEUX + 61, cote: 30, rayonM: 14 });
     const an2 = r[2] ?? 0;
