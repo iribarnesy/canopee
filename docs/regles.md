@@ -275,8 +275,10 @@ que celle-ci peut recevoir (#381).
 
 C'est ce stock qui permet à une **forêt de faire baisser la nappe** en
 transpirant, et à un **incendie de la faire remonter** : mesuré sur une aulnaie
-de fond de vallée, 0,74 m sous la surface avec la forêt, 0,20 m et 9 % de la
-parcelle inondée l'hiver qui suit le feu.
+de fond de vallée, la nappe d'hiver à 0,90 m sous la surface avec la forêt, à
+0,02 m et toute la parcelle inondée au plus l'année qui suit le feu (relevé de
+#380 et #381 ; `docs/realisme.md`, « Cas d'étude : après l'incendie,
+l'inondation »).
 
 **Plafond d'énergie.** La transpiration d'une cellule ne peut pas dépasser ce
 que l'ETP y apporte, au plafond FAO-56 d'une surface rugueuse ou mouillée :
