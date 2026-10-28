@@ -363,4 +363,24 @@ describe("ce que les lignes disent est ce que le moteur a fait", () => {
     const encore = prevoirAction(moisson.state, datee(actionDuChamp("moissonner", DISQUE, ""), 0));
     expect(encore.map(refusDit)).toEqual(["Moissonner : rien à moissonner ici"]);
   });
+
+  it("avant sa maturité, le blé ne se moissonne pas : le panneau dit le refus du moteur (#455)", () => {
+    // Le panneau ne dit pas « hors saison » de lui-même : il affiche ce que
+    // `prevoir` rapporte, et c'est le moteur qui décide que le blé n'est pas
+    // mûr. Il le décide sur son calendrier, pas sur la date de la fiche : le
+    // jeu n'a rien à recalculer, et rien à changer le jour où la maturité
+    // bougera avec l'année.
+    const pasMur = `Moissonner : ${BLE.nom} n'est pas mûr`;
+    const toutJusteSeme = prevoirAction(
+      seme.state,
+      datee(actionDuChamp("moissonner", DISQUE, ""), seme.state.week),
+    );
+    expect(toutJusteSeme.map(refusDit)).toEqual([pasMur]);
+    const auPrintemps = avance(seme.state, 52 - semis + 14);
+    const enAvril = prevoirAction(
+      auPrintemps,
+      datee(actionDuChamp("moissonner", DISQUE, ""), auPrintemps.week),
+    );
+    expect(enAvril.map(refusDit)).toEqual([pasMur]);
+  });
 });

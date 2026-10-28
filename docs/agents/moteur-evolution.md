@@ -61,7 +61,68 @@ qu'un rapport (voir la note de maintenance).
 Séparer calibration et validation : caler un paramètre sur un âge, garder
 l'autre âge pour vérifier.
 
-## Ce que le dernier lot a appris (la faune et le sol : le frottis perdu, #415 ; le labour et les mycorhizes, #384 ; le retour du gibier, #373)
+## Ce que le dernier lot a appris (le blé : #324, #346, #455)
+
+La suite du lot du champ. Le propriétaire a tranché dans cet ordre : donner à C16 un sol de départ qui ressemble à celui de Broadbalk (#324), y juger la rosette du blé d'hiver retirée de la PR #459 (#346), puis recaler la maturité du blé, refuser la moisson avant elle et finir le blé qu'on ne moissonne pas (#455). Les prédictions et les mesures sont dans les commits de la branche `claude/v06-ble`, avant chaque course. Le format ne bouge pas (14) : aucun champ d'état n'est ajouté.
+
+### Un équilibre se vérifie avant de s'y asseoir
+
+#324 demandait un sol « à l'équilibre d'un champ labouré ». Suivi quatre cents ans, le blé continu sans apport n'en trouve pas : sur main, il baisse de 13 à 19 % tous les vingt ans jusqu'au bout (0,08 t/ha à l'an 400) ; avec la rosette, de 7 à 9 % (0,56). L'humus se pose vers l'an 300 ; c'est la litière qui ne se pose pas, son azote monte sans arrêt (114 → 432 kg N/ha), parce que la paille à C/N 90 ne se décompose plus faute d'azote minéral. **Avant de construire un dispositif « à l'équilibre », vérifier que le moteur en a un, et le dire quand il n'en a pas.** Le dispositif retenu ne prétend pas l'équilibre : il donne au champ l'âge de celui de Broadbalk, plusieurs siècles de culture en 1843 (Poulton et al. 2018), soit deux cents ans sous la conduite de l'essai avant la fenêtre lue.
+
+### Une fenêtre qui traverse une bande ne s'y pose pas
+
+Main passait C16 parce que ses ans 61 à 120 traversaient le facteur deux en descendant. Sur le champ de deux siècles, il en sort par le bas (0,35 / 0,30 / 0,26 t/ha) ; la rosette y rend 1,18 / 1,07 / 0,97. Aucune fenêtre ne fait passer les deux : main ne tient que celles qui finissent avant l'an 160, la rosette que celles qui commencent après l'an 120. **Quand deux moteurs passent un même critère sur des fenêtres disjointes, c'est la fenêtre qui les départage ; elle doit donc avoir sa source, et c'est elle qu'il faut chercher d'abord.**
+
+### Un stock mesuré n'est un équilibre que pour un moteur qui le tient
+
+Partir des 28,8 t C/ha de la parcelle en 1843 semblait le plus simple des deux dispositifs. Le moteur perd cette teneur comme celle du sol neuf, et les tranches jugées ne baissaient que de 6 à 9 %. L'équilibre de Broadbalk n'est pas celui du moteur : la parcelle tient 1,00 % de carbone à ~1 t/ha de blé ; le moteur, au même rendement, porte 10 à 13 t C/ha d'humus, moins de la moitié des 28,8 t de la parcelle sur une épaisseur pourtant plus grande.
+
+### Un recalage de phénologie se mesure au jour où l'essai lit
+
+`finDJ` passe de 1 250 à 900 °C·j : la maturité avance de quatre semaines, et le grain lu en semaine 28 n'a pas bougé au millième (C16, C18, sur trente et deux cent soixante ans). Le feuillage recule à 0,2 par semaine et la croissance d'une semaine se calcule sur le feuillage d'avant : à la date de la moisson, le blé recalé n'a perdu qu'une semaine de repli, déjà comptée. Les prédictions d'ampleur (−3 à −8 %) étaient toutes fausses. **Un changement de calendrier ne se juge pas à la date où la plante change, mais à celle où l'essai la mesure.**
+
+### Lire « mûr » sur l'horloge qui arrête la croissance
+
+Le retrait programmé du blé se lisait comme la maturation entière ; il est maintenant la fin du cycle, de la maturité physiologique au grain sec, et ses 150 °C·j font les onze jours de l'AHDB. Le refus de la moisson lit la même horloge (`cultureMure`), et le blé qu'on laisse sur pied finit sur elle, la semaine avant l'ouverture du semis suivant (`finDeCycleCulture`), quand le cumul d'une culture d'hiver est encore celui de l'été : la semaine d'après, la correction de #346 le remet à zéro, et le blé mûr redeviendrait « pas mûr ». **Deux règles qui lisent la même horloge doivent la lire au même endroit de son cycle.**
+
+### Ce que ça donne
+
+Sondes hors dépôt, déterministes (le blé de ces bancs ne tire rien au hasard) ; le LER sur les graines 4, 11 et 23. Branche fusionnée sur main ee7b8f1 ; la fusion de #458 (le labour garde 76 % du réseau mycorhizien) n'a bougé aucun de ces chiffres au centième.
+
+| | main | branche (#324, #346, #455) |
+|---|---|---|
+| C16, ans 61-120 (sol neuf) | 1,41 / 1,09 / 0,87 | 2,88 / 2,51 / 2,18 (hors du facteur deux) |
+| C16, ans 201-260 (champ de deux siècles) | 0,35 / 0,30 / 0,26 (hors du facteur deux) | **1,18 / 1,07 / 0,97** |
+| grain à l'an 400 | 0,08 | 0,56 |
+| C18, rien / 96 / 192 kg N (ans 21-30) | 2,68 / 6,86 / 9,32 | 4,02 / 7,74 / 9,97 |
+| C18, fumier (ans 91-100) | 7,85 | 8,67 |
+| LER, graines 4 / 11 / 23 | 1,446 / 1,388 / 1,373 | 1,454 / 1,397 / 1,380 |
+| blé jamais moissonné : grain en semaine 28 / au plus haut | 2,84 / 3,89 (73 %) | 4,38 / 4,81 (91 %) |
+| blé jamais moissonné, l'an d'après | repart (9,7 t/ha de grain sur pied) | paille sur pied en semaine 37, rien ne repart |
+
+Le recalage de `finDJ` seul (1 250 → 900, rosette en place) ne bouge ni C16, ni C18, ni le LER au millième.
+
+### Les prédictions fausses
+
+- P2 : l'écart entre deux tranches voisines de main devait passer sous 10 % avant l'an 300 ; il ne passe jamais sous 13 %.
+- P3 : la dernière tranche de main entre 0,3 et 0,7 t/ha ; 0,08 à 0,10.
+- P4, à moitié : l'humus de main à l'an 400 dans la fourchette (6,9 t C/ha), mais posé et non en baisse.
+- P9 : la dernière tranche avec la rosette entre 0,6 et 1,2 ; 0,56.
+- P10 : le lessivage avec la rosette sous 5 kg N/ha à l'an 400 ; 9,3.
+- P12 : les stocks de 1843 devaient baisser les tranches jugées de 10 à 20 % ; 6 à 9 %.
+- F3, F4 : le recalage de la maturité devait baisser le grain lu en semaine 28 de 3 à 8 % ; il ne bouge pas au millième.
+- H5 : sans la rosette, le blé sans apport de C18 devait rendre 10 à 25 % de moins ; 33 % de moins (la rosette, +50 %).
+
+Justes : P1, P5 à P8, P11, P13 ; R1 à R5 ; B1, B2, F1, F2, F5, F6 ; G1 à G6 ; H1 à H4.
+
+### Ce qui reste ouvert
+
+- **C16 reste 🟡** : le blé de la fenêtre est sur le ~1 t/ha de Broadbalk, mais il baisse encore. Causes candidates, aucune tranchée : l'azote que la litière immobilise sans plancher, le lessivage des dépôts, la paille que Broadbalk emporte et que le moteur rend, des dépôts de 16,2 kg N/ha/an pour 20 à 25, l'absence de fixation libre.
+- **Le grain après maturité** : le feuillage recule à sa vitesse de repli, et le blé fabrique encore du grain cinq semaines après sa maturité (un quart de plus sur un blé jamais moissonné).
+- **Les pertes après maturité** (égrenage, verse, germination sur pied) : aucun taux sourcé trouvé ; aucune n'est comptée.
+- `SEMAINES_DE_CULTURE` (herbacees.ts) n'est toujours lu nulle part.
+
+## Ce qu'un lot précédent a appris (la faune et le sol : le frottis perdu, #415 ; le labour et les mycorhizes, #384 ; le retour du gibier, #373)
 
 Trois réglages de maintenance. #415 et #384 sont corrigés ; #373 est instruit, et le propriétaire a tranché sur les options de la PR #458 : la loi et le 3 % restent, *(à calibrer)* avec leurs bornes (option A). L'essai de la succession que #415 faisait tomber est réécrit sur sa décision (option S1) : la ligne sans source est retirée, et l'an 60 se lit sur trois graines. Les prédictions et les mesures sont dans les commits de la branche `claude/v06-faune-sol`, avant chaque course. Le format ne bouge pas (14) : le report du frottis se lit sur le compteur de la partie, aucun champ ne s'ajoute.
 

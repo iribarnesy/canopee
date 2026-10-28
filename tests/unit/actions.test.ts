@@ -20,11 +20,12 @@ import { versLAval } from "../../src/engine/boisMort";
 import { CARBON_FRACTION } from "../../src/engine/carbon";
 import { chargeCombustible } from "../../src/engine/feu";
 import { runJournal } from "../../src/engine/game";
+import { HERBACEES, N_HERBACEES } from "../../src/engine/herbacees";
 import { indiceDuMarche } from "../../src/engine/marche";
 import { syntheticYear } from "../../src/engine/meteo";
 import { altitudeParCellule } from "../../src/engine/relief";
 import { rngStateFromSeed } from "../../src/engine/rng";
-import { createGameState, plantAt } from "../../src/engine/state";
+import { createGameState, type GameState, plantAt } from "../../src/engine/state";
 import { LIMON_RICHE } from "../../src/engine/stations";
 import { stateHash, tick } from "../../src/engine/tick";
 import { diametreInitialCm, volumeTigeM3 } from "../../src/engine/trees";
@@ -873,6 +874,14 @@ describe("un chantier se paie sur la surface qu'il travaille dans la parcelle (#
     const geste = (r.gestes ?? []).filter(estGesteSurZone).find((g) => g.type === type);
     return [...(geste?.cellules ?? [])].sort((a, b) => a - b);
   }
+  /**
+   * La même parcelle au jour où son blé est mûr, **sans l'avoir simulée** :
+   * depuis #455, la moisson attend la maturité, et ces essais ne jugent que la
+   * facture et le geste. Le calendrier passe à la semaine de la fiche, et le
+   * cumul de degrés-jours au seuil de maturité du blé ; rien n'a poussé.
+   */
+  const FIN_DJ = HERBACEES.find((h) => h.id === "triticum_aestivum")?.phenologie.finDJ ?? 0;
+  const aMaturite = (s: GameState): GameState => ({ ...s, week: 28, ddYearBase5: FIN_DJ });
 
   it("au coin, un disque ne fait payer que ce qui est dans la parcelle", () => {
     // Le labour, le chaulage et la fauche facturaient l'aire du disque : posé
@@ -896,10 +905,12 @@ describe("un chantier se paie sur la surface qu'il travaille dans la parcelle (#
         cultureId: "triticum_aestivum",
       });
       expect(seme.refusals).toEqual([]);
-      // Moissonné aussitôt : pas un grain, mais la moissonneuse est passée.
-      const moisson = applyAction(seme.state, { type: "moissonner", week: SEMIS, ...zone });
+      // Moissonné mûr sans avoir poussé : pas un grain, mais la moissonneuse
+      // est passée.
+      const mur = aMaturite(seme.state);
+      const moisson = applyAction(mur, { type: "moissonner", week: 28, ...zone });
       expect(moisson.refusals).toEqual([]);
-      return { semis: cout(laboure, seme), moisson: cout(seme.state, moisson) };
+      return { semis: cout(laboure, seme), moisson: cout(mur, moisson) };
     };
     const centre = semerSur(AU_CENTRE);
     const coin = semerSur(AU_COIN);
@@ -922,7 +933,78 @@ describe("un chantier se paie sur la surface qu'il travaille dans la parcelle (#
     // Une moisson plus large que le semis ne prend que ce qui était semé : son
     // geste dit où la culture a quitté le champ, pas où l'engin a roulé.
     const large = { ...AU_CENTRE, rayonM: 12 };
-    const moisson = applyAction(seme.state, { type: "moissonner", week: SEMIS, ...large });
+    const moisson = applyAction(aMaturite(seme.state), { type: "moissonner", week: 28, ...large });
     expect(cellulesDe(moisson, "moissonner")).toEqual(semees);
+  });
+});
+
+describe("la moisson attend la maturité, et un blé laissé sur pied finit en paille (#455)", () => {
+  // Une petite parcelle de limon riche, sans arbre, sous l'année synthétique :
+  // la station de calage de la maturité du blé. Labour en 40, semis en 41.
+  const PETITE = { ...LIMON_RICHE.station, coteM: 10, voisinage: [] };
+  const METEO = syntheticYear(LIMON_RICHE.climat);
+  const ZONE = { x: 5, y: 5, rayonM: 4 };
+  const S = HERBACEES.findIndex((h) => h.id === "triticum_aestivum");
+  const NOM = HERBACEES[S]?.nom ?? "";
+  const centre = (5 * 10 + 5) * N_HERBACEES + S;
+  const avanceJusqua = (etat: GameState, semaineAbsolue: number): GameState => {
+    let x = etat;
+    while (x.week < semaineAbsolue) {
+      const m = METEO[x.week % 52];
+      if (!m) throw new Error("météo manquante");
+      x = tick(x, m).state;
+    }
+    return x;
+  };
+  const avantLabour = avanceJusqua(createGameState(PETITE, rngStateFromSeed(3)), 40);
+  const laboure = applyAction(avantLabour, { type: "labourer", week: 40, ...ZONE }).state;
+  const avantSemis = avanceJusqua(laboure, 41);
+  const seme = applyAction(avantSemis, {
+    type: "semer",
+    week: 41,
+    ...ZONE,
+    cultureId: "triticum_aestivum",
+  }).state;
+  const moissonner = (etat: GameState) =>
+    applyAction(etat, { type: "moissonner", week: etat.week, ...ZONE });
+  // L'an d'après : la semaine de la fiche, et la veille de la fenêtre de semis.
+  const enJuillet = avanceJusqua(seme, 52 + 28);
+  const laVeille = avanceJusqua(enJuillet, 52 + 36);
+  const aLOuverture = avanceJusqua(laVeille, 52 + 37);
+
+  it("semé, il n'est pas mûr : la moisson est refusée, et ne coûte rien", () => {
+    // Il était moissonné à toute date, au poids du jour : en mars, sans grain,
+    // la moissonneuse payée et la culture partie.
+    for (const etat of [seme, avanceJusqua(seme, 52 + 12)]) {
+      const r = moissonner(etat);
+      expect(r.refusals.map((x) => x.reason)).toEqual([`${NOM} n'est pas mûr`]);
+      expect(r.state).toBe(etat);
+    }
+  });
+
+  it("à la date de sa fiche, sur la station de calage, il est mûr", () => {
+    expect(moissonner(enJuillet).refusals).toEqual([]);
+  });
+
+  it("laissé sur pied, il passe en paille à l'ouverture du semis suivant, et ne repart pas", () => {
+    // La veille, il est encore là, mûr, et se moissonnerait.
+    expect(laVeille.soil.herbeMatiereSecheG[centre] ?? 0).toBeGreaterThan(0);
+    expect(laVeille.soil.herbeEmprise[centre] ?? 0).toBeGreaterThan(0);
+    expect(moissonner(laVeille).refusals).toEqual([]);
+    // À l'ouverture, sa matière est sur pied, morte, et sa place est libre.
+    expect(aLOuverture.soil.herbeMatiereSecheG[centre]).toBe(0);
+    expect(aLOuverture.soil.herbeAzoteG[centre]).toBe(0);
+    expect(aLOuverture.soil.herbeEmprise[centre]).toBe(0);
+    expect(aLOuverture.soil.herbeMorteG[centre] ?? 0).toBeGreaterThan(
+      0.9 * (laVeille.soil.herbeMatiereSecheG[centre] ?? 0),
+    );
+    expect(moissonner(aLOuverture).refusals.map((x) => x.reason)).toEqual([
+      "rien à moissonner ici",
+    ]);
+    // Et rien ne repart au printemps : il repartait, et sa matière s'ajoutait
+    // à celle de l'année d'avant.
+    const auPrintemps = avanceJusqua(aLOuverture, 2 * 52 + 20);
+    expect(auPrintemps.soil.herbeEmprise[centre]).toBe(0);
+    expect(auPrintemps.soil.herbeMatiereSecheG[centre]).toBe(0);
   });
 });
