@@ -204,8 +204,15 @@ describe("succession émergente sur friche (200 ans, rien n'est planté)", () =>
     // centaines quand elles font vingt mètres. Ce qu'on vérifie, c'est que la
     // densité a bien fondu par rapport au fourré — pas qu'elle passe sous un
     // nombre fixe, qui était faux aux deux bouts.
+    //
+    // **Borne de 2 000 tiges/ha retirée (#391, décision du propriétaire).** Elle
+    // n'avait pas de source, et elle tombait au milieu d'une oscillation : de l'an
+    // 100 à l'an 200, la friche passe de 1 600 à 2 500 tiges/ha, sur main comme
+    // sur la branche (main : 1 668 à l'an 200, mais 2 480 à l'an 160). Le frottis
+    // de #458 en a déplacé la phase, et la graine 2026 rendait 2 048 à l'an 200,
+    // à embolie et défeuillaison nulles. Ce que dit le commentaire ci-dessus reste
+    // vérifié : la densité a fondu par rapport au fourré.
     const parHa = (n: number) => (n / (50 * 50)) * 10_000;
-    expect(parHa(an200.aliveCount)).toBeLessThan(2000);
     expect(parHa(an200.aliveCount)).toBeLessThan(parHa(an15.aliveCount));
   });
 });

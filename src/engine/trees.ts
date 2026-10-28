@@ -263,6 +263,13 @@ export interface TreeState {
    * et au rendu quels arbres viennent de roussir.
    */
   gelPousseSemaine?: number;
+  /**
+   * Semaine où la soif a fait tomber ses feuilles ; absente = jamais (#391).
+   * Un feuillu installé lâche son feuillage vert plutôt que de laisser casser
+   * son bois, et le refait sur ses réserves comme après un gel des pousses : la
+   * date dit où en est la refeuillaison, avec la même courbe.
+   */
+  defeuillaisonSemaine?: number;
   /** semaine de la dernière levée d'écorce (liège) ; absent = jamais démasclé */
   derniereLeveeSemaine?: number;
   /**
@@ -448,6 +455,18 @@ export interface TreeEnvironment {
    */
   feuillageGele?: number;
   /**
+   * Part du feuillage que la soif a fait tomber et qui n'a pas encore repoussé
+   * ∈ [0,1] (#391). Elle se paie comme celle du gel ; elle n'en diffère que par
+   * le nom qu'elle donne à la mort, si elle tue. Absente, rien n'est tombé.
+   */
+  feuillageTombe?: number;
+  /**
+   * L'arbre a-t-il lâché ses feuilles à la soif depuis moins d'un an
+   * (`reservesEntamees`, reserves.ts) ? Ses réserves ne se refont pas avant, et
+   * son stress ne cicatrise pas (#391). Absent, elles se refont.
+   */
+  reservesEntamees?: boolean;
+  /**
    * Effet fertilisant du CO₂ sur le potentiel de croissance (climat.ts).
    * 1 = concentration d'aujourd'hui. Il agit sur le **potentiel**, donc la loi du
    * minimum le borne : un arbre qui a soif n'en profite pas.
@@ -458,10 +477,19 @@ export interface TreeEnvironment {
 export const STRESS_LETHAL = 10;
 
 /**
- * Vitesse à laquelle la cavitation s'installe quand la satisfaction en eau
- * tombe sous le seuil de survie de l'espèce *(à calibrer)*.
+ * Part de la conductivité que la cavitation emporte par semaine, à pleine
+ * sévérité (satisfaction en eau nulle) : 0,16.
+ *
+ * Walthert et al. 2021 (*Sci. Total Environ.* 753 : 141792) ont suivi neuf
+ * hêtraies suisses pendant la sécheresse de 2018 : du début de l'embolie et de
+ * la défeuillaison (mi-juillet) jusqu'à 65 à 80 % d'embolie native, il s'écoule
+ * « environ un mois », soit 0,13 à 0,20 par semaine. La valeur était de 0,03
+ * *(à calibrer)* : posée avant que l'embolie ne tue (#391), elle ne mordait
+ * pas, et elle est devenue celle qui décide de la mort de soif d'un arbre
+ * installé. Une seule vitesse pour toutes les essences et tous les âges :
+ * aucune source ne donne celle d'un plant.
  */
-export const CAVITATION_PAR_SEMAINE = 0.03;
+export const CAVITATION_PAR_SEMAINE = 0.16;
 
 /**
  * Part du seuil de survie en dessous de laquelle la cavitation s'installe
@@ -483,6 +511,11 @@ export const RECUPERATION_PAR_SEMAINE = 0.0012;
 /**
  * Fait évoluer le dommage hydraulique d'un arbre : il s'aggrave sous stress
  * sévère, se dilue lentement le reste du temps.
+ *
+ * Il plafonnait à 85 %, « un arbre à 85 % d'embolie est déjà mort debout » :
+ * c'était dire la mort sans la compter, et c'était faux pour un feuillu, qui
+ * se relève encore à 85 %. Le plafond est retiré depuis que l'embolie tue à
+ * son seuil (`embolieLetale`, #391) : c'est la mort qui borne le dommage.
  */
 export function prochainDommageHydraulique(
   dommage: number,
@@ -492,9 +525,91 @@ export function prochainDommageHydraulique(
   const seuil = seuilSurvie * SEUIL_CAVITATION;
   if (satisfactionEau < seuil) {
     const severite = (seuil - satisfactionEau) / Math.max(0.05, seuil);
-    return Math.min(0.85, dommage + CAVITATION_PAR_SEMAINE * severite);
+    return Math.min(1, dommage + CAVITATION_PAR_SEMAINE * severite);
   }
   return Math.max(0, dommage - RECUPERATION_PAR_SEMAINE);
+}
+
+/**
+ * Satisfaction en eau sous laquelle le bois de cette essence commence à
+ * casser ses colonnes d'eau. Les stomates sont alors fermés depuis longtemps :
+ * chez presque toutes les espèces, ils se ferment avant que l'embolie ne
+ * commence, et la marge entre les deux croît avec la résistance du bois
+ * (Martin-StPaul, Delzon et Cochard 2017, *Ecol. Lett.* 20 : 1437).
+ */
+export function seuilDeCavitation(espece: EspeceV0): number {
+  return espece.eau.seuilStressSecheresse * SEUIL_CAVITATION;
+}
+
+/**
+ * Part de la conductivité perdue au-delà de laquelle un **feuillu** ne se relève
+ * plus : 88 %. Mesuré sur cinq feuillus mis en sécheresse extrême, le potentiel
+ * hydrique dont la plante ne revient pas suit celui qui coupe 88 % de la
+ * conductivité de la tige, et non la moitié (Urli et al. 2013, *Tree Physiol.*
+ * 33 : 672).
+ */
+export const EMBOLIE_LETALE_FEUILLU = 0.88;
+
+/**
+ * La même chez un **résineux** : la moitié. C'est le seuil rapporté pour les
+ * conifères (Brodribb et Cochard 2009, *Plant Physiol.* 149 : 575), et celui
+ * qu'Urli et al. 2013 opposent aux 88 % des feuillus. C'est sur ces deux seuils que Choat et al. 2012
+ * (*Nature* 491 : 752) comptent la marge de sécurité de 226 espèces forestières.
+ * Et quelle que soit l'espèce, tous les arbres morts de sécheresse qu'on a
+ * mesurés avaient perdu au moins 60 % de leur conductivité (Adams et al. 2017,
+ * *Nat. Ecol. Evol.* 1 : 1285).
+ */
+export const EMBOLIE_LETALE_RESINEUX = 0.5;
+
+/**
+ * Part de la conductivité perdue à laquelle un feuillu installé lâche ses
+ * feuilles : 12 %, le point d'entrée d'air, où la perte de conductivité se met
+ * à croître vite (Meinzer et al. 2009, *Funct. Ecol.* 23 : 922 ; seuil à 12 %
+ * de Domec et Gartner 2001, d'après Gleason et al. 2016).
+ *
+ * Les hêtres que la sécheresse de 2003 a défeuillés avaient lâché des feuilles
+ * vertes, les pétioles sans doute embolisés, sans presque rien perdre de la
+ * conductivité de leurs rameaux (Bréda et al. 2006) : la feuille tombe quand
+ * le bois commence à casser, pas avant, et c'est ce qui le protège. Et c'est un
+ * événement rare : à Hesse, la première défeuillaison estivale mesurée en
+ * trente ans, depuis 1976. Déclencher la chute dès que la soif passe le seuil de
+ * cavitation, sans attendre que le bois casse, défeuillait un aulne du limon
+ * neuf étés sur onze (#391). *(à confirmer : la chute au point d'entrée d'air
+ * est une lecture de la segmentation hydraulique, pas une mesure.)*
+ */
+export const EMBOLIE_DEFEUILLAISON = 0.12;
+
+/** Le seuil d'embolie qui tue cette essence, selon son grand groupe. */
+export function embolieLetale(espece: EspeceV0): number {
+  return espece.eau.resineux ? EMBOLIE_LETALE_RESINEUX : EMBOLIE_LETALE_FEUILLU;
+}
+
+/**
+ * Âge, compté depuis la plantation ou la levée, à partir duquel un arbre est
+ * **installé**, ans.
+ *
+ * Un plant et un arbre installé ne meurent pas de soif de la même façon, et le
+ * terrain le dit en âge. En 1976, en France, « les plantations de l'année ou
+ * celles âgées de deux à trois ans » sont mises à part de toutes les autres :
+ * celles de l'année ont souvent perdu tous leurs plants, alors que dans les
+ * peuplements de cinq à dix ans « les dégâts ont été moins sérieux » et que les
+ * vieux peuplements n'ont perdu que des arbres isolés (Aussenac 1978, *Rev. For.
+ * Fr.* 30 : 103, p. 104). Le premier printemps et le premier été sont cruciaux
+ * pour un arbre planté ; ensuite il résiste mieux, et trois ans de désherbage
+ * assurent d'ordinaire son installation (Davies 1987, *Trees and weeds*, FC
+ * Handbook 2, p. 34).
+ */
+export const ANS_D_INSTALLATION = 3;
+
+/**
+ * L'arbre est-il installé ? Avant, c'est un **plant** : il n'a ni les racines
+ * qui ont colonisé le sol autour de lui, ni les réserves d'un arbre fait, et la
+ * soif le dessèche en quelques semaines. Après, il meurt de soif comme un arbre
+ * : par l'embolie de son bois ou par l'épuisement de ses réserves, et il peut
+ * lâcher ses feuilles pour se protéger.
+ */
+export function estInstalle(tree: Pick<TreeState, "ageWeeks">): boolean {
+  return tree.ageWeeks >= ANS_D_INSTALLATION * 52;
 }
 /**
  * Facteur de survie sous ce seuil → l'arbre puise dans ses réserves. Les
@@ -1406,7 +1521,10 @@ export interface TreeTickResult {
  * La famine entre dans ce classement par ce qu'elle **coûte**, et non par un
  * facteur : c'est la seule façon de comparer un stock qui se vide à des
  * facteurs instantanés. Un arbre qui puise plus qu'il ne souffre par ailleurs
- * se meurt de l'ombre.
+ * se meurt de l'ombre. Elle a deux parts depuis #391 : ce que la lumière seule
+ * aurait fait puiser (l'ombre), et ce que la soif y ajoute en fermant les
+ * stomates ou en faisant tomber les feuilles (la sécheresse). La plus lourde
+ * des deux donne son nom.
  *
  * Le pH a manqué à cette liste alors qu'il compte dans la survie : un arbre tué
  * par un sol trop acide se voyait attribuer la « vieillesse », parce que tous
@@ -1433,14 +1551,15 @@ export interface TreeTickResult {
  * une troisième fois.
  */
 function causeLenteDominante(
-  usure: number,
+  usureOmbre: number,
+  usureSoif: number,
   parLeManque: number,
   fSecSurvie: number,
   fEng: number,
   fPH: number,
   fAge: number,
 ): CauseMort {
-  if (usure > parLeManque) return "ombre";
+  if (usureOmbre + usureSoif > parLeManque) return usureSoif > usureOmbre ? "secheresse" : "ombre";
   const pire = Math.min(fSecSurvie, fEng, fPH, fAge);
   if (pire === fPH) return "solHorsGamme";
   if (pire === fAge) return "vieillesse";
@@ -1468,7 +1587,23 @@ export function tickTree(tree: TreeState, env: TreeEnvironment): TreeTickResult 
   const fSec = droughtFactor(espece, env.waterSatisfaction);
   // Survie hydrique : seuil découplé du confort (le hêtre pousse mal en sec
   // mais son semis survit ; l'aulne, lui, meurt vite hors sol frais).
-  const fSecSurvie = Math.min(1, env.waterSatisfaction / espece.eau.seuilStressSecheresse);
+  //
+  // **Ce compteur ne vaut que pour un plant** (#391). Il menait au seuil, en sept
+  // semaines à une satisfaction de 0,1, un aulne de douze ans comme un plant de
+  // l'année, et tous les arbres d'un peuplement pur ensemble, puisque l'eau
+  // d'un horizon est servie au même taux à toutes les racines qui y puisent :
+  // 136 aulnes de douze ans sur 144 mouraient de soif en 1976. Le terrain voit
+  // mourir les plantations de l'année, beaucoup moins les peuplements de cinq
+  // à dix ans, et dans les vieux peuplements des arbres isolés (Aussenac 1978).
+  // Les dégâts d'une sécheresse ne tuent que rarement un arbre fait sur le coup
+  // (Bréda et al. 2006, *Ann. For. Sci.* 63 : 625). Un arbre installé meurt de
+  // soif autrement : par l'embolie de son bois, à son seuil (`embolieLetale`),
+  // ou par l'épuisement de ses réserves, que la soif vide en fermant les
+  // stomates (plus bas) et en faisant tomber les feuilles (tick.ts).
+  const installe = estInstalle(tree);
+  const fSecSurvie = installe
+    ? 1
+    : Math.min(1, env.waterSatisfaction / espece.eau.seuilStressSecheresse);
   const fEng = waterloggingFactor(espece, env.waterloggingRatio);
   const fLum = lightFactor(espece, env.light);
   const fPH = phFactor(espece, env.phMean);
@@ -1511,7 +1646,16 @@ export function tickTree(tree: TreeState, env: TreeEnvironment): TreeTickResult 
   // rendre la cicatrisation à plein régime six mois par an — assez pour
   // effacer chaque hiver la famine de l'été, et un semis de pin sous futaie
   // fermée survivait indéfiniment. Mesuré : il doit mourir en cinq ans.
-  const puisementDesReserves = partPuiseeSurLesReserves(espece, tree.heightM, env.light);
+  //
+  // **La soif ferme les stomates, et l'arbre qui ne transpire plus n'assimile
+  // plus** (#391) : son revenu suit la même courbe de soif que sa croissance.
+  // C'est l'épuisement des réserves de McDowell et al. 2008 (*New Phytol.* 178 :
+  // 719), et les hêtres défeuillés par la sécheresse de 2003 finissaient la
+  // saison avec deux fois moins d'amidon que leurs voisins feuillés (Bréda et
+  // al. 2006, tableau I). La part que la lumière seule aurait puisée est gardée
+  // à part : c'est elle qui fait une mort de l'ombre, le reste une mort de soif.
+  const puisementALOmbre = partPuiseeSurLesReserves(espece, tree.heightM, env.light);
+  const puisementDesReserves = partPuiseeSurLesReserves(espece, tree.heightM, env.light, fSec);
   // Sénescence : passé ~85 % de la longévité, la vigueur décline puis l'arbre
   // meurt (déterministe) — le moteur du cycle sylvigénétique (ch4-A).
   const ageYears = tree.ageWeeks / 52;
@@ -1625,14 +1769,24 @@ export function tickTree(tree: TreeState, env: TreeEnvironment): TreeTickResult 
   // même dont `reserves.ts` tire son ancre, la défoliation — compté à la chaleur
   // de la semaine, sans le feuillage, puisque c'est justement lui qui manque.
   const perteAuGel = Math.min(1, Math.max(0, env.feuillageGele ?? 0));
-  const usure =
-    (puisementDesReserves * season + perteAuGel * seasonFactor(espece, env.tMean)) *
+  // Celui que la soif a fait tomber se paie de même (#391) : c'est le même cas
+  // de revenu nul, et le même chemin.
+  const perteALaSoif = Math.min(1, Math.max(0, env.feuillageTombe ?? 0));
+  const chaleur = seasonFactor(espece, env.tMean);
+  const usureOmbre = (puisementALOmbre * season + perteAuGel * chaleur) * USURE_PAR_SEMAINE;
+  const usureSoif =
+    ((puisementDesReserves - puisementALOmbre) * season + perteALaSoif * chaleur) *
     USURE_PAR_SEMAINE;
+  const usure = usureOmbre + usureSoif;
   const parLeManqueSemaine =
     survivalFactor < STRESS_ONSET ? (STRESS_ONSET - survivalFactor) * 5 : 0;
   stress += parLeManqueSemaine + usure;
   stressLent += parLeManqueSemaine + usure;
-  if (survivalFactor > STRESS_RECOVERY) {
+  // Un arbre que la soif a défeuillé ne refait pas ses réserves avant un an
+  // (#391, `reservesEntamees`) : la cicatrisation, qui est leur remplissage vu
+  // par l'autre bout, reste fermée, et une seconde défeuillaison le trouve
+  // avec le déficit de la première.
+  if (survivalFactor > STRESS_RECOVERY && !env.reservesEntamees) {
     const apres = Math.max(0, stress - RECUPERATION_STRESS * season * (1 - puisementDesReserves));
     // **Au prorata** : la cicatrisation efface du stress sans savoir d'où il
     // venait, donc elle en efface la même proportion de chaque origine. Sans
@@ -1649,11 +1803,21 @@ export function tickTree(tree: TreeState, env: TreeEnvironment): TreeTickResult 
     stressMaladie *= rapport;
     stress = apres;
   }
-  const alive = stress < STRESS_LETHAL;
+  // **L'embolie** : la cavitation s'installe vite et se dilue lentement, c'est la
+  // mémoire pluriannuelle des sécheresses. Passé son seuil, l'arbre ne se relève
+  // plus, plant ou arbre installé (#391).
+  const dommageHydraulique = prochainDommageHydraulique(
+    tree.dommageHydraulique,
+    env.waterSatisfaction,
+    espece.eau.seuilStressSecheresse,
+  );
+  const embolieFatale = dommageHydraulique >= embolieLetale(espece);
+  const alive = stress < STRESS_LETHAL && !embolieFatale;
   // À la mort, on retient **quel** facteur a eu le dernier mot : c'est ce que le
   // joueur a besoin de savoir pour corriger le tir.
   let causeMort: CauseMort | undefined;
-  if (!alive) {
+  if (embolieFatale) causeMort = "secheresse";
+  else if (!alive) {
     // Le pH manquait à cette liste alors qu'il compte dans la survie : un
     // arbre tué par un sol trop acide se voyait attribuer la « vieillesse »,
     // parce que tous les facteurs listés valaient 1 et que l'âge était le
@@ -1663,14 +1827,23 @@ export function tickTree(tree: TreeState, env: TreeEnvironment): TreeTickResult 
     // La famine entre dans ce classement par ce qu'elle **coûte** cette semaine,
     // et non par un facteur : c'est la seule façon de comparer un stock qui se
     // vide à des facteurs instantanés. Un arbre qui puisait plus qu'il ne
-    // souffrait par ailleurs est mort de l'ombre.
+    // souffrait par ailleurs est mort de l'ombre, ou de soif si c'est la soif
+    // qui le faisait puiser (#391).
     // C'est le facteur de **survie** du pH qui entre ici, le même que dans
     // `survivalFactor` : imputer la mort sur le facteur de **croissance**
     // désignerait le pH presque à chaque fois, puisqu'il lui est toujours
     // inférieur ou égal (#161).
     const pire = Math.min(fSecSurvie, fEng, fPHSurvie, fAge);
     const parLeManque = pire < STRESS_ONSET ? (STRESS_ONSET - pire) * 5 : 0;
-    causeMort = causeLenteDominante(usure, parLeManque, fSecSurvie, fEng, fPHSurvie, fAge);
+    causeMort = causeLenteDominante(
+      usureOmbre,
+      usureSoif,
+      parLeManque,
+      fSecSurvie,
+      fEng,
+      fPHSurvie,
+      fAge,
+    );
   }
   // La même lecture, mais tenue **chaque semaine** et pas seulement à la mort :
   // c'est elle qu'un coup brusque relira pour savoir de quoi l'arbre se
@@ -1682,7 +1855,15 @@ export function tickTree(tree: TreeState, env: TreeEnvironment): TreeTickResult 
   // une hêtraie de limon riche accumulait 189 morts « solHorsGamme ». Mesuré.
   const causeLente =
     usure > 0 || parLeManqueSemaine > 0
-      ? causeLenteDominante(usure, parLeManqueSemaine, fSecSurvie, fEng, fPHSurvie, fAge)
+      ? causeLenteDominante(
+          usureOmbre,
+          usureSoif,
+          parLeManqueSemaine,
+          fSecSurvie,
+          fEng,
+          fPHSurvie,
+          fAge,
+        )
       : tree.causeLente;
 
   return {
@@ -1699,6 +1880,7 @@ export function tickTree(tree: TreeState, env: TreeEnvironment): TreeTickResult 
       alive,
       rootDepthCm,
       causeMort,
+      dommageHydraulique,
     },
     limitingFactor,
   };

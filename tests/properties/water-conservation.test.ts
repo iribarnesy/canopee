@@ -18,6 +18,7 @@ describe("bilan hydrique d'une cellule — conservation de l'eau", () => {
       drainagePerWeekMm: fc.double({ min: 0, max: 100, noNaN: true }),
       rainMm: fc.double({ min: 0, max: 150, noNaN: true }),
       evapDemandMm: fc.double({ min: 0, max: 30, noNaN: true }),
+      eauEvaporableMm: fc.double({ min: 0, max: 60, noNaN: true }),
       nappeMm: fc.double({ min: 0, max: 20, noNaN: true }),
     })
     .map(({ ruMm, fillRatio, excessCapacityMm, excessRatio, ...rest }) => ({
@@ -63,7 +64,7 @@ describe("bilan hydrique d'une cellule — conservation de l'eau", () => {
 
   it("drainage lent + pluie forte → engorgement durable", () => {
     let soil = { soilWaterMm: 140, excessMm: 0 };
-    const common = { ruMm: 140, excessCapacityMm: 60, drainagePerWeekMm: 4 };
+    const common = { ruMm: 140, excessCapacityMm: 60, drainagePerWeekMm: 4, eauEvaporableMm: 25 };
     for (let i = 0; i < 7; i++) {
       const out = cellWaterBalance({ ...common, ...soil, rainMm: 30, evapDemandMm: 2, nappeMm: 0 });
       soil = { soilWaterMm: out.soilWaterMm, excessMm: out.excessMm };

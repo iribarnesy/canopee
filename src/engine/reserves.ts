@@ -116,6 +116,39 @@ export const HAUTEUR_FUTAIE_ADULTE_M = 25;
 export const RESERVES_ANS = 2.5;
 
 /**
+ * Semaines pendant lesquelles un arbre que la soif a défeuillé ne refait pas
+ * ses réserves : 52.
+ *
+ * Bréda et al. 2006 (*Ann. For. Sci.* 63 : 625, § 4) : après une sécheresse,
+ * « the storage compartments are not fully refilled at the end of the growing
+ * season », et « a deficiency in stored reserves may last one or several years
+ * after a stress event ». En octobre 2003, à Hesse, les hêtres défeuillés en
+ * août avaient 0,74 g d'amidon pour 100 g de bois, leurs voisins feuillés 1,56
+ * (tableau I). Un an est la plus courte des durées que la source donne.
+ *
+ * Rien de nouveau n'est tenu : la date de la défeuillaison est déjà dans l'état
+ * (`defeuillaisonSemaine`). Et la mort à la deuxième ou troisième défoliation
+ * consécutive, l'ancre de `RESERVES_ANS`, en tombe sans être écrite : un arbre
+ * défeuillé deux étés de suite entre dans le second avec le déficit du premier,
+ * au lieu de l'avoir effacé pendant l'hiver.
+ */
+export const RESERVES_ENTAMEES_SEMAINES = 52;
+
+/**
+ * Les réserves de cet arbre sont-elles encore entamées par une défeuillaison de
+ * soif ? Vrai pendant `RESERVES_ENTAMEES_SEMAINES` après la chute.
+ */
+export function reservesEntamees(
+  defeuillaisonSemaine: number | undefined,
+  semaine: number,
+): boolean {
+  return (
+    defeuillaisonSemaine !== undefined &&
+    semaine - defeuillaisonSemaine < RESERVES_ENTAMEES_SEMAINES
+  );
+}
+
+/**
  * Ce que l'entretien coûte à **cet** arbre, en part de ce qu'il gagnerait sous une
  * lumière saturante. Croît avec la hauteur (modèle du tube) : le volume
  * d'aubier à entretenir par unité de feuille est proportionnel à la longueur
@@ -155,12 +188,23 @@ export function compensationDeLArbre(espece: EspeceV0, heightM: number): number 
  * de l'atlas, entre le point de compensation de la feuille et la saturation.
  * Aucune courbe nouvelle : la lumière ne se lit pas de deux façons selon qu'on
  * parle de pousser ou de survivre.
+ *
+ * **Et la même courbe de soif** (`facteurEau`, le facteur de croissance de
+ * l'eau, #391) : un arbre qui ferme ses stomates n'assimile plus, et c'est par
+ * là que la sécheresse vide les réserves d'un arbre installé (McDowell et al.
+ * 2008, *New Phytol.* 178 : 719). Absent, l'arbre ne manque pas d'eau.
  */
-export function partPuiseeSurLesReserves(espece: EspeceV0, heightM: number, light: number): number {
+export function partPuiseeSurLesReserves(
+  espece: EspeceV0,
+  heightM: number,
+  light: number,
+  facteurEau = 1,
+): number {
   const depense = partEntretien(heightM);
   if (depense <= 0) return 0;
   const { compensation, saturation } = espece.lumiere;
-  const revenu = Math.min(1, Math.max(0, (light - compensation) / (saturation - compensation)));
+  const revenu =
+    Math.min(1, Math.max(0, (light - compensation) / (saturation - compensation))) * facteurEau;
   return Math.min(1, Math.max(0, 1 - revenu / depense));
 }
 

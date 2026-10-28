@@ -61,7 +61,227 @@ qu'un rapport (voir la note de maintenance).
 Séparer calibration et validation : caler un paramètre sur un âge, garder
 l'autre âge pour vérifier.
 
-## Ce que le dernier lot a appris (le blé : #324, #346, #455)
+## Ce que le dernier lot a appris (l'eau du tapis et la soif des jeunes plants, #391)
+
+Le lot v0.6 issu de l'instruction de #210 (ses options 1, 2 et 6). Le partage de l'eau entre le sol et le tapis suit maintenant FAO-56 (Allen et al. 1998) : la strate transpire au Kcb d'un tapis fermé (0,90) sur ce qu'elle couvre de vert, le sol n'évapore que sur ce qu'elle laisse découvert, au plafond Kc max = 1,20, en deux phases (REW, TEW). Trois réglages *à calibrer* tombent (`HERBE_TRANSPIRATION_COEFF`, `SOIL_EVAP_FRACTION`, `PLAFOND_ENERGIE`), avec la quadratique `soilEvapFactor` et un facteur de saison sans source posé sur la soif de l'herbe. L'eau évaporable se lit sur le déficit de l'horizon de surface, pas sur un état nouveau. Sur décision de l'utilisateur, le lot a ensuite revu la mort de soif d'un arbre installé (O1) : le compteur immédiat ne vaut plus que pour un plant de moins de trois ans ; un arbre installé meurt par l'embolie, à son seuil, ou par l'épuisement de ses réserves, et un feuillu installé lâche ses feuilles sous la soif. Le format de sauvegarde monte à 15 pour la date de défeuillaison. Enfin, sur décision (G1), la vitesse de cavitation est calée sur le terrain (0,16 par semaine, Walthert et al. 2021) et un arbre que la soif a défeuillé ne refait pas ses réserves pendant un an (Bréda et al. 2006) : `climat.test.ts` passe sans réécriture, et le banc de #210 bouge vers le terrain. Les prédictions et les mesures sont dans les commits de la branche, avant chaque course.
+
+### Un nombre calé sur le moteur peut porter deux erreurs qui s'annulent
+
+La demi-ETP du sol nu rendait les jauges de Rothamsted à deux points près : 47 % de la pluie évaporée, 49 % aux jauges (*Rothamsted Report for 1936*, p. 176). C'était une coïncidence. Elle coupait l'évaporation d'un sol mouillé de 2,4 fois par rapport à FAO-56. Le plafond FAO-56 à sa place, le sol nu évapore 56 à 65 % de la pluie : au haut des lysimètres français (Châlons 57 %, Ballif et al. 1983), au-dessus de Rothamsted. J'ai d'abord mis l'écart sur le compte de l'ETP de Hargreaves, réputée haute en climat humide (Trajkovic 2007), et je l'ai écrit. Les fiches climatologiques de Météo-France la démentent : 738 mm contre 753 de Penman à Abbeville, 887 contre 873 à Tours, sur 2001-2020. **La réputation d'une formule n'est pas une mesure sur la série** : la vérifier avant d'écrire la cause. L'excès de janvier à avril sur Rothamsted reste à instruire.
+
+### Un facteur de saison posé sur un feuillage vert vide l'hiver du bilan
+
+Le partage FAO-56 seul laissait la prairie boire à peine plus que le sol nu (7 à 34 mm/an d'écart, 112 à Châlons). De novembre à mars, sous le tapis, rien ne s'évaporait (le sol est couvert) et rien ne se transpirait : un facteur nul sous 4 °C coupait la soif d'un dactyle qui passe l'hiver vert. Un gazon d'hiver rend pourtant 0,6 fois l'évaporation d'une eau libre (Penman 1948). Retiré, la prairie boit 92 à 108 mm de plus que le sol nu et draine 21 à 29 % de la pluie (Châlons 26 %). **Une saison qui est déjà dans le feuillage ne se remet pas par-dessus.** Il servait aussi au gibier, qui le garde.
+
+### Un plafond compté deux fois ne mord qu'une fois ce qu'il borne monté
+
+Le plafond d'énergie d'une cellule ajoutait la demande de la strate à celle des horizons, qui la contenait déjà, et relisait l'exposition du versant que l'ETP portait déjà. À 0,3 ETP, la strate ne l'atteignait jamais : le défaut était latent. À 0,9, il l'aurait rabotée d'un tiers sur toute prairie. **Avant de monter une grandeur, relire ce qui la borne.**
+
+### Comparer au lysimètre le plus proche, pas seulement au plus célèbre
+
+Rothamsted donnait un sol nu, sans prairie à côté. Châlons-sur-Marne donne les deux sur le même sol et les mêmes années (sol nu 371 mm, gazon 483, drainage 42 et 26 % de la pluie), et Versailles et Quimper encadrent le sol nu (379 et 435). C'est cette paire qui a montré que la prairie du premier partage buvait trop peu, et que le sol nu, lui, restait dans les mesures françaises.
+
+### Un plant que l'herbe affaiblit meurt d'autre chose que de soif
+
+Sur la friche, fenêtre 1964, six frênes sur vingt-cinq meurent sous l'herbe, aucun dans les autres bras. Aucun de soif : trois de maladie et trois de ravageurs, au printemps de leur deuxième année, après un premier été sec passé sous un tapis qui buvait. C'est la chaîne que le moteur tient déjà (la vigueur basse attire les ravageurs). **Compter les morts par cause avant de dire qu'un facteur ne tue pas.**
+
+### Un seuil qui ne mord pas ne se corrige pas pour toucher la cible
+
+L'option 2 demandait d'instruire la loi de soif : un plant n'est pas freiné tant que sa satisfaction hydrique reste au-dessus du seuil de confort de l'espèce. La loi sans plateau (la croissance suit la transpiration) a été mesurée sur une copie : le rapport désherbé sur enherbé bouge de -0,04 à +0,06, parce qu'elle freine aussi le désherbé, qui n'est pas à 1 ; et elle coûte 2 à 13 % aux arbres installés du banc des tables (châtaignier -13 %, pin -8 %). Les bornes, elles, disent où est l'écart : sur la friche, la strate privée d'eau ramène le rapport à 0,97-1,04, tout le gain y est de l'eau ; sur le limon riche, le plant privé de faim d'azote le ramène à 1,01-1,06 pour le frêne et le noyer. **Avant de changer une loi commune, borner chaque canal** : c'est l'azote du limon riche qui reste loin du terrain, pas la soif. C'est la leçon du premier essai de #312, vue une seconde fois.
+
+### Une table ne se protège pas d'un défaut qu'elle n'a pas
+
+L'option 6 prévoyait de passer les bancs de tables sur sol dégagé s'ils descendaient. Ils ne descendent pas (-3 % à +1 % de main à quarante ans) : huit arbres au large, enracinés profond, partagent surtout l'azote avec l'herbe, et l'herbe en prenait déjà. Le banc dégagé a été mesuré quand même, prédit au-dessus de l'enherbé : le hêtre et le frêne sortent de leur bande par le haut (+16 et +21 %), et sur le sable profond le pin s'effondre entre vingt et quarante ans (10 morts sur 16, cause à relever). **Une correction conditionnelle se mesure avant de s'appliquer** : appliquée d'office, celle-ci aurait recalé trois essences sur un sol qu'aucune table ne décrit.
+
+### L'année synthétique ne sèche plus la lande en été, la série réelle si
+
+Trois propriétés de conservation sont tombées, toutes faute de feu : leur feu part quand la surface de la lande est sèche (remplissage sous 0,12) et qu'il fait chaud (plus de 24 °C). Dans l'année synthétique, la pluie lissée tombe chaque semaine ; un sol découvert qui n'évapore plus que son eau évaporable ne vide plus son horizon de surface entre deux pluies, et la surface reste au-dessus du seuil en juillet et en août (0,12 à 0,25, contre 0,00 à 0,05 sur main) : la moitié des semaines à risque (57 à 61 en vingt ans, contre 117 à 125). Sur la série réelle de Mont-de-Marsan, avec ses semaines sèches, c'est l'inverse : 222 à 287 semaines à risque en trente ans contre 214 à 237, et sept graines sur treize du décor d'ajoncs de `feu.test.ts` brûlent en vingt-cinq ans, contre six. Les deux scénarios de `carbon-conservation` passent sur la série réelle, et `potassium-conservation` reprend la graine la plus précoce du même balayage, comme son commentaire le prévoyait. **Une pluie lissée n'a pas de semaine sèche** : un mécanisme qui vit des intervalles entre les pluies se juge sur la série réelle (c'est la leçon de #312 sur l'été synthétique, vue de l'autre côté).
+
+### Une prairie qui boit sa part déplace ce qui reposait sur sa sobriété
+
+Sept assertions écologiques cassent, et aucune ne porte sur la prairie. Le fond de vallée s'inondait chaque hiver parce que sa prairie, posée sur la nappe, ne rendait à l'air que 374 mm par an à Tours, 0,43 fois l'ETP de Penman ; elle en rend 611, et la vallée ne s'inonde plus que les hivers humides (quatre sur dix de 1964 à 1973, contre neuf). L'aulnaie pure du limon riche passait 1976 en perdant 23 de ses 144 plants ; sous des aulnes de douze ans qui laissent passer 55 % de la lumière l'été, l'herbe transpire maintenant dès mars, le profil entre en juin à 60 mm au lieu de 99, et 136 aulnes meurent de soif la même année, sur les trois graines. Après la fusion de #419, la frênaie pure de `maladies.test.ts` perd de même 62 frênes sur 144 à la soif, en 1973 et en 1976, avant que la chalarose ne les trouve : elle meurt moins de maladie que le mélange, et l'essai casse à son tour. Ces équilibres n'avaient pas de source : c'étaient des relevés du moteur, posés sur un tapis qui ne buvait pas. **Quand une grandeur devient juste, relever d'abord ce qui reposait sur son erreur**, et le rapporter avant de recaler quoi que ce soit : les assertions cassées sont instruites, aucune n'est touchée.
+
+Quatre ont ensuite été réécrites sur décision de l'utilisateur, chacune sur son critère et signalée dans son commentaire : la crue de la vallée passe sur l'hiver 1965-66, le maillon 1 de `incendie-nappe` porte sur l'évapotranspiration et le sens de la remontée, `nurse` ne compare que les paires que le feu épargne, et la seconde assertion de `sol-vivant` est retirée. Les deux autres, `ravageurs` et `maladies`, sont instruites ci-dessous et laissées cassées.
+
+### Un peuplement qui meurt d'un coup était déjà au bord du précipice
+
+L'aulnaie de `ravageurs.test.ts` perd 136 plants sur 144 en 1976 sur la branche, 18 à 24 sur `main`. Semaine par semaine, `main` n'en est pas loin : la semaine 33, le stress médian des aulnes vaut 8,5 et le neuvième décile 9,4 pour un seuil de 10, et c'est la pluie de la semaine 34 qui les sauve. La loi de soif ne connaît pas l'individu : l'eau d'un horizon est servie au même taux à toutes les racines qui y puisent, les plants d'un peuplement pur ont la même satisfaction (premier et neuvième déciles 0,10 et 0,15), et le compteur les mène ensemble au seuil, en sept semaines à une satisfaction de 0,1 pour un aulne. L'herbe sous le couvert n'a fait qu'avancer l'échéance de trois semaines, en vidant l'horizon de surface avant la feuillaison (61 → 28 mm de la semaine 12 à la semaine 17, contre 66 → 51). **Avant d'accuser le changement qui fait basculer un résultat, mesurer à quelle distance du bord l'ancien se tenait.**
+
+### Une canopée qui se touche n'est pas une canopée fermée
+
+À douze ans, les houppiers des aulnes couvrent 146 % du sol, presque sans élagage (part gardée 0,90), et 54 % de la lumière arrive au sol : un indice foliaire effectif de 1,2, quand une aulnaie adulte en porte 4,8 (Eschenbach et Kappen 1996). Le trait `lai` est défini comme le LAI de peuplement divisé par le chevauchement typique, « un point sous deux ou trois couronnes retrouve le LAI de peuplement » ; mais la pénombre (1 − d²/r²) divise en moyenne par deux l'extinction de chaque couronne traversée, et une plantation qui vient de fermer n'empile pas deux ou trois couronnes. Le dactyle, saturé à 0,47 de lumière, garde donc toute sa couverture sous un peuplement fermé. Une sonde qui double l'extinction ramène la lumière à 0,41 (0,29 pour la seule lumière au sol), et l'hécatombe de 1976 à 61-90 aulnes : **la fermeture porte une part de l'écart, pas l'écart**. Recaler la lumière touche tout le moteur, et ce n'est pas ce lot.
+
+### L'étalement individuel ne sauve pas d'un été trop long
+
+Une autre sonde lit la soif de survie à travers la vigueur individuelle (±20 %). Elle prédisait 50 à 110 morts ; il en meurt 127 à 130. Quand la satisfaction reste à 0,1 onze semaines, seule la queue de la distribution passe. **La synchronie est un symptôme** : c'est la durée qu'un arbre installé tient sans eau qui est en cause, et toutes les constantes de cette loi sont *à calibrer*.
+
+### Le dernier coup n'est pas la cause, et la règle de #103 ne vaut que dans un sens
+
+Dans la frênaie pure de `maladies.test.ts`, le stress médian des frênes vaut déjà 8,8 sur 10 au printemps 1973, par la chalarose ; l'été sec les achève, et 44 des 62 morts inscrites « de sécheresse » ont une majorité de stress de maladie. Depuis #103, un coup rapide qui achève un arbre presque tué par une cause lente rend la mort à la cause lente ; l'inverse n'est pas traité, et un frêne que la chalarose a tué meurt « de sécheresse ». La symétrie, mesurée sur une copie, ne change aucune trajectoire et remonte la frênaie de 0,375 à 0,674 ; mais le mélange reste à 0,389 (0,278 sur `main`) : ses frênes meurent davantage de la chalarose, sans doute parce que la soif ajoute son stress à leur compteur et que la maladie les achève plus tôt (hypothèse, non mesurée). L'essai reste cassé : **une correction juste qui ne touche pas sa cible ne s'applique pas**, et la règle de #103, choisie dans un seul sens, est rapportée comme option.
+
+### Un compteur qui ne connaît pas l'âge tue un arbre fait comme un plant
+
+Le compteur de soif menait au seuil, en sept semaines à une satisfaction de 0,1, un aulne de douze ans comme un plant de l'année. Le terrain les sépare par l'âge, et le dit avec la même frontière deux fois : en 1976, « les plantations de l'année ou celles âgées de deux à trois ans » sont mises à part, celles de cinq à dix ans ont souffert « moins sérieusement » (Aussenac 1978, p. 104) ; trois ans de désherbage assurent d'ordinaire l'installation (Davies 1987, p. 34). Le compteur ne vaut donc plus que pour un plant de moins de trois ans. Un arbre installé meurt de soif par ce que la littérature mesure : l'embolie, à 88 % de conductivité perdue chez un feuillu (Urli et al. 2013), à la moitié chez un résineux (Brodribb et Cochard 2009 ; Choat et al. 2012), et l'épuisement des réserves, que la soif vide en fermant les stomates (McDowell et al. 2008) : le revenu de `reserves.ts` suit la même courbe de soif que la croissance, et la part de puisement que la soif ajoute à l'ombre donne une mort de sécheresse. Rien de nouveau n'est tenu : les réserves restent le compteur vu par l'autre bout. Le plafond de 85 % de l'embolie, qui disait la mort sans la compter, tombe : c'est la mort qui borne le dommage. Mesuré, prédictions écrites avant : aucun aulne de douze ans ne meurt de soif en 1976 (136 / 135 / 137 avant), les plants de l'année et de deux ans y meurent toujours tous, et `ravageurs` et `maladies` passent sans réécriture. **Avant d'empiler une règle d'âge, chercher si le terrain sépare déjà les deux populations, et sur quel critère** : ici, il les séparait par l'âge, deux fois.
+
+### Une chute de feuilles déclenchée au seuil défeuille chaque été
+
+La première défeuillaison partait dès que la soif passait le seuil de cavitation, sans attendre que le bois casse. Mesurée sur trois graines : les aulnes de `ravageurs.test.ts` se défeuillaient neuf étés sur onze (1967, 1969 à 1973, 1975, 1976), les frênes dès 1967, et le coût de leurs refeuillaisons s'ajoutait au stress de la chalarose (121 / 113 / 117 frênes morts de maladie à la fin de 1973, contre 41 / 47 / 45). Or une défeuillaison estivale est rare : à Hesse, la première mesurée en trente ans, en 2003, et les feuilles tombent vertes quand les pétioles s'embolisent, presque sans perte de conductivité des rameaux (Bréda et al. 2006). Elle part maintenant quand la soif embolise encore l'arbre et qu'il a perdu 12 % de sa conductivité, le point d'entrée d'air (Meinzer et al. 2009 ; Domec et Gartner 2001, *à confirmer*) : les aulnes et les frênes ne se défeuillent plus qu'en 1976 de 1966 à 1977. **Un seuil instantané sur un signal qui oscille d'une semaine à l'autre se franchit chaque été** ; un état qui intègre la sévérité et la durée (ici l'embolie elle-même) ne se franchit que dans les années qui le méritent.
+
+### Une protection sans faille protège aussi du réchauffement
+
+La défeuillaison coupe toute la soif de l'arbre : sans feuilles, il ne demande rien, sa satisfaction vaut 1, et son bois cesse de casser. C'est ce que Bréda et al. (2006) observent en 2003 sur le hêtre, qui avait un houppier normal l'été suivant. Mais `climat.test.ts` cassait : sous SSP5-8.5, à soixante ans, 12 à 27 hêtres de la cohorte mouraient de soif, surtout l'an 58 (la sécheresse de 2022 rejouée sous le climat de 2084) ; ils s'y défeuillent maintenant (13 à 22) et passent, et le hêtre ne paie plus plus cher que le chêne (debout 0,49 / 0,84 / 0,78 du témoin figé, borne 0,5). Le terrain de 2018, plus chaud que 2003, dit l'inverse : les potentiels hydriques ont passé le seuil de rupture dans beaucoup d'espèces malgré la chute précoce des feuilles, et la mortalité a continué en 2019 (Schuldt et al. 2020). Une sonde a laissé le bois d'un arbre défeuillé suivre le sol qui sèche (sa satisfaction lue sur le facteur de sécheresse de ses horizons au lieu de 1) : l'embolie maximale des hêtres passe de 0,15 à 0,17, et pas un hêtre de plus ne meurt, comme prédit. Ce n'est donc pas la protection elle-même qui manque : l'an 58, la soif ne casse que 15 % du bois d'un hêtre en un été (`CAVITATION_PAR_SEMAINE`, *à calibrer*), là où l'ancien compteur le tuait en huit semaines. **Une protection qui annule le signal qui l'a déclenchée ne laisse plus rien mesurer au-delà** ; et quand une loi en remplace une autre, la constante *à calibrer* qui ne mordait pas devient celle qui décide. C'est rapporté avec ses options, pas corrigé.
+
+L'utilisateur a choisi de caler cette constante (D1). Walthert et al. (2021) mesurent, sur les hêtres suisses de 2018, environ un mois entre le début de l'embolie et de la défeuillaison et 65 à 80 % d'embolie : 0,13 à 0,20 par semaine, quatre à sept fois les 0,03 du moteur. Mesuré à 0,16, prédit avant : l'aulnaie de 1976 tient (4 / 2 / 0 aulnes morts de soif), mais le hêtre de l'an 58 se défeuille plus tôt, sa défeuillaison arrête l'embolie à 0,44 au plus, et `climat` casse encore (0,73 et 0,82 du témoin figé). La même étude dit que chez le hêtre la défeuillaison vient de l'embolie plutôt qu'elle ne la prévient ; une sonde qui laisse le bois défeuillé suivre le sol fait tenir le hêtre et tue tous les aulnes de douze ans dès 1973. **Une constante sourcée ne répare pas une loi qui coupe le signal** : tant que la défeuillaison protège entièrement, aucune vitesse ne mène le bois au seuil, et dès qu'elle ne protège plus, l'aulne hygrophile du plateau meurt avant le hêtre. Le choix est un jugement de modélisation (protection partielle, ou legs de la défeuillaison) : rapporté, rien n'entre dans le moteur. L'utilisateur a choisi le legs, mesuré sur une sonde (F1) puis appliqué (G1) : voir les deux sections suivantes.
+
+### Un legs ne se cumule que si l'événement qui le pose revient
+
+Le legs choisi ne tient rien de nouveau : un arbre que la soif a défeuillé garde fermée pendant un an la cicatrisation de son stress, qui est le remplissage de ses réserves vu par l'autre bout (Bréda et al. 2006 : l'amidon des hêtres défeuillés de Hesse réduit de moitié, un déficit qui « may last one or several years » ; un an est la plus courte des durées que la source donne). La date de la défeuillaison était déjà dans l'état. Mesuré seul, à 0,03, il ne fait rien : les hêtres de `climat.test.ts` ne se défeuillent que les ans 12 et 58, le legs ne se cumule jamais, et les deux graines qui passent passent par le flux (un état changé l'an 12 change tous les tirages qui suivent). Avec la vitesse de Walthert, ils se défeuillent 15 à 21 années sur soixante sous SSP5-8.5 et trois à climat figé, jamais deux de suite ; deux ou trois défeuillaisons de suite, les ans 54 à 56, et ils meurent, de ravageurs et de soif : 7 / 4 / 9 hêtres de la cohorte debout pour 45 / 45 / 44 au figé. C'est la mort à la deuxième ou troisième défoliation consécutive, l'ancre de `RESERVES_ANS`, que le remplissage rapide effaçait d'une saison à l'autre. **Un legs mesure la répétition, et c'est la fréquence de l'événement qui décide s'il mord** : ni la vitesse seule ni le legs seul ne tenaient D8 ; ensemble, il passe sans réécriture.
+
+### Une constante qui devient juste déplace ce qu'on avait dimensionné sur la fausse
+
+Deux assertions de `secheresse-memoire` dimensionnaient leurs épisodes sur 0,03 : six semaines à 0,02 devaient laisser un arbre entamé, dix semaines à 0,05 un arbre installé vivant. À 0,16, six semaines portent l'embolie à 0,88 et dix semaines tuent l'arbre installé par son bois, comme elles le doivent. Elles sont réécrites sur leur critère, signalé : l'épisode dure un mois, la durée de Walthert, et la seconde sécheresse tue l'arbre que la première avait seulement entamé ; l'épisode dure jusqu'à la mort du plant, et l'arbre installé vit encore. Le banc de #210 bouge pour la même raison : un plant n'a pas de défeuillaison pour se protéger, et dans l'été sec de la fenêtre le plant enherbé s'embolise jusqu'à mourir (les 25 frênes enherbés de la friche en 1964, 23 bouleaux sur 25 de la lande en 1986), le désherbé non. Le hêtre de la friche passe de 1,17 à 1,63 et le châtaignier de la lande de 1,47 à 1,63, dans la fourchette de Davies. **Avant de caler une constante sur le terrain, relever ce qui avait été dimensionné sur l'ancienne valeur** : la durée d'un épisode d'essai en est une, l'équilibre d'un banc aussi.
+
+### Un taux sur le passage du front lit la population autant que l'écorce
+
+« Le feu trie » tombait à 0,16 : pin 226 sur 246, liège 41 sur 68, pour une borne de deux fois. Aucun liège installé n'avait moins bien résisté. Un semis de moins de 0,6 m ne rejette pas, et dans une cellule saturée il meurt quelle que soit son espèce (27 lièges sur 33 et 167 pins sur 167 avant G1, 37 sur 38 et 32 sur 32 après) : le taux d'une espèce sur tout le front suivait la part de semis dans son effectif, c'est-à-dire ce qui avait levé les années d'avant. Sous G1, le front trouve moins de jeunes pins (227 sur deux feux, contre 1 005 sur quatre), et la graine 33 brûle sur 35 semis de liège de moins de trois ans. Et vingt jeunes pins de la graine 5, morts de soif dans le tick même du feu, avant lui, entraient au dénominateur sans jamais entrer au numérateur. Sur la lande plantée, l'écorce trie comme avant (pin 48 sur 48, liège 0 sur 39 ; puis 19 sur 19 et 4 sur 30) : l'essai lit maintenant son taux là, sans les arbres morts avant le front, borne inchangée. « L'incendie dit qui » tombait aussi : la graine 5 brûle deux fois à cinquante-deux semaines d'écart, et les 128 victimes du premier feu entrent dans `morts` la semaine du second. L'essai lit son critère sur les identités. **Un taux rapporte un numérateur à une population : avant d'accuser la règle, regarder qui la population contient, et à quel instant on la compte.**
+
+### Une récolte n'est pas une nouaison, ni un stock un souvenir
+
+Deux essais mesuraient leur critère sur une grandeur qui en somme plusieurs. Le témoin du verger demandait qu'une haie qui n'offre que le gîte ne fasse pas mieux nouer, et le lisait sur la récolte. Sous G1, les pommiers de Dijon se défeuillent six étés sur neuf, et le stress des ravageurs ne cicatrise plus entre deux défeuillaisons ; le gîte de la haie anémophile loge des auxiliaires (G3), le stress des ravageurs y reste trois fois plus bas (0,62 contre 1,95 point à onze ans), les pommiers y poussent plus, et la récolte gagne 7 à 28 % selon la graine pour un service de pollinisation identique. L'essai lit maintenant la nouaison sur le service que le moteur applique, nommé pour l'occasion (`servicePollinisation`). Le plant brouté de `gibier` devait avoir « rattrapé » le plant vierge à 5 % près, et l'essai le lisait dans les deux sens : sous G1, il le dépasse de 5 à 6 %, parce que l'été sec de la première année embolise davantage les plants jamais broutés, plus grands. L'essai lit maintenant le retard, borne inchangée. **Une grandeur composite ne dit rien d'un canal tant que les autres canaux sont immobiles** : quand un lot en remue un autre, lire la grandeur que le critère nomme.
+
+### Une fusion qui déplace le feu casse ce qui comptait les brûlés
+
+La fusion du mort sur pied (#432) a cassé trois essais que ce lot ne touchait pas, les mêmes sur la base fusionnée sans O1 et sur la tête : la cause était la fusion, pas le lot. Deux portent sur le feu. Le foin et la paille restent maintenant debout et ne paillent plus le sol ; sur la lande, les feux changent de semaines et de graines. La graine du feu d'ajoncs de `potassium-conservation` ne brûlait plus : son commentaire écrit la règle (la plus précoce des treize graines de `feu.test.ts`), et le balayage l'a reprise (la 13, semaine 549 ; main brûle sur sept graines, la base fusionnée sur cinq, la tête sur quatre, parce que des ajoncs installés ne meurent plus de soif ; depuis #458, l'essai impose son feu, graine 21, semaine 237, et ne dépend plus d'une graine qui brûle). Dans `nurse`, un feu de plus passe sur la graine 47 et celui de la graine 11 tue le liège abrité : il ne restait qu'une paire de pins épargnée, et les essais du liège comptaient un brûlé pour zéro. Sur décision, le liège se compare comme le pin, sur les paires épargnées, et la graine 1 s'ajoute par une règle écrite avant le balayage (1, 2, 3, ... jusqu'à deux paires par essence) ; sans feu, l'abri gagne partout. Le troisième, `bois-en-travers`, dépassait son délai : sans rapport avec la fusion, ses décennies durent 10 à 15 s sur toutes les copies, et #440 lui a donné un délai propre. **Après une fusion, rejouer les essais cassés sur la base fusionnée sans son lot** : c'est le seul moyen de savoir qui les casse.
+
+### Ce que ça donne
+
+Banc de #210 (25 plants de 0,30 m protégés, une espèce par parcelle de 30 m, cinq ans, météo réelle, graine g = fenêtre 1964 + 20 (g − 1) ; déterministe à graine donnée), désherbé sur enherbé, graines 1 / 2 / 3 :
+
+Les témoins sont remesurés sur main be54fbd (le débourrement de #419), et la branche après sa fusion (a4489df). La colonne du milieu, mesurée avant #419, garde l'étape du partage seul.
+
+| | main be54fbd | partage FAO-56 seul (447a04a) | branche (a4489df) |
+|---|---|---|---|
+| limon riche, hêtre | 0,99 / 0,97 / 0,97 | 1,05 / 1,08 / 1,04 | 1,05 / 1,08 / 1,05 |
+| limon riche, frêne | 1,07 / 1,04 / 1,04 | 1,13 / 1,13 / 1,10 | 1,14 / 1,15 / 1,11 |
+| limon riche, noyer hybride | 1,13 / 1,10 / 1,10 | 1,14 / 1,14 / 1,11 | 1,15 / 1,14 / 1,12 |
+| friche, hêtre | 0,91 / 0,89 / 0,91 | 1,17 / 1,15 / 1,13 | 1,17 / 1,15 / 1,13 |
+| friche, frêne | 0,96 / 0,94 / 0,97 | 1,42 / 1,24 / 1,18 | 1,42 / 1,24 / 1,18 |
+| friche, noyer hybride | 1,13 / 1,13 / 1,11 | 1,28 / 1,23 / 1,18 | 1,27 / 1,23 / 1,18 |
+| lande, pin / bouleau / châtaignier | 1,16 à 1,18 / 1,11 à 1,14 / 1,15 à 1,18 | 1,35 / 1,29 à 1,31 / 1,43 à 1,46 | 1,35 / 1,31 à 1,33 / 1,43 à 1,46 |
+| fauche, limons | 1,01 à 1,14 | 1,02 à 1,14 | 1,02 à 1,14 |
+
+Bilan d'eau sans arbre, bilan vertical (sans bassin amont), dix ans après un an d'amorce, fenêtres 1964 / 1984 / 2004, mm/an :
+
+| | main be54fbd | branche (a4489df) |
+|---|---|---|
+| limon riche, prairie | 327 / 319 / 352 | 534 / 521 / 556 |
+| limon riche, sol nu | 328 / 313 / 341 | 426 / 429 / 455 |
+| friche, prairie / sol nu | 379-409 / 359-390 | 538-596 / 461-503 |
+| lande, telle quelle / sol nu | 354-364 / 340-349 | 492-501 / 356-370 |
+| vallée, prairie / sol nu | 332-352 / 317-332 | 544-568 / 426-439 |
+
+Les tables de production ne bougent pas de plus de 3 % à quarante ans (pin -3 %, frêne +1 %).
+
+La mort de soif d'un arbre installé (O1), météo réelle du limon riche, graines 4 / 17 / 29, sur `main` bd4f3b3 fusionnée (base sans O1, puis la tête) :
+
+| | base | O1 |
+|---|---|---|
+| aulnaie de `ravageurs` : aulnes de douze ans morts de soif en 1976 | 136 / 135 / 137 | 0 / 0 / 0 |
+| aulnaie : aulnes défeuillés, 1976 (autres années de 1966 à 1977) | — | 143 / 141 / 140 (aucun) |
+| frênaie de `maladies` : frênes morts de soif en 1973 et 1976 | 46+19 / 42+24 / 54+12 | 0 |
+| plants de l'année et de deux ans (aulne, frêne), morts de soif en 1976 | 25 sur 25 | 25 sur 25 |
+| plants de quatre ans (aulne, frêne), morts de soif en 1976 | 25 sur 25 | 0 |
+| hêtres de l'année, 1976 | aucun | aucun |
+| `climat.test.ts`, SSP5-8.5 sur figé à soixante ans : cohorte debout | 0,46 / 0,43 / 0,46 | 0,60 / 0,81 / 0,74 |
+| la même, hêtres seuls (borne 0,5) | 0,32 / 0,34 / 0,40 | 0,49 / 0,84 / 0,78 |
+| les mêmes après la fusion de #441 et #439 (cohorte, hêtres) | — | 0,73 / 0,81 / 0,75 ; 0,70 / 0,84 / 0,80 |
+
+Le banc de #210 et la lande de #312 ne bougent pas (rapports à 0,016 près, aucune mort de plus ni de moins), ni le banc des tables : sept essences, année synthétique, hauteurs identiques au centimètre de cinq à quarante ans. L'année synthétique ne mène aucun arbre installé jusqu'au seuil de cavitation.
+
+G1, la vitesse de cavitation de Walthert (0,16) et un an de réserves entamées après une défeuillaison de soif, mesuré sur la branche (graines 11 / 23 / 37 pour `climat`, 4 / 17 / 29 pour le reste, banc de #210 sur 1 / 2 / 3 ; déterministe à graine donnée) :
+
+| | O1 (0,03) | 0,16 seul | G1 |
+|---|---|---|---|
+| `climat`, hêtres de la cohorte debout, SSP5-8.5 sur figé (borne 0,5) | 0,70 / 0,84 / 0,80 | 0,73 / 0,82 / 0,15 | 0,16 / 0,09 / 0,20 |
+| `climat`, cohorte debout (borne 0,85) | 0,73 / 0,81 / 0,75 | 0,75 / 0,83 / 0,55 | 0,36 / 0,27 / 0,34 |
+| `climat`, hêtres morts de soif, moyenne SSP5-8.5 / figé | 3 / 0 | 16 / 0,3 | 42 / 1,3 |
+| aulnaie de `ravageurs`, aulnes de douze ans morts de soif en 1976 + 1977 | 0 | 4+0 / 2+0 / 0+1 | 4+3 / 6+3 / 8+3 |
+| frênaie de `maladies`, frênes morts en 1974 ; vivants fin 1977 | — | 36 / 44 / 35 ; 23 / 22 / 28 | 92 / 106 / 107 ; 3 / 4 / 8 |
+| plants de l'année et de deux ans (aulne, frêne), morts en 1976 | 25 sur 25 | 25 sur 25 | 25 sur 25 |
+| hêtres de deux ans, morts d'embolie en 1976 | 0 | 24 / 25 / 23 | 24 / 25 / 23 |
+| banc de #210, friche, hêtre / noyer hybride, graine 1 | 1,17 / 1,27 | 1,60 / 1,40 | 1,63 / 1,40 |
+| banc de #210, frênes enherbés vivants (friche, graine 1) ; bouleaux enherbés (lande, graine 2) | 19 ; 25 | 0 ; 2 | 0 ; 2 |
+| banc de #210, limon riche ; pin de la lande | 1,05 à 1,15 ; 1,40 à 1,42 | identiques | identiques |
+
+La lande de #312 et le banc des tables ne bougent pas.
+
+### Les prédictions fausses
+
+- P5 : le sol nu de la lande devait évaporer 180 à 300 mm/an sur main ; 340 à 349.
+- P2 : la fauche devait rester à 0,04 du désherbé sur les deux limons ; sur la friche, 0,11 d'écart pour le frêne et le hêtre.
+- Q1 : la prairie du partage FAO-56 devait boire 60 à 200 mm de plus que le sol nu ; 7 à 34. Le sol nu devait évaporer 40 à 52 % de la pluie ; 56 à 60. C'est le facteur de saison.
+- Q2 : même chose sur les quatre autres stations.
+- Q3 : sur la friche et la lande, le désherbage devait rendre 1,00 à 1,15 (feuillus de la friche) et rester sous 1,45 ; il rend jusqu'à 1,42 et 1,46.
+- Q6 : le paillé devait rester devant le désherbé ; des pins paillés de la lande se noient sur l'alios.
+- T3 : le banc dégagé devait rester à 3 % de main ; le hêtre et le frêne montent de 11 à 26 %, le pin s'effondre.
+- O1 : la loi sans plateau devait relever le rapport de la friche de 0,02 à 0,10 ; il baisse pour le frêne et le hêtre.
+- O2 : sans soif, le frêne de la friche devait retomber sous 1,12 ; sa graine 1 reste à 1,44 (ses morts ne viennent pas du facteur eau).
+- F1 : la lande de main devait brûler au moins trois fois par graine en vingt ans synthétiques ; elle ne brûle pas, à 50 m.
+- G1 : l'année synthétique devait garder moins d'une semaine à risque par an ; elle en garde trois.
+- Le décor d'ajoncs devait brûler sur deux à six graines sur treize ; sept.
+- `chandelle-tombee` allongé à dix ans devait voir 12 à 25 chutes ; 66.
+- E3 : la minéralisation de la zone labourée devait passer devant celle de la friche par l'été d'un sol nu ; la zone est réenherbée dès l'été (0,94), l'écart est de 0,07 %.
+- E4 : la baisse des morts par ravageurs de l'aulnaie devait venir des semis ; elle vient des plants, tués par la soif en 1976.
+- E6 : la part pionnière de la canopée de soixante ans devait baisser faute de pionniers ; elle baisse par quatre dryades de plus.
+- La fusion de #419 devait laisser les sept assertions cassées ; `succession` passe (0,5125 ; 0,5526 sur main), et la part de main sort de la fourchette prédite (0,45 à 0,55).
+- M1 : les frênes du mélange de `maladies` devaient mourir de maladie moins de la moitié autant que ceux de la frênaie pure ; 13 sur 36 contre 53 sur 144, parce que la frênaie pure perd 62 frênes à la soif. L'excès devait venir d'autres espèces ou de semis ; il vient de là. Le mélange de main devait rester sous 0,19 ; 0,278.
+- F1 : la couverture des houppiers de l'aulnaie de douze ans devait valoir 0,9 à 1,4 ; 1,46 à 1,50. La part de houppier gardée devait valoir 0,4 à 0,8 ; 0,90 à 0,91.
+- F3 : la frênaie devait laisser passer 0,45 à 0,65 de la lumière de neuf à douze ans ; 0,69 à 0,72 à huit et neuf ans.
+- F4 : sur `main`, la satisfaction médiane des aulnes devait passer moins de trois semaines sous 0,29 en 1976 ; dix.
+- V1 : la pénombre doublée devait ramener la lumière au sol à 0,25-0,35 ; 0,41 à 0,42.
+- V2 : la seule lumière au sol doublée devait tuer à vingt près autant que V1 ; 83 à 90 contre 61 à 64.
+- V3 : la vigueur dans la soif de survie devait laisser mourir 50 à 110 aulnes ; 127 à 130.
+- I2 : l'imputation symétrique devait remonter la frênaie à 0,70-0,95 et faire passer l'essai ; 0,674, et le mélange reste à 0,389.
+- O1, Q2 : la frênaie défeuillée à 12 % devait compter 70 à 125 frênes morts de maladie à la fin de 1977 ; 47 / 62 / 62 (sans soif pour l'achever, la chalarose attend l'après-1976).
+- O1, P9 : `climat.test.ts` devait passer ; le hêtre ne paie plus le réchauffement plus cher que le chêne.
+- O1, R2 : sous SSP5-8.5, les hêtres de la cohorte devaient se défeuiller au moins cinq années sur soixante ; deux (l'an 12 et l'an 58).
+- O1, R1 : `bois-en-travers.test.ts` devait passer sur la base fusionnée sans O1 ; il y dépasse son délai comme sur la tête.
+- S2 : sur la base fusionnée, le liège à découvert devait battre le liège abrité sur au moins deux graines ; sur une seule, la 11, où l'abrité brûle.
+- S3 : la base fusionnée devait garder plus d'arbres sur le versant de `bois-en-travers`, et le délai suivre leur nombre ; mêmes effectifs à quelques tiges, mêmes durées : c'était le bruit des machines.
+- F1-5 (sonde) : au plus 5 aulnes de douze ans morts de soif en 1976 par graine et 10 sur 1976 et 1977 ; 8 et 11 sur la graine 29, et les aulnes se défeuillent presque chaque été, pas seulement en 1973 et 1976.
+- F1-8 (sonde) : le banc de #210 devait rester à 0,02 de la tête ; il bouge de 0,46 sur la friche et des plants enherbés meurent, par la vitesse seule.
+- L1 (sonde) : le legs seul à 0,03 devait faire casser `climat` sur les trois graines ; les graines 11 et 23 passent, par le flux.
+- S1 (sonde) : les essais cassés en plus de `secheresse-memoire` devaient lire des plants enherbés ou des peuplements défeuillés ; `feu` et `gibier` ne lisent ni l'un ni l'autre. P-K : `fruits` devait casser aussi à 0,16 seul ; c'est le legs qui le casse.
+- G1, B2 : la cause du tri de `feu` était bien la population du front, mais le front trouve surtout moins de jeunes pins ; B3 : les vingt pins « survivants » de la graine 5 ne survivaient pas, ils étaient morts de soif dans le tick même du feu.
+- G1, D1 : le dommage des noisetiers de `gibier` devait rester sous 0,05 sans G1 ; 0,052 au plus. D2 : les deux bras ne devaient pas se séparer mieux que deux graines ; ils se séparent un peu mieux.
+- G1, E1 : les pommiers des deux bras de `fruits` devaient se défeuiller des années différentes ; mêmes années, et l'écart est le stress des ravageurs. E2 : l'écart anémophile sur nu devait changer de signe sur trois graines et rester sous 5 % en moyenne ; 7, 28 et 13 %, toujours du même côté.
+
+### Ce qui reste ouvert
+
+- **L'azote du limon riche** : c'est lui qui sépare encore désherbé et enherbé pour le frêne et le noyer, et l'écart au terrain (1,5 à 3) y reste entier. Le partage de l'azote rare entre la strate et le plant se fait à la capacité racinaire (#247) ; c'est là qu'il faudrait regarder, pas dans la loi de soif.
+- **La fauche rapporte encore** (1,02 à 1,14 sur les limons ; Löf 2000 : rien) : une coupe retire au tapis son feuillage, donc sa transpiration et sa demande d'azote, le temps qu'il repousse (`REPOUSSE_PAR_SEMAINE`, *à calibrer*).
+- **Le haut du sol nu** (56 à 65 % de la pluie, l'excès de janvier à avril sur Rothamsted) : ce n'est pas l'ETP, à 2 % de celle de Penman de Météo-France sur 2001-2020 ; le climat de Harpenden ou le plafond d'un sol mouillé, à instruire.
+- **Le phosphore de la strate** fait le gros du désherbage et de la fauche sur la lande (#395).
+- **Le pin du banc dégagé** meurt sur le sable profond quand plus rien ne pousse sous lui : cause à relever.
+- **La défeuillaison à 12 % d'embolie** est une lecture de la segmentation hydraulique, *à confirmer*, et la réparation du stress (`RECUPERATION_STRESS`) reste *à calibrer*. La vitesse de cavitation est sourcée depuis G1 (Walthert et al. 2021), mais pour des hêtres faits : aucune source ne donne celle d'un plant.
+- **La friche de deux siècles de `succession.test.ts`** casse depuis la fusion de #458 : 2 048 tiges vivantes par hectare à deux cents ans, pour une borne de 2 000 sans source (graine 2026, année synthétique, une seule partie). G1 n'y est pour rien : sans lui, la friche est identique à la tige près, et elle ne voit ni embolie ni défeuillaison en deux siècles. De l'an 100 à l'an 200, la densité oscille entre 1 600 et 2 500 tiges par hectare sur la branche avant la fusion (1 672 à deux cents ans), sur main (1 668, mais 2 480 à l'an 160) et sur la tête fusionnée (2 048) : la borne est au milieu de l'oscillation, et le frottis de #458 en a déplacé la phase. Options rapportées dans #391 ; l'essai n'est pas touché.
+- **Les effets de bord de G1**, mesurés sur trois graines et pas corrigés :
+  - la frênaie de `maladies.test.ts` (chalarose active), défeuillée en 1973, ne cicatrise plus le stress de la maladie et meurt en 1974 : 92 / 106 / 107 frênes sur 144 (36 / 44 / 35 à 0,16 seul), 3 / 4 / 8 vivants à la fin de 1977. L'essai passe : le mélange perd toujours moins de la moitié de ses frênes que la frênaie pure. Le legs ferme toute la cicatrisation, y compris celle d'un stress qui ne vient pas de la soif ;
+  - les frênes plantés à quatre ans passent 1976 défeuillés et meurent en 1977, 9 / 14 / 13 sur 25, de chalarose et de ravageurs ; 10 / 5 / 8 aulnes de quatre ans meurent d'embolie en 1976 ;
+  - plus de la moitié des aulnes de douze ans de `ravageurs.test.ts` se défeuillent dix étés sur vingt et un de 1969 à 1989, quelques-uns tous les étés sauf deux ; il en reste 109 / 107 / 111 en 1989. Le terrain donne la défeuillaison estivale pour rare (à Hesse, la première en trente ans, Bréda et al. 2006) : sur ce plateau, l'aulne hygrophile vit au bord de son seuil ;
+  - 24 / 25 / 23 hêtres de deux ans meurent d'embolie en 1976, et aucun de l'année : l'inversion entre les deux âges est antérieure à G1 (le seuil d'espèce), le terrain les donnerait au moins aussi touchés ;
+  - les plants s'embolisent vite : les noisetiers de 0,4 m de `gibier` perdent la moitié de leur conductivité dans leur premier été à Dijon ;
+  - les pommiers du verger de `fruits` se défeuillent six étés sur neuf à Dijon, et la récolte du verger nu baisse de 8,6 à 4,8 kg (graine 3) ;
+  - un semis de liège garde l'écorce de l'adulte dans le moteur (`resistanceEcorce` 0,95) et ne rejette pas sous 0,6 m, quand un semis réel n'a pas encore de liège et rejette du collet.
+- **Le rendu ne montre pas la défeuillaison** : `defeuillaisonSemaine` n'est pas lu côté jeu.
+- **La fermeture du couvert** : indice foliaire effectif de 1,2 sous des aulnes de douze ans qui couvrent 146 % du sol (4,8 sous une aulnaie adulte), 0,28 de lumière au sol sous la hêtraie de quarante ans (E9). Le recalage de l'extinction des houppiers touche tout le moteur.
+- **La règle d'imputation de #103**, à sens unique : un frêne que la chalarose a mené à neuf dixièmes du seuil meurt « de sécheresse » si l'été l'achève.
+- **Deux lectures d'essai tranchées par le propriétaire.**
+  - `gibier` : « rattraper », c'est ne plus être en retard. La borne de 5 % ne se lit que d'un côté, et un plant brouté qui dépasse l'intact reste dans le critère.
+  - `succession`, « le peuplement s'auto-éclaircit » : la borne de 2 000 tiges/ha à deux cents ans, sans source, est retirée (U1). De l'an 100 à l'an 200, la friche oscille entre 1 600 et 2 500 tiges/ha, sur main comme sur la branche. Le frottis de #458 en a déplacé la phase, et la graine 2026 rendait 2 048 à l'an 200, à embolie et défeuillaison nulles. L'essai garde l'assertion relative que son commentaire désignait : la densité a fondu par rapport au fourré.
+  - **Leçon** : une borne absolue posée sur un système qui oscille se lit à une phase, pas à un état. Un lot qui ne touche que la phase (un frottis, un tirage de plus) la fait tomber sans rien changer au critère.
+
+## Ce qu'un lot précédent a appris (le blé : #324, #346, #455)
 
 La suite du lot du champ. Le propriétaire a tranché dans cet ordre : donner à C16 un sol de départ qui ressemble à celui de Broadbalk (#324), y juger la rosette du blé d'hiver retirée de la PR #459 (#346), puis recaler la maturité du blé, refuser la moisson avant elle et finir le blé qu'on ne moissonne pas (#455). Les prédictions et les mesures sont dans les commits de la branche `claude/v06-ble`, avant chaque course. Le format ne bouge pas (14) : aucun champ d'état n'est ajouté.
 
