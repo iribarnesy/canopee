@@ -26,7 +26,8 @@ import { tick } from "../src/engine/tick";
  * automne : c'est le plus simple, et il n'ajoute aucun mécanisme. Il ne met
  * pas le sol à l'équilibre, parce que le moteur n'en a pas : mesuré sur
  * quatre cents ans, le blé sans apport baisse encore de 13 % tous les vingt
- * ans sur main, de 8 % avec la rosette d'hiver (#324, #346).
+ * ans sur main, de 8 % avec la rosette d'hiver (#324, #346), de 5 à 6 % depuis
+ * le partage de l'eau de #391 ; la litière n'y est pour rien (#461).
  */
 export const CHAMP_LABOURE_AVANT_BROADBALK_ANS = 200;
 
