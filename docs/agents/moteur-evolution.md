@@ -61,7 +61,35 @@ qu'un rapport (voir la note de maintenance).
 Séparer calibration et validation : caler un paramètre sur un âge, garder
 l'autre âge pour vérifier.
 
-## Ce que le dernier lot a appris (la litière du blé continu, #461)
+## Ce que le dernier lot a appris (le couvert, #438 ; les semis sous le couvert, #353, instruit)
+
+Le lot v0.6 « couvert ». La pénombre des houppiers (1 − d²/r²) vaut un demi en moyenne sur le disque, et elle était posée telle quelle sur `k · lai` : chaque couronne perdait la moitié du feuillage que l'atlas lui prête. Elle est rapportée à sa moyenne (light.ts, `MOYENNE_PENOMBRE`), sans réglage ni cas d'espèce : la surface foliaire de la couronne se conserve. Les prédictions et les mesures sont dans les commits de la branche, avant chaque course ; les sondes sont des copies du moteur hors dépôt. La correction casse douze assertions dans dix essais : elles sont instruites dans la PR, aucune n'est réécrite, et la suite attend la décision de l'utilisateur.
+
+### Un peuplement qui a la bonne lumière peut l'avoir pour deux raisons fausses
+
+L'issue partait de l'aulnaie de douze ans (54 % de lumière au sol sous des houppiers qui couvrent 146 % du sol) et d'une hêtraie de quarante ans à 28 %. Mesurées sur trois peuplements de cinq à cent vingt ans, deux sur trois fermaient déjà : la hêtraie plantée à 2 m laissait 5 à 10 % de lumière au sol de 20 à 60 ans, la pinède 34 à 45 %, dans la gamme du terrain. Mais leurs houppiers se recouvraient 4,5 à 5 fois, et le LAI que l'atlas prêtait aux couronnes y montait à 15-17 pour le hêtre, deux fois le plateau de 6 à 8 que mesurent Le Dantec et al. (2000) au-delà de 1 000 tiges/ha. La pénombre non normalisée rendait la moitié de cet excès : deux erreurs s'annulaient, et seule l'aulnaie à 3 m, dont les houppiers se recouvrent moins, montrait la première. **Avant de corriger une grandeur que le terrain confirme, chercher le peuplement où l'erreur ne se compense pas** — et mesurer le LAI des couronnes, pas seulement la lumière qui en sort.
+
+### Une correction de la lumière se mesure en dynamique : le peuplement répond
+
+Sur les instantanés de main, la pénombre normalisée portait la hêtraie à 2 à 4 % de lumière au sol et la pinède à 14 à 22 %, sous le terrain pour le pin. En simulant, la hêtraie reste à 5 à 8 % et la pinède à 33 à 45 % : les dominés reçoivent deux fois moins de lumière, meurent de faim plus tôt (631 hêtres plantés par hectare à quarante ans au lieu de 1 100, 23 à 32 morts inscrites « ombre » au lieu de 2), et le peuplement desserré laisse repasser la lumière. Le LAI des couronnes tombe de 15-17 à 10-12 pour le hêtre et de 5 à 2,5-3,3 pour le pin, vers le terrain. **Une décomposition statique dit où est l'écart ; elle ne dit pas où le peuplement s'arrête.** Prédit statiquement (N2, N3), faux deux fois.
+
+### Ce que l'éclaircie libère monte en hauteur dominante, pas au banc des tables
+
+Un peuplement qui s'éclaircit plus vite rend l'eau et l'azote à ses dominants : à quarante ans, la hauteur dominante de l'aulnaie monte de 14,7 à 17,1 m (table : 18,0), celle de la pinède de 13,5-14,1 à 14,3-16,6 m (15,5), celle de la hêtraie de 15,4-15,6 à 18,3-19,1 m (16,0, au-delà de la tolérance de 15 % sur deux graines). Le banc des tables, huit sujets épars sur 60 m, ne bouge que de 3 % au plus. **Une correction qui change la compétition se lit aussi dans un peuplement dense** : le banc des tables mesure un arbre sans voisin, et la règle d'Assmann (la hauteur dominante ne dépend presque pas de la densité) ne se vérifie qu'en comparant les deux.
+
+### Le nombre d'un référentiel porte son dispositif
+
+Le 0,28 de lumière « sous une hêtraie de quarante ans » venait de E9 : une parcelle de 20 m plantée à 3 m, moyennée bords compris. J'ai prédit 0,20 à 0,35 pour la hêtraie de 40 m plantée à 2 m, cœur seul ; elle en laisse 0,06 à 0,08. **Avant de reprendre un nombre du référentiel comme une mesure du peuplement, relire sur quelle parcelle et sur quelle surface il a été moyenné.**
+
+### Une constante posée pour un cas mord partout quand ce qu'elle multiplie double
+
+La marcescence du hêtre (0,35, *à calibrer*) a été posée pour le jeune hêtre, et le moteur la prête à tous. Tant que la pénombre divisait l'extinction par deux, les feuilles mortes d'une hêtraie de quarante ans laissaient 0,58 de lumière mi-avril ; normalisée, 0,47 à 0,51, et la vernale n'y tient plus que 0,10 à 0,12 du sol (0,18 sur main), pendant que l'anémone gagne sous la pinède assombrie : E9 casse. Le poids 0,4 des codominants (B6) multiplie la même extinction, et un hêtre de 25 m de `lumiere.test.ts` à peine plus court que son voisin du sud reçoit 5 % de lumière au lieu de 19 %, puis meurt de faim. **Une correction qui double un terme oblige à relire chaque constante à calibrer qu'il multiplie.**
+
+### Fermer le couvert trie les semis, et la lumière d'avril est une germination
+
+#353 voyait sous une hêtraie de 15 m autant de bouleaux s'installer sous le couvert que dans la trouée. Remesuré (hêtres à 8 m, cinq graines, quinze ans) : 61 sous le couvert pour 71 dans la trouée sur main, 46 pour 69 avec la pénombre normalisée. Mais ceux du couvert meurent de faim en deux à quatre ans sur main, en deux à trois sur la branche ; relevés un à un à quinze ans, les « survivants » du couvert sont des levées de l'année ou de l'an d'avant en train de mourir, plus deux ou trois sujets dans des trouées de houppiers (0,22 à 0,36 de lumière d'été). Sous un couvert planté à 3 m, aucun ne lève. Le filtre d'avril est une germination et l'été trie ; le mois de jugement ne change pas, et le commentaire de `regeneration.ts` le dit maintenant. **Avant de changer quand un filtre juge, suivre ceux qu'il laisse passer** : un compte d'installés n'est pas un compte de vivants.
+
+## Ce qu'un lot précédent a appris (la litière du blé continu, #461)
 
 Le propriétaire avait retenu la piste A de #461 : la paille à C/N 90 ne se décomposerait plus faute d'azote minéral, et l'azote qu'elle immobilise sans plancher priverait le blé continu de l'équilibre de la parcelle Nil. Instruite sur la sonde de C16 (disque de 14 m sur 30 × 30 m, limon riche, quatre cents ans, déterministe : aucun arbre, aucun tirage), la prémisse ne tient pas. La correction retenue est ailleurs dans la décomposition : son humidité se lisait sur une réserve qui n'était plus celle de la cellule. Elle guérit la litière et ne rend pas l'équilibre. Les prédictions et les mesures sont dans les commits de la branche `claude/v06-litiere`, avant chaque course ; main a bougé en cours de lot (#411), et tout a été remesuré sur la fusion. Le format ne bouge pas (15) : aucun champ d'état n'est ajouté.
 

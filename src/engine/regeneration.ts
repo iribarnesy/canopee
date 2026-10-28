@@ -4,8 +4,13 @@
  * produisent des semis. Tous les tirages passent par le PRNG seedé.
  * `semisParAn` représente les établissements **potentiels** (après l'entonnoir de
  * mortalité graine→semis, ch4-B) ; le filtre restant est écologique :
- * - lumière au sol ≥ 2 × le point de compensation de l'espèce (un héliophile
- *   ne s'installe pas sous couvert, un sciaphile si) ;
+ * - lumière au sol ≥ 2 × le point de compensation de l'espèce, **lue la semaine**
+ *   **du recrutement, à la mi-avril** : c'est une germination. Sous un couvert
+ *   caduc qui débourre à peine, un héliophile lève (les feuilles mortes des
+ *   marcescents ombragent encore) ; c'est l'ombre de l'été qui le trie ensuite,
+ *   par la faim (`reserves.ts`). Mesuré sous une hêtraie de 15 m plantée à 8 m,
+ *   cinq graines (#353) : les bouleaux levés sous le couvert y meurent en deux à
+ *   trois ans, et sous un couvert vraiment fermé (3 m) aucun ne lève ;
  * - pas d'arbre vivant à moins de 1,2 m (concurrence immédiate) ;
  * - plafond de densité (auto-éclaircie des fourrés, en attendant la V1).
  * La suite (sécheresse, ombre croissante) relève de la mortalité normale.
