@@ -61,7 +61,67 @@ qu'un rapport (voir la note de maintenance).
 Séparer calibration et validation : caler un paramètre sur un âge, garder
 l'autre âge pour vérifier.
 
-## Ce que le dernier lot a appris (l'eau du tapis et la soif des jeunes plants, #391)
+## Ce que le dernier lot a appris (la litière du blé continu, #461)
+
+Le propriétaire avait retenu la piste A de #461 : la paille à C/N 90 ne se décomposerait plus faute d'azote minéral, et l'azote qu'elle immobilise sans plancher priverait le blé continu de l'équilibre de la parcelle Nil. Instruite sur la sonde de C16 (disque de 14 m sur 30 × 30 m, limon riche, quatre cents ans, déterministe : aucun arbre, aucun tirage), la prémisse ne tient pas. La correction retenue est ailleurs dans la décomposition : son humidité se lisait sur une réserve qui n'était plus celle de la cellule. Elle guérit la litière et ne rend pas l'équilibre. Les prédictions et les mesures sont dans les commits de la branche `claude/v06-litiere`, avant chaque course ; main a bougé en cours de lot (#411), et tout a été remesuré sur la fusion. Le format ne bouge pas (15) : aucun champ d'état n'est ajouté.
+
+### Compter combien de fois une borne mord avant de lui poser un plancher
+
+La borne d'azote de la décomposition (C9) ne mord sur aucune cellule-semaine du disque en quatre siècles, ni sur edcd26c ni sur la fusion. Les décomposeurs passent avant les racines (Kaye et Hart 1997), et l'humus et les dépôts leur rendent chaque semaine plus que ce que la vitesse k × climat leur fait demander. Un plancher, que le terrain justifierait (une paille seule se décompose plus lentement, mais elle se décompose : Henriksen et Breland 1999, Recous et al. 1995), n'aurait rien changé. Les prédictions écrites avant de compter le disaient bornée plus d'une semaine d'été sur deux ; elle ne l'est jamais. **Une borne qu'on accuse se compte avant de se corriger.**
+
+### Une moyenne de parcelle cache les cellules à l'arrêt
+
+Sur la fusion, la litière du disque monte à 18,3 t C/ha à l'an 400 (708 kg N/ha), et elle ne se décompose qu'à 4 % par an quand la somme annuelle de k × climat vaut 0,33 : sur la moyenne, c'est impossible. Relevé cellule par cellule à l'an 300 : 224 des 616 cellules du disque ont perdu tout leur horizon de surface (plus de 30 cm sur 35 ; l'épaisseur est tenue au plancher de 3 cm) et portent 90 % du carbone de la litière, 34,8 t C/ha chacune ; les 314 cellules qui ont reçu du colluvium en portent 2,4. Le facteur climatique des décomposeurs divisait l'eau de l'horizon par la réserve du profil de départ, quand l'eau du bilan se borne à la réserve de la cellule, qui suit son humus et l'épaisseur que l'érosion lui a laissée : un horizon aminci et plein passait pour sec. **Quand un taux moyen ne rend pas le flux moyen, chercher la cellule qui porte le stock.**
+
+### Guérir le symptôme nommé ne rend pas l'équilibre
+
+Lue sur la réserve de la cellule, l'humidité rend la litière à 3,1 t C/ha à l'an 400 (125 kg N/ha), et le grain ne bouge pas : C16 1,458 / 1,339 / 1,240 t/ha contre 1,461 / 1,341 / 1,244, une baisse de 5 à 6 % tous les vingt ans en fin de course dans les deux cas. L'azote que la litière n'immobilise plus part au lessivage (2,4 → 4,5 kg N/ha à l'an 300). L'issue tenait la litière pour la cause parce que c'était le seul stock qui montait. **Un stock qui monte sans fin désigne un flux qui s'arrête, pas forcément celui qui manque à la cible** : 1,5 kg N/ha/an immobilisés de trop (708 contre 125 kg N/ha en quatre siècles) ne pouvaient pas expliquer un blé qui exporte 12 à 13 kg N/ha/an dans son grain à l'an 200.
+
+### Ce qui décide du niveau, sur le bilan d'azote
+
+À plat et sans bassin amont, le même blé se pose vers 2,2 t/ha (tranches finales 2,24 / 2,21 / 2,19), sans lessivage, l'humus à 21,8 t C/ha ; la correction n'y change rien au centième, puisque la réserve n'y bouge qu'avec l'humus. À l'équilibre, le grain exporte ce que les dépôts apportent (17,0 kg N/ha pour 15,9, l'humus fournissant encore le reste) : le niveau est le rapport des dépôts à l'azote d'une tonne de grain. Le moteur met 7,9 kg N dans une tonne de matière sèche, la parcelle Nil 16,6 (Coleman et al. 2017 : 16,3 kg N/ha pour 1,16 t/ha à 85 %, 1968-2012) : la croissance de la culture suit l'indice de nutrition sans plancher, et la plante se dilue jusqu'à la moitié de ce que porte un blé affamé. En pente, l'érosion du banc (#311) et le lessivage qu'elle entraîne empêchent tout équilibre. Sur la fenêtre de C16, les deux défauts se compensent. **Avant de chercher le mécanisme qui manque à un équilibre, écrire son bilan d'entrées et de sorties : le niveau s'y lit, et les stocks n'y entrent pas.**
+
+### Un tirage rebattu n'est pas un mécanisme cassé
+
+La correction fait tomber une assertion de `chandelles.test.ts` : sur un banc à plat sous des saules, les chutes des semaines ventées penchent moins du côté du vent (0,093 pour un seuil de 0,1, cumulé sur six parties ; 0,153 sur main). `directionDeChute` ne lit ni l'eau ni le sol. Les arbres que le banc abat tombent aux mêmes semaines, sous la même emprise, dans les deux variantes : leur concentration attendue est la même par construction, et seul change **quel** arbre tombe, donc le tirage propre de sa chute. Sur douze parties, neuf graines baissaient et la correction restait à 0,097 : cela ressemblait à un effet. Sur vingt-quatre, il disparaît (main 0,134, correction 0,130, écart moyen par graine −0,006 pour un écart-type de 0,063), et main lui-même tombe sous 0,1 sur les graines 17 à 22 (0,086). L'essai passe à vingt-quatre parties, seuil inchangé. **Neuf graines sur douze dans le même sens ne prouvent rien quand l'écart-type d'une graine vaut l'écart cherché : avant de conclure à un effet, ou de doubler les parties pour le noyer, mesurer d'autres graines du moteur d'avant.**
+
+### Ce que ça donne
+
+Sonde du blé continu de C16, déterministe (les graines 4 et 7 rendent le même blé au bit près), sur la fusion 1ffa672.
+
+| | main | correction | à plat, main | à plat, correction |
+|---|---|---|---|---|
+| C16, ans 201-260 (t/ha) | 1,461 / 1,341 / 1,244 | 1,458 / 1,339 / 1,240 | 2,591 / 2,506 / 2,434 | identique |
+| baisse tous les vingt ans, ans 301-400 | 5 à 6 % | 5 à 6 % | 1 à 2 % | identique |
+| litière à l'an 400 (t C/ha ; kg N/ha) | 18,3 ; 708 | 3,1 ; 125 | 2,7 ; 62 | identique |
+| humus à l'an 400 (t C/ha) | 9,2 | 10,7 | 21,8 | identique |
+| cellules-semaines bornées par l'azote | 0 | 0 | 0 | 0 |
+
+### Les prédictions fausses
+
+- A3, à moitié : le carbone de la litière monte, mais son C/N devait rester au-dessus de 40 ; il tombe à 21,8 à l'an 400 (edcd26c).
+- A6 : la borne d'azote devait mordre plus d'une semaine sur deux de mai à septembre ; elle ne mord jamais.
+- B4 : l'humidité lue sur la réserve de la cellule devait rester au-dessus de 0,6 ; 0,48 à l'an 400. Un horizon aminci sèche aussi plus vite.
+- D1c, à moitié, et D1d : à plat, le grain se pose, mais vers 2,2 t/ha et non entre 0,6 et 1,1 ; C16 en sort par le haut.
+- R1 : le partage de l'eau de #411 devait bouger C16 de moins de 15 % ; +24 à +28 %.
+- R3 : la réserve du disque devait perdre plus de moitié ; 49 %.
+- D2', en partie : le facteur climatique moyen de l'an 400 devait passer 0,55 ; 0,548. La moyenne bouge à peine parce que la correction ne touche que les cellules décapées.
+- K1, à moitié : main rend 0,153 sur les graines 5 à 10, et non 0,125 (chiffre d'avant #411) ; la graine 6 bouge de 0,114.
+- K4a, K4b, K4c : l'emprise moyenne des chutes ventées ne baisse pas, la concentration pondérée par l'emprise baisse autant, les morts naturelles ne sont pas plus nombreuses.
+- F1, sur la lande, graine 3 : −6,5 % d'humus et −42 % de litière, par une perturbation de main (240 pins morts entre l'an 20 et l'an 40) absente de la correction.
+- Non prédit : la chute de l'essai des chandelles en CI.
+- D4', pour l'ampleur : lire aussi l'humidité de la strate sur la réserve de la cellule devait monter C16 de plus de 10 % ; +1,7 %.
+
+Justes : A1, A2, A4, A5 ; B1 à B3 ; D1a, D1b ; R2 ; D1' ; D2' pour la litière, le grain et C16 ; D3' ; H1, H2 ; T1 à T5 ; C18 ; K2, K3, K5 ; F1 sur 17 couples station-graine sur 18. D4' pour le reste (sous 2 t/ha, pas d'équilibre).
+
+### Ce qui reste ouvert
+
+- **L'équilibre de C16** : décision du propriétaire sur les pistes rapportées dans la PR (érosion du banc, azote du grain, paille, dépôts, fixation libre).
+- **La même réserve figée ailleurs** : l'humidité de la strate (`remplissage`), la saturation du ruissellement, l'attrait du sanglier, l'humidité des maladies et la sécheresse du feu se divisent encore par la réserve du profil de départ (`ruSurface`). Sur un sol qui ne s'érode pas, l'écart ne passe pas 10 % ; sur une cellule décapée, il est d'un facteur dix. Mesuré pour la strate (D4', hors dépôt) : C16 monte de 1,7 % (1,483 / 1,362 / 1,260), et le blé ne se pose toujours pas ; non livré, hors du lot.
+- **La vitesse de décomposition d'une paille** : 0,6 / C/N donne à une paille seule à C/N 90 une demi-vie de deux ans à climat moyen (k × climat ≈ 0,35 par an) ; le terrain en donne six mois à un an (Smith et Douglas 1971, Amato et al. 1987, Jenkinson 1977). La loi est *à calibrer* depuis C4 ; une paille n'y est lente que par son C/N, quand sa cellulose se décompose vite.
+- `SEMAINES_DE_CULTURE` (herbacees.ts) n'est toujours lu nulle part.
+
+## Ce qu'un lot précédent a appris (l'eau du tapis et la soif des jeunes plants, #391)
 
 Le lot v0.6 issu de l'instruction de #210 (ses options 1, 2 et 6). Le partage de l'eau entre le sol et le tapis suit maintenant FAO-56 (Allen et al. 1998) : la strate transpire au Kcb d'un tapis fermé (0,90) sur ce qu'elle couvre de vert, le sol n'évapore que sur ce qu'elle laisse découvert, au plafond Kc max = 1,20, en deux phases (REW, TEW). Trois réglages *à calibrer* tombent (`HERBE_TRANSPIRATION_COEFF`, `SOIL_EVAP_FRACTION`, `PLAFOND_ENERGIE`), avec la quadratique `soilEvapFactor` et un facteur de saison sans source posé sur la soif de l'herbe. L'eau évaporable se lit sur le déficit de l'horizon de surface, pas sur un état nouveau. Sur décision de l'utilisateur, le lot a ensuite revu la mort de soif d'un arbre installé (O1) : le compteur immédiat ne vaut plus que pour un plant de moins de trois ans ; un arbre installé meurt par l'embolie, à son seuil, ou par l'épuisement de ses réserves, et un feuillu installé lâche ses feuilles sous la soif. Le format de sauvegarde monte à 15 pour la date de défeuillaison. Enfin, sur décision (G1), la vitesse de cavitation est calée sur le terrain (0,16 par semaine, Walthert et al. 2021) et un arbre que la soif a défeuillé ne refait pas ses réserves pendant un an (Bréda et al. 2006) : `climat.test.ts` passe sans réécriture, et le banc de #210 bouge vers le terrain. Les prédictions et les mesures sont dans les commits de la branche, avant chaque course.
 
