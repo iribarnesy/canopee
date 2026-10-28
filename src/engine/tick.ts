@@ -1066,11 +1066,13 @@ export function tick(state: GameState, weather: WeekWeather, essai?: ReglagesDEs
   const availFactor = new Array<number>(nCells);
   /** Le même frein, lu sur le stock du sous-sol (lot B). */
   const availFactorFond = new Array<number>(nCells).fill(0);
-  // **Les solutés ne lisent pas le drainage sous le profil** (#291). Il compte
-  // l'eau que la nappe fait entrer par le bas et ressortir par le bas — 4,9 m
-  // par an sur le sable profond — et qui ne traverse jamais la surface. Deux
-  // flux nets le remplacent : ce qui passe vraiment sous l'horizon 0, et ce qui
-  // quitte vraiment le profil (water.ts).
+  // **Les solutés ne lisent pas le drainage sous le profil** (#291). Il
+  // comptait l'eau que la nappe faisait entrer par le bas et ressortir par le
+  // bas — 4,9 m par an sur le sable profond — et qui ne traversait jamais la
+  // surface ; cette boucle est partie avec #380, mais la nappe remplit encore
+  // par le bas la réserve utile qu'elle noie. Deux flux nets le remplacent : ce
+  // qui passe vraiment sous l'horizon 0, et ce qui quitte vraiment le profil
+  // (water.ts).
   const percolationSurfaceMmArr = new Array<number>(nCells);
   const drainageNetMmArr = new Array<number>(nCells);
   let evapSum = 0;

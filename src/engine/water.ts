@@ -245,7 +245,10 @@ export interface ProfilHydroOutput {
   eauMm: number[];
   excesMm: number[];
   evapMm: number;
-  /** eau sortie sous le profil */
+  /**
+   * Eau rendue à l'aquifère : ce qui sort sous le profil, et l'eau gravitaire
+   * que la nappe de l'aquifère reprend aux horizons qu'elle noie (#380).
+   */
   drainageMm: number;
   /** eau refusée en surface (sol saturé) */
   overflowMm: number;
@@ -255,12 +258,15 @@ export interface ProfilHydroOutput {
    * que la nappe et le reflux y remettent par dessous, mm. C'est elle, et pas
    * `drainageMm`, qui emporte les solutés de la surface (#291).
    *
-   * Les deux diffèrent dès que la nappe entre dans le profil : chaque semaine,
-   * la saturation imposée remplit la macroporosité des horizons noyés, le
-   * ressuyage la vidange par le bas la semaine suivante, et l'aquifère la
-   * reprend. L'eau se conserve — le bilan boucle — mais elle fait une **boucle**
-   * sous la surface, et l'horizon 0 ne la voit jamais passer. Mesuré sur le sable
-   * profond : 5 240 mm/an de drainage pour 331 de percolation nette.
+   * Les deux différaient dès que la nappe entrait dans le profil : chaque
+   * semaine, la saturation imposée remplissait la macroporosité des horizons
+   * noyés, le ressuyage la vidangeait par le bas la semaine suivante, et
+   * l'aquifère la reprenait. L'eau se conservait, mais elle faisait une
+   * **boucle** sous la surface que l'horizon 0 ne voyait jamais passer : 5 240
+   * mm/an de drainage pour 331 de percolation nette sur le sable profond. La
+   * boucle est partie avec #380 ; les deux diffèrent encore de ce que la nappe
+   * met par le bas dans la réserve utile qu'elle noie, et une nappe d'eau libre
+   * impose toujours sa saturation.
    *
    * Profil d'un seul horizon : la surface est le profil, c'est `drainageNetMm`.
    */
@@ -269,14 +275,12 @@ export interface ProfilHydroOutput {
    * Ce qui quitte le profil par le bas **net** de ce que la nappe y a fait
    * entrer par le bas (remontée capillaire et saturation), plancher 0, mm : la
    * recharge nette. C'est l'eau qui emporte un soluté du sous-sol hors de la
-   * parcelle (#291) ; l'eau de la boucle n'a traversé aucun horizon qui ne soit
-   * pas déjà sous la nappe.
+   * parcelle (#291).
    *
-   * Le plancher est hebdomadaire : la saturation d'une semaine se vidange la
-   * semaine suivante, donc les deux termes ne se répondent qu'en moyenne. Une
-   * nappe qui monte fait une semaine à zéro, une nappe qui baisse une semaine
-   * où l'on compte un peu trop. Mesuré, sur l'année, ce décalage ne coûte que
-   * l'arrondi (voir la PR de #291).
+   * Le plancher est hebdomadaire : ce que la nappe met par le bas une semaine
+   * peut sortir la suivante, donc les deux termes ne se répondent qu'en
+   * moyenne. Mesuré, sur l'année, ce décalage ne coûtait que l'arrondi quand la
+   * boucle existait encore (voir la PR de #291).
    */
   drainageNetMm: number;
   /** engorgement de chaque horizon ∈ [0,1] */
