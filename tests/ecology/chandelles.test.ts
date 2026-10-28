@@ -457,7 +457,21 @@ describe("une chandelle tombe dans le sens du coup de vent, pas seulement vers l
     // partie. Cumulé sur 5-10 : 0,100 avant (588 chutes), **0,125** après (575) ;
     // les calmes à 0,009 et −0,001. Le seuil est resté où il était ; le doublement
     // des parties divise l'erreur type du cumul par 1,4, et le délai suit.
-    for (const graine of [5, 6, 7, 8, 9, 10]) {
+    //
+    // **Vingt-quatre parties depuis #461**, la même maladie une troisième fois.
+    // Lire l'humidité des décomposeurs sur la réserve de la cellule ne touche ni
+    // les saules ni le vent ; elle dévie les morts naturelles, donc l'ordre des
+    // vivants que le banc abat aux semaines fixes, donc le tirage propre de
+    // chaque chute (`graineDeChute`, l'identité de l'arbre). Les abattus tombent
+    // aux mêmes semaines, sous la même emprise : leur concentration attendue ne
+    // bouge pas. Cumul 5-10 : 0,153 avant, 0,093 après. Par six parties, le
+    // moteur d'avant rendait 0,153 / 0,116 / **0,086** / 0,175 sur les graines
+    // 5-10, 11-16, 17-22, 23-28 : il tombait lui-même sur 17-22. Sur les
+    // vingt-quatre, 0,134 avant (2 215 chutes ventées), **0,130** après (2 204) ;
+    // écart moyen par graine −0,006, écart-type 0,063 ; les calmes entre −0,004
+    // et +0,016. Le seuil est resté où il était ; l'erreur type du cumul tombe
+    // à ~0,015, et le délai suit.
+    for (const graine of Array.from({ length: 24 }, (_, k) => 5 + k)) {
       let state = plantScattered(
         createGameState(station, rngStateFromSeed(graine)),
         "salix_alba",
@@ -503,7 +517,7 @@ describe("une chandelle tombe dans le sens du coup de vent, pas seulement vers l
     // l'accord de l'auteur ; les deux seuils qui disent le mécanisme restent.
     expect(conc(ventees)).toBeGreaterThan(0.1);
     expect(Math.abs(conc(calmes))).toBeLessThan(0.1);
-  }, 900_000);
+  }, 2_700_000);
 
   it("mais elles ne resserrent PAS au-delà du plancher de hasard", () => {
     // L'essai qui a démenti une phrase que j'avais écrite dans le module. Deux
