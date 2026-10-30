@@ -262,6 +262,11 @@ export function potassiumEnTeneurDAnalyse(state: GameState): Float32Array {
  * Engorgement moyen du profil sous chaque cellule ∈ [0,1] : la part de la
  * macroporosité occupée par l'eau, moyennée sur les horizons. C'est ce que les
  * racines subissent, et ce qu'on veut pouvoir **regarder** sur la carte.
+ *
+ * Sous la surface libre de l'aquifère, la macroporosité est pleine, et son eau
+ * est comptée dans le stock de l'aquifère, pas dans l'eau gravitaire du profil
+ * (#380) : la part noyée s'ajoute donc à ce que l'horizon tient lui-même, comme
+ * le moteur le lit (`profilHydro`).
  */
 export function engorgementParCellule(state: GameState, nH: number): Float32Array {
   const profil = state.station.profil;
@@ -269,10 +274,17 @@ export function engorgementParCellule(state: GameState, nH: number): Float32Arra
   const n = state.soil.mineralNG.length;
   const out = new Float32Array(n);
   for (let i = 0; i < n; i++) {
+    const nappeCm = profondeurPourStock(state.soil.nappeMm[i] ?? 0, profil);
     let somme = 0;
+    let hautCm = 0;
     for (let h = 0; h < nH; h++) {
+      const epaisseur = profil[h]?.epaisseurCm ?? 0;
+      const basCm = hautCm + epaisseur;
+      hautCm = basCm;
+      const noyee = epaisseur > 0 ? Math.min(1, Math.max(0, (basCm - nappeCm) / epaisseur)) : 0;
       const capacite = porosites[h] ?? 0;
-      if (capacite > 0) somme += Math.min(1, (state.soil.excessMm[i * nH + h] ?? 0) / capacite);
+      const libre = capacite > 0 ? (state.soil.excessMm[i * nH + h] ?? 0) / capacite : 0;
+      somme += Math.min(1, noyee + libre);
     }
     out[i] = somme / Math.max(1, nH);
   }

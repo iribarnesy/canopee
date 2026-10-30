@@ -87,6 +87,9 @@ describe("la forêt tient la nappe, et l'incendie la relâche", () => {
     // fermé (FAO-56) : deuxième année après le feu, 522 mm de transpiration et
     // 80 d'évaporation, 602 en tout, contre 855 pour la forêt (sur `main` :
     // 338 contre 771). La nappe d'hiver remonte de 51 cm (55 sur `main`).
+    // Depuis #380 et #381, l'aquifère n'est plus abaissé de l'eau que la
+    // saturation imposée lui prenait : 598 contre 853 mm rendus à l'air, et la
+    // nappe d'hiver remonte de 88 cm.
     //
     // Ce qui tient la nappe, c'est ce que la parcelle **rend à l'air**, et c'est
     // ce que les gestionnaires girondins disaient : la forêt pompe, brûlée elle
@@ -99,7 +102,7 @@ describe("la forêt tient la nappe, et l'incendie la relâche", () => {
   it("2. l'eau qu'elle ne prend plus fait REMONTER la nappe, d'un demi-mètre", () => {
     // Le maillon qui manquait : sans stock, cette eau disparaissait du modèle.
     // Mesuré : la nappe d'hiver passe de 77 cm à 26 cm sous la surface (#391 ;
-    // 72 et 17 sur `main`).
+    // 72 et 17 sur `main`), puis de 90 à 2 cm (#380, #381).
     expect(brulee.nappeHiver).toBeLessThan(intacte.nappeHiver - 30);
   });
 

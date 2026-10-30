@@ -140,6 +140,16 @@ export function ordreDeDescente(altitudes: readonly number[]): number[] {
 }
 
 /**
+ * Un dénivelé de l'ordre de l'arrondi n'est pas une pente, m. `sin(180°)` ne
+ * vaut pas exactement zéro, et sur un versant exposé plein sud deux cellules
+ * d'une même rangée diffèrent de 10⁻¹⁷ m : la rangée du bas se trouvait des
+ * voisines « plus basses » de 4·10⁻¹⁴ %, y envoyait son eau, qui y stagnait au
+ * lieu de sortir (#351). Un nanomètre ne sépare deux cellules d'aucun relief
+ * qu'on dessine ou qu'on génère.
+ */
+const DENIVELE_NEGLIGEABLE_M = 1e-9;
+
+/**
  * Pour chaque cellule, sa voisine la plus basse (parmi les huit) — ou `-1` si
  * elle est déjà au point bas de la parcelle, auquel cas l'eau sort.
  */
@@ -166,7 +176,7 @@ export function voisineAval(altitudes: readonly number[], dims: GridDims): Int32
           if (nx < 0 || ny < 0 || nx >= w || ny >= h) continue;
           const j = ny * w + nx;
           const denivele = ici - (altitudes[j] ?? 0);
-          if (denivele <= 0) continue;
+          if (denivele <= DENIVELE_NEGLIGEABLE_M) continue;
           const distance = ddx !== 0 && ddy !== 0 ? Math.SQRT2 : 1;
           const pente = denivele / distance;
           if (pente > meilleurePente) {
@@ -239,6 +249,16 @@ export function anomalieExpositionC(relief: Relief): number {
  * de la parcelle ; sur un terrain dessiné elle varie, et c'est ce qu'il faut —
  * un plateau creusé d'une mare a des berges raides et un fond plat, et l'eau
  * ne s'y comporte pas de la même façon d'un mètre carré à l'autre.
+ *
+ * **Le point bas d'un versant a la pente du terrain qui continue** (#351). Une
+ * cellule du bord sans voisine plus basse dans la parcelle est l'exutoire
+ * (`voisineAval` vaut −1) ; ne regarder que l'intérieur lui donnait une pente
+ * nulle, et l'eau qui y arrivait « stagnait » au lieu de s'en aller : sur un
+ * versant de 25 %, aucun millimètre ne sortait par le bas, et tout sortait
+ * en débordement. Le terrain ne s'arrête pas à la limite de la parcelle : on
+ * le prolonge au-delà du bord, en reportant de l'autre côté de la cellule la
+ * dénivelée de sa voisine opposée. Un terrain plat le reste ; une cuvette au
+ * milieu de la parcelle, qui n'a pas de bord, aussi.
  */
 export function penteParCellule(altitudes: readonly number[], dims: GridDims): Float32Array {
   const { widthM: w, heightM: h } = dims;
@@ -248,16 +268,36 @@ export function penteParCellule(altitudes: readonly number[], dims: GridDims): F
       const i = y * w + x;
       const ici = altitudes[i] ?? 0;
       let max = 0;
+      let auBord = false;
       for (let dy = -1; dy <= 1; dy++) {
         for (let dx = -1; dx <= 1; dx++) {
           if (dx === 0 && dy === 0) continue;
           const nx = x + dx;
           const ny = y + dy;
-          if (nx < 0 || ny < 0 || nx >= w || ny >= h) continue;
+          if (nx < 0 || ny < 0 || nx >= w || ny >= h) {
+            auBord = true;
+            continue;
+          }
           const denivele = ici - (altitudes[ny * w + nx] ?? 0);
-          if (denivele <= 0) continue;
+          if (denivele <= DENIVELE_NEGLIGEABLE_M) continue;
           const distance = dx !== 0 && dy !== 0 ? Math.SQRT2 : 1;
           max = Math.max(max, (denivele / distance) * 100);
+        }
+      }
+      if (max === 0 && auBord) {
+        // L'exutoire : la descente vers le dehors, terrain prolongé.
+        for (let dy = -1; dy <= 1; dy++) {
+          for (let dx = -1; dx <= 1; dx++) {
+            if (dx === 0 && dy === 0) continue;
+            const dehors = x + dx < 0 || y + dy < 0 || x + dx >= w || y + dy >= h;
+            const ox = x - dx;
+            const oy = y - dy;
+            if (!dehors || ox < 0 || oy < 0 || ox >= w || oy >= h) continue;
+            const denivele = (altitudes[oy * w + ox] ?? 0) - ici;
+            if (denivele <= DENIVELE_NEGLIGEABLE_M) continue;
+            const distance = dx !== 0 && dy !== 0 ? Math.SQRT2 : 1;
+            max = Math.max(max, (denivele / distance) * 100);
+          }
         }
       }
       pentes[i] = max;
