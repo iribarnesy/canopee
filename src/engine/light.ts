@@ -209,6 +209,8 @@ interface Shadow {
   cy: number;
   r2: number;
   heightM: number;
+  /** profondeur du houppier vivant, m : celle que suppose `partHouppier` */
+  profondeurM: number;
   extinction: number;
 }
 
@@ -240,19 +242,17 @@ function buildShadowIndex(
     if (feuillage <= 0) continue;
     const r = crownRadiusM(tree.heightM, espece.lumiere.houppierRatio, tree.diametreCm);
     if (r <= 0) continue;
+    const partGardee = partHouppier(tree.heightM, tree.baseHouppierM ?? 0);
     const shadow: Shadow = {
       cx: tree.x,
       cy: tree.y + decalageNord * tree.heightM,
       r2: r * r,
       heightM: tree.heightM,
+      profondeurM: partGardee * PROFONDEUR_HOUPPIER_MAX * tree.heightM,
       // L'indice foliaire suit le déploiement : c'est là que la phénologie
       // entre dans la loi de Beer-Lambert. Et l'élagage y entre aussi : une
       // couronne dont on a retiré la tranche basse intercepte moins.
-      extinction:
-        BEER_LAMBERT_K *
-        espece.lumiere.lai *
-        feuillage *
-        partHouppier(tree.heightM, tree.baseHouppierM ?? 0),
+      extinction: BEER_LAMBERT_K * espece.lumiere.lai * feuillage * partGardee,
     };
     const bx0 = Math.floor((shadow.cx - r) / BUCKET_M);
     const bx1 = Math.floor((shadow.cx + r) / BUCKET_M);
@@ -304,10 +304,9 @@ function extinctionAt(
     // n'est pas une piste de calibration pour autant, c'est une absurdité
     // physique — à seuil nul, un semis de deux mètres ombrage une cime de
     // vingt-cinq. Ça prouve seulement que le mécanisme est vivant.
-    let weight: number;
-    if (s.heightM > heightM) weight = 1;
-    else if (s.heightM > 0.75 * heightM && s.heightM < heightM) weight = 0.4;
-    else continue;
+    const auDessus = s.heightM - heightM;
+    if (auDessus <= 0 || s.profondeurM <= 0) continue;
+    const weight = Math.min(1, auDessus / s.profondeurM);
     const dx = x - s.cx;
     const dy = y - s.cy;
     const d2 = dx * dx + dy * dy;
