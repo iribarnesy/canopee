@@ -230,13 +230,25 @@ export interface ProfilHydroInput {
    * les racines au bord d'un ruisseau (eau_surface.ts).
    */
   nappeProfondeurCm?: number;
+  /**
+   * Profondeur de la surface libre de l'**aquifère** de la cellule, cm, quand
+   * elle diffère de la précédente : une eau libre voisine peut tenir une nappe
+   * plus haute que celle de l'aquifère (eau_surface.ts). L'aquifère compte déjà
+   * l'eau gravitaire de la part du profil qu'il noie (`capaciteAquifereMm`) ;
+   * celle que l'eau libre noie au-dessus, non. Absente : la nappe est celle de
+   * l'aquifère.
+   */
+  aquifereProfondeurCm?: number;
 }
 
 export interface ProfilHydroOutput {
   eauMm: number[];
   excesMm: number[];
   evapMm: number;
-  /** eau sortie sous le profil */
+  /**
+   * Eau rendue à l'aquifère : ce qui sort sous le profil, et l'eau gravitaire
+   * que la nappe de l'aquifère reprend aux horizons qu'elle noie (#380).
+   */
   drainageMm: number;
   /** eau refusée en surface (sol saturé) */
   overflowMm: number;
@@ -246,12 +258,15 @@ export interface ProfilHydroOutput {
    * que la nappe et le reflux y remettent par dessous, mm. C'est elle, et pas
    * `drainageMm`, qui emporte les solutés de la surface (#291).
    *
-   * Les deux diffèrent dès que la nappe entre dans le profil : chaque semaine,
-   * la saturation imposée remplit la macroporosité des horizons noyés, le
-   * ressuyage la vidange par le bas la semaine suivante, et l'aquifère la
-   * reprend. L'eau se conserve — le bilan boucle — mais elle fait une **boucle**
-   * sous la surface, et l'horizon 0 ne la voit jamais passer. Mesuré sur le sable
-   * profond : 5 240 mm/an de drainage pour 331 de percolation nette.
+   * Les deux différaient dès que la nappe entrait dans le profil : chaque
+   * semaine, la saturation imposée remplissait la macroporosité des horizons
+   * noyés, le ressuyage la vidangeait par le bas la semaine suivante, et
+   * l'aquifère la reprenait. L'eau se conservait, mais elle faisait une
+   * **boucle** sous la surface que l'horizon 0 ne voyait jamais passer : 5 240
+   * mm/an de drainage pour 331 de percolation nette sur le sable profond. La
+   * boucle est partie avec #380 ; les deux diffèrent encore de ce que la nappe
+   * met par le bas dans la réserve utile qu'elle noie, et une nappe d'eau libre
+   * impose toujours sa saturation.
    *
    * Profil d'un seul horizon : la surface est le profil, c'est `drainageNetMm`.
    */
@@ -260,14 +275,12 @@ export interface ProfilHydroOutput {
    * Ce qui quitte le profil par le bas **net** de ce que la nappe y a fait
    * entrer par le bas (remontée capillaire et saturation), plancher 0, mm : la
    * recharge nette. C'est l'eau qui emporte un soluté du sous-sol hors de la
-   * parcelle (#291) ; l'eau de la boucle n'a traversé aucun horizon qui ne soit
-   * pas déjà sous la nappe.
+   * parcelle (#291).
    *
-   * Le plancher est hebdomadaire : la saturation d'une semaine se vidange la
-   * semaine suivante, donc les deux termes ne se répondent qu'en moyenne. Une
-   * nappe qui monte fait une semaine à zéro, une nappe qui baisse une semaine
-   * où l'on compte un peu trop. Mesuré, sur l'année, ce décalage ne coûte que
-   * l'arrondi (voir la PR de #291).
+   * Le plancher est hebdomadaire : ce que la nappe met par le bas une semaine
+   * peut sortir la suivante, donc les deux termes ne se répondent qu'en
+   * moyenne. Mesuré, sur l'année, ce décalage ne coûtait que l'arrondi quand la
+   * boucle existait encore (voir la PR de #291).
    */
   drainageNetMm: number;
   /** engorgement de chaque horizon ∈ [0,1] */
@@ -383,8 +396,8 @@ export function profilHydro(input: ProfilHydroInput, out?: ProfilHydroOutput): P
   }
 
   // ── L'exutoire limite la sortie ; le refus remonte en nappe perchée ───────
-  const drainageMm = Math.min(drainageBrut, input.drainageExterneMm);
-  let remontant = drainageBrut - drainageMm + refus;
+  const sortieExutoireMm = Math.min(drainageBrut, input.drainageExterneMm);
+  let remontant = drainageBrut - sortieExutoireMm + refus;
   for (let i = n - 1; i >= 0 && remontant > 0; i--) {
     const h = horizons[i];
     if (!h) continue;
@@ -412,41 +425,72 @@ export function profilHydro(input: ProfilHydroInput, out?: ProfilHydroOutput): P
     eauMm[n - 1] = (eauMm[n - 1] ?? 0) + nappeMm;
   }
 
-  // ── Saturation imposée par la nappe ──────────────────────────────────────
+  // ── Sous la surface libre de la nappe ────────────────────────────────────
   // La surface libre d'une nappe, c'est le haut de la zone saturée : tout ce
   // qui est dessous a sa réserve utile pleine **et** sa macroporosité pleine. Ce
-  // n'est pas un apport qu'on choisit, c'est un état. L'eau ainsi ajoutée est
-  // comptée comme venue de la nappe, sans quoi le bilan ne bouclerait pas.
+  // n'est pas un apport qu'on choisit, c'est un état (critère A20).
+  //
+  // La réserve utile de la part noyée se remplit depuis la nappe : l'aquifère
+  // ne compte que l'eau gravitaire (sa porosité drainable), et l'eau qui
+  // mouille un sol sec sous la nappe lui est bien prise. Ce qu'une eau libre
+  // noie au-dessus de l'aquifère a aussi sa macroporosité remplie depuis la
+  // nappe.
+  //
+  // **L'eau gravitaire de la part que l'aquifère noie est déjà la sienne**
+  // (#380) : sa capacité compte la colonne du profil (`capaciteAquifereMm`), si
+  // bien que la profondeur qu'on lit sur son stock situe déjà la nappe dans le
+  // sol. Lui imposer en plus cette eau depuis l'aquifère la comptait deux fois :
+  // le stock baissait d'autant, la nappe qu'on lisait la semaine suivante était
+  // plus bas, le profil rendait l'eau par drainage, et le niveau oscillait sur
+  // deux semaines (60 → 138 → 60 → 138 cm sur une colonne de sable profond). La
+  // part que l'aquifère noie garde donc sa porosité pour lui : l'eau gravitaire
+  // qu'un horizon y tient au-delà de ce que le reste de l'horizon peut porter
+  // lui est **rendue**, et l'engorgement de l'horizon vaut cette part plus son
+  // eau libre.
+  const engorgementParHorizon = out?.engorgementParHorizon ?? new Array<number>(n);
+  for (let i = 0; i < n; i++) engorgementParHorizon[i] = 0;
+  let rendueMm = 0;
   const nappeCm = input.nappeProfondeurCm ?? Number.POSITIVE_INFINITY;
+  const aquifereCm = Math.max(nappeCm, input.aquifereProfondeurCm ?? nappeCm);
   if (Number.isFinite(nappeCm)) {
     let hautCm = 0;
     for (let i = 0; i < n; i++) {
       const h = horizons[i];
       if (!h) continue;
       const basCm = hautCm + h.epaisseurCm;
-      // Part de l'horizon située sous la surface libre.
-      const partNoyee =
-        h.epaisseurCm > 0 ? Math.min(1, Math.max(0, (basCm - nappeCm) / h.epaisseurCm)) : 0;
       hautCm = basCm;
+      // Part de l'horizon située sous la surface libre, et sous celle de l'aquifère.
+      const partSous = (cm: number) =>
+        h.epaisseurCm > 0 ? Math.min(1, Math.max(0, (basCm - cm) / h.epaisseurCm)) : 0;
+      const partNoyee = partSous(nappeCm);
       if (partNoyee <= 0) continue;
+      const partAquifere = partSous(aquifereCm);
+      engorgementParHorizon[i] = partAquifere;
       const cibleRu = h.ruMm * partNoyee;
       if ((eauMm[i] ?? 0) < cibleRu) {
         nappeMm += cibleRu - (eauMm[i] ?? 0);
         eauMm[i] = cibleRu;
       }
-      const cibleExces = h.porositeMm * partNoyee;
+      const cibleExces = h.porositeMm * (partNoyee - partAquifere);
       if ((excesMm[i] ?? 0) < cibleExces) {
         nappeMm += cibleExces - (excesMm[i] ?? 0);
         excesMm[i] = cibleExces;
       }
+      const libreMax = h.porositeMm * (1 - partAquifere);
+      if ((excesMm[i] ?? 0) > libreMax) {
+        rendueMm += (excesMm[i] ?? 0) - libreMax;
+        excesMm[i] = libreMax;
+      }
     }
   }
+  // Ce qui quitte le profil pour l'aquifère : par le bas, à ce que l'exutoire
+  // laisse passer, et par la part noyée.
+  const drainageMm = sortieExutoireMm + rendueMm;
 
-  const engorgementParHorizon = out?.engorgementParHorizon ?? new Array<number>(n);
   for (let i = 0; i < n; i++) {
     const h = horizons[i];
-    engorgementParHorizon[i] =
-      h && h.porositeMm > 0 ? Math.min(1, (excesMm[i] ?? 0) / h.porositeMm) : 0;
+    const libre = h && h.porositeMm > 0 ? (excesMm[i] ?? 0) / h.porositeMm : 0;
+    engorgementParHorizon[i] = Math.min(1, (engorgementParHorizon[i] ?? 0) + libre);
   }
   const drainageNetMm = Math.max(0, drainageMm - nappeMm);
   // **Ce qui a traversé la base de l'horizon 0 se lit sur le bilan du

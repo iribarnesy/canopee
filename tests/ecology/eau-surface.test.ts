@@ -211,6 +211,17 @@ describe("la crue comme événement (#288)", () => {
   // à l'équilibre et s'inonde une semaine, puis la crue de l'hiver 1965-66 part
   // la deuxième semaine de janvier et dure vingt semaines, jusqu'en mai. Le
   // talweg y porte 542 000 mm de débit pendant que la lame plafonne à 70 mm.
+  //
+  // **Depuis #380 et #381, la crue que l'essai lit est celle de janvier 1965.**
+  // La nappe lue sur l'aquifère n'est plus abaissée de l'eau que la saturation
+  // imposée lui prenait, et une cellule pleine le reste : la crue que l'état
+  // initial ne faisait durer qu'une semaine dure dix-neuf semaines et se ferme
+  // en mai ; celle de l'hiver 1965-66 part en septembre et dure trente-huit
+  // semaines, sur 99 % de la parcelle au plus, lame 144 mm. Les racines n'en
+  // voient presque rien : sur une prairie de trente mètres, de 1964 à 1973,
+  // l'engorgement d'hiver de l'horizon de surface vaut 0,57 (0,55 avant), mais
+  // la parcelle est inondée 41 % de l'hiver (7 % avant). Le critère ne change
+  // pas : un fond de vallée a sa crue d'hiver, qui commence, dure et se ferme.
   let memo: ReturnType<typeof deuxAns> | undefined;
   const valleeDeuxAns = () => {
     memo ??= deuxAns(VALLEE_ENGORGEE, 100, 1);

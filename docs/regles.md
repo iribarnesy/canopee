@@ -70,7 +70,9 @@ Trois effets, tous exprimés dans le bilan hydrique existant :
 1. **saturation imposée** — sous la surface libre, réserve utile **et**
    macroporosité sont pleines. Ce n'est pas un flux qu'on choisit, c'est un
    état ; l'eau ainsi ajoutée est comptée comme venue de la nappe, sinon le
-   bilan ne bouclerait pas ;
+   bilan ne bouclerait pas. Sous la nappe de l'aquifère lui-même, la
+   macroporosité noyée est déjà comptée dans son stock (§4.4) : seule la
+   réserve utile y est remplie ;
 2. **remontée capillaire** — décroissance exponentielle avec la distance
    verticale, sur une hauteur capillaire déduite de la texture (30 cm dans un
    sable, ~1,8 m dans un limon) ;
@@ -264,17 +266,25 @@ par la porosité drainable : cent millimètres font soixante-dix centimètres de
 battement dans un sable, deux mètres dans une argile.
 
 Quand elle atteint la base du profil, elle entre dans le sol et les mécanismes
-existants prennent le relais — saturation imposée, exutoire bouché, asphyxie.
-L'inondation n'est rien d'autre que le prolongement de la montée.
+existants prennent le relais — saturation, exutoire bouché, asphyxie.
+L'inondation n'est rien d'autre que le prolongement de la montée. La capacité
+de l'aquifère compte la colonne du profil : sous sa surface libre, la
+macroporosité est pleine de **son** eau, et le profil ne la tient pas une
+seconde fois (#380). Une cellule pleine ne cède à sa voisine d'aval que ce
+que celle-ci peut recevoir (#381).
 
 C'est ce stock qui permet à une **forêt de faire baisser la nappe** en
 transpirant, et à un **incendie de la faire remonter** : mesuré sur une aulnaie
-de fond de vallée, 0,74 m sous la surface avec la forêt, 0,20 m et 9 % de la
-parcelle inondée l'hiver qui suit le feu.
+de fond de vallée, la nappe d'hiver à 0,90 m sous la surface avec la forêt, à
+0,02 m et toute la parcelle inondée au plus l'année qui suit le feu (relevé de
+#380 et #381 ; `docs/realisme.md`, « Cas d'étude : après l'incendie,
+l'inondation »).
 
 **Plafond d'énergie.** La transpiration d'une cellule ne peut pas dépasser ce
-que l'ETP y apporte (à 15 % près, un couvert rugueux captant un peu plus qu'un
-gazon de référence). La demande d'un arbre étant proportionnelle à son
+que l'ETP y apporte, au plafond FAO-56 d'une surface rugueuse ou mouillée :
+1,20 fois l'ETP (Allen et al. 1998, éq. 72). L'ETP de la cellule porte déjà
+l'exposition du versant, et la demande de la strate n'y est comptée qu'une
+fois (#342, réglé par #391). La demande d'un arbre étant proportionnelle à son
 houppier, la somme des demandes dépassait sinon plusieurs fois l'énergie reçue
 dès que les couronnes se superposent.
 
