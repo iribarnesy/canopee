@@ -196,8 +196,7 @@ describe("LE CRITÈRE : un peuplement qu'on vient d'ouvrir verse", () => {
     let toutDeSuiteEclairci = 0;
     let toutDeSuiteTemoin = 0;
     let cohorteTotale = 0;
-    let abriEclairci = 0;
-    let abriTemoin = 0;
+    const abrisParGraine: { graine: number; eclairci: number; temoin: number }[] = [];
     for (const graine of [3, 7, 11, 13, 17, 19]) {
       let base: GameState = plantScattered(
         createGameState(stationB, rngStateFromSeed(graine)),
@@ -227,8 +226,9 @@ describe("LE CRITÈRE : un peuplement qu'on vient d'ouvrir verse", () => {
       const dom = vE.filter((t) => t.heightM > 0.8 * hMax);
       const cohorte = new Set(dom.map((t) => t.id));
       cohorteTotale += cohorte.size;
-      abriEclairci += moyenne(dom.map((t) => abriAuVent(vE, t))) * dom.length;
-      abriTemoin += moyenne(dom.map((t) => abriAuVent(vT, t))) * dom.length;
+      const abriE = moyenne(dom.map((t) => abriAuVent(vE, t)));
+      const abriT = moyenne(dom.map((t) => abriAuVent(vT, t)));
+      if (dom.length > 0) abrisParGraine.push({ graine, eclairci: abriE, temoin: abriT });
       for (const [eclairciBras, depart] of [
         [true, eclairci],
         [false, base],
@@ -256,7 +256,22 @@ describe("LE CRITÈRE : un peuplement qu'on vient d'ouvrir verse", () => {
     }
     // L'ouverture dépouille les dominants : relevé 0,275 → 0,189 sur les six
     // graines, soit un tiers de leur abri.
-    expect(abriEclairci / cohorteTotale).toBeLessThan(0.8 * (abriTemoin / cohorteTotale));
+    //
+    // **Réécrit sur son critère (#438), et c'est signalé.** C'est la prémisse du
+    // banc, pas son critère (le critère est le rapport des couchés, plus bas),
+    // et elle portait une ampleur relevée sur le moteur : moins de 0,8 fois
+    // l'abri du témoin. Depuis que la pénombre conserve le feuillage des
+    // couronnes, le témoin non éclairci s'éclaircit de lui-même : à quarante
+    // ans, 1 431 à 1 475 tiges/ha sur les graines 3 et 7, contre 2 325 sur main
+    // (graine 7). L'éclaircie à 150 tiges/ha y retire donc moins d'abri : 0,83
+    // fois celui du témoin sur les deux graines, contre 0,51 sur main. Ce que la
+    // prémisse affirme, c'est que l'ouverture **retire** de l'abri aux dominants :
+    // elle se vérifie graine par graine, sur chaque graine dont l'éclaircie
+    // garde des dominants.
+    expect(cohorteTotale).toBeGreaterThan(0);
+    for (const a of abrisParGraine) {
+      expect(a.eclairci, `graine ${a.graine}`).toBeLessThan(a.temoin);
+    }
 
     // ── **et c'est la fenêtre de cinq ans qui porte la mesure** (#183) ──────────
     //
@@ -278,12 +293,23 @@ describe("LE CRITÈRE : un peuplement qu'on vient d'ouvrir verse", () => {
     // La fenêtre de **cinq ans** est celle qui compte, et le commentaire ci-dessus
     // disait déjà pourquoi : au-delà, les deux bras ont divergé en hauteur et
     // en diamètre, donc on ne mesure plus l'abri perdu mais tout ce qui a
-    // suivi. Les deux seuils sont posés sous les rapports mesurés — 1,75 sous
+    // suivi. Les deux seuils étaient posés sous les rapports mesurés — 1,75 sous
     // 2,45 et 1,3 sous 1,64 — et tous deux au-dessus de 1.
+    //
+    // **Relu (#438, décision du propriétaire) : l'essai n'exige plus que la
+    // direction.** Les deux seuils étaient relevés sur le moteur. Depuis que la
+    // pénombre conserve le feuillage des couronnes, le témoin non éclairci
+    // s'éclaircit de lui-même : 1 431 à 1 475 tiges/ha à quarante ans, contre
+    // 2 325 sur main. Il verse donc déjà davantage, et l'ouverture n'ajoute plus
+    // que 1,32 fois sur cinq ans (25 couchés contre 19) et 1,25 fois sur douze
+    // (60 contre 48). C'est le motif que F18 écrit déjà pour la carie du tronc :
+    // ce n'est pas la naïveté qui a baissé, **c'est le témoin qui a cessé d'être**
+    // **intact**. Ce qui reste exigé, sur les deux fenêtres : plus de couchés dans
+    // le bras éclairci que dans le témoin.
     expect(couchesTemoin).toBeGreaterThan(0);
     expect(toutDeSuiteTemoin).toBeGreaterThan(0);
-    expect(toutDeSuiteEclairci).toBeGreaterThan(1.75 * toutDeSuiteTemoin);
-    expect(couchesEclairci).toBeGreaterThan(1.3 * couchesTemoin);
+    expect(toutDeSuiteEclairci).toBeGreaterThan(toutDeSuiteTemoin);
+    expect(couchesEclairci).toBeGreaterThan(couchesTemoin);
     // **Le délai** (#378) : six graines de quarante ans, puis deux bras de douze.
     // Rien ne s'y rogne : les couchés se comptent par dizaines sur les six
     // graines (49 contre 20 sur cinq ans), et une graine de moins amincit

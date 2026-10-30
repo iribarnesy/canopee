@@ -56,19 +56,28 @@ function snapshotStats(state: GameState) {
   };
 }
 
-/** La friche laissée à elle-même `annees` ans depuis une graine, relevée aux années demandées. */
+/**
+ * La friche laissée à elle-même `annees` ans depuis une graine, relevée aux années
+ * demandées. Elle note aussi le **sommet du fourré** : le plus grand nombre de
+ * tiges vivantes relevé en fin d'année jusqu'à l'an 60, avant que la canopée
+ * pionnière ne s'installe (essai de l'an 60).
+ */
 function friche(graine: number, annees: number, releves: readonly number[]) {
   const weather = syntheticYear(FRICHE_LIMON.climat);
   let state = createGameState(FRICHE_LIMON.station, rngStateFromSeed(graine));
   const snapshots = new Map<number, ReturnType<typeof snapshotStats>>();
+  let sommetDuFourre = 0;
   for (let i = 0; i < annees * 52; i++) {
     const w = weather[i % 52];
     if (!w) throw new Error("météo manquante");
     state = tick(state, w).state;
     const year = (i + 1) / 52;
     if (releves.includes(year)) snapshots.set(year, snapshotStats(state));
+    if (Number.isInteger(year) && year <= 60) {
+      sommetDuFourre = Math.max(sommetDuFourre, state.trees.filter((t) => t.alive).length);
+    }
   }
-  return snapshots;
+  return { snapshots, sommetDuFourre };
 }
 
 /**
@@ -132,7 +141,7 @@ function canopeePionniereHetresDessous(an60: ReturnType<typeof snapshotStats>) {
 
 describe("succession émergente sur friche (200 ans, rien n'est planté)", () => {
   // Une seule longue simulation, snapshots aux années 15, 60, 120 et 200.
-  const snapshots = friche(2026, 200, [15, 60, 120, 200]);
+  const { snapshots, sommetDuFourre } = friche(2026, 200, [15, 60, 120, 200]);
   const an15 = snapshots.get(15);
   const an60 = snapshots.get(60);
   const an120 = snapshots.get(120);
@@ -157,7 +166,7 @@ describe("succession émergente sur friche (200 ans, rien n'est planté)", () =>
     it(
       `an 60 (graine ${graine}) : canopée pionnière, les hêtres attendent dans le sous-étage`,
       () => {
-        const an = graine === 2026 ? an60 : friche(graine, 60, [60]).get(60);
+        const an = graine === 2026 ? an60 : friche(graine, 60, [60]).snapshots.get(60);
         if (!an) throw new Error("snapshot manquant");
         canopeePionniereHetresDessous(an);
       },
@@ -212,7 +221,16 @@ describe("succession émergente sur friche (200 ans, rien n'est planté)", () =>
     // de #458 en a déplacé la phase, et la graine 2026 rendait 2 048 à l'an 200,
     // à embolie et défeuillaison nulles. Ce que dit le commentaire ci-dessus reste
     // vérifié : la densité a fondu par rapport au fourré.
+    //
+    // **Réécrit sur son critère (#438), et c'est signalé.** Le fourré était lu à
+    // l'an 15, et l'essai supposait que l'an 15 en était le sommet. Depuis que la
+    // pénombre conserve le feuillage des couronnes, le fourré s'éclaircit plus tôt
+    // sous son propre couvert : 2 172 tiges/ha à l'an 15, moins que les 2 520 de
+    // l'an 200, qui tombe au haut de l'oscillation décrite ci-dessus. Le critère
+    // est que la densité ait fondu par rapport **au fourré** : on la compare à son
+    // sommet, relevé chaque année jusqu'à l'an 60.
     const parHa = (n: number) => (n / (50 * 50)) * 10_000;
-    expect(parHa(an200.aliveCount)).toBeLessThan(parHa(an15.aliveCount));
+    expect(sommetDuFourre).toBeGreaterThanOrEqual(an15.aliveCount);
+    expect(parHa(an200.aliveCount)).toBeLessThan(parHa(sommetDuFourre));
   });
 });
