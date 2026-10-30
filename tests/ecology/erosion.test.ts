@@ -19,12 +19,23 @@ import { tick } from "../../src/engine/tick";
 const COTE = 30;
 
 /** Fait tourner n années sur un versant, avec l'herbe qu'on veut au départ. */
-function surUnVersant(pentePct: number, herbeInitiale: number, annees: number) {
+/** Rangée du pied : le versant descend jusqu'à elle, et le replat commence là. */
+const PIED = 8;
+
+function surUnVersant(pentePct: number, herbeInitiale: number, annees: number, aSonPied = false) {
+  // Le versant qui finit sur un replat : plat jusqu'à la rangée du pied, puis
+  // la pente vers le nord (terrain dessiné).
+  const altitudesM = aSonPied
+    ? Array.from(
+        { length: COTE * COTE },
+        (_, i) => Math.max(0, Math.floor(i / COTE) - PIED) * (pentePct / 100),
+      )
+    : undefined;
   const st = {
     ...LIMON_RICHE.station,
     coteM: COTE,
     herbeInitiale,
-    relief: { ...RELIEF_PLAT, pentePct, expositionDeg: 180 },
+    relief: { ...RELIEF_PLAT, pentePct, expositionDeg: 180, ...(altitudesM ? { altitudesM } : {}) },
     voisinage: [],
     gibierParHa: 0,
   };
@@ -107,9 +118,18 @@ describe("l'érosion amincit le sol, et c'est la boucle qui se referme", () => {
     expect(perte(couvert.state)).toBeLessThan(0.2 * perte(nu.state));
   });
 
-  it("ce qui part du haut épaissit le bas : le colluvium", () => {
-    const { state } = surUnVersant(30, 0, 25);
-    // Le terrain descend vers le sud (y = 0) : la terre s'accumule en bas.
+  it("ce qui part du haut épaissit le pied du versant : le colluvium", () => {
+    // **Réécrit sur son critère** (#351). L'essai lisait un versant plan, et la
+    // terre s'y accumulait sur la seule rangée du bas : le point bas de la
+    // parcelle n'avait pas de pente, il ne s'érodait pas et recevait les dépôts
+    // de l'amont (−0,66 cm en vingt-cinq ans, quand la rangée du dessus perdait
+    // 0,22). C'était le défaut de #351 : le terrain continue au-delà du bord, et
+    // le bas d'un versant régulier n'en est pas le pied. Avec la pente qui
+    // continue, la rangée du bas perd comme celle du dessus (0,123 cm contre
+    // 0,116) et plus aucune cellule ne gagne. Le colluvium se dépose là où la
+    // pente faiblit : l'essai porte sur un versant qui finit sur un replat.
+    const { state } = surUnVersant(30, 0, 25, true);
+    // Le terrain descend vers le sud (y = 0) jusqu'au replat.
     const bande = (yDebut: number, yFin: number) => {
       let somme = 0;
       let n = 0;
@@ -121,8 +141,9 @@ describe("l'érosion amincit le sol, et c'est la boucle qui se referme", () => {
       }
       return somme / Math.max(1, n);
     };
-    // En haut on perd (valeur positive), en bas on gagne (valeur négative).
-    expect(bande(COTE - 8, COTE)).toBeGreaterThan(bande(0, 8));
+    // En haut on perd (valeur positive), au pied on gagne (valeur négative).
+    expect(bande(COTE - 8, COTE)).toBeGreaterThan(0);
+    expect(bande(PIED, PIED + 1)).toBeLessThan(0);
   });
 
   it("une cellule ne perd pas une terre qu'elle n'a pas, et ce qui part arrive ailleurs (#283)", () => {
@@ -172,7 +193,9 @@ describe("l'érosion amincit le sol, et c'est la boucle qui se referme", () => {
   it("un sol aminci retient moins d'eau : la boucle est vicieuse", () => {
     // On compare la réserve utile de surface là où le sol a le plus maigri à
     // celle d'une cellule intacte. Le lien passe par l'épaisseur d'horizon.
-    const { state } = surUnVersant(30, 0, 25);
+    // Sur le versant qui finit sur un replat, depuis #351 : un versant plan
+    // n'a plus de cellule qui gagne (voir l'essai du colluvium).
+    const { state } = surUnVersant(30, 0, 25, true);
     const perdues = [...state.soil.epaisseurPerdueCm];
     expect(Math.max(...perdues)).toBeGreaterThan(0);
     expect(Math.min(...perdues)).toBeLessThan(0);

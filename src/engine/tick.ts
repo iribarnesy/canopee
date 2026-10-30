@@ -1066,11 +1066,13 @@ export function tick(state: GameState, weather: WeekWeather, essai?: ReglagesDEs
   const availFactor = new Array<number>(nCells);
   /** Le même frein, lu sur le stock du sous-sol (lot B). */
   const availFactorFond = new Array<number>(nCells).fill(0);
-  // **Les solutés ne lisent pas le drainage sous le profil** (#291). Il compte
-  // l'eau que la nappe fait entrer par le bas et ressortir par le bas — 4,9 m
-  // par an sur le sable profond — et qui ne traverse jamais la surface. Deux
-  // flux nets le remplacent : ce qui passe vraiment sous l'horizon 0, et ce qui
-  // quitte vraiment le profil (water.ts).
+  // **Les solutés ne lisent pas le drainage sous le profil** (#291). Il
+  // comptait l'eau que la nappe faisait entrer par le bas et ressortir par le
+  // bas — 4,9 m par an sur le sable profond — et qui ne traversait jamais la
+  // surface ; cette boucle est partie avec #380, mais la nappe remplit encore
+  // par le bas la réserve utile qu'elle noie. Deux flux nets le remplacent : ce
+  // qui passe vraiment sous l'horizon 0, et ce qui quitte vraiment le profil
+  // (water.ts).
   const percolationSurfaceMmArr = new Array<number>(nCells);
   const drainageNetMmArr = new Array<number>(nCells);
   let evapSum = 0;
@@ -1219,10 +1221,14 @@ export function tick(state: GameState, weather: WeekWeather, essai?: ReglagesDEs
   // voisine, et celle que porte l'aquifère. C'est la plus **haute** des deux qui
   // gouverne, puisque c'est elle qui sature le sol en premier.
   const nappeCm = new Float32Array(nCells);
+  // Celle de l'aquifère seul : sous elle, l'eau gravitaire du profil est déjà
+  // comptée dans son stock (#380).
+  const nappeAquifereCm = new Float32Array(nCells);
   for (let i = 0; i < nCells; i++) {
+    nappeAquifereCm[i] = profondeurPourStock(nappeStockMm[i] ?? 0, station.profil);
     nappeCm[i] = Math.min(
       nappeEauLibreCm[i] ?? Number.POSITIVE_INFINITY,
-      profondeurPourStock(nappeStockMm[i] ?? 0, station.profil),
+      nappeAquifereCm[i] ?? Number.POSITIVE_INFINITY,
     );
   }
   let cellulesInondees = 0;
@@ -1332,6 +1338,7 @@ export function tick(state: GameState, weather: WeekWeather, essai?: ReglagesDEs
           ? station.remonteeNappeMmSemaine + remonteeCapillaireMm(nappeCm[i] ?? 0, station.profil)
           : station.remonteeNappeMmSemaine,
         nappeProfondeurCm: nappeCm[i] ?? Number.POSITIVE_INFINITY,
+        aquifereProfondeurCm: nappeAquifereCm[i] ?? Number.POSITIVE_INFINITY,
         drainageExterneMm: drainageAvecNappe(
           station.drainageExterneMmSemaine,
           nappeCm[i] ?? Number.POSITIVE_INFINITY,
@@ -1588,22 +1595,29 @@ export function tick(state: GameState, weather: WeekWeather, essai?: ReglagesDEs
   // ── 2 ter. La nappe s'écoule vers l'aval ─────────────────────────────────
   // Même réseau que le ruissellement, mais bien plus lentement : c'est le
   // débit de base, celui qui fait les bas de pente frais et les sources.
+  //
+  // **Une voisine pleine ne reçoit rien, et ce qu'elle refuse reste en
+  // amont** (#381). La cellule le cédait quand même et l'eau ressortait chez
+  // elle : un aquifère plein perdait chaque semaine sa part de vidange, et sa
+  // nappe, qu'on lit après, ne remontait jamais plus haut que la vidange
+  // d'une semaine — 4,6 cm sur le sable à plat, à 0,4 cm du seuil
+  // d'affleurement. La source n'est pas perdue : une cellule pleine qui reste
+  // pleine rend en surface, la semaine suivante, ce que la pluie y ajoute.
   for (const i of descente) {
     const stock = nappeStockMm[i] ?? 0;
     if (stock <= 0) continue;
     const part = stock * tauxDeVidange(station.profil, pentes[i] ?? 0);
     if (part <= 0) continue;
-    nappeStockMm[i] = stock - part;
     const j = aval[i] ?? -1;
     if (j < 0) {
+      nappeStockMm[i] = stock - part;
       vidangeNappeMm += part;
       continue;
     }
     const place = Math.max(0, capaciteNappeMm - (nappeStockMm[j] ?? 0));
     const recu = Math.min(part, place);
+    nappeStockMm[i] = stock - recu;
     nappeStockMm[j] = (nappeStockMm[j] ?? 0) + recu;
-    // Si l'aval est plein, l'eau ressort : c'est une source de rupture de pente.
-    if (part > recu) debordementParCellule[i] = (debordementParCellule[i] ?? 0) + (part - recu);
   }
 
   // L'eau qui court emporte la terre : ce qui suit descend avec elle, cellule
@@ -2663,9 +2677,14 @@ export function tick(state: GameState, weather: WeekWeather, essai?: ReglagesDEs
     for (let k = 0; k < nT; k++) {
       const h = tranches.horizon[k] ?? 0;
       const partHorizon = (tranches.epaisseurCm[k] ?? 0) / (station.profil[h]?.epaisseurCm ?? 1);
+      // L'eau gravitaire d'un horizon se lit sur son engorgement : sous la
+      // nappe, sa part noyée est pleine, et cette eau-là est comptée dans
+      // l'aquifère, pas dans `excessMm` (#380).
       eauTranche[k] =
         (eauFletrissementTranche[k] ?? 0) +
-        ((waterMm[i * nH + h] ?? 0) + (excessMm[i * nH + h] ?? 0)) * partHorizon;
+        ((waterMm[i * nH + h] ?? 0) +
+          (waterlogging[i * nH + h] ?? 0) * (horizonsHydro[h]?.porositeMm ?? 0)) *
+          partHorizon;
       if (k < nS - 1) fluxTranche[k] = qSurface;
       else if (nT === nS) fluxTranche[k] = qSortie;
       else if (k === nS - 1) fluxTranche[k] = qSurface;

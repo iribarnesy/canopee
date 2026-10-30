@@ -74,9 +74,10 @@ function avecTroncs(state: GameState, part: number | undefined): GameState {
  * 0 pour « du bois dans le sens de la pente », 1 pour « du bois en travers ».
  *
  * L'eau de surface se lit sur `overflowMm` autant que sur
- * `ruissellementSortantMm` : le point bas d'une parcelle n'a pas de voisine
- * plus basse, donc pas de pente, donc tout ce qui y arrive y stagne avant de
- * s'en aller. Ne compter que le second ferait croire à un versant étanche.
+ * `ruissellementSortantMm` : ce qui stagne sur du plat finit aussi par s'en
+ * aller. Le point bas d'un versant, qui n'a pas de voisine plus basse dans la
+ * parcelle, a la pente du terrain qui continue depuis #351 : sur ce versant à
+ * 25 %, son eau sort en ruissellement, et elle sortait en débordement avant.
  */
 function versant(graine: number, part: number | undefined, annees: number, bassinAmontHa = 0.5) {
   const station = { ...STATION, relief: { ...STATION.relief, bassinAmontHa } };

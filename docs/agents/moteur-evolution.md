@@ -89,6 +89,93 @@ La marcescence du hêtre (0,35, *à calibrer*) a été posée pour le jeune hêt
 
 #353 voyait sous une hêtraie de 15 m autant de bouleaux s'installer sous le couvert que dans la trouée. Remesuré (hêtres à 8 m, cinq graines, quinze ans) : 61 sous le couvert pour 71 dans la trouée sur main, 46 pour 69 avec la pénombre normalisée. Mais ceux du couvert meurent de faim en deux à quatre ans sur main, en deux à trois sur la branche ; relevés un à un à quinze ans, les « survivants » du couvert sont des levées de l'année ou de l'an d'avant en train de mourir, plus deux ou trois sujets dans des trouées de houppiers (0,22 à 0,36 de lumière d'été). Sous un couvert planté à 3 m, aucun ne lève. Le filtre d'avril est une germination et l'été trie ; le mois de jugement ne change pas, et le commentaire de `regeneration.ts` le dit maintenant. **Avant de changer quand un filtre juge, suivre ceux qu'il laisse passer** : un compte d'installés n'est pas un compte de vivants.
 
+## Ce qu'un lot précédent a appris (l'hydrologie : la nappe dans le profil, #380 ; le plafond de la vidange, #381 ; le point bas d'un versant, #351 ; #342 vérifiée ; #337 instruite)
+
+Le lot v0.6 de l'hydrologie. Trois défauts de comptage, corrigés dans les mécanismes existants, sans état neuf (le format reste 15) : l'aquifère et le profil comptaient deux fois l'eau de la part noyée (#380) ; une cellule pleine cédait à une voisine pleine une eau qui ressortait chez elle (#381) ; le point bas d'un versant n'avait pas de pente (#351). #342 était réglée par #391, et une sonde le montre. #337, les crues du sable, est instruite sur ce qui reste. Prédictions et mesures dans les commits de la branche, avant chaque course.
+
+### Quand deux stocks se recouvrent, l'eau commune doit appartenir à l'un des deux
+
+La capacité de l'aquifère compte la colonne du profil : c'est ce qui laisse la nappe monter dans le sol et l'inonder. La profondeur lue sur son stock situait donc déjà la nappe dans le profil, et l'eau gravitaire de la part noyée était la sienne. La saturation imposée la remplissait en plus depuis ce stock : le niveau lu baissait d'autant, le profil rendait l'eau par drainage la semaine suivante, et la nappe d'une colonne de sable sans pluie faisait 60 → 138 → 60 → 138 cm. Sur trente ans de partie libre, 1 910 mm de drainage par an pour 330 de recharge, et une autocorrélation de −0,85 des variations du niveau. La part que l'aquifère noie garde maintenant sa porosité pour lui ; seule la réserve utile s'y remplit depuis la nappe, et une nappe d'eau libre garde sa saturation imposée. **Une eau comptée dans deux stocks fait la navette entre eux**, et ce qu'on lit sur l'un dépend de la semaine.
+
+### Corriger un double compte rend l'eau à la lecture, pas forcément aux racines
+
+Sur la branche, la vallée s'inonde presque chaque hiver (39 crues en trente ans de partie libre, contre 2 sur main ; 41 % de la parcelle inondée l'hiver sur la prairie de 1964-1973, contre 7 %), et l'aulnaie de `incendie-nappe` brûlée l'est entièrement. Avant d'y voir une vallée noyée, la sonde a regardé ce que les racines subissent : l'engorgement d'hiver de l'horizon de surface passe de 0,55 à 0,57, celui du fond reste à 0,81. Le profil était déjà saturé sur main, par la saturation imposée, pendant que l'aquifère affichait 56 cm ; c'est la nappe lue qui rejoint l'état du sol. Seul l'été change vraiment : le fond sèche (0,57 → 0,31), le profil ne gardant plus de réserve perchée. **Avant de recaler une station sur une lecture qui bouge, mesurer si l'état qu'elle lit a bougé** ; ici il n'a pas bougé l'hiver, et le niveau déclaré de la vallée, qui n'a pas de source, n'est pas touché.
+
+### Un seuil de lecture posé près d'un plafond numérique lit le plafond
+
+La vidange d'une cellule pleine vers une voisine pleine ne déplaçait rien dans l'aquifère, mais elle retirait chaque semaine 0,5 % à la cellule : la nappe lue ensuite ne remontait jamais au-dessus de 4,6 cm sur le sable et de 4,4 dans la vallée, et le seuil d'affleurement est à 5. Une cellule inondée était une cellule au plafond, et une semaine sèche les sortait toutes ensemble. La cellule garde maintenant ce que l'aval refuse ; la nappe minimale la plus fréquente de la vallée passe de 4,4 à 0 cm, et les crues du sable de une à deux semaines en médiane. **Un seuil à quelques millimètres d'un plafond que le schéma impose mesure le schéma, pas l'état** ; et quand l'écart tient à deux constantes *à calibrer* (l'épaisseur de l'aquifère, la vidange minimale), un mètre d'aquifère de plus suffisait à rendre l'inondation impossible.
+
+### Le bord d'une parcelle n'est pas le pied d'un versant
+
+Le point bas d'un versant n'avait pas de pente : `penteParCellule` ne regardait que l'intérieur, la cellule de l'exutoire n'y a pas de voisine plus basse, et toute l'eau qui y arrivait « stagnait ». La conservation ne voyait rien, les deux flux étant des sorties. Le terrain est maintenant prolongé au-delà du bord pour ces seules cellules : sur un versant de 25 %, 60 mm/an sortent en ruissellement, contre 67 en débordement. Mais la rangée du bas s'érode à son tour, et deux essais de `erosion.test.ts` cassaient : leur colluvium était cette seule rangée, plate par le défaut, qui recevait les dépôts sans s'éroder (−0,66 cm en vingt-cinq ans, quand la rangée du dessus perdait 0,22). Sur un versant régulier qui continue, plus bas veut dire plus d'eau et plus de perte ; le colluvium se dépose où la pente faiblit, et les deux essais portent maintenant sur un versant qui finit sur un replat. **Un dépôt qui ne se forme qu'au bord du domaine est un effet de bord** avant d'être un dépôt.
+
+### `sin(180°)` ne vaut pas zéro
+
+La correction du point bas laissait 3,4 mm/an de débordement sur le versant plein sud : deux cellules de la rangée du bas se trouvaient une voisine « plus basse » de 10⁻¹⁷ m (le terme croisé du versant porte `sin(180°)` = 1,2·10⁻¹⁶), n'étaient donc pas l'exutoire, et l'eau y stagnait. Un dénivelé de moins d'un nanomètre ne compte plus. **Une égalité de flottants qui décide d'un chemin doit avoir sa tolérance écrite** ; elle ne se voit qu'en comptant les cellules, pas dans un total.
+
+### Un défaut réglé ailleurs se ferme sur une mesure
+
+#391 avait retiré `PLAFOND_ENERGIE` et posé le plafond à 1,20 fois l'ETP de la cellule. La lecture du code suffisait presque ; une sonde l'a confirmé sur une aulnaie dense de fond de vallée : le plafond mord à 1,19-1,20 sur le plat, l'adret et l'ubac à 50 %, là où il mordait à 1,36 sur l'adret et à 0,85 sur l'ubac avant #391. Elle a aussi trouvé `regles.md` qui disait encore « à 15 % près ». **Une issue fermée sur un titre de commit laisse les documents mentir** ; la mesure coûte une sonde, et elle oblige à relire ce qui décrit la règle.
+
+### Une crue de sable dure ce que dure la pluie
+
+#337 comptait 136 crues en trente ans sur le sable profond. La station redéclarée (#369) en laissait 55 ; #391, dont la strate boit sa part, 17 à 18, toutes d'une semaine, et sortait la nappe de la classe VI par le bas (GHG 89-90 cm). Après #380 et #381 : 22 sur les trois graines, toutes dans les années humides (1974-1975, 1978-1983, 1988, 1992-1993), 86 % l'hiver, et la nappe revient dans la classe VI (GHG 74-75, GLG 173-175) sans toucher au niveau déclaré. Le sable s'inonde maintenant moins souvent que la vallée (39) et moins longtemps (deux semaines en médiane contre douze). Mais un hiver humide s'y découpe encore en deux à sept crues : un sable plein perd 5 à 8 cm par semaine sèche par l'échange régional, et l'eau qui ressort ne reste pas en surface (lame médiane 0,16 mm). La porosité drainable du sable (15 % dans le moteur, 21 à 27 % de rendement spécifique pour un sable fin à grossier, Johnson 1967) et l'échange régional *(à calibrer)* décident de ce battement, et l'eau qui stagne dans les creux est un mécanisme absent. **Une crue est un état de la surface autant que de la nappe** : tant que le moteur ne garde pas l'eau qui ressort, la crue d'un sol filtrant dure ce que dure la pluie.
+
+### Ce que ça donne
+
+Partie libre du jeu (météo réelle d'Abbeville pour le sable, de Tours pour la vallée ; ssp245, bocage, faune allumée, trente ans, aucun geste) ; trois graines sur main et sur la tête, une sur les étapes intermédiaires (l'hydrologie n'y dépend presque pas de la graine). GHG et GLG : moyenne des trois relevés bimensuels les plus hauts et les plus bas de chaque année hydrologique, au milieu de la parcelle.
+
+| | main 1ffa672 | #380 (7e363cc) | + #381 (e27927e) | tête (+ #351) |
+|---|---|---|---|---|
+| sable : crues (graines 1 / 2 / 3) | 18 / 17 / 18 | 25 | 22 | 22 / 22 / 22 |
+| sable : d'une ou deux semaines ; durée médiane / maximale | 100 % ; 1 / 1 | 92 % ; 1 / 3 | 73 % ; 2 / 4 | 77 % ; 2 / 4-5 |
+| sable : semaines de crue | 17-18 | 39 | 41 | 40-41 |
+| sable : autocorrélation des variations ; variation hivernale médiane | −0,85 ; 8,8 cm | +0,31 ; 4,4 | +0,30 ; 4,4 | +0,30 ; 4,4 |
+| sable : drainage | 1 906-1 912 mm/an | 329 | 327 | 327 |
+| sable : GHG / GLG | 89-90 / 164-167 cm | 75 / 174 | 74 / 174 | 74-75 / 173-175 |
+| vallée : crues ; semaines de crue | 2 / 2 / 2 ; 3 | 43 ; 430 | 39 ; 444 | 39 / 39 / 39 ; 443-445 |
+| vallée : durée médiane / maximale | 2 / 2 | 10 / 24 | 12 / 24 | 12 / 24 |
+| vallée : GHG / GLG ; nappe médiane | 34 / 113-114 ; 77 cm | 14 / 145 ; 89 | 11 / 146 ; 88 | 11 / 146 ; 88-89 |
+| vallée : nappe minimale la plus fréquente | 4,4 cm | 4,4 | 0 | 0 |
+| vallée : ruissellement sortant / débordement | 0 / 558 mm/an | 0 / 574 | 0 / 569 | 468 / 101 |
+
+Sondes des essais, déterministes, main contre la tête :
+
+| | main | tête |
+|---|---|---|
+| colonne de sable, 30 mm en semaine 2 | 60 → 138 → 60 → 138 → 78 → 138 cm | 60 → 70 → 62 → 72 → 82 cm |
+| plafond d'énergie (aulnaie dense : plat / adret / ubac) | 1,195 / 1,188 / 1,199 (avant #391 : 1,142 / 1,359 / 0,848) | inchangé |
+| versant à 25 %, un an : ruissellement sortant / débordement | 0,00 / 67,35 mm | 59,67 / 0,00 |
+| `erosion.test.ts`, 30 %, rangée du bas / bande du haut (25 ans) | −0,663 / +0,101 cm | +0,123 / +0,101 |
+| banc de A11 (15 %, dix ans) : arrachée / sortie | 11,8 / 1,62 t/ha/an | 12,6 / 2,11 |
+| `incendie-nappe` : nappe d'hiver intacte / brûlée ; inondée au plus | 77 / 26 cm ; 11 / 15 % | 90 / 2 ; 92 / 100 |
+| `incendie-nappe` : remontée isolée / massif | 50,5 / 98,9 cm | 87,9 / 140,4 |
+| `eau-surface`, vallée 1965-66 : crue lue | 20 semaines, 24 %, lame 70 mm | 19 semaines (celle de 1965) ; la suivante 38, 99 %, 144 mm |
+| prairie de la vallée, hiver : engorgement surface / fond ; inondée | 0,55 / 0,81 ; 7 % | 0,57 / 0,81 ; 41 % |
+| banc des tables (graines 17 et 43), hauteurs à vingt / quarante ans | hêtre 8,48 / 16,86 ; pin 8,34 / 15,64 ; aulne 11,85 / 18,45 ; frêne 8,61 / 16,14 ; charme 9,56 / 16,28 ; bouleau 13,39 / 19,18 ; châtaignier 10,69 / 19,47 m | à 0,2 % près (hêtre 8,48 / 16,85 ; pin 8,34 / 15,64 ; aulne 11,87 / 18,45 ; frêne 8,60 / 16,13 ; charme 9,56 / 16,27 ; bouleau 13,39 / 19,17 ; châtaignier identique) ; mêmes survivants |
+
+Essais : tous les essais nommés passent sans réécriture (`eau-surface`, `incendie-nappe`, `crue`, `crue-evenement`, `climat`, `saumos`, `hauteurs`, `calques-du-sol`, `snapshot`, les conservations), leurs commentaires donnant les nouveaux relevés. Réécrits sur leur critère, signalés : les trois essais du bloc #291 de `profil-hydro-conservation` qui décrivaient la boucle, et deux essais de `erosion.test.ts` qui lisaient le colluvium au bord de la parcelle.
+
+### Les prédictions fausses
+
+- P2 : la nappe de la colonne devait rester à 70 cm ou plus haut les semaines paires pendant huit semaines ; l'échange régional la fait descendre dès la semaine 4 (78 cm).
+- P4 : le sable de main devait compter 20 à 50 crues ; 17 à 18. La vallée de main, 8 à 25 ; 2.
+- P5 : la somme du ruissellement sortant et du débordement ne devait pas baisser ; elle baisse de 9 à 11 % (la rangée du bas ruisselle sa propre pluie). L'érosion exportée devait monter de 0 à 30 % ; 32 et 33 %. Le débordement ne tombait pas à zéro avant la tolérance d'arrondi (3,4 mm).
+- P6 : #380 ne devait pas ajouter de crues au sable ; 18 → 25. La part des crues d'une ou deux semaines devait baisser d'au moins dix points ; huit. La vallée devait compter 1,3 à 3 fois les crues de main ; 21 fois. Sa nappe médiane devait remonter d'au moins 5 cm ; elle descend de 12.
+- P7 : la nappe minimale la plus fréquente du sable devait passer à 0 avec #381 ; elle reste à 4,6 (la rangée du bas, qui cède hors de la parcelle) jusqu'à #351.
+- P8 : `erosion.test.ts` n'était pas prévu parmi les essais cassés.
+- E1 : la nappe d'hiver de l'aulnaie intacte devait remonter de 5 à 30 cm ; elle descend de 13. La parcelle brûlée devait être inondée de 20 à 60 % ; 100 %. La remontée devait tomber entre 20 et 50 cm ; 88.
+
+Justes : P1, P3 ; P4 pour la part de crues courtes, l'autocorrélation, la nappe minimale et la faible dépendance à la graine ; P5 pour le ruissellement sortant et la pente de 1 % ; P6 pour l'autocorrélation, le drainage, la variation hivernale et le GHG du sable ; P7 pour la vallée et pour les crues du sable ; P8 pour les essais qui passent et les trois essais de la boucle ; C1 à C4 ; E2, E3 ; V1, V2.
+
+### Ce qui reste ouvert
+
+- **La vallée s'inonde presque chaque hiver**, sur toute sa surface parfois (99 % au plus en 1965-66), alors que ses racines n'ont pas vu de changement l'hiver. Son niveau déclaré (40 cm) n'a pas de source ; le recaler serait caler sur le moteur sans cible. Options rapportées dans la PR.
+- **Les crues du sable** se découpent encore en épisodes d'une à cinq semaines dans un hiver humide. La porosité drainable du sable (15 % contre 21 à 27 %, Johnson 1967) et `ECHANGE_REGIONAL` *(à calibrer)* en décident ; l'eau qui stagne dans les creux n'existe pas dans le moteur.
+- **Une nappe d'eau libre** garde la saturation imposée, prise d'abord à l'aquifère quand il a de l'eau : la boucle de #291 y survit, plus bas que la nappe gouvernante, donc sans effet sur ce qu'on lit.
+- **La rangée qui cède hors de la parcelle** garde le plafond de la vidange (4,6 cm sur le sable) : elle reste lue comme inondée quand elle est pleine, et une semaine sèche l'en sort.
+- **Une cellule plate est un exutoire** (`voisineAval` vaut −1 sur un replat) : l'eau y stagne, mais la terre en transit y quitte la parcelle et la vidange de l'aquifère aussi.
+
 ## Ce qu'un lot précédent a appris (la litière du blé continu, #461)
 
 Le propriétaire avait retenu la piste A de #461 : la paille à C/N 90 ne se décomposerait plus faute d'azote minéral, et l'azote qu'elle immobilise sans plancher priverait le blé continu de l'équilibre de la parcelle Nil. Instruite sur la sonde de C16 (disque de 14 m sur 30 × 30 m, limon riche, quatre cents ans, déterministe : aucun arbre, aucun tirage), la prémisse ne tient pas. La correction retenue est ailleurs dans la décomposition : son humidité se lisait sur une réserve qui n'était plus celle de la cellule. Elle guérit la litière et ne rend pas l'équilibre. Les prédictions et les mesures sont dans les commits de la branche `claude/v06-litiere`, avant chaque course ; main a bougé en cours de lot (#411), et tout a été remesuré sur la fusion. Le format ne bouge pas (15) : aucun champ d'état n'est ajouté.

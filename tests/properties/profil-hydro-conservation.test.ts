@@ -217,12 +217,20 @@ describe("un fond mince ne bouche pas le profil (#263)", () => {
 });
 
 describe("l'eau qui emporte les solutés est celle qui traverse (#291)", () => {
-  // Sous une nappe, la saturation imposée remplit chaque semaine la
-  // macroporosité des horizons noyés, le ressuyage la vidange par le bas la
+  // Sous une nappe, la saturation imposée remplissait chaque semaine la
+  // macroporosité des horizons noyés, le ressuyage la vidangeait par le bas la
   // semaine suivante : 5 240 mm/an de drainage sur le sable profond pour 331 de
-  // percolation nette. L'eau se conserve (le premier bloc de ce fichier le
+  // percolation nette. L'eau se conservait (le premier bloc de ce fichier le
   // garde) ; ce bloc-ci garde que les solutés ne prennent pas la boucle pour de
   // la percolation.
+  //
+  // **La boucle est partie avec #380** : sous la nappe de l'aquifère, l'eau
+  // gravitaire est la sienne, et elle ne lui est plus reprise pour être
+  // rendue la semaine suivante. Les deux premiers essais vérifiaient que la
+  // boucle existait (« c'est le fait de l'issue ») : ils vérifient maintenant
+  // qu'elle n'existe plus, sur le même critère — rien ne traverse sans pluie,
+  // et les flux nets retrouvent la pluie. Une nappe tenue par une eau libre
+  // garde la saturation imposée, et son reflux : c'est le troisième.
   const SABLE_0 = { ruMm: 26, porositeMm: 37, conductiviteMm: 4000, epaisseurCm: 25 };
   const SABLE_1 = { ruMm: 34, porositeMm: 62, conductiviteMm: 5000, epaisseurCm: 45 };
   const SABLE_2 = { ruMm: 40, porositeMm: 85, conductiviteMm: 6000, epaisseurCm: 60 };
@@ -265,29 +273,33 @@ describe("l'eau qui emporte les solutés est celle qui traverse (#291)", () => {
     return cumul;
   }
 
-  it("sans pluie, la boucle sous la nappe draine mais rien ne traverse la surface", () => {
+  it("sans pluie, rien ne draine sous la nappe, et rien ne traverse la surface", () => {
     const c = semaines([SABLE_0, SABLE_1, SABLE_2], 0, 50);
-    // La boucle existe, et elle est grosse : c'est le fait de l'issue.
-    expect(c.drainage).toBeGreaterThan(1000);
+    // La boucle drainait plus de 1 000 mm en vingt-cinq semaines : elle n'est
+    // plus (#380).
+    expect(c.drainage).toBeLessThan(1e-6);
     // Aucune goutte n'a traversé l'horizon de surface, qui est au-dessus de la nappe.
     expect(c.surface).toBeLessThan(1e-9);
     // Et ce qui sort du profil n'est, en net, que ce que la nappe y a mis.
     expect(c.net).toBeLessThan(1e-6);
   });
 
-  it("avec pluie, les deux flux nets retrouvent la pluie et pas la boucle", () => {
+  it("avec pluie, le drainage et les deux flux nets retrouvent la pluie", () => {
     const c = semaines([SABLE_0, SABLE_1, SABLE_2], 12, 50);
     const pluie = 12 * 25;
-    expect(c.drainage).toBeGreaterThan(5 * pluie);
+    // Plus de cinq fois la pluie avec la boucle ; la pluie elle-même sans (#380).
+    expect(c.drainage).toBeCloseTo(pluie, 6);
     expect(c.surface).toBeCloseTo(pluie, 6);
     expect(c.net).toBeCloseTo(pluie, 6);
   });
 
-  it("une nappe dans l'horizon de surface : ce qui reflue ne compte pas pour traversé", () => {
-    // La vallée engorgée : nappe à 19 cm dans une surface de 30, exutoire presque
-    // fermé. La pluie descend, traverse, se fait refuser à l'exutoire et reflue
-    // jusqu'à ruisseler. La première version comptait la descente sans le
-    // reflux et voyait passer sous la surface dix fois ce qui sort du profil.
+  /**
+   * Quarante semaines de 20 mm sous une nappe fixe à 19 cm, dans une surface de
+   * 30 cm, exutoire presque fermé : les profils de la vallée engorgée.
+   * `aquifereCm` dit qui tient la nappe : l'aquifère lui-même (la même
+   * profondeur), ou une eau libre voisine, l'aquifère restant plus bas.
+   */
+  function sousUneNappeA19Cm(aquifereCm: number) {
     const horizons = [
       { ruMm: 60, porositeMm: 30, conductiviteMm: 300, epaisseurCm: 30 },
       { ruMm: 100, porositeMm: 55, conductiviteMm: 200, epaisseurCm: 55 },
@@ -318,6 +330,7 @@ describe("l'eau qui emporte les solutés est celle qui traverse (#291)", () => {
           nappeMm: 0,
           drainageExterneMm: 1.1,
           nappeProfondeurCm: 19,
+          aquifereProfondeurCm: aquifereCm,
         },
         r,
       );
@@ -327,10 +340,34 @@ describe("l'eau qui emporte les solutés est celle qui traverse (#291)", () => {
         ruissele += r.overflowMm;
       }
     }
+    return { surface, net, ruissele };
+  }
+
+  it("une nappe d'eau libre dans l'horizon de surface : ce qui reflue ne compte pas pour traversé", () => {
+    // La pluie descend, traverse, se fait refuser à l'exutoire et reflue
+    // jusqu'à ruisseler. La première version comptait la descente sans le
+    // reflux et voyait passer sous la surface dix fois ce qui sort du profil.
+    //
+    // **La nappe est celle d'une eau libre depuis #380**, et c'est le seul cas
+    // qui reflue encore. L'essai portait sur la vallée engorgée, dont la nappe
+    // est celle de son aquifère : sous elle, l'eau gravitaire est la sienne, la
+    // pluie le recharge au lieu de refluer, et c'est l'essai suivant.
+    const { surface, net, ruissele } = sousUneNappeA19Cm(Number.POSITIVE_INFINITY);
     expect(ruissele).toBeGreaterThan(400);
     // En régime, ce qui traverse la surface est ce qui sort du profil, pas la pluie.
     expect(surface).toBeCloseTo(net, 6);
     expect(surface).toBeLessThan(40);
+  });
+
+  it("la même nappe tenue par l'aquifère : la pluie le recharge, et ce qui traverse est ce qui sort", () => {
+    // Une nappe fixe, ici, ne monte pas : dans le tick, l'aquifère qui reçoit
+    // cette eau monte, se remplit, et rend en surface ce qu'il ne peut plus
+    // tenir. Ce que l'essai garde est le critère de #291 : ce qui traverse la
+    // surface est ce qui sort du profil, et c'est la pluie.
+    const { surface, net, ruissele } = sousUneNappeA19Cm(19);
+    expect(ruissele).toBeLessThan(1e-9);
+    expect(surface).toBeCloseTo(net, 6);
+    expect(net).toBeCloseTo(30 * 20, 6);
   });
 
   it("sans nappe, rien ne change : les flux nets valent le drainage", () => {
