@@ -121,6 +121,7 @@ import {
   azoteCritiqueG,
   chuteDuMortSurPied,
   DUREE_VIE_TISSUS_DJ,
+  facteurAzoteDeLaCroissance,
   herbeDemandeEauL,
   humiditeVecue,
   RUE_HERBACEE_G_MJ,
@@ -2374,8 +2375,12 @@ export function tick(state: GameState, weather: WeekWeather, essai?: ReglagesDEs
     // Ce qu'elle fabrique est la production possible de la semaine
     // (`herbePotentielG`, calculée avant le partage de l'azote), rabotée par sa
     // faim d'azote : sous la courbe critique de dilution, la croissance baisse
-    // en proportion de l'indice de nutrition azotée — la teneur de la plante sur
-    // la teneur critique —, ce que font les modèles de culture depuis Lemaire.
+    // comme le carré de l'indice de nutrition azotée — la teneur de la plante sur
+    // la teneur critique —, borné au plancher de STICS, parce que la carence
+    // freine à la fois les feuilles et l'efficience du rayonnement
+    // (`facteurAzoteDeLaCroissance`, #461). Le frein des feuilles passe ici et
+    // pas dans le feuillage : la couverture verte est aussi ce qui transpire,
+    // abrite le sol et se fauche.
     //
     // Ce qu'elle rend tient à son histoire de vie. **Une pérenne** perd ses tissus
     // à mesure qu'ils vieillissent (`DUREE_VIE_TISSUS_DJ`) et quand son feuillage
@@ -2424,11 +2429,8 @@ export function tick(state: GameState, weather: WeekWeather, essai?: ReglagesDEs
       let azote = (herbeAzoteG[k] ?? 0) + (herbeDemandeEspeceG[k] ?? 0) * serviEspece;
       let matiere = herbeMatiereSecheG[k] ?? 0;
       const potentiel = herbePotentielG[k] ?? 0;
-      if (potentiel > 0) {
-        const critique = azoteCritiqueG(matiere + potentiel);
-        const nutrition = critique > 0 ? Math.min(1, azote / critique) : 1;
-        matiere += potentiel * nutrition;
-      }
+      if (potentiel > 0)
+        matiere += potentiel * facteurAzoteDeLaCroissance(matiere + potentiel, azote);
       if (!fiche.culture && matiere > 0) {
         const avant = feuillagesAvant[s] ?? 0;
         const apres = herbeFeuillage[k] ?? 0;
