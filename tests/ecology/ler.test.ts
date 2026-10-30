@@ -446,6 +446,15 @@ describe("le dispositif à trois bras, soixante ans", () => {
    * plus sa réserve), mêmes graines : culture 0,637 / 0,639 / 0,652, arbre
    * 0,806 / 0,821 / 0,715, **total 1,444 / 1,460 / 1,367**, identique à main au
    * millième. Main en était déjà là, après #396, #412 et #420.
+   *
+   * **Relevé depuis que la faim d'azote freine deux fois la croissance des
+   * herbacées** (#461), mêmes graines, contre main après #463 : culture 0,628 /
+   * 0,636 / 0,643 (0,640 / 0,646 / 0,655), arbre 0,773 / 0,692 / 0,701 (0,810 /
+   * 0,764 / 0,725), **total 1,401 / 1,328 / 1,345** (1,451 / 1,410 / 1,380). Le
+   * blé pur fertilisé perd 2 % (9,68 t/ha contre 9,86), et c'est surtout le
+   * terme arbre qui baisse : le témoin forestier pousse plus vite (2,52 m³/ha/an
+   * contre 2,39 à la graine 23), sans doute parce que son herbe fait moins de
+   * matière par kilo d'azote *(non instruit)*.
    */
   it("le mélange bat la somme des parties", () => {
     const agro = bras(RANGS_AGROFORESTERIE, true);
@@ -594,6 +603,18 @@ describe("le dispositif à trois bras, soixante ans", () => {
     //
     // Le plancher passe sur les trois graines. Le sens de Restinclières est
     // retrouvé, pas son amplitude (~2,7 à dix-neuf ans).
+    //
+    // **Il ne passe plus que sur deux graines sur trois depuis #461**, et c'est
+    // dit ici plutôt que tu : la faim d'azote freine deux fois la croissance des
+    // herbacées, et le témoin forestier pousse plus vite (cause non instruite).
+    // Mêmes graines :
+    //
+    //   graine                     4       11      23    moyenne
+    //   main après #463          1,354   1,032   1,317    1,234
+    //   faim d'azote au carré    1,339   0,985   1,376    1,233
+    //
+    // La graine de l'essai passe, la moyenne ne bouge pas, la graine 11 repasse
+    // sous 1. Le plancher reste où il est : c'est le fait de Restinclières.
     expect(parArbre(agro) / parArbre(boisPur)).toBeGreaterThan(1);
     // **La culture**, **elle**, **paie** — et c'est le sens même d'un LER : le mélange rend
     // moins de grain par hectare de **parcelle** qu'un champ de blé pur, puisqu'il

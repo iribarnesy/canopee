@@ -43,14 +43,17 @@ import {
 } from "../../src/engine/tassement";
 import { tick } from "../../src/engine/tick";
 import { cellulesDeLaZone } from "../../src/engine/zone";
-import { CHAMP_LABOURE_AVANT_BROADBALK_ANS } from "../helpers";
+import { CHAMP_LABOURE_AVANT_BROADBALK_ANS, RELIEF_DE_BROADBALK } from "../helpers";
 
 const FICHE = HERBACEES.find((h) => h.id === "triticum_aestivum");
 if (!FICHE?.culture) throw new Error("fiche du blé manquante");
 const BLE = FICHE.culture;
 const WEATHER = syntheticYear(LIMON_RICHE.climat);
 
-/** Blé continu sans aucun apport — la parcelle nue de Broadbalk. */
+/**
+ * Blé continu sans aucun apport — la parcelle nue de Broadbalk, sur son relief
+ * (`RELIEF_DE_BROADBALK`, #461).
+ */
 function bleContinuSansApport(ans: number): number[] {
   const COTE = 30;
   const R = 14;
@@ -58,7 +61,12 @@ function bleContinuSansApport(ans: number): number[] {
   // Le grain se lit sur pied : la trésorerie compte aussi le passage d'engin.
   const zone = { x: centre, y: centre, rayonM: R };
   const aireHa = cellulesDeLaZone(COTE, zone).length / 10_000;
-  const station = { ...LIMON_RICHE.station, coteM: COTE, voisinage: [] };
+  const station = {
+    ...LIMON_RICHE.station,
+    coteM: COTE,
+    voisinage: [],
+    relief: { ...LIMON_RICHE.station.relief, ...RELIEF_DE_BROADBALK },
+  };
   let state: GameState = createGameState(station, rngStateFromSeed(4));
   const rendements: number[] = [];
   const geste = (a: GameAction) => {
@@ -185,6 +193,16 @@ describe("le point zéro, mesuré sur l'échelle de temps de Broadbalk", () => {
     // Nil ne l'était pas. Sur ce champ-là, main rend 0,35 / 0,30 / 0,26 t/ha
     // aux ans 201-260 et finit sous le facteur deux (sonde du blé continu,
     // déterministe) : il passait dans la bande, il ne s'y posait pas.
+    //
+    // **Et il s'y pose depuis #461**, sur un banc qui a changé : le relief de
+    // Broadbalk (une pente d'un degré, sans bassin amont) à la place de celui du
+    // limon riche, et une croissance qui suit la faim d'azote au carré
+    // (`facteurAzoteDeLaCroissance`). Les bornes ne bougent pas. Relevé :
+    // 3,90 / 3,36 / 2,75 / 2,29 / 1,94 / 1,65 / 1,41 / 1,26 / 1,20 / 1,17 / 1,16
+    // / 1,15 / 1,14 : il entre dans la bande aux ans 121 à 140 et y reste, en
+    // ne descendant plus que de 1 % par tranche à la fin. La descente stricte
+    // tient encore sur ces treize tranches ; au-delà, le grain ne bouge plus
+    // (1,13 t/ha de l'an 260 à l'an 400).
     const N = CHAMP_LABOURE_AVANT_BROADBALK_ANS / 20 + 3;
     const r = bleContinuSansApport(N * 20);
     const tranche = (d: number) => {

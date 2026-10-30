@@ -17,7 +17,7 @@ import { createGameState, type GameState, plantAt } from "../../src/engine/state
 import { LIMON_RICHE } from "../../src/engine/stations";
 import { tick } from "../../src/engine/tick";
 import { cellulesDeLaZone } from "../../src/engine/zone";
-import { CHAMP_LABOURE_AVANT_BROADBALK_ANS } from "../helpers";
+import { CHAMP_LABOURE_AVANT_BROADBALK_ANS, RELIEF_DE_BROADBALK } from "../helpers";
 
 const S_BLE = HERBACEES.findIndex((h) => h.id === "triticum_aestivum");
 const FICHE_BLE = HERBACEES[S_BLE];
@@ -38,9 +38,14 @@ function culture(options: {
   /** Graine de la partie. Une seule ne dit rien dès qu'il y a des arbres. */
   graine?: number;
   arbres?: { especeId: string; y: number }[];
+  /** La pente et le bassin amont de Broadbalk à la place de ceux du limon riche (#461). */
+  reliefDeBroadbalk?: boolean;
 }): number[] {
   const { ans, cote, rayonM } = options;
-  const station = { ...LIMON_RICHE.station, coteM: cote, voisinage: [] };
+  const relief = options.reliefDeBroadbalk
+    ? { ...LIMON_RICHE.station.relief, ...RELIEF_DE_BROADBALK }
+    : LIMON_RICHE.station.relief;
+  const station = { ...LIMON_RICHE.station, coteM: cote, voisinage: [], relief };
   let state: GameState = createGameState(station, rngStateFromSeed(options.graine ?? 4));
   for (const rang of options.arbres ?? []) {
     for (let x = 2; x < cote; x += 8) state = plantAt(state, rang.especeId, x, rang.y, 2);
@@ -228,8 +233,38 @@ describe("ce que le blé rend, contre une source extérieure au moteur", () => {
     // #391. Lue sur la réserve de la cellule, elle reste à 3 t C/ha, et le grain
     // ne bouge pas (1,458 / 1,339 / 1,240 t/ha contre 1,461 / 1,341 / 1,244) :
     // le blé baisse encore de 5 à 6 % tous les vingt ans à l'an 400.
+    //
+    // **Le banc change, et ses bornes non** (#461). Deux choses manquaient à
+    // l'équilibre, et ce lot les règle ensemble.
+    //
+    // Le grain était deux fois trop pauvre en azote : 7,9 kg N par tonne de
+    // matière sèche, contre 16,6 sur la parcelle Nil (Coleman et al. 2017,
+    // *Sci. Total Environ.* 609 : 1483, moyennes 1968-2012). La croissance ne
+    // suivait l'indice de nutrition qu'une fois, et un blé affamé gardait tout
+    // son feuillage. Elle le suit maintenant au carré, avec le plancher de
+    // STICS (`facteurAzoteDeLaCroissance`, herbe.ts) : 14,2 kg N par tonne.
+    //
+    // Et le banc portait le relief du limon riche, une pente de 4 % sous un
+    // demi-hectare de bassin, qui emporte quatre à cinq tonnes de terre par
+    // hectare et par an (#311) ; Broadbalk a une pente d'un degré et n'est pas
+    // un bas de versant. **Le banc prend le relief de Broadbalk**
+    // (`RELIEF_DE_BROADBALK`) : c'est un changement du dispositif, signalé ici,
+    // et les bornes de C16 ne bougent pas. Relevé (sonde du blé continu,
+    // déterministe, fusion de 18dbb29) :
+    //
+    //                                     ans 201-220   221-240   241-260   an 2
+    //     main, relief du limon              1,482       1,364     1,266    4,66
+    //     ce lot, relief du limon            0,823       0,785     0,755    4,01
+    //     ce lot, relief de Broadbalk        1,157       1,147     1,139    4,39
+    //
+    // Et le blé **se pose** : 1,13 t de matière sèche/ha de l'an 260 à l'an
+    // 400, à moins de 1 % d'une tranche à l'autre, soit 1,33 t/ha à 85 % pour
+    // 1,16 sur la parcelle Nil, avec 14,2 kg N par tonne de matière sèche. Le
+    // niveau tient au plancher de l'indice : le blé finit sa saison dessous
+    // (0,25 à la moisson). Sur le relief du limon, le même moteur descend
+    // encore de 4 à 5 % tous les vingt ans : l'érosion et le lessivage.
     const VIEUX = CHAMP_LABOURE_AVANT_BROADBALK_ANS;
-    const r = culture({ ans: VIEUX + 61, cote: 30, rayonM: 14 });
+    const r = culture({ ans: VIEUX + 61, cote: 30, rayonM: 14, reliefDeBroadbalk: true });
     const an2 = r[2] ?? 0;
     const tranche = (debut: number) => {
       const t = r.slice(debut, debut + 20);
