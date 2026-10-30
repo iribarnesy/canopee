@@ -293,12 +293,23 @@ describe("LE CRITÈRE : un peuplement qu'on vient d'ouvrir verse", () => {
     // La fenêtre de **cinq ans** est celle qui compte, et le commentaire ci-dessus
     // disait déjà pourquoi : au-delà, les deux bras ont divergé en hauteur et
     // en diamètre, donc on ne mesure plus l'abri perdu mais tout ce qui a
-    // suivi. Les deux seuils sont posés sous les rapports mesurés — 1,75 sous
+    // suivi. Les deux seuils étaient posés sous les rapports mesurés — 1,75 sous
     // 2,45 et 1,3 sous 1,64 — et tous deux au-dessus de 1.
+    //
+    // **Relu (#438, décision du propriétaire) : l'essai n'exige plus que la
+    // direction.** Les deux seuils étaient relevés sur le moteur. Depuis que la
+    // pénombre conserve le feuillage des couronnes, le témoin non éclairci
+    // s'éclaircit de lui-même : 1 431 à 1 475 tiges/ha à quarante ans, contre
+    // 2 325 sur main. Il verse donc déjà davantage, et l'ouverture n'ajoute plus
+    // que 1,32 fois sur cinq ans (25 couchés contre 19) et 1,25 fois sur douze
+    // (60 contre 48). C'est le motif que F18 écrit déjà pour la carie du tronc :
+    // ce n'est pas la naïveté qui a baissé, **c'est le témoin qui a cessé d'être**
+    // **intact**. Ce qui reste exigé, sur les deux fenêtres : plus de couchés dans
+    // le bras éclairci que dans le témoin.
     expect(couchesTemoin).toBeGreaterThan(0);
     expect(toutDeSuiteTemoin).toBeGreaterThan(0);
-    expect(toutDeSuiteEclairci).toBeGreaterThan(1.75 * toutDeSuiteTemoin);
-    expect(couchesEclairci).toBeGreaterThan(1.3 * couchesTemoin);
+    expect(toutDeSuiteEclairci).toBeGreaterThan(toutDeSuiteTemoin);
+    expect(couchesEclairci).toBeGreaterThan(couchesTemoin);
     // **Le délai** (#378) : six graines de quarante ans, puis deux bras de douze.
     // Rien ne s'y rogne : les couchés se comptent par dizaines sur les six
     // graines (49 contre 20 sur cinq ans), et une graine de moins amincit
