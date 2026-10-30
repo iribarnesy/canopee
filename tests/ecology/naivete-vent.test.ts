@@ -196,8 +196,7 @@ describe("LE CRITÈRE : un peuplement qu'on vient d'ouvrir verse", () => {
     let toutDeSuiteEclairci = 0;
     let toutDeSuiteTemoin = 0;
     let cohorteTotale = 0;
-    let abriEclairci = 0;
-    let abriTemoin = 0;
+    const abrisParGraine: { graine: number; eclairci: number; temoin: number }[] = [];
     for (const graine of [3, 7, 11, 13, 17, 19]) {
       let base: GameState = plantScattered(
         createGameState(stationB, rngStateFromSeed(graine)),
@@ -227,8 +226,9 @@ describe("LE CRITÈRE : un peuplement qu'on vient d'ouvrir verse", () => {
       const dom = vE.filter((t) => t.heightM > 0.8 * hMax);
       const cohorte = new Set(dom.map((t) => t.id));
       cohorteTotale += cohorte.size;
-      abriEclairci += moyenne(dom.map((t) => abriAuVent(vE, t))) * dom.length;
-      abriTemoin += moyenne(dom.map((t) => abriAuVent(vT, t))) * dom.length;
+      const abriE = moyenne(dom.map((t) => abriAuVent(vE, t)));
+      const abriT = moyenne(dom.map((t) => abriAuVent(vT, t)));
+      if (dom.length > 0) abrisParGraine.push({ graine, eclairci: abriE, temoin: abriT });
       for (const [eclairciBras, depart] of [
         [true, eclairci],
         [false, base],
@@ -256,7 +256,22 @@ describe("LE CRITÈRE : un peuplement qu'on vient d'ouvrir verse", () => {
     }
     // L'ouverture dépouille les dominants : relevé 0,275 → 0,189 sur les six
     // graines, soit un tiers de leur abri.
-    expect(abriEclairci / cohorteTotale).toBeLessThan(0.8 * (abriTemoin / cohorteTotale));
+    //
+    // **Réécrit sur son critère (#438), et c'est signalé.** C'est la prémisse du
+    // banc, pas son critère (le critère est le rapport des couchés, plus bas),
+    // et elle portait une ampleur relevée sur le moteur : moins de 0,8 fois
+    // l'abri du témoin. Depuis que la pénombre conserve le feuillage des
+    // couronnes, le témoin non éclairci s'éclaircit de lui-même : à quarante
+    // ans, 1 431 à 1 475 tiges/ha sur les graines 3 et 7, contre 2 325 sur main
+    // (graine 7). L'éclaircie à 150 tiges/ha y retire donc moins d'abri : 0,83
+    // fois celui du témoin sur les deux graines, contre 0,51 sur main. Ce que la
+    // prémisse affirme, c'est que l'ouverture **retire** de l'abri aux dominants :
+    // elle se vérifie graine par graine, sur chaque graine dont l'éclaircie
+    // garde des dominants.
+    expect(cohorteTotale).toBeGreaterThan(0);
+    for (const a of abrisParGraine) {
+      expect(a.eclairci, `graine ${a.graine}`).toBeLessThan(a.temoin);
+    }
 
     // ── **et c'est la fenêtre de cinq ans qui porte la mesure** (#183) ──────────
     //

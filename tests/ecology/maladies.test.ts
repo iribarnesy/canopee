@@ -67,7 +67,10 @@ describe("à l'échelle du peuplement : la diversification comme assurance", () 
       if (esp === "fraxinus_excelsior") idsFrenes.push(state.nextTreeId - 1);
     }
     const scenario = getScenario("stable");
+    const frenes = new Set(idsFrenes);
     let mortsMaladie = 0;
+    let mortsMaladieFrenes = 0;
+    let semainesFrene = 0;
     for (let i = 0; i < ans * 52; i++) {
       const base = OBSERVATIONS[i % OBSERVATIONS.length];
       if (!base) throw new Error("météo manquante");
@@ -78,8 +81,17 @@ describe("à l'échelle du peuplement : la diversification comme assurance", () 
       );
       state = r.state;
       mortsMaladie += r.morts.filter((m) => m.cause === "maladie").length;
+      mortsMaladieFrenes += r.morts.filter((m) => m.cause === "maladie" && frenes.has(m.id)).length;
+      for (const t of state.trees) if (t.alive && frenes.has(t.id)) semainesFrene++;
     }
-    return { tauxMortalite: mortsMaladie / Math.max(1, idsFrenes.length) };
+    return {
+      tauxMortalite: mortsMaladie / Math.max(1, idsFrenes.length),
+      /**
+       * Morts de chalarose des frênes plantés par année-frêne vivant : le risque,
+       * et non le décompte.
+       */
+      risque: mortsMaladieFrenes / Math.max(1, semainesFrene / 52),
+    };
   }
 
   const frenaie = peuplement(["fraxinus_excelsior"], 30);
@@ -96,6 +108,19 @@ describe("à l'échelle du peuplement : la diversification comme assurance", () 
 
   it("les mêmes frênes noyés dans un mélange s'en tirent bien mieux", () => {
     // Rien n'est codé pour ça : c'est l'inoculum, qui vient des voisins.
-    expect(melange.tauxMortalite).toBeLessThan(frenaie.tauxMortalite / 2);
+    //
+    // **Réécrit sur son critère (#438), et c'est signalé.** L'essai rapportait
+    // les morts de chalarose au nombre de frênes **plantés**. Or un frêne ne
+    // meurt qu'une fois, et dans le mélange il meurt aussi des ravageurs ou de
+    // la soif : le décompte dépend de qui l'atteint le premier, pas de
+    // l'inoculum. Depuis que la pénombre conserve le feuillage des couronnes,
+    // les frênes du mélange meurent presque autant au total (29 sur 36, contre
+    // 33 sur main) ; ils meurent seulement moins des autres causes et plus de
+    // la chalarose, et le décompte passait de 0,25 à 0,44 pour une frênaie à
+    // 0,65. Ce que l'inoculum décide, c'est le **risque** : les morts de
+    // chalarose par année-frêne vivant. Mesuré, graine 4 : 5,00 pour cent
+    // années-frêne dans la frênaie, 2,04 dans le mélange (sur main : 5,43 et
+    // 1,12). La borne ne bouge pas : moitié moins.
+    expect(melange.risque).toBeLessThan(frenaie.risque / 2);
   });
 });

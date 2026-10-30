@@ -63,7 +63,7 @@ l'autre âge pour vérifier.
 
 ## Ce que le dernier lot a appris (le couvert, #438 ; les semis sous le couvert, #353, instruit)
 
-Le lot v0.6 « couvert ». La pénombre des houppiers (1 − d²/r²) vaut un demi en moyenne sur le disque, et elle était posée telle quelle sur `k · lai` : chaque couronne perdait la moitié du feuillage que l'atlas lui prête. Elle est rapportée à sa moyenne (light.ts, `MOYENNE_PENOMBRE`), sans réglage ni cas d'espèce : la surface foliaire de la couronne se conserve. Les prédictions et les mesures sont dans les commits de la branche, avant chaque course ; les sondes sont des copies du moteur hors dépôt. La correction casse douze assertions dans dix essais : elles sont instruites dans la PR, aucune n'est réécrite, et la suite attend la décision de l'utilisateur.
+Le lot v0.6 « couvert ». La pénombre des houppiers (1 − d²/r²) vaut un demi en moyenne sur le disque, et elle était posée telle quelle sur `k · lai` : chaque couronne perdait la moitié du feuillage que l'atlas lui prête. Elle est rapportée à sa moyenne (light.ts, `MOYENNE_PENOMBRE`), sans réglage ni cas d'espèce : la surface foliaire de la couronne se conserve. Les prédictions et les mesures sont dans les commits de la branche, avant chaque course ; les sondes sont des copies du moteur hors dépôt. La correction casse douze assertions dans dix essais, instruites dans la PR. Sur décision de l'utilisateur, la correction est gardée. Six essais dont le dispositif était en cause sont réécrits sur leur critère, chacun signalé dans son commentaire : `elagage`, `elancement`, `feu`, `succession`, `maladies` et `naivete-vent`. `fertilisation` ne l'est pas, parce que la mesure complète contredit sa source (voir plus bas). Trois défauts révélés sont ouverts : #467, #468 et #469. Leurs essais (`lumiere`, `herbacees`, `fruits`) restent rouges en attendant.
 
 ### Un peuplement qui a la bonne lumière peut l'avoir pour deux raisons fausses
 
@@ -83,11 +83,23 @@ Le 0,28 de lumière « sous une hêtraie de quarante ans » venait de E9 : une p
 
 ### Une constante posée pour un cas mord partout quand ce qu'elle multiplie double
 
-La marcescence du hêtre (0,35, *à calibrer*) a été posée pour le jeune hêtre, et le moteur la prête à tous. Tant que la pénombre divisait l'extinction par deux, les feuilles mortes d'une hêtraie de quarante ans laissaient 0,58 de lumière mi-avril ; normalisée, 0,47 à 0,51, et la vernale n'y tient plus que 0,10 à 0,12 du sol (0,18 sur main), pendant que l'anémone gagne sous la pinède assombrie : E9 casse. Le poids 0,4 des codominants (B6) multiplie la même extinction, et un hêtre de 25 m de `lumiere.test.ts` à peine plus court que son voisin du sud reçoit 5 % de lumière au lieu de 19 %, puis meurt de faim. **Une correction qui double un terme oblige à relire chaque constante à calibrer qu'il multiplie.**
+La marcescence du hêtre (0,35, *à calibrer*) a été posée pour le jeune hêtre, et le moteur la prête à tous. Tant que la pénombre divisait l'extinction par deux, les feuilles mortes d'une hêtraie de quarante ans laissaient 0,58 de lumière mi-avril ; normalisée, 0,47 à 0,51, et la vernale n'y tient plus que 0,10 à 0,12 du sol (0,18 sur main), et le gradient de la part vernale de E9 se retourne (#468). Le poids 0,4 des codominants (B6) multiplie la même extinction, et un hêtre de 25 m de `lumiere.test.ts` à peine plus court que son voisin du sud reçoit 5 % de lumière au lieu de 19 %, puis meurt de faim (#467). **Une correction qui double un terme oblige à relire chaque constante à calibrer qu'il multiplie.**
+
+### Avant de réécrire un essai sur son critère, relire tout ce qu'il mesure
+
+J'avais rangé `fertilisation` parmi les essais dont seul le dispositif était en cause : la ligne qui casse est une borne sans source (le rapport de l'allée la deuxième année, 0,983 pour 0,99). La série complète, relevée avant de réécrire, dit autre chose. L'allée coûte plus à tout âge : 0,553 à l'an 15 contre 0,849, et à H/L 0,74, l'observation de Dupraz (« pas beaucoup affecté sous H/L 0,8 ») qui fonde E13 n'est plus tenue. De même, j'avais mis la cassure de E9 sur le compte de la marcescence ; la ligne qui casse est la saisonnalité sous la **pinède**, où la marcescence n'est pour rien. **Une ligne qui casse se lit sur son assertion, et un essai se relit en entier** avant d'en réécrire une ligne.
 
 ### Fermer le couvert trie les semis, et la lumière d'avril est une germination
 
 #353 voyait sous une hêtraie de 15 m autant de bouleaux s'installer sous le couvert que dans la trouée. Remesuré (hêtres à 8 m, cinq graines, quinze ans) : 61 sous le couvert pour 71 dans la trouée sur main, 46 pour 69 avec la pénombre normalisée. Mais ceux du couvert meurent de faim en deux à quatre ans sur main, en deux à trois sur la branche ; relevés un à un à quinze ans, les « survivants » du couvert sont des levées de l'année ou de l'an d'avant en train de mourir, plus deux ou trois sujets dans des trouées de houppiers (0,22 à 0,36 de lumière d'été). Sous un couvert planté à 3 m, aucun ne lève. Le filtre d'avril est une germination et l'été trie ; le mois de jugement ne change pas, et le commentaire de `regeneration.ts` le dit maintenant. **Avant de changer quand un filtre juge, suivre ceux qu'il laisse passer** : un compte d'installés n'est pas un compte de vivants.
+
+### Points ouverts
+
+- **La hauteur dominante des peuplements denses** monte de 12 à 22 % à quarante ans avec la correction, par l'eau et l'azote que l'éclaircie plus rapide rend aux dominants. Aulnaie : 14,6-14,8 → 17,0-17,3 m (table : 18,0). Pinède : 13,5-14,1 → 14,3-16,6 m (15,5). Hêtraie : 15,4-15,6 → 18,3-19,1 m, pour une table à 16,0, au-delà de la tolérance de 15 % sur deux graines. Le banc des tables (huit sujets épars) ne le voit pas : 3 % au plus, sauf le frêne (+7,6 %, accepté dans sa bande). La règle d'Assmann (la hauteur dominante ne dépend presque pas de la densité) n'est donc pas tenue entre un peuplement dense et des sujets épars. *À instruire.*
+- **Les houppiers d'un peuplement dense sont trop larges.** Plantés à 2 m, ils se recouvrent 4,5 à 5 fois, et le LAI des couronnes du hêtre monte à 15-17, deux fois le plateau du terrain. L'éclaircie plus rapide le ramène à 10-12. Le rayon suit le diamètre (B10), mais rien ne le restreint latéralement entre voisins. C'est un mécanisme à part.
+- **#467, #468, #469** : leurs essais restent rouges en attendant une décision.
+- **`fertilisation`** : rouge, avec la décision rapportée dans #464.
+- **`fruticee`** : il casse depuis la fusion de l'hydrologie (#463), instruit dans #464.
 
 ## Ce qu'un lot précédent a appris (l'hydrologie : la nappe dans le profil, #380 ; le plafond de la vidange, #381 ; le point bas d'un versant, #351 ; #342 vérifiée ; #337 instruite)
 
