@@ -130,10 +130,10 @@ import {
   abriVentIndexe,
   baseHouppierCible,
   computeGroundLight,
-  computeLight,
   couvertAuDessusDesArbres,
   crownRadiusM,
   indexerAbriVent,
+  lumieresDesArbres,
   type PartOmbrageante,
 } from "./light";
 import { lumiereApresBordures } from "./lisiere";
@@ -845,6 +845,10 @@ export function tick(state: GameState, weather: WeekWeather, essai?: ReglagesDEs
 
   // ── 0. Lumière : au sol (microclimat, évaporation) et par arbre (croissance
   //      **et** transpiration — c'est le moteur de l'effet nurse, cf. trees.ts).
+  // La lumière d'un arbre est celle de **tout son houppier** : chaque voisin y
+  // pèse la part de sa couronne qui dépasse la sienne, et un voisin de même
+  // hauteur la moitié de son ombre, ce qui suffit à affamer les dominés d'une
+  // futaie serrée et à y faire monter les perches.
   // Phénologie : chaque espèce a son calendrier, et le feuillage se déploie
   // progressivement au lieu de s'allumer d'un coup (phenologie.ts).
   // Le **même** contexte que celui qui voyagera dans l'instantané : le rendu
@@ -891,14 +895,24 @@ export function tick(state: GameState, weather: WeekWeather, essai?: ReglagesDEs
     }
     return Math.min(1, total);
   };
-  const light = computeLight(trees, partOmbrageanteDe);
+  // La lumière d'un arbre est celle de son **houppier** : l'ombre de chaque voisin
+  // y pèse la part de son houppier qui dépasse chaque niveau du sien, moyennée
+  // de la base à la cime. Un voisin de même hauteur en donne la moitié, c'est
+  // l'ombrage latéral entre égaux (light.ts, `poidsDuVoisin`). C'est elle qui
+  // nourrit la croissance, les réserves et la transpiration. La même loi, lue à
+  // la seule **cime**, dit à l'élagage naturel ce que reçoit le sommet (#467).
+  const lumieres = lumieresDesArbres(trees, partOmbrageanteDe);
+  const light = lumieres.houppier;
+  const lumiereCime = lumieres.cime;
   // **l'entourage** ombrage les lisières : un carré de bocage au milieu d'un massif
   // n'est pas une clairière isolée (lisiere.ts). Et la géométrie n'est pas
   // symétrique — c'est ce qui est au **sud** qui ombrage.
   for (let t = 0; t < light.length; t++) {
     const arbre = trees[t];
     if (!arbre) continue;
-    light[t] = (light[t] ?? 1) * lumiereApresBordures(arbre.x, arbre.y, dims, station.bordures);
+    const bordures = lumiereApresBordures(arbre.x, arbre.y, dims, station.bordures);
+    light[t] = (light[t] ?? 1) * bordures;
+    lumiereCime[t] = (lumiereCime[t] ?? 1) * bordures;
   }
   for (let i = 0; i < nCells; i++) {
     const x = (i % dims.widthM) + 0.5;
@@ -2870,9 +2884,16 @@ export function tick(state: GameState, weather: WeekWeather, essai?: ReglagesDEs
     // basses cessent de payer leur respiration et meurent. La base du houppier
     // **monte**, et ne redescend jamais — une branche morte ne repousse pas. C'est
     // ce cliquet qui donne le fût nu d'une futaie serrée, et lui seul : à
-    // lumière pleine, la cible reste au ras du sol et rien ne bouge.
+    // lumière pleine, la cible reste au ras du sol et rien ne bouge. Le calcul
+    // part de la lumière de la **cime** et descend dans le feuillage de l'arbre :
+    // il lit donc la lumière de cime, pas celle du houppier entier (#467).
     const lumiere = getEspece(tree.especeId).lumiere;
-    const cible = baseHouppierCible(next.heightM, light[t] ?? 1, lumiere.compensation, lumiere.lai);
+    const cible = baseHouppierCible(
+      next.heightM,
+      lumiereCime[t] ?? 1,
+      lumiere.compensation,
+      lumiere.lai,
+    );
     // La scie compte autant que l'ombre, et l'arbre ne les distingue pas.
     const baseHouppierM = Math.max(tree.baseHouppierM ?? 0, cible, next.hauteurElagueeM);
     // Franchissement de stade : on a les deux instants sous la main ici, et

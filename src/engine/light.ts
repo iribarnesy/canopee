@@ -1,7 +1,8 @@
 /**
  * Lumière spatiale (docs/regles.md §5) : chaque arbre reçoit la lumière qui
- * traverse les couronnes des arbres **plus hauts** dont l'ombre couvre sa
- * position (Beer-Lambert par couronne traversée, k = 0,5). L'ombre d'une
+ * traverse les couronnes voisines dont l'ombre couvre sa position, chacune au
+ * prorata de la part de son houppier qui **dépasse** le sien (Beer-Lambert par
+ * couronne traversée, k = 0,5 ; voir `poidsDuVoisin`). L'ombre d'une
  * couronne est décalée vers le **nord** (+y) d'une fraction de la hauteur —
  * le soleil est au sud en France : planter en lignes est-ouest ou nord-sud
  * n'a pas le même effet. Les caducs n'ombragent pas hors saison de végétation,
@@ -235,6 +236,8 @@ export function partHouppier(heightM: number, baseHouppierM: number): number {
 const MOYENNE_PENOMBRE = 0.5;
 
 interface Shadow {
+  /** l'arbre qui la porte : un houppier ne s'ombrage pas lui-même */
+  id: number;
   cx: number;
   cy: number;
   r2: number;
@@ -275,11 +278,12 @@ function buildShadowIndex(
     if (r <= 0) continue;
     const partGardee = partHouppier(tree.heightM, tree.baseHouppierM ?? 0);
     const shadow: Shadow = {
+      id: tree.id,
       cx: tree.x,
       cy: tree.y + decalageNord * tree.heightM,
       r2: r * r,
       heightM: tree.heightM,
-      profondeurM: partGardee * PROFONDEUR_HOUPPIER_MAX * tree.heightM,
+      profondeurM: profondeurHouppierM(tree),
       // L'indice foliaire suit le déploiement : c'est là que la phénologie
       // entre dans la loi de Beer-Lambert. Et l'élagage y entre aussi : une
       // couronne dont on a retiré la tranche basse intercepte moins. La
@@ -303,71 +307,193 @@ function buildShadowIndex(
   return buckets;
 }
 
-function extinctionAt(
-  buckets: Map<number, Shadow[]>,
-  x: number,
-  y: number,
-  heightM: number,
+/**
+ * Profondeur du houppier vivant d'un arbre, m : sa part gardée de la profondeur
+ * maximale, celle que suppose `partHouppier`. Le houppier va de
+ * `hauteur − profondeur` à la cime.
+ */
+function profondeurHouppierM(tree: TreeState): number {
+  return (
+    partHouppier(tree.heightM, tree.baseHouppierM ?? 0) * PROFONDEUR_HOUPPIER_MAX * tree.heightM
+  );
+}
+
+/**
+ * Sous cette profondeur, m, un houppier se lit comme un point, à sa cime. C'est
+ * une tolérance de calcul, pas un paramètre : elle évite de diviser par une
+ * profondeur nulle (un point au sol, un arbre rabattu sans couronne) ou presque
+ * nulle, où la différence des deux intégrales ne garderait plus de chiffre juste.
+ */
+const PROFONDEUR_PONCTUELLE_M = 1e-6;
+
+/**
+ * Hauteur cumulée de la part d'un houppier voisin qui dépasse chaque niveau, m :
+ * l'intégrale, du niveau `z` jusqu'en haut, de la part du houppier de cime `h` et
+ * de profondeur `d` située au-dessus du niveau courant. Cette part vaut 1 sous la
+ * base du houppier, décroît linéairement dans sa profondeur (feuillage uniforme,
+ * comme le suppose `partHouppier`) et vaut 0 au-dessus de la cime.
+ */
+function partAuDessusCumuleeM(z: number, h: number, d: number): number {
+  if (z >= h) return 0;
+  if (z >= h - d) return ((h - z) * (h - z)) / (2 * d);
+  return h - z - d / 2;
+}
+
+/**
+ * ─── **le poids d'un voisin** : la part de son houppier qui dépasse le mien ───────
+ *
+ * Un niveau de mon houppier reçoit l'ombre du feuillage voisin qui est au-dessus
+ * de lui : la part du houppier voisin qui le dépasse. Le poids de ce voisin est
+ * cette part, **moyennée sur toute la profondeur de mon houppier**, de sa base à
+ * sa cime :
+ *
+ * | hauteur du voisin / la mienne (houppiers à 0,9 de la hauteur) | 0,5 | 0,75 | 1 | 1,1 | 1,5 | 2 | 3 |
+ * |---|---|---|---|---|---|---|---|
+ * | poids | 0,20 | 0,35 | **0,50** | 0,56 | 0,70 | 0,80 | 0,90 |
+ *
+ * Un voisin de même hauteur pèse un demi : la moitié haute de son houppier dépasse
+ * la moitié basse du mien. Personne ne l'a posé, et la loi n'a aucune constante.
+ * Elle est continue partout ; elle vaut 1 pour un point au sol, dont la lumière,
+ * celle des semis et le couvert du sol ne changent pas ; un voisin plus court
+ * ombrage le bas de mon houppier.
+ *
+ * **La lumière d'un arbre devient donc celle de son houppier**, pas celle de sa
+ * cime. C'est elle qui nourrit la croissance, le budget carbone, l'étiolement et
+ * la transpiration. Le moteur suit un seul soleil moyen, au sud, à 68° ; la
+ * lumière basse du matin, du soir et de l'hiver, et le ciel diffus de côté, que
+ * les houppiers voisins de même taille interceptent, n'y existent pas. Lire
+ * l'ombre sur tout le houppier en rend une part : c'est l'ombrage latéral entre
+ * égaux, celui qui affame les dominés et fait monter les perches (B6, F6, E10).
+ *
+ * **Ce que cette loi remplace** (#467). Un voisin plus haut d'un centimètre
+ * ombrageait à plein, un voisin de même hauteur pas du tout, un voisin plus court
+ * d'un centimètre à 0,4 : trois poids autour de l'égalité, et deux nombres sans
+ * source, le 0,4 et la bande des 75 % de la hauteur. Un hêtre de canopée à peine
+ * plus court que son voisin du sud tombait à 5 % de lumière à sa cime, et mourait
+ * de faim en cinq ans. Le 0,4 et le 0,75 sont tombés.
+ *
+ * Lue à la **cime** (`baseM` = `cimeM`), la même loi donne la part du houppier
+ * voisin qui dépasse la cime : un sommet ne voit que ce qui le dépasse. C'est la
+ * lumière de cime, celle que lit l'élagage naturel (`baseHouppierCible`),
+ * calculée dans la même passe.
+ */
+export function poidsDuVoisin(
+  cimeVoisinM: number,
+  profondeurVoisinM: number,
+  cimeM: number,
+  baseM: number,
 ): number {
-  const key = Math.floor(y / BUCKET_M) * 100_000 + Math.floor(x / BUCKET_M);
-  const list = buckets.get(key);
-  if (!list) return 0;
-  let extinction = 0;
-  for (const s of list) {
-    // Plus haut = ombrage plein ; codominant (dans les 25 % sous la cible) =
-    // ombrage latéral partiel.
-    //
-    // **Ce commentaire justifiait le terme par l'auto-éclaircie** — « sans lui, une
-    // cohorte dense de même hauteur ne se gênerait jamais et l'auto-éclaircie
-    // n'émergerait pas » — et la campagne de #65 a mesuré le contraire. Terme
-    // **annulé** (poids 0), une pineraie plantée à 2 m passe quand même de 361 à
-    // 59-69 tiges en cent vingt ans, contre 47-54 au poids d'aujourd'hui. Elle
-    // s'éclaircit donc sans lui, et à peine moins vite.
-    //
-    // Ce qui l'éclaircit n'est pas la lumière : sur ~310 morts, les **ravageurs** en
-    // prennent 205 à 244 et les **chablis** 55 à 98 ; l'ombre, 4 à 7. La mortalité
-    // densité-dépendante de ce moteur passe par la pression parasitaire et le
-    // vent. Le poids ne déplace ni l'élancement, ni l'auto-éclaircie, ni le
-    // tempo de la succession, ni le tri des espèces.
-    //
-    // Le terme reste — il est physiquement juste, un voisin de même taille
-    // ombrage bel et bien de côté — mais il ne porte **aucune** des conclusions
-    // qu'on lui prêtait. Ce qui porte, c'est le **seuil** : le passer de 0,75 à 0
-    // effondre le peuplement (45 tiges au lieu de 276 à cent vingt ans). Ce
-    // n'est pas une piste de calibration pour autant, c'est une absurdité
-    // physique — à seuil nul, un semis de deux mètres ombrage une cime de
-    // vingt-cinq. Ça prouve seulement que le mécanisme est vivant.
-    const auDessus = s.heightM - heightM;
-    if (auDessus <= 0 || s.profondeurM <= 0) continue;
-    const weight = Math.min(1, auDessus / s.profondeurM);
-    const dx = x - s.cx;
-    const dy = y - s.cy;
-    const d2 = dx * dx + dy * dy;
-    if (d2 <= s.r2) {
-      // Pénombre : l'ombre est pleine à l'aplomb du houppier et s'estompe vers
-      // son bord (couronne moins épaisse, lumière latérale). C'est ce dégradé
-      // qui crée les micro-situations d'abri — un sujet planté **en lisière** d'une
-      // nurse est protégé du vent et du rayonnement sans être étouffé (ch1-A).
-      // Il est rapporté à sa moyenne dans `buildShadowIndex`.
-      extinction += weight * s.extinction * (1 - d2 / s.r2);
-    }
+  if (profondeurVoisinM <= 0) return 0;
+  const profondeur = cimeM - baseM;
+  if (profondeur <= PROFONDEUR_PONCTUELLE_M) {
+    return Math.max(0, Math.min(1, (cimeVoisinM - cimeM) / profondeurVoisinM));
   }
-  // Une ou deux couronnes s'additionnent pleinement ; les empilements profonds
-  // saturent (chevauchements, trouées de ciel) vers MAX_EXTINCTION.
+  const moyenne =
+    (partAuDessusCumuleeM(baseM, cimeVoisinM, profondeurVoisinM) -
+      partAuDessusCumuleeM(cimeM, cimeVoisinM, profondeurVoisinM)) /
+    profondeur;
+  return Math.max(0, Math.min(1, moyenne));
+}
+
+/**
+ * Une ou deux couronnes s'additionnent pleinement ; les empilements profonds
+ * saturent (chevauchements, trouées de ciel) vers MAX_EXTINCTION.
+ */
+function saturer(extinction: number): number {
   if (extinction <= 2) return extinction;
   const span = MAX_EXTINCTION - 2;
   return 2 + span * (1 - Math.exp(-(extinction - 2) / span));
 }
 
+/** Les deux lectures de l'ombre sur un arbre : son houppier entier, et sa cime seule. */
+interface LecturesOmbre {
+  houppier: number;
+  cime: number;
+}
+
 /**
- * Lumière relative ∈ [0,1] reçue par chaque arbre vivant (index aligné sur
- * `trees`, 1 pour les morts). `part` donne le feuillage ombrageant de chaque arbre.
+ * Ce que les couronnes voisines éteignent, avant saturation, au point (x, y) sur
+ * un houppier qui va de `baseM` à `cimeM` : lu sur le houppier entier, et à la
+ * cime. Un point au sol se lit avec `baseM` = `cimeM` = 0. `selfId` écarte le
+ * houppier de l'arbre lu.
+ */
+function sommerOmbres(
+  buckets: Map<number, Shadow[]>,
+  x: number,
+  y: number,
+  cimeM: number,
+  baseM: number,
+  selfId: number,
+  out: LecturesOmbre,
+): void {
+  out.houppier = 0;
+  out.cime = 0;
+  const key = Math.floor(y / BUCKET_M) * 100_000 + Math.floor(x / BUCKET_M);
+  const list = buckets.get(key);
+  if (!list) return;
+  for (const s of list) {
+    if (s.id === selfId) continue;
+    const dx = x - s.cx;
+    const dy = y - s.cy;
+    const d2 = dx * dx + dy * dy;
+    if (d2 > s.r2) continue;
+    const poidsCime = poidsDuVoisin(s.heightM, s.profondeurM, cimeM, cimeM);
+    const poidsHouppier =
+      baseM < cimeM ? poidsDuVoisin(s.heightM, s.profondeurM, cimeM, baseM) : poidsCime;
+    if (poidsHouppier <= 0) continue;
+    // Pénombre : l'ombre est pleine à l'aplomb du houppier et s'estompe vers
+    // son bord (couronne moins épaisse, lumière latérale). C'est ce dégradé
+    // qui crée les micro-situations d'abri — un sujet planté **en lisière** d'une
+    // nurse est protégé du vent et du rayonnement sans être étouffé (ch1-A).
+    // Il est rapporté à sa moyenne dans `buildShadowIndex`.
+    const penombre = 1 - d2 / s.r2;
+    out.houppier += poidsHouppier * s.extinction * penombre;
+    out.cime += poidsCime * s.extinction * penombre;
+  }
+}
+
+/** Extinction en un point au sol, saturée. */
+function extinctionAt(buckets: Map<number, Shadow[]>, x: number, y: number): number {
+  const lu: LecturesOmbre = { houppier: 0, cime: 0 };
+  sommerOmbres(buckets, x, y, 0, 0, -1, lu);
+  return saturer(lu.cime);
+}
+
+/**
+ * Les deux lumières de chaque arbre vivant ∈ [0,1] (index alignés sur `trees`, 1
+ * pour les morts) : celle de son **houppier**, qui le nourrit, et celle de sa
+ * **cime**, que lit l'élagage naturel. Une seule passe pour les deux.
+ */
+export function lumieresDesArbres(
+  trees: readonly TreeState[],
+  part: PartOmbrageante,
+): { houppier: number[]; cime: number[] } {
+  const buckets = buildShadowIndex(trees, part);
+  const houppier = new Array<number>(trees.length);
+  const cime = new Array<number>(trees.length);
+  const lu: LecturesOmbre = { houppier: 0, cime: 0 };
+  for (let i = 0; i < trees.length; i++) {
+    const tree = trees[i];
+    if (!tree?.alive) {
+      houppier[i] = 1;
+      cime[i] = 1;
+      continue;
+    }
+    const baseM = tree.heightM - profondeurHouppierM(tree);
+    sommerOmbres(buckets, tree.x, tree.y, tree.heightM, baseM, tree.id, lu);
+    houppier[i] = Math.exp(-saturer(lu.houppier));
+    cime[i] = Math.exp(-saturer(lu.cime));
+  }
+  return { houppier, cime };
+}
+
+/**
+ * Lumière relative ∈ [0,1] reçue par le **houppier** de chaque arbre vivant (index
+ * aligné sur `trees`, 1 pour les morts). `part` donne le feuillage ombrageant de
+ * chaque arbre.
  */
 export function computeLight(trees: readonly TreeState[], part: PartOmbrageante): number[] {
-  const buckets = buildShadowIndex(trees, part);
-  return trees.map((tree) =>
-    tree.alive ? Math.exp(-extinctionAt(buckets, tree.x, tree.y, tree.heightM)) : 1,
-  );
+  return lumieresDesArbres(trees, part).houppier;
 }
 
 /** Lumière relative au sol en un point (pour l'installation des semis). */
@@ -378,7 +504,7 @@ export function lightAtPoint(
   part: PartOmbrageante,
 ): number {
   const buckets = buildShadowIndex(trees, part);
-  return Math.exp(-extinctionAt(buckets, x, y, 0));
+  return Math.exp(-extinctionAt(buckets, x, y));
 }
 
 /**
@@ -401,7 +527,7 @@ export function indexerOmbres(trees: readonly TreeState[], part: PartOmbrageante
 }
 
 export function lumiereAuPointIndexee(ombres: IndexOmbres, x: number, y: number): number {
-  return Math.exp(-extinctionAt(ombres, x, y, 0));
+  return Math.exp(-extinctionAt(ombres, x, y));
 }
 
 /**
@@ -544,7 +670,7 @@ export function couvertAuDessusDuSol(
   const out = new Array<number>(widthM * heightM);
   for (let y = 0; y < heightM; y++) {
     for (let x = 0; x < widthM; x++) {
-      out[y * widthM + x] = 1 - Math.exp(-extinctionAt(buckets, x + 0.5, y + 0.5, 0));
+      out[y * widthM + x] = 1 - Math.exp(-extinctionAt(buckets, x + 0.5, y + 0.5));
     }
   }
   return out;
@@ -552,19 +678,24 @@ export function couvertAuDessusDuSol(
 
 /**
  * Le couvert au-dessus de **chaque** arbre ∈ [0,1] (index aligné sur `trees`, 0 pour
- * les morts) : les houppiers plus hauts que lui dont la projection le couvre —
- * et pour une part ceux de sa taille, selon la même règle que l'ombre. Ce
- * qui abrite les fleurs d'un fruitier d'une nuit de gel, c'est ce qui pousse
- * au-dessus de lui, pas le bois voisin qui lui prend le soleil du soir.
+ * les morts) : les houppiers voisins dont la projection le couvre, chacun au
+ * prorata de la part qui dépasse son houppier, lue sur tout le houppier comme
+ * l'ombre (`poidsDuVoisin`). Ce qui abrite les fleurs d'un fruitier d'une nuit
+ * de gel, c'est ce qui pousse au-dessus d'elles, et elles sont dans tout le
+ * houppier ; pas le bois voisin qui lui prend le soleil du soir.
  */
 export function couvertAuDessusDesArbres(
   trees: readonly TreeState[],
   part: PartOmbrageante,
 ): number[] {
   const buckets = buildShadowIndex(trees, part, 0);
-  return trees.map((tree) =>
-    tree.alive ? 1 - Math.exp(-extinctionAt(buckets, tree.x, tree.y, tree.heightM)) : 0,
-  );
+  const lu: LecturesOmbre = { houppier: 0, cime: 0 };
+  return trees.map((tree) => {
+    if (!tree.alive) return 0;
+    const baseM = tree.heightM - profondeurHouppierM(tree);
+    sommerOmbres(buckets, tree.x, tree.y, tree.heightM, baseM, tree.id, lu);
+    return 1 - Math.exp(-saturer(lu.houppier));
+  });
 }
 
 /**
@@ -581,7 +712,7 @@ export function computeGroundLight(
   const out = new Array<number>(widthM * heightM);
   for (let y = 0; y < heightM; y++) {
     for (let x = 0; x < widthM; x++) {
-      out[y * widthM + x] = Math.exp(-extinctionAt(buckets, x + 0.5, y + 0.5, 0));
+      out[y * widthM + x] = Math.exp(-extinctionAt(buckets, x + 0.5, y + 0.5));
     }
   }
   return out;
