@@ -83,7 +83,7 @@ La fauche coûtait 10 à 11 % au pin de la lande, et `herbe.test.ts` gardait cet
 
 ### Mieux nourri, plus haut, plus exposé
 
-Sous A comme sous B, les pins du sable ne manquent plus de phosphore que 22 à 31 % des semaines (58 à 74 % sur main) et poussent de 6 à 7 % plus haut. Sur la graine 17, ils sont plus hauts aux coups de vent des années 22, 26 et 32, et tous les huit tombent en chablis (cinq sur main) : la moyenne des deux graines du banc compte zéro pour celle-là, et l'essai tombe à 7,9 m. **Un banc de huit arbres et deux graines mesure aussi le vent** ; avant de lire une hauteur, lire combien d'arbres il reste.
+Sous A comme sous B, les pins du sable ne manquent plus de phosphore que 22 à 31 % des semaines (58 à 74 % sur main) et poussent de 6 à 7 % plus haut. Sur la graine 17, ils sont plus hauts aux coups de vent des années 22, 26 et 32, et tous les huit tombent en chablis (cinq sur main) : la moyenne des deux graines du banc compte zéro pour celle-là, et l'essai tombe à 7,9 m. Quatre graines de plus le confirment : sous B, le vent tue plus de pins que sur main sur trois d'entre elles, et les survivants sont 10 % plus hauts. Sur les sept graines, main fait 15,30 m (−1 % de la table) et B 16,39 m sur les six où il reste des pins (+6 %), 14,05 m en comptant zéro pour la graine rasée (−9 %) : dans la bande dans les deux lectures. **Un banc de huit arbres et deux graines mesure aussi le vent** ; avant de lire une hauteur, lire combien d'arbres il reste.
 
 ### Sous O2, la boucle refermée rend les arbres sans fabriquer
 
@@ -140,6 +140,7 @@ CI : sous A, `herbe.test.ts` (la fauche) et `hauteurs.test.ts` (le pin de la gra
 - P1d : la lande et la prairie devaient perdre du phosphore ; elles en créaient.
 - P1e : le noyer de la graine 23 à 29,4 cm, sous la fourchette de 30 à 34.
 - P2 : le phosphore offert baisse plus que prédit partout où la litière immobilisait (houx 0,96 pour 1,0 à 1,5, noyer 7,9 pour 11 à 14,5, prairie 5,6 pour 8 à 16, blé −20 % pour ±15 %) et monte plus sous le pin du sable (0,66 pour 0,35 à 0,60) ; le plafond de la strate du sable tombe à 0 et non à 10 à 25 % ; le pin de la lande perd 24 % et non 5 à 20 % ; la fauche devait garder un rapport de 0,85 à 0,95, elle passe à 1,01 ; la graine 17 du pin rasée par le vent n'était pas prévue.
+- P5c : une graine de main sur quatre de plus devait garder moins de trois pins ; aucune n'en garde moins de six.
 - P3b, P3d : B devait retirer de 0,5 à 2 kg/ha d'offert au noyer et 5 à 20 % au châtaignier ; 0,3 et 2 %. Les deux essais des ajoncs n'étaient pas prévus.
 
 ### Ce qui reste ouvert
