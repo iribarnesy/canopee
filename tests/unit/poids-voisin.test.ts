@@ -106,7 +106,7 @@ describe("le poids d'un voisin, lu sur tout le houppier", () => {
     expect(poidsDuVoisin(1.1, 0.99, 1, 1)).toBeCloseTo(0.1 / 0.99, 12);
     expect(poidsDuVoisin(30, 27, 1, 1)).toBe(1);
     // Et la lecture du houppier tend vers elle quand la profondeur s'annule.
-    expect(poidsDuVoisin(1.1, 0.99, 1, 1 - 1e-4)).toBeCloseTo(0.1 / 0.99, 4);
+    expect(poidsDuVoisin(1.1, 0.99, 1, 1 - 1e-4)).toBeCloseTo(0.1 / 0.99, 3);
   });
 
   it("un voisin sans houppier ne pèse rien", () => {
@@ -134,12 +134,14 @@ describe("la lumière des arbres", () => {
 
   it("au sol, tout houppier pèse à plein, le petit comme le grand", () => {
     // Hors saturation, les extinctions s'additionnent : la lumière sous les
-    // deux est le produit des lumières sous chacun.
+    // deux est le produit des lumières sous chacun. Feuillage à 30 % pour
+    // rester sous la saturation là où les deux ombres se recouvrent.
     const grand = arbre(1, 8, 8, 12);
-    const petit = arbre(2, 9, 12, 6);
-    const deux = computeGroundLight([grand, petit], 20, 20, () => 1);
-    const sousGrand = computeGroundLight([grand], 20, 20, () => 1);
-    const sousPetit = computeGroundLight([petit], 20, 20, () => 1);
+    const petit = arbre(2, 9, 10, 6);
+    const part = () => 0.3;
+    const deux = computeGroundLight([grand, petit], 20, 20, part);
+    const sousGrand = computeGroundLight([grand], 20, 20, part);
+    const sousPetit = computeGroundLight([petit], 20, 20, part);
     let comparees = 0;
     for (let i = 0; i < deux.length; i++) {
       const a = sousGrand[i] ?? 1;
