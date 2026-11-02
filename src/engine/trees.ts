@@ -1118,7 +1118,8 @@ export function volumeAerienM3(diametreCm: number, heightM: number): number {
  * de #65 l'a mesuré.** Le moteur couvre H/D de 35 à 49 quand la sylviculture
  * mesure 25–40 au large et 90–100 en perche : le bon ordre, un cinquième de
  * l'étendue. Ce commentaire a longtemps désigné le poids d'ombrage des
- * codominants (0,4 dans `light.ts:extinctionAt`) comme la cause, et
+ * codominants (0,4 dans `light.ts:extinctionAt`, remplacé depuis par la part
+ * du houppier voisin qui dépasse celui de la cible, #467) comme la cause, et
  * `elancement.test.ts` le répétait. **C'est faux, et le balayage le montre** :
  * porter ce poids à 1 — c'est-à-dire supprimer toute l'atténuation — fait
  * passer les dominants d'une hêtraie plantée à 2 m de H/D 42,1 à 41,7. Poids 1,
