@@ -674,6 +674,10 @@ const CODER_2017 =
   "Coder 2017, Black Walnut Allelopathy: Tree Chemical Warfare, Warnell School of Forestry & Natural Resources, University of Georgia, publication WSFNR-17-06 — synthèse de vulgarisation";
 const MEYER_NIFA =
   "Meyer (Purdue University), Investigation of metabolic mechanisms underlying juglone resistance, projet USDA NIFA 2022-2024 — énoncé du projet, pas un résultat";
+const HEMERY_2005 =
+  "Hemery, Savill & Pryor 2005, Applications of the crown diameter–stem diameter relationship for different species of broadleaved trees, Forest Ecology and Management 215 : 285-294 (sud de l'Angleterre ; noyers isolés, équation de Hemery 2000)";
+const FERNANDEZ_MOYA_2020 =
+  "Fernández-Moya & Urbán-Martínez 2020, Estimation of crown competition factor for hybrid walnut (Juglans x intermedia) Mj209xRa planted forests in Spain, Annals of Silvicultural Research 44(1) : 24-29 (Gérone, Cuenca, La Corogne ; plantations à 5 × 6 m)";
 /** **sources des trois traits du commun que sa fiche wallonne contredisait** (#377). */
 const CNPF_NOYERS_2023 =
   "Le Mesle & Trembleau 2023, Les noyers à bois, fiche essence 4 (2e édition), CNPF Centre-Val de Loire et Île-de-France";
@@ -1072,7 +1076,19 @@ export const ESPECES_V0: readonly EspeceV0[] = [
     // Plateau (#278) : « deep and rich soils, with pH values of
     // between 6 and 7.5 » (de Rigo et al. 2016, Atlas européen).
     optimumPh: [6.0, 7.5],
-    lumiere: { compensation: 0.2, saturation: 0.75, lai: 2.6, houppierRatio: 0.5, caduc: true },
+    // **Le houppier, sur Hemery, Savill et Pryor (2005)** (#438). Leur table 1
+    // donne au noyer commun K = 2,75 + 18,16 d (diamètre de houppier K et de
+    // tronc d, en mètres ; 46 arbres, r² 0,93), mesuré sur des noyers isolés,
+    // les seuls arbres hors forêt de l'étude, parce qu'on ne cultive le noyer
+    // qu'isolé : 5,5 m de houppier à 15 cm, 6,4 à 20, 8,2 à 30. Le moteur
+    // donne `houppierRatio × D` mètres de houppier à D centimètres
+    // (`crownRadiusM`) : 0,35 est leur rapport K/d à 16 cm, celui d'un noyer
+    // d'agroforesterie de quinze ans. L'ancien 0,5, sans source, faisait 9 m à
+    // 18 cm. Un rapport fixe ne suit pas l'ordonnée à l'origine de la droite :
+    // il fait le jeune plus étroit (3,5 m au lieu de 4,6 à 10 cm) et l'adulte
+    // plus large (17,5 m au lieu de 11,8 à 50 cm) *(à recaler, avec toutes
+    // les essences, sur la relation entière)*.
+    lumiere: { compensation: 0.2, saturation: 0.75, lai: 2.6, houppierRatio: 0.35, caduc: true },
     // **Un pivot de 3,7 m**, mesuré dans une plantation de semis du nord de
     // l'Albanie, les racines latérales surtout entre 60 et 80 cm (Zeneli & Kola
     // 2006) ; la fiche wallonne le dit « à enracinement très profond », et donne
@@ -1161,6 +1177,7 @@ export const ESPECES_V0: readonly EspeceV0[] = [
       ATLAS,
       GWDD_2009,
       FEE_HYBRIDE,
+      HEMERY_2005,
       CNPF_NOYERS_2023,
       ZENELI_2006,
       RIETVELD_1983,
@@ -2546,7 +2563,15 @@ export const ESPECES_V0: readonly EspeceV0[] = [
     // pleine lumière » adulte), un peu moins que le commun (MAA 2024 : le
     // phototropisme et la sensibilité à l'ombrage « semblent moins prononcés »).
     // L'écart n'est chiffré nulle part : la lumière du commun est reprise.
-    lumiere: { compensation: 0.2, saturation: 0.75, lai: 2.6, houppierRatio: 0.5, caduc: true },
+    //
+    // Le houppier aussi (#438) : Hemery et al. (2005) ne mesurent que le commun.
+    // La seule relation publiée pour l'hybride vient de plantations à 5 × 6 m
+    // (Mj209 × Ra, sept à huit cents arbres de 5 à 33 cm) : 4,8 m de houppier
+    // à 15 cm, 5,8 à 20, 7,3 à 30 (Fernández-Moya et Urbán-Martínez 2020).
+    // C'est un peu sous le commun isolé, ce qu'on attend d'arbres serrés, et ce
+    // n'est pas l'arbre d'une allée à 100 tiges/ha : le rapport du commun est
+    // repris *(à confirmer en plein champ)*.
+    lumiere: { compensation: 0.2, saturation: 0.75, lai: 2.6, houppierRatio: 0.35, caduc: true },
     // Des racines de noyer relevées jusqu'à **4 m**, la profondeur du relevé, sous
     // les allées cultivées de Restinclières à dix-sept ans — plus profond qu'en
     // plantation pure, parce que le blé occupe la surface (Cardinael 2015). Le
@@ -2642,6 +2667,8 @@ export const ESPECES_V0: readonly EspeceV0[] = [
       CARDINAEL_2015,
       MAA_2024,
       COELLO_2013,
+      HEMERY_2005,
+      FERNANDEZ_MOYA_2020,
       GWDD_2009,
       RIETVELD_1983,
       CODER_2017,
