@@ -61,6 +61,27 @@ export const RATIO_P_SUR_N = 0.09;
 export const RATIO_K_SUR_N = 0.55;
 
 /**
+ * Le phosphore que porte un flux d'azote organique, g/m² (#473).
+ *
+ * **Le phosphore de la matière organique suit son azote.** Le moteur n'a pas de
+ * stock de phosphore organique : la litière, l'humus et le bois mort portent le
+ * leur implicitement, au rapport du prélèvement, comme ils portent leur azote.
+ * Le phosphore ne bouge donc que là où l'azote passe de la matière organique au
+ * minéral, ou du minéral à la matière organique, et du même nombre : la
+ * minéralisation de l'humus le rend, la litière qui libère son azote le rend,
+ * les décomposeurs qui immobilisent l'azote du sol, et l'humus nouveau qui y
+ * prend le sien, le prennent avec.
+ *
+ * Seule la minéralisation de l'humus suivait cette règle. La litière rendait son
+ * azote sans son phosphore, l'immobilisation prenait le sien sans phosphore :
+ * le phosphore que l'herbe avait pris avec l'azote que sa litière recycle ne
+ * revenait jamais, et celui de l'azote immobilisé revenait sans avoir été pris.
+ */
+export function phosphoreDeLAzoteOrganiqueG(azoteG: number): number {
+  return azoteG * RATIO_P_SUR_N;
+}
+
+/**
  * Le potassium que porte la strate herbacée, g/m², déduit de son azote.
  *
  * **La strate prélevait du potassium et n'en rendait jamais** (#222). Elle le

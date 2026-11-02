@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import { cnHumusDuProfil, treeTotalCarbonKg } from "../../src/engine/carbon";
 import { getEspece } from "../../src/engine/especes";
 import { syntheticYear } from "../../src/engine/meteo";
+import { phosphoreDeLAzoteOrganiqueG } from "../../src/engine/pk";
 import { rngStateFromSeed } from "../../src/engine/rng";
 import { createGameState, type GameState, plantScattered } from "../../src/engine/state";
 import type { StationClimat } from "../../src/engine/stations";
@@ -14,6 +15,13 @@ import { dureeChandelleSemaines } from "../../src/engine/trees";
  * chaque semaine, pluie = évaporation + transpiration + drainage + débordement
  * + Δstock (sol, nappe et manteau neigeux), et minéralisation = prélèvements + lessivage + Δstock d'azote.
  */
+
+/**
+ * La précision du bilan du phosphore, en décimales de kg/ha : le phosphore
+ * assimilable est tenu en flottants simples, comme le potassium échangeable
+ * (`potassium-conservation.test.ts`).
+ */
+const PRECISION_P = 4;
 
 /** Stock d'eau moyen par **cellule**, tous horizons confondus (sol stratifié). */
 function meanWaterStock(state: GameState): number {
@@ -54,6 +62,28 @@ function meanNStockKgHa(state: GameState): number {
   let boisCoucheNG = 0;
   for (let i = 0; i < n; i++) boisCoucheNG += state.soil.boisAuSolNG[i] ?? 0;
   return ((sum + state.stockBrf.azoteG + state.carbon.deadWoodNG + boisCoucheNG) / n) * 10;
+}
+
+/**
+ * Phosphore du **sol**, kg/ha (#473) : l'assimilable, le fixé, et celui de la
+ * matière organique, que la litière, l'humus, le bois mort et le broyat portent
+ * au rapport de leur azote (`phosphoreDeLAzoteOrganiqueG`, pk.ts). La strate et
+ * les arbres sont dehors : ce qu'ils prennent est un prélèvement, ce qu'ils
+ * versent à la litière ou au bois mort un retour.
+ */
+function phosphoreDuSolKgHa(state: GameState): number {
+  const n = state.soil.phosphoreG.length;
+  const cnHumus = cnHumusDuProfil(state.station.profil);
+  let mineral = 0;
+  let azoteOrganique = state.stockBrf.azoteG + state.carbon.deadWoodNG;
+  for (let i = 0; i < n; i++) {
+    mineral += (state.soil.phosphoreG[i] ?? 0) + (state.soil.phosphoreFixeG[i] ?? 0);
+    azoteOrganique +=
+      (state.soil.litterNG[i] ?? 0) +
+      (state.soil.humusCG[i] ?? 0) / cnHumus +
+      (state.soil.boisAuSolNG[i] ?? 0);
+  }
+  return ((mineral + phosphoreDeLAzoteOrganiqueG(azoteOrganique)) / n) * 10;
 }
 
 /**
@@ -101,6 +131,7 @@ function checkConservation(
     const before = meanWaterStock(state);
     const beforeN = meanNStockKgHa(state);
     const avantSysteme = systemeEntier ? azoteDuSystemeKgHa(state) : 0;
+    const avantP = phosphoreDuSolKgHa(state);
     const resultat = tick(state, w);
     const { state: next, fluxes } = resultat;
 
@@ -156,6 +187,27 @@ function checkConservation(
         6,
       );
     }
+
+    // **Le phosphore du sol se referme aussi** (#473). Il entre par la roche,
+    // l'atmosphère et ce que les plantes versent au sol : la litière et le bois
+    // mort portent le phosphore de leur azote, et les feuilles d'arbre le
+    // surplus qu'elles rendent dès leur chute. Il sort par le prélèvement, par
+    // la terre qui quitte la parcelle et par l'humus que les ectomycorhizes
+    // minent. Tout le reste est interne : la minéralisation, la litière qui
+    // libère ou immobilise, l'humification, la rétrogradation. Sur main, la
+    // litière rendait son azote sans son phosphore et l'immobilisait sans lui,
+    // et les feuilles le rendaient deux fois : ce bilan ne pouvait pas tenir.
+    expect(fluxes.phosphoreOrganiqueNonTrouveKgHa).toBe(0);
+    expect(phosphoreDuSolKgHa(next) - avantP).toBeCloseTo(
+      fluxes.apportPKgHa +
+        fluxes.retourPFeuillesKgHa +
+        phosphoreDeLAzoteOrganiqueG(fluxes.litterfallKgHa + fluxes.fixationKgHa) -
+        fluxes.uptakePKgHa -
+        fluxes.erosionPKgHa -
+        fluxes.erosionPOrganiqueKgHa -
+        phosphoreDeLAzoteOrganiqueG(fluxes.minageEctoKgHa),
+      PRECISION_P,
+    );
 
     // **et ce qui sort du sol doit arriver dans une plante** (#115). Le bilan
     // ci-dessus ferme le côté **sol** : il compte `uptakeKgHa`, c'est-à-dire ce que
