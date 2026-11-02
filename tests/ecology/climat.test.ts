@@ -373,8 +373,8 @@ describe("dans une partie, le réchauffement se voit", () => {
     // sonde hors dépôt : sous SSP5-8.5, 61 / 101 / 40 morts de soif, dont 3 /
     // 3 / 3 plantés (81 / 96 / 45 et 1 / 8 / 4 avec l'élagage sur le
     // houppier) ; sur le couvert seul (#464), 4 / 1 / 0 au figé et 41 / 72 /
-    // 49 sous SSP5-8.5. Aucun hêtre planté mort de soif au figé, dans les
-    // trois variantes et sur chaque graine.
+    // 49 sous SSP5-8.5. Aucun hêtre planté mort de soif au figé, sur chaque
+    // graine, dans ces trois variantes comme avec la vernale de #476.
     for (const [i, f] of fige.runs.entries()) {
       const c = chauffe.runs[i];
       if (!c) throw new Error("partie manquante");
