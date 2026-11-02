@@ -242,7 +242,7 @@ describe("dans une partie, le réchauffement se voit", () => {
     const scenario = getScenario(scenarioId);
     let etpDebut = 0;
     let etpFin = 0;
-    const morts: { especeId: string; cause: string }[] = [];
+    const morts: { id: number; especeId: string; cause: string }[] = [];
     /**
      * Le sommet de la pullulation, **rapporté aux hôtes**.
      *
@@ -288,6 +288,11 @@ describe("dans une partie, le réchauffement se voit", () => {
       etpFin: etpFin / 5,
       hetresMortsDeSoif: morts.filter(
         (m) => m.especeId === "fagus_sylvatica" && m.cause === "secheresse",
+      ).length,
+      // Les mêmes, parmi les hêtres **plantés** : des arbres installés, et non les
+      // semis que la parcelle lève d'elle-même au fil de la partie.
+      hetresPlantesMortsDeSoif: morts.filter(
+        (m) => m.especeId === "fagus_sylvatica" && m.cause === "secheresse" && cohorte.has(m.id),
       ).length,
       // Ce qui reste **debout** de la cohorte plantée : la grandeur directe, celle
       // qu'aucune imputation de cause ne peut déplacer (#84).
@@ -351,14 +356,34 @@ describe("dans une partie, le réchauffement se voit", () => {
     // monte et de pluies d'été qui reculent, lue par les seuils d'une espèce
     // qui « aime le frais ». Sur soixante ans de climat figé, le hêtre ne
     // meurt jamais de sécheresse sur ce limon profond ; sous SSP5-8.5, si.
-    // Ce qui compte est le **rapport**, pas le compte. À climat figé, il meurt
-    // quelques hêtres de soif : un semis dense s'auto-éclaircit, et la soif
-    // est un des couteaux qui s'en charge — d'autant plus depuis que le
-    // plafond d'auto-éclaircie laisse le fourré atteindre sa vraie densité.
-    // Sous SSP5-8.5, la même parcelle en perd plus de vingt fois autant.
-    expect(fige.hetresMortsDeSoif).toBeLessThan(5);
-    expect(chauffe.hetresMortsDeSoif).toBeGreaterThan(5);
-    expect(chauffe.hetresMortsDeSoif).toBeGreaterThan(3 * Math.max(1, fige.hetresMortsDeSoif));
+    // Ce qui compte est le **rapport**, pas le compte.
+    //
+    // **Relu sur son critère (#467), et c'est signalé.** L'essai bornait à
+    // moins de cinq la moyenne des hêtres morts de soif au figé sur les trois
+    // parties, un nombre relevé sur le moteur. L'ombrage entre égaux lu sur le
+    // houppier l'a porté à 5,33 (4,67 quand l'élagage lit la cime). Relevés
+    // mort par mort, aucun de ces hêtres n'était planté : au figé, les morts de
+    // soif sont toutes des recrues que la parcelle a levées d'elle-même (5 / 8
+    // / 1 sur les graines 11, 23 et 37 ; 9 / 6 / 1 avec l'élagage sur la
+    // lumière du houppier), des semis de quelques mois à quinze ans. Ce que
+    // l'essai affirme se lit donc graine par graine : au figé, **aucun hêtre
+    // planté** ne meurt de soif (« le hêtre ne meurt jamais de sécheresse »),
+    // et sous SSP5-8.5 la parcelle en perd plus de cinq et plus de trois fois
+    // le figé (le rapport, sur chaque graine, et non plus en moyenne). Mesuré,
+    // sonde hors dépôt : sous SSP5-8.5, 61 / 101 / 40 morts de soif, dont 3 /
+    // 3 / 3 plantés (81 / 96 / 45 et 1 / 8 / 4 avec l'élagage sur le
+    // houppier) ; sur le couvert seul (#464), 4 / 1 / 0 au figé et 41 / 72 /
+    // 49 sous SSP5-8.5. Aucun hêtre planté mort de soif au figé, dans les
+    // trois variantes et sur chaque graine.
+    for (const [i, f] of fige.runs.entries()) {
+      const c = chauffe.runs[i];
+      if (!c) throw new Error("partie manquante");
+      expect(f.hetresPlantesMortsDeSoif, `graine ${GRAINES[i]}`).toBe(0);
+      expect(c.hetresMortsDeSoif, `graine ${GRAINES[i]}`).toBeGreaterThan(5);
+      expect(c.hetresMortsDeSoif, `graine ${GRAINES[i]}`).toBeGreaterThan(
+        3 * Math.max(1, f.hetresMortsDeSoif),
+      );
+    }
     // On ne compare **pas** les effectifs finaux : ils mélangent la cohorte
     // plantée et les semis nés en cours de route, et un climat plus chaud
     // allonge la saison de végétation donc en installe davantage. Un
