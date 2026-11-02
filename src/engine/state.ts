@@ -737,7 +737,8 @@ export interface TickFluxes {
    * Le phosphore que les racines auraient pris avec leur azote si le sol l'avait
    * eu, kg/ha : la plante prend alors son azote sans tout son phosphore, et la
    * matière organique qu'elle fera en portera plus qu'elle n'en a pris. Il mord
-   * sous une culture fertilisée, jamais sous une forêt ni sur la lande.
+   * sous une culture fertilisée (un blé à 192 kg N/ha : 13 kg P/ha/an), à peine
+   * sous une forêt ou sur la lande (moins de 1 % des cellules-semaines mesurées).
    */
   phosphoreNonPrisKgHa: number;
   /**

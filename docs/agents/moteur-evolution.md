@@ -85,6 +85,10 @@ La fauche coûtait 10 à 11 % au pin de la lande, et `herbe.test.ts` gardait cet
 
 Sous A comme sous B, les pins du sable ne manquent plus de phosphore que 22 à 31 % des semaines (58 à 74 % sur main) et poussent de 6 à 7 % plus haut. Sur la graine 17, ils sont plus hauts aux coups de vent des années 22, 26 et 32, et tous les huit tombent en chablis (cinq sur main) : la moyenne des deux graines du banc compte zéro pour celle-là, et l'essai tombe à 7,9 m. **Un banc de huit arbres et deux graines mesure aussi le vent** ; avant de lire une hauteur, lire combien d'arbres il reste.
 
+### Sous O2, la boucle refermée rend les arbres sans fabriquer
+
+O2 (#470) double ce que l'herbe prend d'azote, et sa litière le libère : sur main, sans son phosphore (26 à 81 kg N/ha/an), et la strate, qui en voudrait deux fois plus, ne le trouve pas la moitié à trois quarts du temps. Le pin du sable tombait de 16,43 à 9,40 m, le châtaignier de 20,27 à 14,30, le houx de 2,66 à 1,26. Sous B, le phosphore revient avec l'azote de la litière, et les trois retrouvent leurs hauteurs de main (15,25, 20,31, 2,66), le plafond du prélèvement ne mordant plus que 2 % des cellules-semaines sous le pin. La sonde de #461 qui rendait le phosphore à la mort des tissus y arrivait en le fabriquant ; celle-ci y arrive en le comptant. Le noyer, lui, ne bouge pas : il grossit par l'azote (33,5 cm à dix-neuf ans, hors de la bande de Restinclières). **Quand une loi nouvelle casse des arbres par un nutriment, chercher d'abord la fuite que la loi a ouverte** : ici, O2 n'avait rien de faux sur le phosphore ; il faisait passer plus d'azote par une frontière qui ne portait pas le sien.
+
 ### Ce que ça donne
 
 Sonde hors dépôt, bancs recopiés des essais ; chaque course est déterministe à graine fixée. Flux en kg P/ha/an sur la course ; « offert » : phosphore assimilable tamisé par le pH, moyenne de parcelle des semaines de saison.
@@ -117,6 +121,15 @@ Ce que les arbres et le sol en voient, main → A → B :
 | bouleaux, 60 a | 15,07 m ; offert 33,4 ; P du sol 539 | identique ; 19,6 ; 335 | identique ; 17,7 ; 300 |
 | prairie, 40 a | offert 21,3 ; P du sol 347 | 5,6 ; 119 | 5,6 ; 119 |
 | blé, 10 a | offert 1,75 ; plafond 16,8 % | 1,40 ; 15,7 % | 1,40 ; 15,7 % |
+
+Sous O2 (#470, sonde hors dépôt), graines 17 / 43 / 7, noyer 4 / 11 / 23 :
+
+| banc | main | main + O2 | B + O2 |
+|---|---|---|---|
+| pin du sable, 40 a | 16,43 / 14,84 / 13,60 m ; P 0,89 ; plafond 24 % | 9,40 / 7,26 / 6,52 ; P 0,48 ; 52 % | 15,25 / 15,37 / 14,07 ; P 0,98 ; 2 % |
+| châtaignier, 40 a | 20,27 / 18,68 / 18,04 m ; P 1 | 14,30 / 10,42 / 8,71 ; P 0,55 ; 72 % | 20,31 / 18,69 / 18,05 ; P 1 ; 0 % |
+| houx, 12 a | 2,66 / 2,38 / 2,33 m ; P 1 | 1,25 / 1,19 / 1,05 ; P 0,43 ; 60 % | 2,66 / 2,38 / 2,33 ; P 1 ; 0 % |
+| noyer en allée, 19 a | 32,2 / 31,5 / 29,4 cm | 33,5 / 32,6 / 30,9 | 33,5 / 32,6 / 30,9 |
 
 CI : sous A, `herbe.test.ts` (la fauche) et `hauteurs.test.ts` (le pin de la graine 17) tombent ; sous B, aussi `bases.test.ts` (les deux essais des ajoncs). Passent, sous les deux : `pk`, `ler`, `bases` hors ajoncs, `culture`, `fertilisation`, `noyer-hybride`, `hauteurs-arbustes`, `litiere-herbacee` (Park Grass ; la strate ne lit pas le phosphore, son prélèvement ne bouge pas), `feu`, `tolerances`, et les bilans.
 
