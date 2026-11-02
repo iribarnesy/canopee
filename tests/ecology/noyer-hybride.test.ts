@@ -107,6 +107,9 @@ describe("le noyer hybride contre ses références (#213)", () => {
     // sous le « environ double » d'Aletà, mesuré à six ans contre le **meilleur**
     // des dix noyers communs de l'essai : c'est l'ordre qui est gardé, pas
     // l'ampleur.
+    //
+    // Remesuré avec le houppier des noyers calé sur Hemery et al. (2005, #438),
+    // graines 4, 11 et 23 : 12,89 m et 31,1 cm contre 9,17 m et 21,9 cm.
     const hybride = cohorte("juglans_x_intermedia", "allee");
     const commun = cohorte("juglans_regia", "allee");
     for (const an of [10, 20]) {
@@ -125,6 +128,10 @@ describe("le noyer hybride contre ses références (#213)", () => {
     // tant que les noyers subissaient la
     // juglone de leurs voisins : elle les bridait autant en allée qu'en plein,
     // et l'espacement ne jouait plus (#375).
+    //
+    // **Avec la pénombre normalisée (#438), elle tombait sur la graine 11**
+    // (0,96 ; 1,09 et 1,12 sur les graines 4 et 23). Le houppier calé sur
+    // Hemery et al. (2005) la rend sur les trois : 1,12 / 1,05 / 1,08.
     const allee = jalon(cohorte("juglans_x_intermedia", "allee"), 20);
     const plein = jalon(cohorte("juglans_x_intermedia", "plein"), 20);
     expect(allee.d).toBeGreaterThan(plein.d);
@@ -144,6 +151,10 @@ describe("le noyer hybride contre ses références (#213)", () => {
     // dans leurs racines (Rietveld 1983, Coder 2017) : leur sensibilité vaut 0,
     // et aucun nombre de croissance n'a bougé pour obtenir cet accord.
     //
+    // Remesuré avec la pénombre normalisée et le houppier calé sur Hemery et al.
+    // (2005, #438), graines 4, 11 et 23 : 12,39 m (−6 %) et 29,9 cm (+9 %) ;
+    // la pénombre seule donnait 13,37 m (+1 %) et 30,3 cm (+10 %).
+    //
     // **La tolérance** est celle que le banc des hauteurs tient à vingt ans, l'âge
     // qui n'a servi à aucun calage (`TOLERANCE_TENUE_A_LECART`). Et la station
     // n'est pas la même : un fluviosol profond à nappe sous climat
@@ -161,7 +172,8 @@ describe("le noyer hybride contre ses références (#213)", () => {
   it("grossit entre cinq et dix ans comme une bonne station du réseau de Bade-Wurtemberg", () => {
     // Ehring 2011, 55 placettes de jeunes hybrides : 8,5 mm/an de six à dix ans
     // en moyenne de stations, 14 mm sur les stations au-dessus de la moyenne,
-    // plus de 17 sur les meilleures. Le moteur : 15,2 mm/an, trois graines.
+    // plus de 17 sur les meilleures. Le moteur : 15,2 mm/an, trois graines ;
+    // 14,2 avec le houppier calé sur Hemery et al. (2005, #438).
     //
     // **Réécrit, et c'est signalé** (#375). L'essai bornait le moteur à ±25 % de
     // la moyenne du réseau, et il y tombait — 8,0 mm/an — parce que la juglone

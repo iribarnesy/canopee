@@ -2529,6 +2529,11 @@ export const ESPECES_V0: readonly EspeceV0[] = [
     // ses stations au-dessus de la moyenne) : en hauteur un peu dessous, en
     // diamètre au niveau d'une bonne station.
     //
+    // Remesuré avec la pénombre normalisée et le houppier calé sur Hemery et
+    // al. (2005, #438), graines 4, 11 et 23 : 7,6 m et 17,9 cm à dix ans,
+    // 12,9 m et 31,1 cm à vingt ; à dix-neuf ans, 12,4 m (−6 %) et 29,9 cm
+    // (+9 %).
+    //
     // À l'entrée de la fiche, le moteur était à 8,1 m et 19,1 cm à dix-neuf ans :
     // chaque noyer subissait la juglone de ses voisins à la sensibilité médiane,
     // et sa croissance plafonnait à la moitié. Ce n'était pas ce nombre (#375).
