@@ -145,6 +145,18 @@ describe("l'auto-élagage ÉMERGE d'une partie simulée", () => {
    * identique sauf l'écartement — c'est la leçon sylvicole que le jeu doit
    * faire sentir : on plante serré pour avoir du bois droit.
    */
+  /**
+   * Les pins **plantés** encore vivants, et eux seuls.
+   *
+   * **Réécrit sur son critère (#438), et c'est signalé** : l'essai lisait toutes
+   * les tiges vivantes. Or à vingt-cinq ans les pins grainent depuis dix ans, et
+   * la plantation lâche porte 132 recrues pour 16 plantés. Depuis que la pénombre
+   * rapporte le feuillage de chaque couronne à sa moyenne, ces recrues,
+   * ombragées par leurs parents, s'élaguent (0,135 de fût nu en moyenne), et la
+   * moyenne des 148 tiges passait au-dessus du plancher alors que les 16 plantés
+   * y restaient (0,10). Le critère porte sur la plantation : ce sont ses arbres
+   * qu'on compte. Les bornes ne bougent pas.
+   */
   function pineraie(ecartementM: number, ans: number): TreeState[] {
     const station: Station = { ...LIMON_RICHE.station, coteM: 40, voisinage: [], gibierParHa: 0 };
     const meteo = syntheticYear(LIMON_RICHE.climat);
@@ -154,12 +166,13 @@ describe("l'auto-élagage ÉMERGE d'une partie simulée", () => {
         state = plantAt(state, "pinus_sylvestris", x, y, 2);
       }
     }
+    const plantes = new Set(state.trees.map((t) => t.id));
     for (let i = 0; i < ans * 52; i++) {
       const w = meteo[i % 52];
       if (!w) throw new Error("météo manquante");
       state = tick(state, w).state;
     }
-    return state.trees.filter((t) => t.alive);
+    return state.trees.filter((t) => t.alive && plantes.has(t.id));
   }
 
   it("la futaie serrée fait du fût nu, la plantation lâche reste branchue", () => {

@@ -151,9 +151,11 @@ export interface EspeceV0 {
     /** saturation ∈ [0,1] : lumière au-delà de laquelle la croissance plafonne */
     saturation: number;
     /**
-     * Indice foliaire **de la couronne** (Beer-Lambert) : ombre d'une couronne
-     * traversée seule. ≈ LAI de peuplement / chevauchement typique (~2) —
-     * un point sous 2-3 couronnes retrouve le LAI de peuplement.
+     * Indice foliaire **de la couronne** (Beer-Lambert) : sa surface de feuilles
+     * rapportée à la projection du houppier au sol. ≈ LAI de peuplement /
+     * chevauchement typique (~2) — un point sous 2-3 couronnes retrouve le LAI
+     * de peuplement. La pénombre le répartit, double à l'aplomb du tronc et nul
+     * au bord, sans en changer la somme (light.ts, #438).
      */
     lai: number;
     /** rayon du houppier / hauteur */
