@@ -133,7 +133,7 @@ L'instruction (branche `claude/v06-sous-pin`) :
 
 Le lot :
 - **W3** : fausse sur le couvert (voir plus haut).
-- **X3** : `climat.test.ts` casse en CI, et c'est le seul fichier hors `herbacees`.
+- **X3** : `climat.test.ts` casse en CI, et c'est le seul fichier hors `herbacees` (le brut de la graine 23, relu depuis ; voir plus bas).
 - **Y2** : juste sur la direction, fausse sur l'ampleur (graine 23 : −0,21).
 - **Z1** : sur la branche qui fusionne le couvert, `climat` casse aussi, sur une autre ligne.
 
@@ -143,11 +143,17 @@ Le lot :
 
 Sur la branche qui fusionne le couvert, c'est une autre ligne : les hêtres debout au chaud doivent être moins de la moitié de ceux du froid. Le couvert seul passait d'un demi-arbre (14 pour une borne de 14,5) ; avec A, le froid garde un hêtre de moins (28) et la borne tombe pile à 14.
 
-Les deux bornes sont posées sous le minimum d'une campagne du moteur. Je n'ai touché à aucune : la décision est rapportée dans la PR. **Quand une correction fait tomber une borne d'un arbre ou d'une graine, mesurer d'abord ce que la même borne laissait de marge avant elle.**
+Les deux bornes sont posées sous le minimum d'une campagne du moteur. **Quand une correction fait tomber une borne d'un arbre ou d'une graine, mesurer d'abord ce que la même borne laissait de marge avant elle.**
+
+**Le brut est relu, sur décision du propriétaire.** Il doit dépasser 1 sur chaque graine : le réchauffement n'inverse jamais la pullulation, le défaut de #95. Il doit aussi dépasser 1,2 en moyenne sur les trois graines de l'essai (11, 23, 37), borne inchangée. Le par-hôte reste exigé graine par graine, à 1,5, et aucune graine n'est ajoutée.
+- Avec A, le brut vaut 1,400 / 1,126 / 1,437, soit 1,32 en moyenne.
+- Sur main, il vaut 1,318 / 1,334 / 1,440, soit 1,36.
+
+La relecture est signalée dans l'essai, avec les six graines de l'instruction. La ligne des hêtres debout, qui casse sur la fusion avec le couvert, n'est pas de ce lot : elle est transmise à l'agent des voisins (#471), qui relit `climat` sur la branche du couvert.
 
 ### Ce qui reste ouvert
 
-- **`climat.test.ts`** : deux assertions par graine, posées sous des minimums du moteur, cassent d'un cheveu, l'une sur main + A (brut, graine 23), l'autre sur la fusion avec le couvert (hêtres debout, graine 37). La décision attend le propriétaire (PR #476).
+- **`climat.test.ts`, les hêtres debout de la graine 37** : la ligne casse d'un arbre sur la fusion avec le couvert (14 pour 0,5 × 28), alors que le couvert seul passait d'un demi-arbre. Elle est transmise à l'agent des voisins (#471).
 - **#472 : une herbe de demi-ombre estivale.** C'est elle qui lèverait la limite de E9 sous le pin. Elle sort aussi du périmètre de la V1.
 - **La marcescence du hêtre est prêtée à l'adulte** (0,35, *à calibrer*). Svendsen 2001 (*Alces* 37 : 475-482), citant Schaffalitzky de Muckadell 1962, la tient pour un trait juvénile, limité aux branches de moins de 3 m environ ; la source primaire n'est pas ouverte (*à confirmer*). C'est un mécanisme, qui n'est pas codé.
   - Il ne joue pas sur E9 : l'anémone sature dès 0,25 de lumière.
