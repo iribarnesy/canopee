@@ -2328,9 +2328,10 @@ export function tick(state: GameState, weather: WeekWeather, essai?: ReglagesDEs
   //
   // Espèce par espèce (herbacees.ts) : chacune a son point de compensation, sa
   // gamme de pH et sa saison, et ne fait bouger son emprise que pendant la
-  // sienne. C'est de là que sort la fenêtre vernale — une anémone juge sa
-  // station en mars, sous un couvert caduc encore nu ; une graminée la juge en
-  // mai, sous le même couvert refermé.
+  // sienne. C'est de là que sort la fenêtre vernale. Une anémone juge sa
+  // station sur sa saison entière, de février à juin, dont les semaines sous le
+  // couvert caduc encore nu font l'essentiel ; une graminée la juge chaque
+  // semaine, et recule en mai sous le même couvert refermé.
   //
   // Ce qui ne dépend que de la semaine se calcule une fois pour toute la
   // parcelle, et les deux tampons par cellule sont alloués une fois pour

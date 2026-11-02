@@ -45,14 +45,23 @@
  *
  * Une espèce ne fait bouger son emprise que pendant sa saison de croissance :
  * dormante, elle est gelée — elle ne gagne rien et ne perd rien. Donc
- * **chaque espèce juge sa station au moment où elle pousse**. L'anémone la juge
- * en mars, sous un couvert caduc encore nu : elle s'installe. La graminée la
- * juge en mai, sous le même couvert refermé : elle recule. Sous un couvert
- * sempervirent, les deux voient la même lumière et la vernale n'a plus
- * d'avantage — pour peu que ce couvert soit dense, car un pin clair laisse
- * assez de jour toute l'année pour que la graminée tienne le sol.
+ * **chaque espèce juge sa station pendant qu'elle pousse**.
  *
- * Rien de tout cela n'est écrit dans une règle : ça sort de la phénologie de
+ * Une vernale la juge sur sa **saison entière** : la lumière moyenne des
+ * semaines où ses feuilles sont sorties (`lumiereJugee`, #468). L'anémone sort
+ * en février sous un couvert caduc encore nu. Le hêtre se feuille fin avril,
+ * quatre à cinq semaines avant qu'elle ne rentre : ces semaines d'ombre pèsent
+ * dans sa moyenne sans l'effacer, et elle s'installe. La graminée, elle, juge
+ * chaque semaine ; en mai, sous le même couvert refermé, elle recule.
+ *
+ * Sous un couvert sempervirent, les deux voient la même lumière toute l'année,
+ * et la vernale n'a plus d'avantage de fenêtre. Mais elle tient tout le sol dès
+ * 0,25 de lumière, sa saturation, et un pin clair (30 à 45 % de lumière) ne
+ * laisse pas à la graminée de quoi tenir tout le sol : la vernale prend le
+ * reste, et le sous-bois du pin devient à moitié saisonnier. Sur le terrain, ce
+ * reste irait à une herbe de demi-ombre estivale, que l'atlas n'a pas (#472).
+ *
+ * Seule la moyenne de saison est écrite. Le reste sort de la phénologie de
  * chaque espèce et de la lumière hebdomadaire que `light.ts` calcule déjà.
  *
  * ## Ce que le modèle **ne** fait pas
