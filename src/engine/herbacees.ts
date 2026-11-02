@@ -902,6 +902,74 @@ export function capaciteHerbacee(h: HerbaceeV0, lumiereAuSol: number, ph: number
 }
 
 /**
+ * ─── **une vernale juge sa station sur sa saison**, **pas sur sa pire semaine** (#468) ───
+ *
+ * Une géophyte vernale fait toute sa matière pendant que ses feuilles sont
+ * sorties, de février à juin pour l'anémone (SHIRREFFS_1985), et la range dans
+ * son rhizome. Ce que ce rhizome peut tenir dépend de ce que la saison entière
+ * lui a donné, pas de sa dernière semaine.
+ *
+ * Jugée chaque semaine sur la lumière de la semaine, elle l'était en fait sur
+ * la pire. Sous une hêtraie, le hêtre se feuille quatre à cinq semaines avant
+ * qu'elle ne rentre ; sa capacité à l'ombre d'été, 0,05 à 0,12 sous les centres
+ * des couronnes, lui retirait en une semaine ce que mars lui avait donné. Son
+ * tapis se réglait donc sur mai, et la fenêtre de printemps ne servait qu'à
+ * exclure la graminée. Mesuré : 9 à 18 % du sol d'une hêtraie de quarante ans
+ * (#468).
+ *
+ * La lumière jugée est la **moyenne** de celle des semaines de sa saison,
+ * pondérée par sa vigueur : une semaine où elle ne fait que sortir compte peu,
+ * une semaine en pleine feuille compte entier. La saison est celle que ses
+ * traits déclarent (`debutDJ`, `seuilJourH`, `finDJ`) ; aucune durée n'est
+ * ajoutée. Dormante, l'espèce oublie, et la saison suivante repart de sa
+ * première semaine.
+ *
+ * Seules les espèces à **retrait programmé** jugent ainsi. Les autres n'ont pas
+ * de fin de saison écrite, et c'est la semaine où le couvert se referme qui
+ * doit faire reculer une graminée (E9). Une culture ne juge rien
+ * (`evoluerEmprises`).
+ */
+export const JUGE_SA_SAISON: readonly boolean[] = HERBACEES.map(
+  (h) => h.phenologie.finDJ !== undefined && h.culture === undefined,
+);
+
+/**
+ * Le poids de la saison en cours, pour toute la parcelle : la somme des
+ * vigueurs depuis la sortie des feuilles, cette semaine comprise. Il retombe à
+ * zéro quand l'espèce dort. La vigueur ne lit que le calendrier : une valeur
+ * par espèce suffit.
+ */
+export function poidsDeSaison(poidsAvant: number, vigueur: number): number {
+  return vigueur > 0 ? poidsAvant + vigueur : 0;
+}
+
+/**
+ * La lumière qu'une espèce qui juge sa saison voit cette semaine dans une
+ * cellule. La mémoire est mise à jour en place.
+ *
+ * `sommes[k]` porte la lumière de la saison pondérée par la vigueur, et
+ * `poids`, la somme des vigueurs (`poidsDeSaison`, cette semaine comprise).
+ * Une espèce dormante efface sa somme et rend la lumière de la semaine, qui ne
+ * sert à rien : dormante, elle ne bouge pas (`evoluerEmprises`).
+ */
+export function lumiereJugee(
+  sommes: GrilleEcrite,
+  k: number,
+  poids: number,
+  vigueur: number,
+  lumiere: number,
+): number {
+  if (vigueur <= 0 || poids <= 0) {
+    sommes[k] = 0;
+    return lumiere;
+  }
+  sommes[k] = (sommes[k] ?? 0) + vigueur * lumiere;
+  // Divisée sur la valeur rangée, pour qu'une partie relue juge comme celle
+  // qui ne l'a pas été.
+  return (sommes[k] ?? 0) / poids;
+}
+
+/**
  * Vitesses d'installation, à plat. La strate tourne sur toutes les cellules
  * toutes les semaines : aller relire la fiche à chaque cellule se paie sur
  * toute la suite de tests.

@@ -110,9 +110,12 @@ import {
   finDeCycleCulture,
   HERBACEES,
   INERTIE_RESSOURCE_FLORALE,
+  JUGE_SA_SAISON,
+  lumiereJugee,
   N_HERBACEES,
   OFFRE_FLORALE_SUFFISANTE,
   partSaisonniere,
+  poidsDeSaison,
   rabattreParEspece,
   suivreFeuillage,
   vigueurHerbacee,
@@ -1061,6 +1064,8 @@ export function tick(state: GameState, weather: WeekWeather, essai?: ReglagesDEs
   const herbeFeuillage = state.soil.herbeFeuillage.slice();
   const herbeBiomasse = state.soil.herbeBiomasse.slice();
   const herbeHumidite = state.soil.herbeHumidite.slice();
+  const herbeLumiereSaison = state.soil.herbeLumiereSaison.slice();
+  const herbeVigueurSaison = state.soil.herbeVigueurSaison.slice();
   /** engorgement par (cellule, horizon) */
   const waterlogging = new Array<number>(nCells * nH).fill(0);
   const availFactor = new Array<number>(nCells);
@@ -2342,6 +2347,13 @@ export function tick(state: GameState, weather: WeekWeather, essai?: ReglagesDEs
   // (`finDeCycleCulture`, #455).
   const finsDeCycle = HERBACEES.map((h) => finDeCycleCulture(h, pheno));
   const thermiques = HERBACEES.map((h) => facteurThermique(h, weather.tMean));
+  // Une vernale juge sa station sur sa saison (#468) : le poids de la saison
+  // ne lit que le calendrier, il vaut pour toute la parcelle.
+  for (let s = 0; s < N_HERBACEES; s++) {
+    if (JUGE_SA_SAISON[s]) {
+      herbeVigueurSaison[s] = poidsDeSaison(herbeVigueurSaison[s] ?? 0, vigueurs[s] ?? 0);
+    }
+  }
   // Ce qui tombe du mort sur pied cette semaine : la même part pour toutes les
   // espèces et toutes les cellules, puisqu'elle ne lit que la température.
   const chuteMort = chuteDuMortSurPied(weather.tMean);
@@ -2360,12 +2372,23 @@ export function tick(state: GameState, weather: WeekWeather, essai?: ReglagesDEs
     const lumiere = groundLight[i] ?? 1;
     const humidite = herbeHumidite[i] ?? remplissage;
     const ph = state.soil.ph[i] ?? 7;
+    const base = i * N_HERBACEES;
     for (let s = 0; s < N_HERBACEES; s++) {
       const h = HERBACEES[s];
-      capacites[s] = h ? capaciteHerbacee(h, lumiere, ph) * plafondTassement : 0;
+      // Une vernale voit la lumière moyenne de sa saison, les autres celle de
+      // la semaine (herbacees.ts, #468).
+      const lumiereVue = JUGE_SA_SAISON[s]
+        ? lumiereJugee(
+            herbeLumiereSaison,
+            base + s,
+            herbeVigueurSaison[s] ?? 0,
+            vigueurs[s] ?? 0,
+            lumiere,
+          )
+        : lumiere;
+      capacites[s] = h ? capaciteHerbacee(h, lumiereVue, ph) * plafondTassement : 0;
       facteursEau[s] = h ? facteurEauHerbacee(h, humidite) : 0;
     }
-    const base = i * N_HERBACEES;
     for (let s = 0; s < N_HERBACEES; s++) feuillagesAvant[s] = herbeFeuillage[base + s] ?? 0;
     evoluerEmprises(herbeEmprise, base, capacites, vigueurs, thermiques);
     suivreFeuillage(herbeFeuillage, herbeEmprise, base, saisonnieres, facteursEau, thermiques);
@@ -4685,6 +4708,8 @@ export function tick(state: GameState, weather: WeekWeather, essai?: ReglagesDEs
         herbeMorteAzoteG,
         ressourceFlorale,
         herbeFeuillage,
+        herbeLumiereSaison,
+        herbeVigueurSaison,
         herbeBiomasse,
         herbeHumidite,
         ravageurs,
