@@ -1285,7 +1285,6 @@ function emptyFluxes(): TickFluxes {
     apportKKgHa: 0,
     retourKKgHa: 0,
     apportPKgHa: 0,
-    retourPFeuillesKgHa: 0,
     erosionPOrganiqueKgHa: 0,
     phosphoreNonPrisKgHa: 0,
     phosphoreOrganiqueNonTrouveKgHa: 0,

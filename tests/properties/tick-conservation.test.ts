@@ -104,6 +104,20 @@ function azoteDuSystemeKgHa(state: GameState): number {
   return meanNStockKgHa(state) + ((strate + arbres) / n) * 10;
 }
 
+/**
+ * Phosphore du **système entier**, kg/ha (#473) : le sol, et celui que la strate
+ * et les arbres portent avec leur azote.
+ */
+function phosphoreDuSystemeKgHa(state: GameState): number {
+  const n = state.soil.phosphoreG.length;
+  let azote = 0;
+  for (const v of state.soil.herbeAzoteG) azote += v;
+  for (const v of state.soil.herbeMorteAzoteG) azote += v;
+  for (const t of state.trees)
+    azote += t.uptakeYearG + (t.reserveAzoteG ?? 0) + (t.azoteBoisG ?? 0);
+  return phosphoreDuSolKgHa(state) + (phosphoreDeLAzoteOrganiqueG(azote) / n) * 10;
+}
+
 /** Le peuplement des essais : trois essences, posées petites et grandes. */
 function peuplementMixte(state: GameState): GameState {
   let s = plantScattered(state, "fagus_sylvatica", 40);
@@ -132,6 +146,7 @@ function checkConservation(
     const beforeN = meanNStockKgHa(state);
     const avantSysteme = systemeEntier ? azoteDuSystemeKgHa(state) : 0;
     const avantP = phosphoreDuSolKgHa(state);
+    const avantPSysteme = systemeEntier ? phosphoreDuSystemeKgHa(state) : 0;
     const resultat = tick(state, w);
     const { state: next, fluxes } = resultat;
 
@@ -186,12 +201,25 @@ function checkConservation(
         fluxes.depositionKgHa - fluxes.leachedKgHa - fluxes.erosionNKgHa - fluxes.erosionNHumusKgHa,
         6,
       );
+      // **Et son phosphore** (#473) : la strate et les arbres portent celui de
+      // leur azote, résorbé avec lui, versé avec lui à la litière et au bois
+      // mort. Le système ne gagne que ce que la roche et l'atmosphère donnent,
+      // ne perd que ce que la terre emporte, et compte à part le phosphore que
+      // les racines ont pris d'azote sans le trouver au sol. La feuille qui
+      // rendait à sa chute 1,4 fois le phosphore de son azote l'ouvrait à
+      // chaque automne.
+      expect(phosphoreDuSystemeKgHa(next) - avantPSysteme).toBeCloseTo(
+        fluxes.apportPKgHa -
+          fluxes.erosionPKgHa -
+          fluxes.erosionPOrganiqueKgHa +
+          fluxes.phosphoreNonPrisKgHa,
+        PRECISION_P,
+      );
     }
 
     // **Le phosphore du sol se referme aussi** (#473). Il entre par la roche,
     // l'atmosphère et ce que les plantes versent au sol : la litière et le bois
-    // mort portent le phosphore de leur azote, et les feuilles d'arbre le
-    // surplus qu'elles rendent dès leur chute. Il sort par le prélèvement, par
+    // mort portent le phosphore de leur azote. Il sort par le prélèvement, par
     // la terre qui quitte la parcelle et par l'humus que les ectomycorhizes
     // minent. Tout le reste est interne : la minéralisation, la litière qui
     // libère ou immobilise, l'humification, la rétrogradation. Sur main, la
@@ -200,7 +228,6 @@ function checkConservation(
     expect(fluxes.phosphoreOrganiqueNonTrouveKgHa).toBe(0);
     expect(phosphoreDuSolKgHa(next) - avantP).toBeCloseTo(
       fluxes.apportPKgHa +
-        fluxes.retourPFeuillesKgHa +
         phosphoreDeLAzoteOrganiqueG(fluxes.litterfallKgHa + fluxes.fixationKgHa) -
         fluxes.uptakePKgHa -
         fluxes.erosionPKgHa -

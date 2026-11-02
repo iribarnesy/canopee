@@ -196,7 +196,6 @@ import {
   RATIO_P_SUR_N,
   RELARGAGE_HEBDO,
   RETOUR_LITIERE_K,
-  RETOUR_LITIERE_P,
   retrogradationHebdo,
   SATURATION_K_G_M2,
   SATURATION_P_G_M2,
@@ -1132,8 +1131,6 @@ export function tick(state: GameState, weather: WeekWeather, essai?: ReglagesDEs
   let uptakePSumG = 0;
   /** Ce que la roche et l'atmosphère apportent au phosphore assimilable, g. */
   let apportPSumG = 0;
-  /** Le surplus de phosphore que les feuilles d'arbre rendent dès leur chute, g. */
-  let retourPFeuillesSumG = 0;
   /**
    * Le phosphore qu'un flux d'azote vers la matière organique aurait dû prendre
    * et n'a pas trouvé, g : la cellule n'en avait plus. Il ne devrait jamais
@@ -3595,15 +3592,10 @@ export function tick(state: GameState, weather: WeekWeather, essai?: ReglagesDEs
         (oldN + share);
       litterNG[i] = oldN + share;
       litterCG[i] = (litterCG[i] ?? 0) + shareC;
-      // Le phosphore de la feuille rentre au sol avec elle. La litière porte
-      // celui de son azote, et le rend en se décomposant (pk.ts, #473) ; la
-      // feuille en porte davantage (`RETOUR_LITIERE_P`), et ce surplus est
-      // rendu dès la chute. Le rendre tout entier à la chute le comptait deux
-      // fois : l'azote de la feuille le rendait une seconde fois en passant
-      // par l'humus.
-      const feuillesP = share * RATIO_P_SUR_N * (RETOUR_LITIERE_P / LITTER_RETURN_FRACTION - 1);
-      phosphoreG[i] = (phosphoreG[i] ?? 0) + feuillesP;
-      retourPFeuillesSumG += feuillesP;
+      // Le phosphore de la feuille rentre au sol avec elle, dans son azote : la
+      // litière le rend en se décomposant (pk.ts, #473). Il était rendu tout
+      // entier dès la chute, à 1,4 fois le rapport, et l'azote de la feuille
+      // le rendait une seconde fois en passant par l'humus.
       // Le **potassium** revient tout de suite : ce n'est qu'un ion, la pluie le
       // rince de la feuille avant même qu'elle ait fini de se décomposer. Le
       // phosphore, lui, est dans les molécules — il attend la décomposition,
@@ -4852,7 +4844,6 @@ export function tick(state: GameState, weather: WeekWeather, essai?: ReglagesDEs
       apportKKgHa: (apportKSumG / nCells) * G_PER_M2_TO_KG_PER_HA,
       retourKKgHa: (retourKSumG / nCells) * G_PER_M2_TO_KG_PER_HA,
       apportPKgHa: (apportPSumG / nCells) * G_PER_M2_TO_KG_PER_HA,
-      retourPFeuillesKgHa: (retourPFeuillesSumG / nCells) * G_PER_M2_TO_KG_PER_HA,
       erosionPOrganiqueKgHa:
         (phosphoreDeLAzoteOrganiqueG(erosionSortieNlitG + erosionSortieHumusCG / cnHumus) /
           nCells) *

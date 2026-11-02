@@ -725,14 +725,13 @@ export interface TickFluxes {
    * **le budget du phosphore**, kg/ha (#473). Le phosphore de la matière
    * organique n'est pas un état : la litière, l'humus et le bois mort portent
    * celui de leur azote (`phosphoreDeLAzoteOrganiqueG`, pk.ts). Ce que la roche
-   * altérée et l'atmosphère apportent, le surplus que les feuilles d'arbre
-   * rendent dès leur chute, et ce que la terre emporte de matière organique
-   * hors de la parcelle referment, avec le prélèvement et l'érosion du
-   * phosphore assimilable, le phosphore du sol chaque semaine
-   * (`phosphore-conservation.test.ts`).
+   * altérée et l'atmosphère apportent, et ce que la terre emporte de matière
+   * organique hors de la parcelle referment, avec le prélèvement, l'érosion du
+   * phosphore assimilable et ce que les plantes versent au sol, le phosphore du
+   * sol chaque semaine (`tick-conservation.test.ts`,
+   * `phosphore-conservation.test.ts`).
    */
   apportPKgHa: number;
-  retourPFeuillesKgHa: number;
   erosionPOrganiqueKgHa: number;
   /**
    * Le phosphore que les racines auraient pris avec leur azote si le sol l'avait
