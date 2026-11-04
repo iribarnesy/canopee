@@ -61,7 +61,80 @@ qu'un rapport (voir la note de maintenance).
 Séparer calibration et validation : caler un paramètre sur un âge, garder
 l'autre âge pour vérifier.
 
-## Ce que le dernier lot a appris (la boucle du phosphore de l'herbe, #473 ; la fauche relue sur Davies 1985, le pin sur sept graines, le décor des ajoncs allongé)
+## Ce que le dernier lot a appris (l'azote du grain et le relief de Broadbalk, #461)
+
+La fin de #461. Le premier lot avait guéri la litière sans rendre l'équilibre, et écrit le bilan qui décide du niveau : à l'équilibre, le grain exporte ce que les dépôts apportent, et le moteur mettait 7,9 kg N dans une tonne de matière sèche quand la parcelle Nil en met 16,6. Le propriétaire a retenu G (l'azote du grain), puis E1 (le relief de Broadbalk) mesuré avec G. Deux prototypes de G ont été mesurés puis rapportés : plafonner le grain par l'azote (G-b) et rabattre le feuillage d'une plante affamée (G-a). G-a tenait Broadbalk, Park Grass, C18 et le LER, mais cassait A18 et le tassement de l'herbe ; il a été rapporté avant d'être codé, et l'utilisateur a choisi O2 : le frein des feuilles passe dans la loi de croissance. Prédictions et mesures dans les commits de la branche `claude/v06-azote-grain`, avant chaque course ; main a bougé en cours de lot (#463), et tout a été remesuré sur la fusion. Le format ne bouge pas (15) : aucun champ d'état n'est ajouté.
+
+### Une production tenue par l'azote ne bouge pas quand la teneur double
+
+Sous G-a, la prairie de Park Grass prélevait 98 kg N/ha/an au lieu de 51, et la question était de savoir si c'était un artefact. Le bilan de la boucle plante-litière l'a tranchée : la production est identique au kilo près (4 263 kg C/ha/an dans les deux cas), parce qu'à l'équilibre elle est tenue par l'azote qui entre dans la boucle (l'humus minéralisé et les dépôts, 116 kg N/ha/an), pas par la teneur des tissus. Le même carbone tombe avec deux fois plus d'azote ; les décomposeurs en immobilisent 19 kg au lieu de 65, et la plante prend la différence. Dépôts, lessivage et fixation ne bougent pas. **Un flux qui double sans que les entrées bougent est un recyclage : l'écrire sur le bilan de la boucle avant de le juger.** L'indice de nutrition de saison qui en sort (0,46 sous G-a, 0,56 sous O2, 0,25 sur main) se compare au terrain : 0,54 et 0,59 en moyenne sur les prairies permanentes sans apport d'azote (Duru et al. 2000, *Fourrages* 164 : 381, tableau 5).
+
+### Une variable que tout le moteur lit ne peut pas prendre un sens de plus
+
+G-a multipliait le feuillage cible de chaque herbacée par l'indice de nutrition, ce que la littérature dit de la surface foliaire (STICS, Beaudoin et al. 2022, § 4.4.2 ; Gastal et Lemaire 2002). Mais le feuillage du moteur est une couverture verte, et la transpiration, l'abri du sol, la fauche et le tassement la lisent. La couverture de saison d'une prairie de limon tombait de 0,96 à 0,44 ; elle transpirait 260 mm au lieu de 519 et buvait moins qu'un sol nu (A18 : −15 mm, plus de +56 exigés d'après Ballif et al. 1983) ; l'herbe tassée couvrait plus que l'intacte, parce qu'une herbe freinée a moins faim d'azote ; et la fauche, qui coupe jusqu'à une couverture de 0,1, laissait sur pied le quart de la matière au lieu du dixième. Sur le terrain, une prairie pauvre reste fermée : sans azote, une fétuque perd 60 à 70 % de sa surface foliaire mais seulement un tiers à la moitié de l'interception (Marino et Agnusdei 2007). O2 met le même frein dans la loi de croissance, où seule la croissance le lit. **Avant de faire porter un effet à une variable d'état, lister tout ce qui la lit.**
+
+### Un plancher sourcé peut faire le niveau, et il faut le dire
+
+Avec le plancher de STICS (l'indice ne descend pas sous 0,3), le blé continu se pose à 1,13 t de matière sèche/ha sur le relief de Broadbalk, à moins de 1 % d'une tranche de vingt ans à l'autre, avec 14,2 kg N par tonne. Sans plancher, il descend encore à l'an 400 (0,65 t/ha, 25 kg N par tonne). Le blé finit sa saison sous le plancher (indice 0,25 à la moisson) : sa croissance de fin de saison y est tenue à 9 % du potentiel, et c'est ce qui fixe le niveau ; l'azote du grain s'ajuste alors aux dépôts. La parcelle Nil (0,99 t de matière sèche/ha, 16,6 kg N par tonne) tombe entre les deux, plus près du plancher sur les deux chiffres. **Quand une borne sourcée tient l'équilibre, le niveau dépend de sa valeur : l'écrire, plutôt que de lire l'accord comme une propriété du mécanisme.**
+
+### Le relief du banc pesait autant que le mécanisme
+
+Sur le relief du limon riche (4 % de pente sous un demi-hectare de bassin), O2 ne pose pas le blé : il descend encore de 4 à 5 % tous les vingt ans (C16 0,823 / 0,785 / 0,755), parce que l'érosion amincit l'horizon de surface et que le lessivage suit (#311). Sur celui de Broadbalk, une pente d'un degré sans bassin amont, il se pose comme à plat, à 0,5 % près. Les deux bancs de la parcelle Nil prennent ce relief (`RELIEF_DE_BROADBALK`) : c'est un changement du dispositif, signalé dans les deux essais, et les bornes de C16 ne bougent pas. **Un banc qui compare le moteur à un essai de terrain doit en avoir le relief, ou dire ce que le sien ajoute.**
+
+### Ce que ça donne
+
+Sondes déterministes sur la fusion de 18dbb29 ; le LER sur les graines 4, 11 et 23.
+
+| | main | ce lot |
+|---|---|---|
+| Blé continu à plat, tranches des ans 341-400 (t MS/ha) | 2,24 / 2,21 / 2,19 | 1,13 / 1,13 / 1,13 |
+| … azote du grain (kg N/t MS) ; indice à la moisson | 7,9 ; 0,19 | 14,2 ; 0,25 |
+| … sans plancher (an 400) | — | 0,65 t/ha, 25,5 kg N/t, descend encore |
+| C16 sur le relief de Broadbalk (ans 201-260), an 2 | — | 1,157 / 1,147 / 1,139 ; 4,39 |
+| C16 sur le relief du limon (ans 201-260), an 2 | 1,482 / 1,364 / 1,266 ; 4,66 | 0,823 / 0,785 / 0,755 ; 4,01 |
+| C18 : rien / 96 / 192 kg N / fumier (t/ha) | 4,22 / 7,89 / 10,13 / 9,10 | 3,02 / 6,93 / 9,96 / 8,48 |
+| LER total | 1,451 / 1,410 / 1,380 | 1,401 / 1,328 / 1,345 |
+| Arbre d'allée sur témoin forestier | 1,354 / 1,032 / 1,317 | 1,339 / 0,985 / 1,376 |
+| Park Grass : prélèvement, indice de saison | 51,5 kg N/ha/an ; 0,25 | 112,8 ; 0,56 |
+| … production, litière (an 40, C/N) | 4 263 kg C/ha/an ; 12,1 t C/ha (46) | 4 297 ; 6,4 (30) |
+| A18 : prairie moins sol nu | +94,7 mm/an | +94,7 |
+
+Essais sous ce lot : eau-du-tapis, tassement, herbacees (E9 compris), feu, herbe, litiere-herbacee, fertilisation, prairie-de-fauche passent ; C16 et labour-desserre passent sur le relief de Broadbalk. Sous G-a, eau-du-tapis, tassement, E9 et feu cassaient.
+
+### Les prédictions fausses
+
+- **L'indice du blé à la moisson** : prédit entre 0,25 et 0,35, relevé 0,249. Le blé finit sous le plancher, et c'est le plancher qui fixe le niveau.
+- **Sans plancher** : prédit entre 0,7 et 1,2 t/ha, relevé 0,65 à l'an 400, et le grain descend encore.
+- **L'indice de saison de Park Grass** : prédit entre 0,38 et 0,55, relevé 0,56.
+- **Le LER** : prédit à moins de 0,06 de main, relevé −0,082 à la graine 11 ; et le rapport de l'arbre d'allée au témoin forestier y passe sous 1 (0,985), ce que la prédiction des planchers tenus excluait.
+- **Sous G-a** (P6) : le feuillage de Park Grass, prédit en baisse de 5 à 30 %, a perdu 54 % ; la couverture du limon, prédite entre 0,7 et 0,9, est tombée à 0,44 ; la molinie a perdu 44 % de son feuillage pour moins de 30 % prédits ; les indices de saison de main (dactyle 0,24, molinie 0,34) étaient sous les fourchettes prédites.
+
+### Ce qui reste ouvert
+
+- **Le niveau dépend du plancher.** 1,13 t de matière sèche/ha et 14,2 kg N/t, pour 0,99 et 16,6 sur la parcelle Nil : le blé finit sa saison sous 0,3, et la valeur du plancher (`INNmin` de STICS, « couramment admise ») décide de sa croissance de fin de saison.
+- **Le sens de Restinclières ne tient plus que sur deux graines sur trois** (0,985 à la graine 11, moyenne inchangée à 1,23). La cause, un témoin forestier qui pousse plus vite, n'est pas instruite.
+- **Le relief de Broadbalk** n'est lu que par extrait (e-RA, page de physique du sol) ; l'absence de bassin amont est une hypothèse *(à confirmer)*.
+- **La litière de la prairie** s'équilibre à 6,4 t C/ha, quand une prairie non pâturée porte de l'ordre de 160 g/m² de matière morte (Sims et al. 1978) : la vitesse de décomposition (0,6 / C/N) reste sans ancre.
+- **Sous G-a, une chandelle déclarée consumée restait dans la liste des arbres** (`feu.test.ts`, ligne 394) quand la graine du premier feu changeait. O2 ne change pas ce feu, et l'essai passe ; le cas n'est pas instruit.
+
+### Après la boucle du phosphore (#475) : ce qui reste rouge, et pourquoi
+
+La suite complète d'O2 cassait quinze essais. La boucle du phosphore de #475, fusionnée dans la branche, en rend neuf (le pin, les deux du châtaignier, le genêt, le houx, les trois de `bases.test.ts`, `tempete.test.ts`). Sept restent rouges (run 41865147943), dont un nouveau : le noyer hybride (Restinclières, Bade-Wurtemberg), le frêne à 40 ans, I8, l'ombre des arbres sur le blé (graine 1), le versant de l'érosion et la garde des rejets de `feu.test.ts`. Les cinq premiers retrouvent au centième leur valeur d'avant #475. Prédictions P9 à P11 et mesures dans les commits de la branche, sondes hors dépôt sur trois graines au moins.
+
+**Une validation obtenue sous une faim que personne n'avait vérifiée ne valide que la somme.** Sur le limon riche, la litière de l'herbe de main immobilise l'azote, et les arbres plantés en ont faim : facteur azote de 0,71 à 0,80 pour le frêne, de 0,91 à 0,92 pour le noyer hybride, l'azote bornant 58 à 79 % de leur saison. O2 enrichit cette litière, l'immobilisation cesse, et les arbres poussent à ce que leurs paramètres permettent : le frêne passe de 16,1 à 19,3 m à 40 ans (table : 16,5), le noyer de 32,2 à 33,5 cm à 19 ans (graine 4). Main avec le facteur azote des arbres forcé à 1 donne la même chose, au dixième près pour le noyer, à 4 % près pour le frêne. Le `pousseMaxMAn` du frêne était « non calé, validé » sur la table, et celui du noyer posé depuis sa source sans calage : tous deux tenaient grâce à une faim que la prairie de Park Grass ne montre pas (indice de saison 0,25 sur main, 0,56 sous O2, 0,54 à 0,59 sur le terrain).
+
+**Le diamètre d'un arbre au large n'a pas de paramètre d'espèce.** En pleine lumière, il gagne `ALLOCATION_DIAMETRE_LUMIERE` (2,5 cm) par mètre de hauteur, constante commune calée sur le moteur (l'élancement d'un hêtre de référence, 332898c) : 2,49 cm/m mesurés entre 5 et 10 ans sur toutes les graines. Le réseau de Bade-Wurtemberg en donne 1,1 en moyenne (8,5 mm de diamètre pour 78 cm de hauteur par an), Restinclières 2,08 en cumul à 19 ans. Le noyer de la fusion pousse en hauteur sous la moyenne du réseau (60 à 69 cm/an) et grossit comme ses meilleures stations : c'est l'allocation qui fait l'écart, et l'azote qui l'a découvert.
+
+**Trois essais jugeaient un tirage.**
+- **Culture, graine 1.** Sous O2, la croissance suit le carré de l'indice, et le blé pur sans apport perd plus vite entre 25 et 33 ans (−16 % contre −10 %) : le rapport de l'allée au blé pur reste à plat sur la graine 1 (0,439 puis 0,442). La moyenne des cinq graines baisse toujours (0,456 puis 0,421).
+- **Érosion, le versant plan.** Le banc ne dépend d'aucune graine. L'écart d'humus entre le bas et le haut reste sous 0,01 % du stock ; sur main, il change de signe à 14 ans, un an avant la mesure, et sous O2 il reste négatif jusqu'à 20 ans. Depuis #351, un versant plan n'a pas de pied, et c'est l'essai du versant qui finit sur un replat qui garde le colluvium.
+- **Feu, la garde des cent rejets.** Les graines qui brûlent changent entières d'un moteur à l'autre (main 9, 11, 17, 37 ; O2 sans #475 3, 21, 31 ; la fusion 13, 17, 23, 31). Sur la fusion, le premier feu trouvé arrive à trois ans et demi, et seuls les 36 ajoncs plantés rejettent. L'égalité du bilan, elle, tient.
+
+**I8 tenait à la litière en trop.** Le creux de main ne vaut plus que −0,35 t C/ha (le −2,04 de l'en-tête de l'essai est ancien), aux ans 2 à 4, quand la litière enfouie de la prairie (11,4 t C/ha) se décompose. Sous O2 la prairie en porte moitié moins (5,4), et le creux disparaît (+0,16). Au labour, l'herbe sur pied, que l'inventaire de carbone ne compte pas, passe à la litière, qui le compte : 0,7 t C/ha qui masquent la perte d'humus du labour (0,75).
+
+Aucune borne n'a bougé, aucun paramètre non plus : les options sont dans le corps de la PR #470.
+
+## Ce qu'un lot précédent a appris (la boucle du phosphore de l'herbe, #473 ; la fauche relue sur Davies 1985, le pin sur sept graines, le décor des ajoncs allongé)
 
 Le lot de maintenance décidé sur #461 (option 1 du rapport P8) : le phosphore que l'herbe prend avec l'azote que sa litière recycle ne reviendrait jamais au sol. Une sonde de main (compteurs seuls, aucun calcul changé) a d'abord écrit le bilan du phosphore de bout en bout, sur neuf bancs. Deux variantes ont ensuite été codées et mesurées sur la sonde et en CI : A, le phosphore suit l'azote organique à chaque passage vers le minéral et retour ; B, A sans le surplus que les feuilles d'arbre rendaient à la chute (`RETOUR_LITIERE_P` retiré). Elles referment le bilan, et deux essais tombent sous l'une et l'autre : la fauche ne coûte plus rien au pin de la lande, et les pins du sable d'une graine du banc des hauteurs, mieux nourris, tombent tous au vent ; sous B, le décor des ajoncs de `bases.test.ts` ne vide plus aucune cellule de ses bases. Le lot s'est arrêté là. Le propriétaire a retenu B, fait relire l'essai de la fauche sur Davies 1985, élargir le banc du pin à sept graines et allonger le décor des ajoncs ; la transpiration de l'herbe fauchée, qui portait la direction perdue, part dans #477. Aucun champ d'état : le format reste celui de main (16 depuis #476). Prédictions et mesures dans les commits de la branche, avant chaque course.
 

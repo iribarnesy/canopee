@@ -23,13 +23,33 @@ import { tick } from "../src/engine/tick";
  * Ces siècles-là ne sont pas ceux du moteur : le même article les donne en
  * assolement, avec du fumier une année sur cinq. Le vieillissement des essais
  * se fait sous leur propre conduite, blé continu sans apport, labouré chaque
- * automne : c'est le plus simple, et il n'ajoute aucun mécanisme. Il ne met
- * pas le sol à l'équilibre, parce que le moteur n'en a pas : mesuré sur
- * quatre cents ans, le blé sans apport baisse encore de 13 % tous les vingt
- * ans sur main, de 8 % avec la rosette d'hiver (#324, #346), de 5 à 6 % depuis
- * le partage de l'eau de #391 ; la litière n'y est pour rien (#461).
+ * automne : c'est le plus simple, et il n'ajoute aucun mécanisme. Il ne
+ * mettait pas le sol à l'équilibre, parce que le moteur n'en avait pas :
+ * mesuré sur quatre cents ans, le blé sans apport baissait encore de 13 % tous
+ * les vingt ans, de 8 % avec la rosette d'hiver (#324, #346), de 5 à 6 % depuis
+ * le partage de l'eau de #391 ; la litière n'y était pour rien (#461). **Il s'y
+ * pose depuis #461**, sur le relief de Broadbalk (`RELIEF_DE_BROADBALK`) et avec
+ * la faim d'azote qui freine deux fois la croissance : 1,13 t/ha dès l'an 260
+ * environ, à moins de 1 % d'une tranche de vingt ans à l'autre.
  */
 export const CHAMP_LABOURE_AVANT_BROADBALK_ANS = 200;
+
+/**
+ * **Le relief de Broadbalk** (#461, E1) : la pente et le bassin amont que les
+ * essais de la parcelle Nil (C16, `culture.test.ts` et
+ * `labour-desserre.test.ts`) posent sur la station du limon riche à la place
+ * des siens.
+ *
+ * Broadbalk a « a slope of 1 degree, West to East » (e-RA, Broadbalk, physique
+ * du sol ; lu par extrait, *à confirmer sur la page*), soit 1,75 %. Le champ
+ * n'est pas un bas de versant, et le moteur ne lui donne aucun bassin amont
+ * *(à confirmer)*. Le limon riche, lui, porte une pente de 4 % sous un demi-hectare
+ * de bassin : sur ce relief, l'érosion amincit l'horizon de surface de quatre à
+ * cinq tonnes de terre par hectare et par an (#311), le lessivage suit, et
+ * aucun équilibre ne tenait. Sur celui de Broadbalk, le blé se pose comme à
+ * plat, à 0,5 % près.
+ */
+export const RELIEF_DE_BROADBALK = { pentePct: 1.75, bassinAmontHa: 0 } as const;
 
 export interface RunOptions {
   /** densité de cervidés ; 0 par défaut pour isoler ce qu'on mesure */

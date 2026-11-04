@@ -130,6 +130,15 @@ describe("la prairie de Park Grass", () => {
     // la mesure, pour une prairie tempérée sans apport *(ordre de grandeur, à
     // confirmer)*. Les parcelles sans engrais de Park Grass donnent un foin de
     // l'ordre de 1 à 2 t/ha/an.
+    //
+    // **113 kg N/ha/an depuis #461**, la production n'ayant pas bougé (4,30 t
+    // C/ha/an contre 4,26) : la croissance suit la faim d'azote au carré, les
+    // tissus sont deux fois plus riches (2,80 % d'azote contre 1,27), ce qui
+    // tombe a un C/N de 38 au lieu de 83, et les décomposeurs n'immobilisent
+    // plus que 4 kg N/ha/an au lieu de 65. C'est un recyclage interne : dépôts,
+    // lessivage et fixation ne bougent pas. L'indice de nutrition de saison
+    // passe de 0,25 à 0,56, celui des prairies permanentes sans apport d'azote
+    // (0,54 et 0,59 en moyenne ; Duru et al. 2000, *Fourrages* 164 : 381).
     const installe = r.prelevement.slice(10);
     const parAn = installe.reduce((a, b) => a + b, 0) / installe.length;
     expect(parAn).toBeGreaterThan(40);
@@ -142,7 +151,9 @@ describe("la prairie de Park Grass", () => {
     // quarante ans, parce que la strate ne rendait que ce que son débit fixe
     // lui faisait prendre. Elle rend maintenant ce qu'elle fabrique.
     // Relevé : 73,0 → 77,8 t C/ha en quarante ans (+6,6 %). La prédiction écrite
-    // avant le code demandait ±10 % sur cinquante ans.
+    // avant le code demandait ±10 % sur cinquante ans. Depuis #461 : 73,1 → 78,6
+    // (+7,5 %) ; l'humus reçoit ce que la production lui verse, et elle n'a pas
+    // bougé.
     const depart = r.humus[0] ?? 0;
     const fin = r.humus[39] ?? 0;
     expect(Math.abs(fin / depart - 1)).toBeLessThan(0.1);
@@ -152,7 +163,10 @@ describe("la prairie de Park Grass", () => {
     // Une pente serait une erreur de vitesse de décomposition. Relevé : 11,4
     // puis 11,6 t C/ha aux ans 30 et 40, C/N 45. Le niveau est haut pour une
     // prairie, et la vitesse de décomposition (0,6 / C/N) reste sans ancre
-    // *(à calibrer)* : l'essai porte sur l'équilibre, pas sur le niveau.
+    // *(à calibrer)* : l'essai porte sur l'équilibre, pas sur le niveau. Depuis
+    // #461 : 6,1 puis 6,4 t C/ha, C/N 30 — une litière plus riche se décompose
+    // plus vite. Les prairies non pâturées portent de l'ordre de 160 g/m² de
+    // matière morte (Sims et al. 1978, *J. Ecol.* 66 : 251) : c'est encore haut.
     const avant = r.litiere[29] ?? 0;
     const fin = r.litiere[39] ?? 0;
     expect(fin).toBeGreaterThan(0);

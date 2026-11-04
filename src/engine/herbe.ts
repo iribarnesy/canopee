@@ -74,6 +74,47 @@ export function azoteCritiqueG(matiereSecheGM2: number): number {
 }
 
 /**
+ * **Le plancher de l'indice de nutrition azotée** : sous 0,3, la carence ne
+ * freine plus davantage. C'est la valeur couramment admise dans STICS, qui
+ * borne à ce plancher tous ses indices de stress azoté (Beaudoin et al. 2022,
+ * *STICS soil-crop model*, Quae, § 4.4.2, `INNmin`).
+ */
+export const INDICE_NUTRITION_PLANCHER = 0.3;
+
+/**
+ * **Ce que la faim d'azote laisse de la croissance** d'une herbacée, ∈ [0,09 ; 1]
+ * (#461). L'indice de nutrition azotée — l'azote de la plante sur l'azote
+ * critique de sa matière (Lemaire et Gastal 1997) — borné entre le plancher et
+ * 1, **au carré** : la carence freine la croissance des feuilles et
+ * l'efficience du rayonnement, deux freins qui se multiplient et qui suivent
+ * l'indice de la même façon (STICS, § 4.4.2 et tableau 4.2 : `innlai` pour les
+ * feuilles, `inns` pour l'efficience ; « in practice, it seems that these two
+ * functions react very similarly »). L'azote réduit la surface foliaire plus
+ * que la photosynthèse, et son effet sur l'interception s'ajoute à celui sur
+ * l'efficience (Gastal et Lemaire 2002, *J. Exp. Bot.* 53:789).
+ *
+ * Le frein des feuilles passe ici, dans la loi de croissance, et pas dans la
+ * couverture : la couverture verte du moteur est aussi ce qui transpire, abrite
+ * le sol et se fauche, et un tapis pauvre reste fermé — sans azote, une fétuque
+ * perd 60 à 70 % de sa surface foliaire mais seulement un tiers à la moitié de
+ * l'interception (Marino et Agnusdei 2007). L'y mettre faisait boire une
+ * prairie moins qu'un sol nu (A18).
+ *
+ * Avant ce lot, la croissance suivait l'indice une seule fois : un blé sans
+ * apport gardait tout son feuillage, produisait deux fois trop de matière par
+ * kilo d'azote et diluait l'azote de son grain à la moitié de celui de
+ * Broadbalk.
+ */
+export function facteurAzoteDeLaCroissance(matiereSecheGM2: number, azoteG: number): number {
+  if (matiereSecheGM2 <= 0) return 1;
+  const indice = Math.min(
+    1,
+    Math.max(INDICE_NUTRITION_PLANCHER, azoteG / azoteCritiqueG(matiereSecheGM2)),
+  );
+  return indice * indice;
+}
+
+/**
  * Durée de vie des tissus d'une herbacée pérenne, degrés-jours base 4 °C :
  * 400 à 520 dans une prairie tempérée, en commun pour les espèces codominantes
  * (Lemaire et Agnusdei 2000 : trois feuilles vivantes par talle au plus). Le
