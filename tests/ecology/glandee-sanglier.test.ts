@@ -72,7 +72,10 @@ describe("ce que la mesure a coûté au sanglier", () => {
     // recrues sans sanglier, dans les deux variantes). L'essai garde donc la
     // ration petite à la densité de référence, et lit l'attribution à forte
     // densité, graine par graine : la régénération y perd plus que la glandée.
-    // Le seuil de trois fois est retiré.
+    // Le seuil de trois fois est retiré. Mesuré, sonde hors dépôt, graines 3 à
+    // 7 : la ration prend 1,4 / 0,9 / 1,1 / 2,5 / 1,2 % de la glandée à la
+    // densité de référence ; à 0,5 par hectare, la régénération perd 38 / 31 /
+    // 41 / 46 / 41 % pour 10,7 / 7,5 / 9,0 / 16,4 / 9,5 % de glandée.
     for (const p of parties) {
       const g = `graine ${p.graine}`;
       // La ration reste petite à densité ordinaire : moins d'un vingtième de la
