@@ -145,14 +145,23 @@ const CACHE = new Map<string, Record<number, number>>();
  * Hauteur moyenne des sujets plantés, aux jalons demandés, moyennée sur les
  * graines. `anMax` borne la simulation : un arbuste dont la mesure de terrain
  * s'arrête à douze ans ne coûte pas une partie de quarante.
+ *
+ * **Une graine où il ne reste aucun sujet compte zéro** dans la moyenne : elle
+ * n'est pas retirée. C'est la règle de toujours du banc, et elle est écrite
+ * depuis que le pin du sable a perdu tous ses sujets au vent sur une graine
+ * (#473) : une essence dont le banc se vide doit le payer, pas le cacher.
+ *
+ * `graines` vaut les deux graines du banc ; le pin en demande davantage
+ * (`hauteurs-pin.test.ts`).
  */
 export function hauteurs(
   especeId: string,
   anMax = 40,
   sc = LIMON_RICHE,
   coteM = 60,
+  graines: readonly number[] = GRAINES,
 ): Record<number, number> {
-  const cle = `${especeId}|${anMax}|${sc.station.id}|${coteM}`;
+  const cle = `${especeId}|${anMax}|${sc.station.id}|${coteM}|${graines.join(",")}`;
   const enCache = CACHE.get(cle);
   if (enCache) return enCache;
   // 2 et 4 ans sont là pour des **mesures de terrain** qui tombent à ces âges-là
@@ -165,7 +174,7 @@ export function hauteurs(
   const station = { ...sc.station, coteM, gibierParHa: 0, voisinage: [] };
   const cumul: Record<number, number> = {};
   for (const j of jalons) cumul[j] = 0;
-  for (const graine of GRAINES) {
+  for (const graine of graines) {
     let state = createGameState(station, rngStateFromSeed(graine));
     state = plantScattered(state, especeId, PLANTS, 0.3);
     for (let i = 0; i < anMax * 52; i++) {
@@ -182,7 +191,7 @@ export function hauteurs(
     }
   }
   const mesure: Record<number, number> = {};
-  for (const j of jalons) mesure[j] = (cumul[j] ?? 0) / GRAINES.length;
+  for (const j of jalons) mesure[j] = (cumul[j] ?? 0) / graines.length;
   CACHE.set(cle, mesure);
   return mesure;
 }

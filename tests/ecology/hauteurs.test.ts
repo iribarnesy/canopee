@@ -137,8 +137,10 @@ describe("chaque essence est jugée sur la station de sa table", () => {
   });
 });
 
-describe("hauteurs absolues contre les tables de production (hêtre, pin, aulne)", () => {
-  const especes = ["fagus_sylvatica", "pinus_sylvestris", "alnus_glutinosa", "betula_pendula"];
+describe("hauteurs absolues contre les tables de production (hêtre, aulne, bouleau)", () => {
+  // **Le pin a son propre fichier** (`hauteurs-pin.test.ts`, #473) : son banc
+  // tourne sur sept graines, et un fichier est l'unité que la CI répartit.
+  const especes = ["fagus_sylvatica", "alnus_glutinosa", "betula_pendula"];
   for (const [especeId, ref] of Object.entries(TABLE)) {
     if (!especes.includes(especeId)) continue;
     it(`${ref.nom} : 20 et 40 ans dans la bande de la table`, () => {
@@ -158,9 +160,9 @@ describe("hauteurs absolues contre les tables de production (hêtre, pin, aulne)
       }
       // **Le délai** (#378) : deux graines de quarante ans par essence, sur la
       // parcelle déjà réduite de `hauteurs-commun.ts`. En CI sur main (sept
-      // courses), le pin en prend 154 à 214 s, le hêtre et l'aulne jusqu'à 189,
-      // pour 300 s de délai ; le pin a pris 251 s sur une autre tête. Il fait
-      // 2,5 fois la plus longue course de main, arrondi à la minute.
+      // courses), le hêtre et l'aulne en prennent jusqu'à 189 s (le pin, parti
+      // dans son fichier, 154 à 251), pour 300 s de délai. Il fait 2,5 fois la
+      // plus longue course de main, arrondi à la minute.
     }, 540_000);
   }
   it("le bouleau reste devant le hêtre en jeunesse : c'est un pionnier", () => {

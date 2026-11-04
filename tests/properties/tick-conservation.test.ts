@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import { cnHumusDuProfil, treeTotalCarbonKg } from "../../src/engine/carbon";
 import { getEspece } from "../../src/engine/especes";
 import { syntheticYear } from "../../src/engine/meteo";
+import { phosphoreDeLAzoteOrganiqueG } from "../../src/engine/pk";
 import { rngStateFromSeed } from "../../src/engine/rng";
 import { createGameState, type GameState, plantScattered } from "../../src/engine/state";
 import type { StationClimat } from "../../src/engine/stations";
@@ -14,6 +15,13 @@ import { dureeChandelleSemaines } from "../../src/engine/trees";
  * chaque semaine, pluie = évaporation + transpiration + drainage + débordement
  * + Δstock (sol, nappe et manteau neigeux), et minéralisation = prélèvements + lessivage + Δstock d'azote.
  */
+
+/**
+ * La précision du bilan du phosphore, en décimales de kg/ha : le phosphore
+ * assimilable est tenu en flottants simples, comme le potassium échangeable
+ * (`potassium-conservation.test.ts`).
+ */
+const PRECISION_P = 4;
 
 /** Stock d'eau moyen par **cellule**, tous horizons confondus (sol stratifié). */
 function meanWaterStock(state: GameState): number {
@@ -57,6 +65,28 @@ function meanNStockKgHa(state: GameState): number {
 }
 
 /**
+ * Phosphore du **sol**, kg/ha (#473) : l'assimilable, le fixé, et celui de la
+ * matière organique, que la litière, l'humus, le bois mort et le broyat portent
+ * au rapport de leur azote (`phosphoreDeLAzoteOrganiqueG`, pk.ts). La strate et
+ * les arbres sont dehors : ce qu'ils prennent est un prélèvement, ce qu'ils
+ * versent à la litière ou au bois mort un retour.
+ */
+function phosphoreDuSolKgHa(state: GameState): number {
+  const n = state.soil.phosphoreG.length;
+  const cnHumus = cnHumusDuProfil(state.station.profil);
+  let mineral = 0;
+  let azoteOrganique = state.stockBrf.azoteG + state.carbon.deadWoodNG;
+  for (let i = 0; i < n; i++) {
+    mineral += (state.soil.phosphoreG[i] ?? 0) + (state.soil.phosphoreFixeG[i] ?? 0);
+    azoteOrganique +=
+      (state.soil.litterNG[i] ?? 0) +
+      (state.soil.humusCG[i] ?? 0) / cnHumus +
+      (state.soil.boisAuSolNG[i] ?? 0);
+  }
+  return ((mineral + phosphoreDeLAzoteOrganiqueG(azoteOrganique)) / n) * 10;
+}
+
+/**
  * Azote du **système entier**, kg/ha : le sol ci-dessus, la strate herbacée
  * (vivante et morte sur pied) et les arbres (feuillage de l'année, réserve et
  * bois). Le bilan du sol ne voit pas l'azote qu'un arbre perd sans le verser :
@@ -72,6 +102,20 @@ function azoteDuSystemeKgHa(state: GameState): number {
     arbres += t.uptakeYearG + (t.reserveAzoteG ?? 0) + (t.azoteBoisG ?? 0);
   // Une cellule fait un mètre carré : g par cellule = g/m².
   return meanNStockKgHa(state) + ((strate + arbres) / n) * 10;
+}
+
+/**
+ * Phosphore du **système entier**, kg/ha (#473) : le sol, et celui que la strate
+ * et les arbres portent avec leur azote.
+ */
+function phosphoreDuSystemeKgHa(state: GameState): number {
+  const n = state.soil.phosphoreG.length;
+  let azote = 0;
+  for (const v of state.soil.herbeAzoteG) azote += v;
+  for (const v of state.soil.herbeMorteAzoteG) azote += v;
+  for (const t of state.trees)
+    azote += t.uptakeYearG + (t.reserveAzoteG ?? 0) + (t.azoteBoisG ?? 0);
+  return phosphoreDuSolKgHa(state) + (phosphoreDeLAzoteOrganiqueG(azote) / n) * 10;
 }
 
 /** Le peuplement des essais : trois essences, posées petites et grandes. */
@@ -101,6 +145,8 @@ function checkConservation(
     const before = meanWaterStock(state);
     const beforeN = meanNStockKgHa(state);
     const avantSysteme = systemeEntier ? azoteDuSystemeKgHa(state) : 0;
+    const avantP = phosphoreDuSolKgHa(state);
+    const avantPSysteme = systemeEntier ? phosphoreDuSystemeKgHa(state) : 0;
     const resultat = tick(state, w);
     const { state: next, fluxes } = resultat;
 
@@ -155,7 +201,40 @@ function checkConservation(
         fluxes.depositionKgHa - fluxes.leachedKgHa - fluxes.erosionNKgHa - fluxes.erosionNHumusKgHa,
         6,
       );
+      // **Et son phosphore** (#473) : la strate et les arbres portent celui de
+      // leur azote, résorbé avec lui, versé avec lui à la litière et au bois
+      // mort. Le système ne gagne que ce que la roche et l'atmosphère donnent,
+      // ne perd que ce que la terre emporte, et compte à part le phosphore que
+      // les racines ont pris d'azote sans le trouver au sol. La feuille qui
+      // rendait à sa chute 1,4 fois le phosphore de son azote l'ouvrait à
+      // chaque automne.
+      expect(phosphoreDuSystemeKgHa(next) - avantPSysteme).toBeCloseTo(
+        fluxes.apportPKgHa -
+          fluxes.erosionPKgHa -
+          fluxes.erosionPOrganiqueKgHa +
+          fluxes.phosphoreNonPrisKgHa,
+        PRECISION_P,
+      );
     }
+
+    // **Le phosphore du sol se referme aussi** (#473). Il entre par la roche,
+    // l'atmosphère et ce que les plantes versent au sol : la litière et le bois
+    // mort portent le phosphore de leur azote. Il sort par le prélèvement, par
+    // la terre qui quitte la parcelle et par l'humus que les ectomycorhizes
+    // minent. Tout le reste est interne : la minéralisation, la litière qui
+    // libère ou immobilise, l'humification, la rétrogradation. Sur main, la
+    // litière rendait son azote sans son phosphore et l'immobilisait sans lui,
+    // et les feuilles le rendaient deux fois : ce bilan ne pouvait pas tenir.
+    expect(fluxes.phosphoreOrganiqueNonTrouveKgHa).toBe(0);
+    expect(phosphoreDuSolKgHa(next) - avantP).toBeCloseTo(
+      fluxes.apportPKgHa +
+        phosphoreDeLAzoteOrganiqueG(fluxes.litterfallKgHa + fluxes.fixationKgHa) -
+        fluxes.uptakePKgHa -
+        fluxes.erosionPKgHa -
+        fluxes.erosionPOrganiqueKgHa -
+        phosphoreDeLAzoteOrganiqueG(fluxes.minageEctoKgHa),
+      PRECISION_P,
+    );
 
     // **et ce qui sort du sol doit arriver dans une plante** (#115). Le bilan
     // ci-dessus ferme le côté **sol** : il compte `uptakeKgHa`, c'est-à-dire ce que
