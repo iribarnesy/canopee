@@ -131,7 +131,7 @@ Sous O2 (#470, sonde hors dépôt), graines 17 / 43 / 7, noyer 4 / 11 / 23 :
 | houx, 12 a | 2,66 / 2,38 / 2,33 m ; P 1 | 1,25 / 1,19 / 1,05 ; P 0,43 ; 60 % | 2,66 / 2,38 / 2,33 ; P 1 ; 0 % |
 | noyer en allée, 19 a | 32,2 / 31,5 / 29,4 cm | 33,5 / 32,6 / 30,9 | 33,5 / 32,6 / 30,9 |
 
-CI : sous A, `herbe.test.ts` (la fauche) et `hauteurs.test.ts` (le pin de la graine 17) tombent ; sous B, aussi `bases.test.ts` (les deux essais des ajoncs). Passent, sous les deux : `pk`, `ler`, `bases` hors ajoncs, `culture`, `fertilisation`, `noyer-hybride`, `hauteurs-arbustes`, `litiere-herbacee` (Park Grass ; la strate ne lit pas le phosphore, son prélèvement ne bouge pas), `feu`, `tolerances`, et les bilans.
+CI : sous A, `herbe.test.ts` (la fauche) et `hauteurs.test.ts` (le pin de la graine 17) tombent ; sous B, aussi `bases.test.ts` (les deux essais des ajoncs). Passent, sous les deux : `pk`, `ler`, `bases` hors ajoncs, `culture`, `fertilisation`, `noyer-hybride`, `hauteurs-arbustes`, `litiere-herbacee` (Park Grass ; la strate ne lit pas le phosphore, son prélèvement ne bouge pas), `feu`, `tolerances`, et les bilans. Après les décisions du propriétaire, `herbe.test.ts` relu sur Davies 1985, le pin sur sept graines (`hauteurs-pin.test.ts` : 14,19 m à quarante ans, −8,5 % ; 9,19 m à vingt, +13,5 %) et le décor des ajoncs sur quatre-vingt-dix ans (une cellule vidée sur chacune des trois graines) passent.
 
 ### Les prédictions fausses
 
