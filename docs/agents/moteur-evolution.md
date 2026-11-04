@@ -61,7 +61,33 @@ qu'un rapport (voir la note de maintenance).
 Séparer calibration et validation : caler un paramètre sur un âge, garder
 l'autre âge pour vérifier.
 
-## Ce que le dernier lot a appris (les voisins : la part du houppier qui dépasse, #467)
+## Ce que le dernier lot a appris (le bois mort retenu sur pied, #478)
+
+Le lot v0.6 « bois mort », empilé sur les voisins (#471, PR #479), sur décision du propriétaire. Un trait d'atlas, `feu.boisMortRetenu` : la part morte du combustible fin sur pied. L'ajonc le déclare à 0,40 (Vega et al. 2024, *Fire* 7 : 126, landes à ajonc de Galice) ; les autres fiches n'ont pas de mesure et ne gardent rien. Ce bois mort reste du combustible au niveau où il est mort, entre la hauteur élaguée à la scie et la base du houppier vivant. Les deux étages se combinent par la moyenne de leurs bases, chacun pesé par sa part (feu.ts, `baseDuCombustible`), comme le moteur combinait déjà les houppiers d'une cellule. Aucune constante nouvelle, aucune loi du feu touchée, aucun champ d'état : le format reste à 16. Prédictions et mesures dans les commits de la branche, avant chaque course ; les sondes sont des copies du moteur hors dépôt.
+
+### La prémisse d'un lot se remesure sur la base du jour
+
+Le lot partait d'un essai rouge : la lande d'ajoncs de `feu.test.ts` ne brûlait plus en quarante ans, sur aucune des cinq graines. Le temps de l'écrire, main (#475, le phosphore de l'herbe) était arrivée dans la branche des voisins, et la base brûlait de nouveau sur la graine 5 (an 28,6, 57 chandelles consumées) : `feu` passait déjà sans le trait. J'avais prédit le contraire. L'agent des voisins l'a trouvé de son côté, à la même semaine. **Avant de mesurer ce qu'un mécanisme répare, remesurer la panne sur la base qu'on vient de fusionner.**
+
+### Un compte de feux ne mesure pas un mécanisme du feu ; la probabilité de départ sur le même état, si
+
+Sur cinq graines, le trait ne change pas le nombre de feux : un de chaque côté, la graine 5 brûlant sept ans plus tôt. Sur treize, il en donne 7 contre 5, mais une graine qui brûlait sans lui (la 37) ne brûle plus : un départ de plus, qui n'a pas pris, a décalé le flux. Un départ est rare par construction, quelques dixièmes par graine en quarante ans. Or, jusqu'au premier départ, les deux parties sont identiques, puisque la charge ne consomme aucun tirage. Une sonde calcule donc chaque semaine, sur l'état de la base, la charge et la probabilité de départ avec et sans le trait. Les départs attendus en quarante ans montent de 9 à 12 % sur chacune des cinq graines (0,59-0,64 contre 0,66-0,70). **Quand deux variantes partagent la trajectoire jusqu'à l'événement rare, comparer leurs probabilités sur le même état, pas leurs événements.**
+
+### Un combustible ne compte que là où la charge ne plafonne pas
+
+J'avais prédit +30 à +80 % de charge de dix à trente ans, et +20 à +60 % de départs attendus. Mesuré : +11 à +14 % de charge de dix à vingt ans, +25 à +29 % de vingt à trente (probabilité de propagation +28 à +33 %), et +9 à +12 % de départs. Le facteur combustible du risque plafonne à une charge moyenne de 1. L'herbe des dix premières années et les chandelles des dix dernières (charge de 1,8 à 2,0) l'y tiennent déjà ; le trait ne joue que dans la phase dense, celle où la base des houppiers monte. **Un combustible ajouté se mesure là où la charge ne plafonne pas ; ailleurs, il ne change que la taille du feu.**
+
+### Une part mesurée sur pied est déjà un équilibre
+
+La piste de départ était une décomposition ou une chute du bois mort, sourcée ou à calibrer. Mais la grandeur que mesurent les inventaires de combustible, la part morte du combustible fin sur pied, est déjà l'équilibre entre ce qui meurt et ce qui tombe. Vega et al. la trouvent indépendante de la fertilité de la station, et elle monte de 0,32 à deux ans à 0,45 à vingt-deux. La prendre comme poids de l'étage mort évite une durée de chute que rien ne chiffre, et un champ d'état. **Avant d'ajouter un taux, chercher si la grandeur mesurée n'en est pas déjà le résultat.**
+
+### Points ouverts
+
+- **La valeur par défaut** : sans mesure, une fiche ne garde rien (0, ce que faisait le moteur). C'est sans doute faux pour le genêt, la callune et le pin sylvestre, et il faut une source par espèce. Décision en attente (#479).
+- **L'âge du fourré** : la part de l'ajonc monte de 0,32 à 0,45 entre deux et vingt-deux ans ; le trait prend 0,40, la valeur des dix ans.
+- **La Nouvelle-Zélande** donne moins : 16 à 18 % de rameaux morts dans un fourré de six à sept ans et demi (Egunjobi 1971, lu dans la revue de Zouhar 2005, pas dans l'article). Les deux sources ne comptent pas la même chose (des rameaux entiers, tout le combustible fin).
+
+## Ce qu'un lot précédent a appris (les voisins : la part du houppier qui dépasse, #467)
 
 Le lot v0.6 « voisins », empilé sur le couvert (#464, PR #471). Un voisin pèse la part de son houppier qui dépasse chaque niveau du houppier de la cible, moyennée de sa base à sa cime (light.ts, `poidsDuVoisin`). Un égal pèse 0,5, un point au sol 1, et le 0,4 des codominants comme la bande des 75 % sont tombés. La loi n'a aucune constante : elle intègre la part de houppier que suppose déjà `partHouppier`. Sur décision, l'élagage naturel se fait **niveau par niveau** : la base du houppier lit sa propre lumière (`profondeurVivanteParNiveaux`). Prédictions et mesures dans les commits de la branche, avant chaque course ; les sondes sont des copies du moteur hors dépôt. Format inchangé.
 
