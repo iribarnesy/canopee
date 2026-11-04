@@ -98,6 +98,7 @@ Deux lignes ont été relues en directions, sur décision. La première : « le 
 - **La lande d'ajoncs ne brûle plus** : le bois mort retenu sur pied n'existe pas (voir plus haut).
 - **La hêtraie fermée de `trouees`** s'effondre ; le banc ou la charge d'entretien sont à revoir, décision en attente (#471).
 - **La profondeur des houppiers du hêtre** reste dans #474 : 0,62 à 0,68 de la hauteur en futaie serrée de vingt à soixante ans, contre 46 à 48 % dans les hêtraies slovaques non éclaircies (Štefančík 2020).
+- **`chandelles`** : la concentration des chutes ventées vaut 0,0997 avec l'élagage niveau par niveau, et 0,1012 avec l'élagage sur la lumière du houppier, à 0,01 d'erreur-type. Ce n'est pas l'élagage : c'est l'arrivée de main (#476) qui l'a fait passer de 0,130 à 0,10, et le seuil sans source tombe dessus. Une relecture en signification est proposée (#471).
 - **`glandee`** : sur cinq graines, la perte de recrues que le boutis inflige à la densité de référence vaut −6 à +14 % avec la loi B, −6 à +8 % sur le couvert seul ; c'est du tirage, des deux côtés.
 
 ## Ce qu'un lot précédent a appris (le couvert, #438 ; les semis sous le couvert, #353, instruit)
