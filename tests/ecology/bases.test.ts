@@ -305,8 +305,22 @@ describe("le complexe ne peut céder que les bases qu'il porte", () => {
    * Le décor où le plancher mord, et il n'est pas fabriqué : des ajoncs sur la
    * lande sèche, c'est-à-dire l'espèce du lieu sur la station du lieu. Le
    * complexe y est petit (17,4 eq/m² de capacité, un sable), la litière y est
-   * pauvre (4,5 mg/g de calcium), et soixante ans suffisent à vider la cellule
-   * la plus exposée.
+   * pauvre (4,5 mg/g de calcium), et le temps suffit à vider la cellule la plus
+   * exposée.
+   *
+   * **Le décor court maintenant quatre-vingt-dix ans, et c'est signalé** (#473).
+   * Soixante ans suffisaient tant que la feuille d'un arbre rendait à sa chute
+   * 1,4 fois le phosphore de son azote. Les ajoncs sont des fixateurs : ce
+   * surplus, pris en partie nulle part, les nourrissait. Depuis que la feuille ne
+   * porte que le phosphore de son azote, ils tiennent sur leur lande (89 à 96
+   * ajoncs vivants à soixante ans sur les graines 1 à 3, contre 82 à 105 sur le
+   * moteur d'avant), mais poussent de 9 à 20 % moins (facteur phosphore de saison
+   * 0,45 contre 0,60), et leur litière acidifie moins vite : aucune cellule ne se
+   * vidait plus en soixante ans (plancher 0,048 à 0,43 eq/m²). En
+   * quatre-vingt-dix ans, une cellule se vide sur chacune des trois graines
+   * (non-tamponné 0,016 / 0,031 / 0,004 eq/m², plancher 1,3e-4 à 2,1e-4). Le
+   * décor densifié (un ajonc par mètre, soixante ans) en vidait sur deux graines
+   * sur trois. Aucune garde n'a bougé.
    */
   function lande(ans: number, graine: number) {
     const COTE = 16;
@@ -359,7 +373,7 @@ describe("le complexe ne peut céder que les bases qu'il porte", () => {
 
   /**
    * **Trois parties, pas une** (#280). Que le complexe se vide dans les soixante
-   * ans est un **tirage** : sur huit graines, il ne se vide pas sur trois avec
+   * ans (quatre-vingt-dix depuis #473) est un **tirage** : sur huit graines, il ne se vide pas sur trois avec
    * le moteur d'avant #280, sur deux avec celui d'après — et ce ne sont pas les
    * mêmes. L'essai tirait la graine 3, qui se trouve parmi les deux ; avec la 4,
    * la 7 ou la 8, c'est l'ancien moteur qui serait tombé.
@@ -372,14 +386,14 @@ describe("le complexe ne peut céder que les bases qu'il porte", () => {
    * non-tamponné nul partout, dans l'une ou l'autre version — 1, 2, 3 ne sont pas
    * choisies, ce sont les trois premières.
    */
-  const LANDES = [1, 2, 3].map((g) => lande(60, g));
+  const LANDES = [1, 2, 3].map((g) => lande(90, g));
   const CUMUL = {
     nonTamponne: LANDES.reduce((a, r) => a + r.nonTamponne, 0),
     planchePartout: Math.min(...LANDES.map((r) => r.planchePartout)),
     plancherProfond: Math.min(...LANDES.map((r) => r.plancherProfond)),
   };
 
-  it("soixante ans d'ajoncs sur la lande : le pool touche zéro et s'y arrête", () => {
+  it("quatre-vingt-dix ans d'ajoncs sur la lande : le pool touche zéro et s'y arrête", () => {
     const r = CUMUL;
     for (const partie of LANDES) expect(partie.tiges).toBeGreaterThan(0);
     // Le décor a bien fait son travail : il a vidé une cellule, dans au moins
@@ -396,7 +410,8 @@ describe("le complexe ne peut céder que les bases qu'il porte", () => {
     // l'altération et les dépôts, plus bas dans le même tick. Ce qu'on peut donc
     // exiger, et qui dit exactement la bonne chose, c'est qu'elle ne finisse
     // jamais la semaine avec plus que ce que cette semaine-là lui a apporté.
-    // Relevé : 2,87e-4 pour un apport hebdomadaire de 2,87e-4.
+    // Relevé : 2,87e-4 pour un apport hebdomadaire de 2,87e-4 ; 1,3e-4 sur le décor
+    // de quatre-vingt-dix ans (#473).
     const apportHebdo =
       alterationBasesSurfaceEqM2Semaine(LANDE_SECHE.station.profil) +
       DEPOSITION_BASES_EQ_M2_SEMAINE;

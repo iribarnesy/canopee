@@ -437,6 +437,10 @@ describe("une chandelle tombe dans le sens du coup de vent, pas seulement vers l
     const expo = Math.min(1, Math.max(0, station.ventExposition));
     const ventees: { d: number; cap: number }[] = [];
     const calmes: { d: number; cap: number }[] = [];
+    const conc = (a: readonly { d: number; cap: number }[]) =>
+      a.length ? a.reduce((s, x) => s + Math.cos(x.d - x.cap), 0) / a.length : 0;
+    /** La concentration des chutes ventées de chaque partie : l'erreur-type s'en déduit. */
+    const venteesParGraine: number[] = [];
     // **Trois parties, pas une** (#291) — le remède que le dépôt a déjà pris pour
     // le feu et pour la lande d'ajoncs, et pour la même maladie. Une trentaine de
     // chutes ventées par partie donnent à leur concentration une erreur-type de
@@ -472,6 +476,7 @@ describe("une chandelle tombe dans le sens du coup de vent, pas seulement vers l
     // et +0,016. Le seuil est resté où il était ; l'erreur type du cumul tombe
     // à ~0,015, et le délai suit.
     for (const graine of Array.from({ length: 24 }, (_, k) => 5 + k)) {
+      const venteesDeLaPartie: { d: number; cap: number }[] = [];
       let state = plantScattered(
         createGameState(station, rngStateFromSeed(graine)),
         "salix_alba",
@@ -493,12 +498,13 @@ describe("une chandelle tombe dans le sens du coup de vent, pas seulement vers l
           rafaleDeLaSemaine(state.graineMarche, i, w.ventMoyMs) * expo,
         );
         for (const c of r.chutes) {
-          (emprise > 0 ? ventees : calmes).push({ d: c.directionRad, cap: w.ventVersRad });
+          const chute = { d: c.directionRad, cap: w.ventVersRad };
+          (emprise > 0 ? ventees : calmes).push(chute);
+          if (emprise > 0) venteesDeLaPartie.push(chute);
         }
       }
+      venteesParGraine.push(conc(venteesDeLaPartie));
     }
-    const conc = (a: readonly { d: number; cap: number }[]) =>
-      a.length ? a.reduce((s, x) => s + Math.cos(x.d - x.cap), 0) / a.length : 0;
     // Le mécanisme a bien tourné : une chute sur sept tombe un jour de coup de
     // vent. Sur un terrain **plat**, où la pente ne dit rien, c'est le vent seul.
     expect(ventees.length).toBeGreaterThan(30);
@@ -515,7 +521,26 @@ describe("une chandelle tombe dans le sens du coup de vent, pas seulement vers l
     // La concentration des calmes mesure ces quatre caps, pas le hasard, et un
     // rapport dont le dénominateur est ce reliquat lit le tirage. Retiré avec
     // l'accord de l'auteur ; les deux seuils qui disent le mécanisme restent.
-    expect(conc(ventees)).toBeGreaterThan(0.1);
+    //
+    // **La ligne des chutes ventées est relue en signification (#467, décision
+    // du propriétaire), et c'est signalé.** Elle exigeait une concentration
+    // cumulée au-delà de 0,1. Ce seuil n'avait pas de source, et c'est l'arrivée
+    // de main (#476, la vernale) qui a déplacé la grandeur : 0,130 avant,
+    // 0,0997 après, et 0,1012 sur la même base quand l'élagage lit la lumière du
+    // houppier (vingt-quatre graines, l'écart entre les deux valant le dixième
+    // de l'erreur-type). Le seuil tombait pile sur la valeur attendue. Ce que
+    // l'essai affirme, c'est que ces chutes penchent du côté du vent : leur
+    // concentration cumulée doit dépasser zéro de plus de trois erreurs-types,
+    // estimées graine par graine. Mesuré : 0,0997 pour une erreur-type de
+    // 0,0094, soit 10,6 erreurs-types. La ligne des calmes ne change pas : leurs
+    // chutes tombent aux quatre mêmes semaines de l'année, et leur
+    // concentration serait elle aussi « significative » (3,9 erreurs-types),
+    // alors qu'elle ne mesure que ces quatre caps.
+    const n = venteesParGraine.length;
+    const moyenne = venteesParGraine.reduce((s, x) => s + x, 0) / n;
+    const variance = venteesParGraine.reduce((s, x) => s + (x - moyenne) ** 2, 0) / (n - 1);
+    const erreurType = Math.sqrt(variance / n);
+    expect(conc(ventees)).toBeGreaterThan(3 * erreurType);
     expect(Math.abs(conc(calmes))).toBeLessThan(0.1);
   }, 2_700_000);
 
