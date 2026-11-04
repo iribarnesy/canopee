@@ -503,6 +503,23 @@ export interface SoilState {
    */
   herbeFeuillage: Grille;
   /**
+   * **La lumière de la saison**, pour les espèces qui jugent leur station sur
+   * leur saison (`herbacees.ts:JUGE_SA_SAISON`, #468) : la lumière de chaque
+   * semaine de la saison en cours, pondérée par la vigueur de l'espèce, même
+   * indexation à plat que `herbeEmprise`. C'est une **mémoire**, comme
+   * `herbeHumidite` : sans elle, une vernale ne verrait que sa pire semaine.
+   * Elle s'efface quand l'espèce dort. Nulle pour les autres espèces.
+   */
+  herbeLumiereSaison: Grille;
+  /**
+   * **Le poids de la saison** de chaque espèce, une valeur par espèce et non par
+   * cellule : la somme de ses vigueurs depuis la sortie des feuilles
+   * (`herbacees.ts:poidsDeSaison`, #468). La lumière jugée est
+   * `herbeLumiereSaison` divisée par ce poids. Il ne dépend que du calendrier,
+   * donc il vaut pour toute la parcelle.
+   */
+  herbeVigueurSaison: GrilleLongue;
+  /**
    * Biomasse herbacée présente ∈ [0,1] : elle **suit** la couverture mais ne
    * disparaît pas quand l'herbe jaunit — le foin sur pied reste le meilleur
    * combustible de l'été. Seuls le feu, la fauche et la décomposition la font
@@ -721,6 +738,33 @@ export interface TickFluxes {
    */
   apportKKgHa: number;
   retourKKgHa: number;
+  /**
+   * **le budget du phosphore**, kg/ha (#473). Le phosphore de la matière
+   * organique n'est pas un état : la litière, l'humus et le bois mort portent
+   * celui de leur azote (`phosphoreDeLAzoteOrganiqueG`, pk.ts). Ce que la roche
+   * altérée et l'atmosphère apportent, et ce que la terre emporte de matière
+   * organique hors de la parcelle referment, avec le prélèvement, l'érosion du
+   * phosphore assimilable et ce que les plantes versent au sol, le phosphore du
+   * sol chaque semaine (`tick-conservation.test.ts`,
+   * `phosphore-conservation.test.ts`).
+   */
+  apportPKgHa: number;
+  erosionPOrganiqueKgHa: number;
+  /**
+   * Le phosphore que les racines auraient pris avec leur azote si le sol l'avait
+   * eu, kg/ha : la plante prend alors son azote sans tout son phosphore, et la
+   * matière organique qu'elle fera en portera plus qu'elle n'en a pris. Il mord
+   * sous une culture fertilisée (un blé à 192 kg N/ha : 13 kg P/ha/an), à peine
+   * sous une forêt ou sur la lande (moins de 1 % des cellules-semaines mesurées).
+   */
+  phosphoreNonPrisKgHa: number;
+  /**
+   * Le phosphore qu'un flux d'azote vers la matière organique (immobilisation,
+   * humification) aurait dû prendre et que la cellule n'avait plus, kg/ha. Il ne
+   * mord pas sur les bancs mesurés ; s'il mordait, la matière organique
+   * porterait un phosphore pris nulle part.
+   */
+  phosphoreOrganiqueNonTrouveKgHa: number;
   /**
    * **le budget de bases** de la semaine, eq/ha, terme par terme (bases.ts). Il est
    * exposé pour être **vérifié** : la variation du pool doit valoir apports +
@@ -982,6 +1026,10 @@ export function createGameState(
       // couvert, pas des souches nues. La première semaine le ramènera à ce
       // que la saison permet.
       herbeFeuillage: Float32Array.from(Array.from({ length: n }, () => depart).flat()),
+      // Aucune saison commencée au premier jour : la première sortie des
+      // feuilles ouvre la mémoire (#468).
+      herbeLumiereSaison: new Float32Array(n * N_HERBACEES),
+      herbeVigueurSaison: new Float64Array(N_HERBACEES),
       herbeBiomasse: new Float32Array(n).fill(station.herbeInitiale),
       // Rien sur pied au premier jour : la couverture déclarée par la station
       // est un feuillage qui repart, et la première saison fabrique sa matière.

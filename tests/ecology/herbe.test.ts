@@ -207,6 +207,13 @@ describe("concurrence herbacée sur les jeunes plants", () => {
     // la strate boit ce qu'un tapis fermé boit (#391), elle prend de l'eau au
     // plant ; sur ce banc, le rapport ne bouge presque pas (0,893 / 0,898 / 0,893,
     // graines 3, 7, 11) : sur la lande, c'est toujours le phosphore.
+    //
+    // **Et ce phosphore était une fuite** (#473). La strate le rendait bien, mais
+    // l'herbe fauchée, verte, tombait en litière à un C/N bas et libérait son
+    // azote sans son phosphore, dans le disque même du plant. Le phosphore
+    // suivant maintenant l'azote de la litière, la fauche ne coûte plus rien au
+    // pin : 1,004 à 1,010 sur les graines 3, 7 et 11. L'essai tient toujours : la
+    // fauche ne libère pas le plant.
     expect(pauvre.rapport).toBeLessThan(1.05);
   });
 
@@ -216,7 +223,8 @@ describe("concurrence herbacée sur les jeunes plants", () => {
     // moitié du contraste qui survit intacte, parce qu'elle ne reposait sur
     // aucun apport fantôme. Relevé sur ce banc (#210) : sur le limon, le pin ne
     // manque ni d'eau, ni d'azote, ni de phosphore, seul le pH le freine (0,77 à
-    // 0,80), et la fauche rend 1,001 sur les graines 3, 7 et 11.
+    // 0,80), et la fauche rend 1,001 sur les graines 3, 7 et 11 (1,002 depuis
+    // #473).
     expect(riche.rapport).toBeLessThan(1.1);
     // Et l'arbre a bien poussé : 3,11 m à douze ans pour le pin sur limon
     // riche, contre 2,63 sur la lande (graine 3, relevé de #210). Ce n'est pas
@@ -225,25 +233,31 @@ describe("concurrence herbacée sur les jeunes plants", () => {
     expect(riche.sans).toBeGreaterThan(pauvre.sans);
   });
 
-  it("la fauche coûte sur sol pauvre, pas sur un sol qui ne manque de rien", () => {
-    // **Le sens que cet essai gardait s'est retourné** (#247) : la fauche ne
-    // libérait le plant sur sol pauvre que par un gain d'azote. Il gardait
-    // ensuite un plafond de dix points entre les deux sols, relevé sur le moteur
-    // et sans source ; il est tombé à #310, le lot où l'herbe a puisé son eau dans
-    // tout son enracinement : 0,888 et 0,889 sur la lande (graines 3 et 7) contre
-    // 1,001 sur le limon. Le plafond est retiré. Ce que dit le terrain est la
-    // direction : faucher une graminée accroît sa transpiration et renforce la
-    // concurrence pour l'eau (Davies et Gardiner 1989, *Arboriculture Research
-    // Note* 59/89/ARB). Prédit avant la mesure sur une graine neuve : lande sous
-    // limon, lande entre 0,85 et 0,95. Relevé graine 11 : 0,894 contre 1,001.
+  it("la fauche ne libère le plant sur aucun des deux sols (Davies 1985)", () => {
+    // **Relu sur Davies 1985, et c'est signalé** (#473). L'essai s'appelait « la
+    // fauche coûte sur sol pauvre, pas sur un sol qui ne manque de rien » et
+    // exigeait un rapport plus bas sur la lande que sur le limon : la direction
+    // de Davies et Gardiner 1989 (*Arboriculture Research Note* 59/89/ARB),
+    // pour qui couper une graminée accroît sa transpiration et renforce la
+    // concurrence pour l'eau, d'autant plus que le sol est sec. Le moteur la
+    // tenait par une **fuite de phosphore**, pas par l'eau (#210) : l'herbe
+    // fauchée, verte, tombait en litière à un C/N bas et libérait son azote
+    // sans son phosphore, dans le disque même du plant. Retirer le phosphore du
+    // minimum du pin ramenait déjà le rapport à 1 (0,997 à 0,999, graines 3, 7
+    // et 11). Depuis que le phosphore de la matière organique suit son azote
+    // (#473), la fauche ne coûte plus rien au pin de la lande : 1,004 à 1,010 sur
+    // les graines 3, 7 et 11, contre 1,001 sur le limon (main : 0,893 à 0,898
+    // contre 1,001).
     //
-    // **Le moteur trouve cette direction par le phosphore, pas par l'eau** (#210,
-    // relevé détaillé à l'essai « faucher n'est pas désherber ») : retirer l'eau
-    // du minimum du pin ne change pas le rapport, retirer le phosphore le ramène
-    // à 1. Le sens est juste, la cause ne l'est pas. Ce qui reste ouvert est ce
-    // que l'herbe prend en eau à un jeune plant, et la reprise d'un plant
-    // **désherbé**, que le moteur n'a pas de geste pour mesurer.
-    expect(pauvre.rapport).toBeLessThan(riche.rapport);
+    // Ce que le moteur tient maintenant, et pour la bonne cause, est ce que dit
+    // Davies 1985 (*Forestry* 58 : 167-180, sept essais sur prairies anglaises) :
+    // couper l'herbe au-dessus du sol est **inefficace**, sur aucun sol elle ne
+    // libère le plant ; seuls le désherbage et le paillage le font (#392). La
+    // borne est celle que cet essai tient déjà sur la lande (cinq points). Le
+    // surcoût de Davies et Gardiner sur sol sec n'est plus retrouvé : il passe
+    // par la transpiration de l'herbe qui repousse, que le moteur ne relie pas
+    // à la fauche (E12 ; issue ouverte pour la ramener par sa cause).
+    for (const bras of [pauvre, riche]) expect(bras.rapport).toBeLessThan(1.05);
   });
 });
 

@@ -117,6 +117,195 @@ Essais sous ce lot : eau-du-tapis, tassement, herbacees (E9 compris), feu, herbe
 - **La litière de la prairie** s'équilibre à 6,4 t C/ha, quand une prairie non pâturée porte de l'ordre de 160 g/m² de matière morte (Sims et al. 1978) : la vitesse de décomposition (0,6 / C/N) reste sans ancre.
 - **Sous G-a, une chandelle déclarée consumée restait dans la liste des arbres** (`feu.test.ts`, ligne 394) quand la graine du premier feu changeait. O2 ne change pas ce feu, et l'essai passe ; le cas n'est pas instruit.
 
+## Ce qu'un lot précédent a appris (la boucle du phosphore de l'herbe, #473 ; la fauche relue sur Davies 1985, le pin sur sept graines, le décor des ajoncs allongé)
+
+Le lot de maintenance décidé sur #461 (option 1 du rapport P8) : le phosphore que l'herbe prend avec l'azote que sa litière recycle ne reviendrait jamais au sol. Une sonde de main (compteurs seuls, aucun calcul changé) a d'abord écrit le bilan du phosphore de bout en bout, sur neuf bancs. Deux variantes ont ensuite été codées et mesurées sur la sonde et en CI : A, le phosphore suit l'azote organique à chaque passage vers le minéral et retour ; B, A sans le surplus que les feuilles d'arbre rendaient à la chute (`RETOUR_LITIERE_P` retiré). Elles referment le bilan, et deux essais tombent sous l'une et l'autre : la fauche ne coûte plus rien au pin de la lande, et les pins du sable d'une graine du banc des hauteurs, mieux nourris, tombent tous au vent ; sous B, le décor des ajoncs de `bases.test.ts` ne vide plus aucune cellule de ses bases. Le lot s'est arrêté là. Le propriétaire a retenu B, fait relire l'essai de la fauche sur Davies 1985, élargir le banc du pin à sept graines et allonger le décor des ajoncs ; la transpiration de l'herbe fauchée, qui portait la direction perdue, part dans #477. Aucun champ d'état : le format reste celui de main (16 depuis #476). Prédictions et mesures dans les commits de la branche, avant chaque course.
+
+### Avant de refermer une boucle, compter les deux sens du flux qui la traverse
+
+La prémisse venait d'O2, où la litière de l'herbe libère son azote. Sur main, elle l'**immobilise** presque partout : 11 kg N/ha/an sur la lande, 19 sous le châtaignier, 21 sous le houx, 33 sous le noyer, 64 dans la prairie de Park Grass. Cet azote pris au minéral passe à l'humus, et l'humus qui se minéralise rend le phosphore de son azote : un phosphore que personne n'avait pris. Main **fabriquait** de 1 à 6 kg P/ha/an, et le phosphore du sol (assimilable et fixé) passait de 112 à 211 kg/ha sous le châtaignier en quarante ans, à 347 dans la prairie, à 538 sous les bouleaux de `pk.test.ts` en soixante ans. La perte que décrivait #461 n'existait que sur le sable du pin, où la litière libère 26 kg N/ha/an sans son phosphore (2,4 kg P/ha/an perdus) ; O2 la créait ailleurs en changeant l'immobilisation en libération, et c'est ce basculement d'une création en perte que P8 avait mesuré. **Une boucle qu'on croit ouverte dans un sens peut fabriquer dans l'autre** ; le flux qui la traverse se compte avec son signe avant de la refermer.
+
+### Un stock implicite tient à chaque frontière, ou il ment des deux côtés
+
+Le moteur n'a pas de phosphore organique : la litière, l'humus et le bois mort portent celui de leur azote. La minéralisation de l'humus était seule à respecter cette règle. La litière qui libère ou immobilise, l'humus nouveau qui prend son azote au minéral, le bois mort qui rend le sien, les cendres et le labour qui minéralise l'humus passaient la frontière sans leur phosphore, chacun dans son sens. Une seule fonction (`phosphoreDeLAzoteOrganiqueG`) à chacun de ces passages referme le bilan ; il est vérifié chaque semaine, sol seul sous des arbres (`tick-conservation.test.ts`), parcelle sans arbre gestes compris (`phosphore-conservation.test.ts`), et, sous B, système entier arbres compris. **Un stock qu'on ne porte pas est un stock qu'on doit débiter et créditer partout où son porteur passe** ; en oublier une frontière ne se voit pas dans un total qui ne le compte pas.
+
+### Un taux de retour plus grand que celui du pool qui recycle crée de la matière
+
+La feuille d'arbre rendait à sa chute 1,4 fois le phosphore de son azote (`RETOUR_LITIERE_P` 0,7 contre 0,5 pour l'azote), réglé quand la moitié non rendue de l'azote finissait au bois. Depuis #247, elle part en réserve et revient l'année suivante : à l'état stable, ce que l'arbre perd en litière vaut ce qu'il prend, et 1,4 fois le rapport crée 0,4 fois le phosphore de l'azote tombé. Le terrain ne le demande pas : les feuilles vertes et sénescentes ont le même rapport N:P en moyenne mondiale (12,9 et 12,6), et un feuillu caduc résorbe son phosphore à 58,5 % (Vergutz et al. 2012, *Ecol. Monogr.* 82 : 205). Le surplus nourrissait les ajoncs de la lande, fixateurs dont l'azote tiré de l'air rendait à la chute un phosphore pris nulle part : sous B, ils poussent moins, leur litière acidifie moins, et le décor de `bases.test.ts` ne vide plus aucune cellule de ses bases en soixante ans. Mesurés sur leur lande (graines 1 à 3), ils tiennent pourtant : 89 à 96 ajoncs vivants à soixante ans contre 82 à 105 sur main, la régénération relevant la cohorte plantée vers vingt-cinq ans dans les deux cas, pour 9 à 20 % de hauteur en moins (facteur P de saison 0,45 contre 0,60). Le décor court maintenant quatre-vingt-dix ans, garde inchangée, et une cellule se vide sur chacune des trois graines. **Quand un pool se met à recycler ce qu'on croyait perdu, les taux réglés sur la perte deviennent des sources.**
+
+### Un défaut peut tenir un critère sourcé, encore
+
+La fauche coûtait 10 à 11 % au pin de la lande, et `herbe.test.ts` gardait cette direction (Davies et Gardiner 1989 : couper une graminée accroît sa transpiration). #210 avait montré que le moteur la trouvait par le phosphore. La sonde dit comment : l'herbe fauchée, verte, tombe en litière à un C/N bas, libère son azote, et sur main sans son phosphore, dans le disque même du plant. La boucle refermée, la fauche ne coûte plus rien (1,004 à 1,010 sur les graines 3, 7 et 11, sous A comme sous B) ; le terrain met ce coût sur l'eau, que le moteur ne relie pas à la fauche. **Corriger un compte peut retirer à un essai ce qui le tenait** ; l'essai dit alors ce que le moteur ne sait pas faire, et c'est une décision de le réécrire, pas une correction. Le propriétaire l'a prise : l'essai tient maintenant ce que dit Davies 1985 (couper l'herbe est inefficace, sur aucun sol la fauche ne libère le plant), E12 reste 🟡 en disant que la direction de Davies et Gardiner n'est plus retrouvée, et elle doit revenir par sa cause, l'herbe qui repousse et transpire davantage (#477).
+
+### Mieux nourri, plus haut, plus exposé
+
+Sous A comme sous B, les pins du sable ne manquent plus de phosphore que 22 à 31 % des semaines (58 à 74 % sur main) et poussent de 6 à 7 % plus haut. Sur la graine 17, ils sont plus hauts aux coups de vent des années 22, 26 et 32, et tous les huit tombent en chablis (cinq sur main) : la moyenne des deux graines du banc compte zéro pour celle-là, et l'essai tombe à 7,9 m. Quatre graines de plus le confirment : sous B, le vent tue plus de pins que sur main sur trois d'entre elles, et les survivants sont 10 % plus hauts. Sur les sept graines, main fait 15,30 m (−1 % de la table) et B 16,39 m sur les six où il reste des pins (+6 %), 14,05 m en comptant zéro pour la graine rasée (−9 %) : dans la bande dans les deux lectures. **Un banc de huit arbres et deux graines mesure aussi le vent** ; avant de lire une hauteur, lire combien d'arbres il reste.
+
+### Sous O2, la boucle refermée rend les arbres sans fabriquer
+
+O2 (#470) double ce que l'herbe prend d'azote, et sa litière le libère : sur main, sans son phosphore (26 à 81 kg N/ha/an), et la strate, qui en voudrait deux fois plus, ne le trouve pas la moitié à trois quarts du temps. Le pin du sable tombait de 16,43 à 9,40 m, le châtaignier de 20,27 à 14,30, le houx de 2,66 à 1,26. Sous B, le phosphore revient avec l'azote de la litière, et les trois retrouvent leurs hauteurs de main (15,25, 20,31, 2,66), le plafond du prélèvement ne mordant plus que 2 % des cellules-semaines sous le pin. La sonde de #461 qui rendait le phosphore à la mort des tissus y arrivait en le fabriquant ; celle-ci y arrive en le comptant. Le noyer, lui, ne bouge pas : il grossit par l'azote (33,5 cm à dix-neuf ans, hors de la bande de Restinclières). **Quand une loi nouvelle casse des arbres par un nutriment, chercher d'abord la fuite que la loi a ouverte** : ici, O2 n'avait rien de faux sur le phosphore ; il faisait passer plus d'azote par une frontière qui ne portait pas le sien.
+
+### Ce que ça donne
+
+Sonde hors dépôt, bancs recopiés des essais ; chaque course est déterministe à graine fixée. Flux en kg P/ha/an sur la course ; « offert » : phosphore assimilable tamisé par le pH, moyenne de parcelle des semaines de saison.
+
+Le bilan de main, terme par terme (« écart » : ce que chaque flux d'azote franchissant la frontière organique / minéral sans son phosphore crée, + , ou perd, −) :
+
+| banc | minéralisation de l'humus | roche + dépôts | prélèvement (herbe / arbres) | immobilisation | libération | labour | plafond | écart net | P du sol début → fin (kg/ha) |
+|---|---|---|---|---|---|---|---|---|---|
+| châtaignier, limon acide, 40 a | 7,86 | 2,18 | 7,40 / 0,43 | +1,69 | −0,16 | 0 | 0,02 | +1,80 | 112 → 211 |
+| pin, sable profond, 40 a | 2,36 | 1,68 | 4,55 / 0,13 | +0,03 | −2,38 | 0 | 0,56 | −1,73 | 143 → 120 |
+| noyer en allée, 20 a | 8,81 | 2,93 | 6,06 / 1,42 | +3,00 | −0,04 | 0 | 0 | +3,65 | 112 → 211 |
+| pin de herbe.test, lande, 12 a | 2,44 | 1,68 | 2,13 / 0 | +1,03 | 0 | 0 | 0 | +1,03 | 97 → 121 |
+| bouleaux de pk.test, 60 a | 7,14 | 4,63 | 2,09 / 4,58 | +2,10 | −0,15 | 0 | 0 | +3,88 | 112 → 538 |
+| prairie de Park Grass, 40 a | 8,97 | 1,69 | 4,79 / 0 | +5,72 | 0 | 0 | 0 | +5,72 | 112 → 347 |
+| blé à 192 kg N/ha, 10 a | 9,27 | 1,80 | 12,73 / 0 | +5,58 | 0 | −6,07 | 13,18 | +12,68 | 112 → 96 |
+
+Les feuilles d'arbre ajoutaient leur double compte (0,06 à 2,01). Sous A et B, tous les écarts valent zéro sauf le plafond du prélèvement, et sous A le surplus des feuilles.
+
+Ce que les arbres et le sol en voient, main → A → B :
+
+| banc | main | A | B |
+|---|---|---|---|
+| houx, 12 a | 2,66 / 2,38 / 2,33 m ; P 1 ; offert 1,64 | identique ; offert 0,96 | identique ; 0,96 |
+| châtaignier, 40 a | 20,27 / 18,68 / 18,04 m ; P 1 ; offert 1,84 | identique ; 1,04 | identique ; 1,02 |
+| noyer en allée, 20 a | 33,2 / 32,4 / 30,5 cm ; P 1 ; offert 15,2 | identique ; 7,9 | identique ; 7,6 |
+| pin du sable, 40 a (17 / 43 / 7) | 16,43 (3 pins) / 14,84 (8) / 13,60 (6) m ; P 0,89 ; offert 0,30 | 0 (aucun) / 15,85 (7) / 14,52 (5) ; P 0,99 ; 0,66 | 0 / 15,79 / 14,44 ; P 0,98 ; 0,66 |
+| plafond de la strate du sable | 24 % des cellules-semaines | 0 % | 0 % |
+| pin de la lande, 12 a (3 / 7 / 11) | 2,54 / 1,87 / 3,17 m ; P 0,545 ; offert 0,40 | 1,94 / 1,45 / 2,41 ; P 0,42 ; 0,30 | 1,93 / 1,44 / 2,39 ; 0,42 ; 0,30 |
+| fauché / non fauché, lande | 0,898 / 0,898 / 0,893 | 1,010 / 1,007 / 1,008 | 1,005 / 1,007 / 1,004 |
+| bouleaux, 60 a | 15,07 m ; offert 33,4 ; P du sol 539 | identique ; 19,6 ; 335 | identique ; 17,7 ; 300 |
+| prairie, 40 a | offert 21,3 ; P du sol 347 | 5,6 ; 119 | 5,6 ; 119 |
+| blé, 10 a | offert 1,75 ; plafond 16,8 % | 1,40 ; 15,7 % | 1,40 ; 15,7 % |
+
+Sous O2 (#470, sonde hors dépôt), graines 17 / 43 / 7, noyer 4 / 11 / 23 :
+
+| banc | main | main + O2 | B + O2 |
+|---|---|---|---|
+| pin du sable, 40 a | 16,43 / 14,84 / 13,60 m ; P 0,89 ; plafond 24 % | 9,40 / 7,26 / 6,52 ; P 0,48 ; 52 % | 15,25 / 15,37 / 14,07 ; P 0,98 ; 2 % |
+| châtaignier, 40 a | 20,27 / 18,68 / 18,04 m ; P 1 | 14,30 / 10,42 / 8,71 ; P 0,55 ; 72 % | 20,31 / 18,69 / 18,05 ; P 1 ; 0 % |
+| houx, 12 a | 2,66 / 2,38 / 2,33 m ; P 1 | 1,25 / 1,19 / 1,05 ; P 0,43 ; 60 % | 2,66 / 2,38 / 2,33 ; P 1 ; 0 % |
+| noyer en allée, 19 a | 32,2 / 31,5 / 29,4 cm | 33,5 / 32,6 / 30,9 | 33,5 / 32,6 / 30,9 |
+
+CI : sous A, `herbe.test.ts` (la fauche) et `hauteurs.test.ts` (le pin de la graine 17) tombent ; sous B, aussi `bases.test.ts` (les deux essais des ajoncs). Passent, sous les deux : `pk`, `ler`, `bases` hors ajoncs, `culture`, `fertilisation`, `noyer-hybride`, `hauteurs-arbustes`, `litiere-herbacee` (Park Grass ; la strate ne lit pas le phosphore, son prélèvement ne bouge pas), `feu`, `tolerances`, et les bilans. Après les décisions du propriétaire, `herbe.test.ts` relu sur Davies 1985, le pin sur sept graines (`hauteurs-pin.test.ts` : 14,19 m à quarante ans, −8,5 % ; 9,19 m à vingt, +13,5 %) et le décor des ajoncs sur quatre-vingt-dix ans (une cellule vidée sur chacune des trois graines) passent.
+
+### Les prédictions fausses
+
+- P1a : les feuilles devaient rendre 1,1 à 1,6 fois le phosphore que les arbres prennent ; 0,3 à 0,6, des arbres qui poussent mettant leur azote au bois.
+- P1c, pour le pin du sable : le plafond du prélèvement y mord 24 % des cellules-semaines, la strate prenant son azote sans tout son phosphore.
+- P1d : la lande et la prairie devaient perdre du phosphore ; elles en créaient.
+- P1e : le noyer de la graine 23 à 29,4 cm, sous la fourchette de 30 à 34.
+- P2 : le phosphore offert baisse plus que prédit partout où la litière immobilisait (houx 0,96 pour 1,0 à 1,5, noyer 7,9 pour 11 à 14,5, prairie 5,6 pour 8 à 16, blé −20 % pour ±15 %) et monte plus sous le pin du sable (0,66 pour 0,35 à 0,60) ; le plafond de la strate du sable tombe à 0 et non à 10 à 25 % ; le pin de la lande perd 24 % et non 5 à 20 % ; la fauche devait garder un rapport de 0,85 à 0,95, elle passe à 1,01 ; la graine 17 du pin rasée par le vent n'était pas prévue.
+- P5c : une graine de main sur quatre de plus devait garder moins de trois pins ; aucune n'en garde moins de six.
+- P3b, P3d : B devait retirer de 0,5 à 2 kg/ha d'offert au noyer et 5 à 20 % au châtaignier ; 0,3 et 2 %. Les deux essais des ajoncs n'étaient pas prévus.
+
+### Ce qui reste ouvert
+
+- **La direction de Davies et Gardiner 1989** (la fauche coûte sur sol sec) n'est plus retrouvée : elle doit revenir par la transpiration de l'herbe qui repousse (#477).
+- **Le plafond du prélèvement** laisse un blé fertilisé prendre son azote sans 13 kg P/ha/an de son phosphore : la plante porte alors plus qu'elle n'a pris (#434).
+- **Les fixateurs** portent le phosphore de leur azote fixé sans l'avoir pris au sol. Les ajoncs tiennent sur leur lande sous B, limités par le phosphore 94 % des semaines (91 % sur main).
+- **Le feu** ne rend que le phosphore de l'azote de ses cendres (le cinquième de ce qui brûle) ; celui de l'azote qui part en fumée sort avec lui, quand le potassium de la strate reste tout entier dans les cendres.
+- **La litière d'herbe** porte le rapport N:P de la plante verte, quand une graminée résorbe son phosphore un peu plus que son azote (82,1 % contre 74,6 %, Vergutz et al. 2012) *(à calibrer)*.
+
+## Ce qu'un lot précédent a appris (la vernale juge sa saison, #468 ; E9 relu sur le pin)
+
+#468 était un essai rouge dans la PR du couvert (#464) : la pénombre normalisée faisait monter à 1,90-2,03 la saisonnalité du sous-bois sous le pin, pour une borne de 1,6. Instruit d'abord sur la branche du couvert, cellule par cellule, sur trois graines. Le propriétaire a retenu deux décisions : A, la vernale juge sa station sur sa saison ; F, la ligne du pin devient une direction. Il a envoyé B en issue (#472). Prédictions et mesures dans les commits vides de `claude/v06-sous-pin` (instruction) et de `claude/v06-vernale` (le lot). **Le format passe à 16.**
+
+**Ce lot sort du périmètre de la V1.** `docs/v1.md` range la strate herbacée parmi ce qui attendra. Le propriétaire l'a accordé pour #468, parce qu'un essai rouge bloquait la PR du couvert. Je le signale ici et dans la PR, pour qu'aucun lot ne s'en serve comme précédent.
+
+### Un mécanisme documenté se vérifie sur un calendrier relevé
+
+E9, l'en-tête de `herbacees.ts` et le commentaire publié du tick disaient tous trois : « l'anémone juge sa station en mars ». Le moteur la jugeait chaque semaine de sa saison, donc sur la pire. Le calendrier relevé dans une partie (an 40, 2003) montre l'enchaînement :
+- le hêtre se feuille en semaine 18 ;
+- l'anémone reste en pleine vigueur jusqu'en semaine 21 ;
+- son emprise perd en une semaine, la 18e, tout ce qu'elle avait gagné depuis février.
+
+Dans les cellules sombres, son tapis valait au millième sa capacité à la lumière de juillet. Personne ne l'avait vu, parce que l'essai lisait une part vernale, c'est-à-dire un rapport, et que le rapport tenait. **Une phrase qui explique un mécanisme se vérifie sur la semaine où elle prétend qu'il agit.**
+
+### Une borne relevée sur le moteur à un âge donné peut mesurer un transitoire
+
+La borne de 1,6 sous le pin tenait sur main parce que l'anémone n'était pas encore arrivée. Elle avance à la vitesse de son rhizome, au plus 0,02 de parcelle par an, et commence quand le couvert se ferme :
+- **sur main**, la saisonnalité passe 1,6 vers l'an 45-50 (graines 3, 7, 11), et l'anémone tient 41-42 % du sol à l'an 60 ;
+- **avec la pénombre normalisée**, le pin se ferme dix ans plus tôt et elle atteint le même plafond dès l'an 40.
+
+La correction du couvert n'a pas créé le défaut, elle l'a avancé. **Avant d'accuser la correction qui fait casser une borne calée sur le moteur, prolonger la course de la version d'avant.**
+
+### La moyenne de la parcelle cachait la médiane
+
+À l'an 40, sous le pin corrigé, la lumière moyenne baisse peu : 0,34-0,41 contre 0,42-0,45. La médiane, elle, tombe de 0,38-0,41 à 0,27-0,33, et 40 à 43 % des cellules passent sous 0,25 (8 à 12 % sur main). Le bord sud et les trouées tiennent la moyenne pendant que le centre des couronnes s'assombrit.
+
+Le dactyle a une capacité en rampe, de 0,12 à 0,47. Calculée cellule par cellule, elle tombe de 0,71-0,76 à 0,50-0,56. **Une réponse non linéaire ne se juge pas sur la moyenne de son entrée.**
+
+### Le défaut était dans l'espèce qui manque
+
+Deux traits sont restés sur le banc des accusés : le plafond du dactyle et la saturation de l'anémone.
+- **Le dactyle recule à peu près là où son indice de lumière d'Ellenberg le place** (7, « also in the shade up to about 30% », Chytrý et al. 2018).
+- **Relever la saturation de l'anémone** demanderait 0,8 pour passer sous 1,6, en calcul statique, sans source, et enfoncerait le hêtre.
+- **Pladias classe l'une et l'autre « rare » sous le pin.** Ce qui couvre une pinède en été est une herbe de demi-ombre estivale, absente d'un atlas de trois spontanées. Le sol que le dactyle ne tient pas va donc à l'anémone par défaut.
+
+**Quand deux espèces se disputent un sol qu'aucune des deux n'occupe sur le terrain, chercher la troisième** (#472).
+
+### Remplacer une constante de sonde par un trait
+
+La sonde qui a chiffré A utilisait une moyenne glissante à 0,1 par semaine active, une constante sans source. Le lot la remplace par la moyenne de la saison entière, pondérée par la vigueur. La saison est celle que déclarent les traits de la fiche (`debutDJ`, `seuilJourH`, `finDJ`), et aucune durée n'est ajoutée.
+
+Elle ne donne pas tout à fait la même chose. Sur main, l'écart est de ±0,02 d'anémone sous le hêtre. Sur le couvert, il atteint +0,09 à +0,10 : la moyenne glissante oubliait les semaines nues plus vite, et je ne l'avais pas prédit. **Une constante qu'une sonde a dû inventer est une question posée aux traits** ; souvent, la fiche y répond déjà.
+
+### Ce que ça donne
+
+Dispositif de E9 (20 m, plantation à 3 m, limon riche, Abbeville), an 40, graines 3, 7 et 11, sondes hors dépôt. « Couvert » désigne une branche locale de mesure qui fusionne `origin/claude/v06-couvert` (8f0418c) ; elle n'a pas été poussée.
+
+| | main 18dbb29 | main + A | couvert | couvert + A |
+|---|---|---|---|---|
+| hêtre : emprise de l'anémone | 0,17-0,18 | 0,58-0,64 | 0,09-0,12 | 0,64-0,67 |
+| hêtre : part vernale | 0,48-0,51 | 0,76-0,80 | 0,37-0,47 | 0,82-0,84 |
+| hêtre : saisonnalité | 5,3-6,2 | 5,4-6,3 | 4,6-6,1 | 6,8-7,6 |
+| pin : saisonnalité | 1,32-1,42 | identique | 1,90-2,03 | identique |
+| pin : part vernale | 0,24-0,29 | identique | 0,47-0,51 | identique |
+| découvert | 1,04 ; 0,04 | identique | identique | identique |
+| lignes de l'ancien essai en échec | aucune | aucune | pin 1,6 ; gradient | pin 1,6 |
+
+Sous le pin, rien ne bouge : la lumière y est la même toute la saison. Sous le hêtre, les survivants sont les mêmes à l'an 40, et les hauteurs bougent de 0,25 m au plus.
+
+### Les prédictions fausses
+
+L'instruction (branche `claude/v06-sous-pin`) :
+- **H1** : le bord sud reste sous 0,75 de lumière, et le cœur du pin corrigé n'est pas sous 0,25. C'est la médiane qui tombe.
+- **H2**, à moitié : au bord sud du couvert, l'anémone tient 0,17-0,22, pour 0,1 au plus prédit.
+- **H3** : fausse sur une graine.
+- **T7** : sur la graine 3, la lumière baisse encore après l'an 40.
+- **U2** : juste sur la conclusion, fausse sur les chiffres.
+- **V4** : fausse sur le couvert.
+
+Le lot :
+- **W3** : fausse sur le couvert (voir plus haut).
+- **X3** : `climat.test.ts` casse en CI, et c'est le seul fichier hors `herbacees` (le brut de la graine 23, relu depuis ; voir plus bas).
+- **Y2** : juste sur la direction, fausse sur l'ampleur (graine 23 : −0,21).
+- **Z1** : sur la branche qui fusionne le couvert, `climat` casse aussi, sur une autre ligne.
+
+### Un essai par graine sur un compte rebattu
+
+`climat.test.ts` casse sur la branche, pour une seule raison : le thermomètre brut de la pullulation, sur la graine 23, vaut 1,13 pour une borne de 1,2. Sur les six graines de la campagne de #183, A déplace ce brut de −0,01 à +0,08 sur cinq d'entre elles. Sur la graine 23, la partie chauffée de main perd une cinquantaine de tiges de plus (133 survivants contre 184 avec A) et pullule plus haut. **C'est un épisode de mortalité rebattu, pas un effet de la vernale sur les ravageurs.**
+
+Sur la branche qui fusionne le couvert, c'est une autre ligne : les hêtres debout au chaud doivent être moins de la moitié de ceux du froid. Le couvert seul passait d'un demi-arbre (14 pour une borne de 14,5) ; avec A, le froid garde un hêtre de moins (28) et la borne tombe pile à 14.
+
+Les deux bornes sont posées sous le minimum d'une campagne du moteur. **Quand une correction fait tomber une borne d'un arbre ou d'une graine, mesurer d'abord ce que la même borne laissait de marge avant elle.**
+
+**Le brut est relu, sur décision du propriétaire.** Il doit dépasser 1 sur chaque graine : le réchauffement n'inverse jamais la pullulation, le défaut de #95. Il doit aussi dépasser 1,2 en moyenne sur les trois graines de l'essai (11, 23, 37), borne inchangée. Le par-hôte reste exigé graine par graine, à 1,5, et aucune graine n'est ajoutée.
+- Avec A, le brut vaut 1,400 / 1,126 / 1,437, soit 1,32 en moyenne.
+- Sur main, il vaut 1,318 / 1,334 / 1,440, soit 1,36.
+
+La relecture est signalée dans l'essai, avec les six graines de l'instruction. La ligne des hêtres debout, qui casse sur la fusion avec le couvert, n'est pas de ce lot : elle est transmise à l'agent des voisins (#471), qui relit `climat` sur la branche du couvert.
+
+### Ce qui reste ouvert
+
+- **`climat.test.ts`, les hêtres debout de la graine 37** : la ligne casse d'un arbre sur la fusion avec le couvert (14 pour 0,5 × 28), alors que le couvert seul passait d'un demi-arbre. Elle est transmise à l'agent des voisins (#471).
+- **#472 : une herbe de demi-ombre estivale.** C'est elle qui lèverait la limite de E9 sous le pin. Elle sort aussi du périmètre de la V1.
+- **La marcescence du hêtre est prêtée à l'adulte** (0,35, *à calibrer*). Svendsen 2001 (*Alces* 37 : 475-482), citant Schaffalitzky de Muckadell 1962, la tient pour un trait juvénile, limité aux branches de moins de 3 m environ ; la source primaire n'est pas ouverte (*à confirmer*). C'est un mécanisme, qui n'est pas codé.
+  - Il ne joue pas sur E9 : l'anémone sature dès 0,25 de lumière.
+  - Il joue en revanche sur la lumière d'avril sous le hêtre (0,47-0,50 avec la pénombre normalisée, 0,57-0,59 sur main).
+- **Une vernale part d'une emprise de 3,6 % dans chaque cellule** (`empriseInitiale`), comme s'il y avait partout une banque de rhizomes. Sur un ancien champ, l'anémone colonise depuis un bois ancien, de 0,2 à 0,85 m par an (Brunet et von Oheimb 1998, *Nordic Journal of Botany* 18 : 369-377). Non instruit.
+
 ## Ce qu'un lot précédent a appris (l'hydrologie : la nappe dans le profil, #380 ; le plafond de la vidange, #381 ; le point bas d'un versant, #351 ; #342 vérifiée ; #337 instruite)
 
 Le lot v0.6 de l'hydrologie. Trois défauts de comptage, corrigés dans les mécanismes existants, sans état neuf (le format reste 15) : l'aquifère et le profil comptaient deux fois l'eau de la part noyée (#380) ; une cellule pleine cédait à une voisine pleine une eau qui ressortait chez elle (#381) ; le point bas d'un versant n'avait pas de pente (#351). #342 était réglée par #391, et une sonde le montre. #337, les crues du sable, est instruite sur ce qui reste. Prédictions et mesures dans les commits de la branche, avant chaque course.
