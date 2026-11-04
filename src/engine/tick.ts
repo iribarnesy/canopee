@@ -192,13 +192,13 @@ import {
   facteurAlterationBiologique,
   facteurNutriment,
   lessivagePotassiumG,
+  phosphoreDeLAzoteOrganiqueG,
   potassiumDeLaStrateG,
   prelevementPotassium,
   RATIO_K_SUR_N,
   RATIO_P_SUR_N,
   RELARGAGE_HEBDO,
   RETOUR_LITIERE_K,
-  RETOUR_LITIERE_P,
   retrogradationHebdo,
   SATURATION_K_G_M2,
   SATURATION_P_G_M2,
@@ -975,6 +975,11 @@ export function tick(state: GameState, weather: WeekWeather, essai?: ReglagesDEs
   // L'humus de ce sol : mull par défaut, mor sur un podzol qui le déclare (#289).
   const cnHumus = cnHumusDuProfil(station.profil);
   /**
+   * L'azote que la dernière humification a pris au **minéral**, g : le phosphore
+   * le suit dans l'humus nouveau (#473).
+   */
+  let humifiePrisAuMineralG = 0;
+  /**
    * **L'humus a un C/N, donc humifier demande de l'azote** (#247). Le carbone qui
    * passe à l'humus y entrait seul, et l'humus porte son azote implicitement,
    * au C/N du profil : chaque gramme de carbone humifié créait ~1/11 de gramme
@@ -991,6 +996,7 @@ export function tick(state: GameState, weather: WeekWeather, essai?: ReglagesDEs
    * l'azote ne permet pas d'humifier part en CO₂. Rend le carbone humifié.
    */
   const humifier = (i: number, carboneG: number, depuisLitiere: boolean): number => {
+    humifiePrisAuMineralG = 0;
     if (carboneG <= 0) return 0;
     const besoin = carboneG / cnHumus;
     let reste = besoin;
@@ -1006,6 +1012,7 @@ export function tick(state: GameState, weather: WeekWeather, essai?: ReglagesDEs
         ammoniacalNG[i] = Math.max(0, (ammoniacalNG[i] ?? 0) * ((stock - pris) / stock));
       mineralNG[i] = stock - pris;
       reste -= pris;
+      humifiePrisAuMineralG = pris;
     }
     const humifie = (besoin - reste) * cnHumus;
     humusCG[i] = (humusCG[i] ?? 0) + humifie;
@@ -1127,6 +1134,28 @@ export function tick(state: GameState, weather: WeekWeather, essai?: ReglagesDEs
   const alterationBasesSurfaceSemaine = alterationBasesSurfaceEqM2Semaine(profil);
   const alterationBasesProfondeSemaine = alterationBasesProfondeEqM2Semaine(profil);
   let uptakePSumG = 0;
+  /** Ce que la roche et l'atmosphère apportent au phosphore assimilable, g. */
+  let apportPSumG = 0;
+  /**
+   * Le phosphore qu'un flux d'azote vers la matière organique aurait dû prendre
+   * et n'a pas trouvé, g : la cellule n'en avait plus. Il ne devrait jamais
+   * mordre ; s'il mord, la matière organique porte un phosphore qui n'a été
+   * pris nulle part, et le bilan le dit.
+   */
+  let phosphoreOrganiqueNonTrouveSumG = 0;
+  /** Le phosphore que l'azote prélevé aurait dû emporter et que le sol n'avait pas, g. */
+  let phosphoreNonPrisSumG = 0;
+  /**
+   * Le flux de phosphore qui accompagne un flux net d'azote organique, g : rendu
+   * s'il est positif, pris au phosphore assimilable s'il est négatif, et jamais
+   * plus que la cellule n'en a. Rend ce qui s'ajoute au stock.
+   */
+  const echangerPhosphoreOrganique = (i: number, pG: number): number => {
+    if (pG >= 0) return pG;
+    const pris = Math.min(Math.max(0, phosphoreG[i] ?? 0), -pG);
+    phosphoreOrganiqueNonTrouveSumG += -pG - pris;
+    return -pris;
+  };
   let uptakeKSumG = 0;
   let leachedKSumG = 0;
   /** Ce que la roche et l'atmosphère apportent au potassium échangeable, g (Σ cellules). */
@@ -1498,6 +1527,7 @@ export function tick(state: GameState, weather: WeekWeather, essai?: ReglagesDEs
       basesAcideNonTamponneSumEq += -effetBases - tamponne;
     }
     const humifieLitiere = humifier(i, LITTER_HUMIFICATION * decayedC, true);
+    const azoteHumifieDuMineral = humifiePrisAuMineralG;
     emittedG += decayedC - humifieLitiere;
     mineralNG[i] = (mineralNG[i] ?? 0) + mineralized + transfere + depositionG;
 
@@ -1532,10 +1562,16 @@ export function tick(state: GameState, weather: WeekWeather, essai?: ReglagesDEs
 
     // ── Phosphore et potassium (pk.ts) ─────────────────────────────────────
     const phCell = state.soil.ph[i] ?? 7;
-    // Le phosphore libéré par l'humus qui se minéralise. Celui des feuilles
-    // tombées, lui, revient à la chute (plus bas) : le compter deux fois
-    // reviendrait à en fabriquer.
-    const pOrganique = mineralized * RATIO_P_SUR_N;
+    // Le phosphore de la matière organique suit son azote (pk.ts, #473) : ce
+    // que l'humus minéralise, ce que la litière libère ou immobilise, ce que
+    // l'humus nouveau prend au minéral. Le flux net de la cellule est celui de
+    // l'azote qui a franchi la frontière cette semaine, dans un sens ou dans
+    // l'autre. La minéralisation de l'humus était seule à le rendre : la
+    // litière rendait son azote sans son phosphore, et l'azote immobilisé
+    // revenait plus tard, par l'humus, avec un phosphore qu'il n'avait pas pris.
+    const pMatiereOrganique = phosphoreDeLAzoteOrganiqueG(
+      mineralized + transfere - azoteHumifieDuMineral,
+    );
 
     // Ce que la roche libère, semaine après semaine — et bien plus vite là où
     // le mycélium l'attaque (pk.ts). C'est ainsi qu'une forêt installée
@@ -1547,8 +1583,9 @@ export function tick(state: GameState, weather: WeekWeather, essai?: ReglagesDEs
         state.soil.mycorhizes.ericoide[i] ?? 0,
       ),
     );
-    phosphoreG[i] =
-      (phosphoreG[i] ?? 0) + pOrganique + alterationPSemaine * bio + depositionPSemaine;
+    phosphoreG[i] = (phosphoreG[i] ?? 0) + alterationPSemaine * bio + depositionPSemaine;
+    apportPSumG += alterationPSemaine * bio + depositionPSemaine;
+    phosphoreG[i] = (phosphoreG[i] ?? 0) + echangerPhosphoreOrganique(i, pMatiereOrganique);
     const apportK = alterationKSemaine * bio + depositionKSemaine;
     potassiumG[i] = (potassiumG[i] ?? 0) + apportK;
     apportKSumG += apportK;
@@ -2309,6 +2346,7 @@ export function tick(state: GameState, weather: WeekWeather, essai?: ReglagesDEs
       const prisP = Math.min(offert, azotePris * RATIO_P_SUR_N);
       phosphoreG[i] = (phosphoreG[i] ?? 0) - prisP;
       uptakePSumG += prisP;
+      phosphoreNonPrisSumG += azotePris * RATIO_P_SUR_N - prisP;
       // Le potassium vient de l'échangeable, et de la réserve quand
       // l'échangeable ne suffit plus : une culture le vide chaque printemps
       // (pk.ts, #222).
@@ -3578,12 +3616,10 @@ export function tick(state: GameState, weather: WeekWeather, essai?: ReglagesDEs
         (oldN + share);
       litterNG[i] = oldN + share;
       litterCG[i] = (litterCG[i] ?? 0) + shareC;
-      // Le phosphore de la feuille rentre au sol avec elle. On le rend
-      // disponible dès la chute plutôt que d'ouvrir un pool « P de litière » :
-      // une approximation d'un pas de temps, sur un élément qui de toute façon
-      // ne bouge pas d'un millimètre.
-      phosphoreG[i] =
-        (phosphoreG[i] ?? 0) + share * RATIO_P_SUR_N * (RETOUR_LITIERE_P / LITTER_RETURN_FRACTION);
+      // Le phosphore de la feuille rentre au sol avec elle, dans son azote : la
+      // litière le rend en se décomposant (pk.ts, #473). Il était rendu tout
+      // entier dès la chute, à 1,4 fois le rapport, et l'azote de la feuille
+      // le rendait une seconde fois en passant par l'humus.
       // Le **potassium** revient tout de suite : ce n'est qu'un ion, la pluie le
       // rince de la feuille avant même qu'elle ait fini de se décomposer. Le
       // phosphore, lui, est dans les molécules — il attend la décomposition,
@@ -3933,6 +3969,13 @@ export function tick(state: GameState, weather: WeekWeather, essai?: ReglagesDEs
   for (let i = 0; i < nCells; i++) {
     rendreAzoteDuBois(i, deadDecayNG / nCells);
     humifieBoisG += humifier(i, humifiedPerCellG, false);
+    // Son phosphore suit son azote, rendu ou repris par l'humus qu'il forme (#473).
+    phosphoreG[i] =
+      (phosphoreG[i] ?? 0) +
+      echangerPhosphoreOrganique(
+        i,
+        phosphoreDeLAzoteOrganiqueG(deadDecayNG / nCells - humifiePrisAuMineralG),
+      );
   }
   emittedG += deadDecayKgC * 1000 - humifieBoisG;
   // Le bois couché se décompose plus vite que le bois debout, et il fait son
@@ -3947,6 +3990,12 @@ export function tick(state: GameState, weather: WeekWeather, essai?: ReglagesDEs
     boisAuSolNG[i] = (boisAuSolNG[i] ?? 0) - azoteRendu;
     rendreAzoteDuBois(i, azoteRendu);
     emittedG += decompose - humifier(i, decompose * DEADWOOD_HUMIFICATION, false);
+    phosphoreG[i] =
+      (phosphoreG[i] ?? 0) +
+      echangerPhosphoreOrganique(
+        i,
+        phosphoreDeLAzoteOrganiqueG(azoteRendu - humifiePrisAuMineralG),
+      );
   }
   // Le tas de broyat se décompose aussi, en tas : il chauffe, et ce qu'il perd
   // part en CO₂ (carbon.ts). Il ne fait pas d'humus, puisqu'il n'est sur aucune
@@ -4186,6 +4235,10 @@ export function tick(state: GameState, weather: WeekWeather, essai?: ReglagesDEs
         retourKSumG += cendresK;
         const cendresN = ((litterNG[i] ?? 0) + azoteHerbe + azoteMortSurPied) * 0.2;
         mineralNG[i] = (mineralNG[i] ?? 0) + cendresN;
+        // Le phosphore des cendres suit leur azote (#473).
+        phosphoreG[i] =
+          (phosphoreG[i] ?? 0) +
+          echangerPhosphoreOrganique(i, phosphoreDeLAzoteOrganiqueG(cendresN));
         // L'azote des cendres est ammoniacal (#280) — c'est même la forme sous
         // laquelle un feu le laisse, la nitrification venant après.
         ammoniacalNG[i] = (ammoniacalNG[i] ?? 0) + cendresN;
@@ -4816,6 +4869,14 @@ export function tick(state: GameState, weather: WeekWeather, essai?: ReglagesDEs
       leachedKKgHa: (leachedKSumG / nCells) * G_PER_M2_TO_KG_PER_HA,
       apportKKgHa: (apportKSumG / nCells) * G_PER_M2_TO_KG_PER_HA,
       retourKKgHa: (retourKSumG / nCells) * G_PER_M2_TO_KG_PER_HA,
+      apportPKgHa: (apportPSumG / nCells) * G_PER_M2_TO_KG_PER_HA,
+      erosionPOrganiqueKgHa:
+        (phosphoreDeLAzoteOrganiqueG(erosionSortieNlitG + erosionSortieHumusCG / cnHumus) /
+          nCells) *
+        G_PER_M2_TO_KG_PER_HA,
+      phosphoreNonPrisKgHa: (phosphoreNonPrisSumG / nCells) * G_PER_M2_TO_KG_PER_HA,
+      phosphoreOrganiqueNonTrouveKgHa:
+        (phosphoreOrganiqueNonTrouveSumG / nCells) * G_PER_M2_TO_KG_PER_HA,
       basesApportEqHa: (basesApportSumEq / nCells) * 10_000,
       basesLessiveEqHa: (basesLessiveSumEq / nCells) * 10_000,
       basesLitiereEqHa: (basesLitiereSumEq / nCells) * 10_000,
