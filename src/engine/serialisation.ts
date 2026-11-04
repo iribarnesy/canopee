@@ -231,8 +231,27 @@ const MAGIE = "CANOPEE\u0000";
  * 13 comme avant, avec ses deux grilles de mort sur pied à zéro
  * (`VERSIONS_RELUES`). Un moteur de version 14, lui, refuse un bloc de version
  * 15 : il rendrait ses feuilles à un arbre qui les refait encore.
+ *
+ * **16 (issue #468, la vernale juge sa saison)** : le sol porte deux grilles de
+ * plus, `herbeLumiereSaison`, la lumière de la saison en cours pondérée par la
+ * vigueur pour chaque cellule et chaque herbacée, et `herbeVigueurSaison`, le
+ * poids de cette saison, une valeur par herbacée. Une vernale juge sa station
+ * sur leur rapport, et non plus sur la lumière de la semaine (herbacees.ts).
+ *
+ * Un bloc de version 15 se **relit** avec ces deux grilles à zéro, et la raison
+ * est celle de la neige. Une mémoire vide dit « aucune semaine de saison
+ * comptée » : la première semaine relue, la vernale juge sur la lumière de cette
+ * semaine, exactement comme le faisait un moteur de version 15, puis sa mémoire
+ * se remplit. Hors de sa saison (juin à janvier pour l'anémone), la mémoire est
+ * vide de toute façon, et le bloc relu est l'état exact. Dans sa saison, le
+ * reste de cette saison-là se juge sur les semaines qui suivent la reprise : la
+ * vernale peut y perdre encore la place que l'ancienne règle lui retirait, une
+ * fois, et la saison suivante repart entière. Les blocs de version 14 et 13 se
+ * relisent de même, la version 13 avec en plus ses deux grilles de mort sur
+ * pied à zéro (`VERSIONS_RELUES`). Un moteur de version 15 refuse un bloc de
+ * version 16.
  */
-export const VERSION_FORMAT = 15;
+export const VERSION_FORMAT = 16;
 
 /** Ce qu'il faut ajouter au sol d'un bloc ancien pour en faire un sol de la version courante. */
 interface Relecture {
@@ -247,13 +266,19 @@ interface Relecture {
  * leur sol pour en faire un sol de la version courante. Une version absente
  * d'ici est refusée, et le journal reprend la main.
  */
+/** La mémoire de saison des vernales (#468) : vide, elle dit « aucune semaine comptée ». */
+const MEMOIRE_DE_SAISON = ["herbeLumiereSaison", "herbeVigueurSaison"] as const;
+
 const VERSIONS_RELUES: Record<number, Relecture> = {
   [VERSION_FORMAT]: { sol: {}, grillesVides: [] },
-  // Rien à ajouter au sol : seule une date d'arbre manque, et son absence dit
-  // « jamais défeuillé par la soif », ce qui était vrai (#391).
-  14: { sol: {}, grillesVides: [] },
+  // La mémoire de saison manque : vide, la vernale juge la semaine de reprise
+  // comme le faisait la version 15, puis sa mémoire se remplit (#468).
+  15: { sol: {}, grillesVides: MEMOIRE_DE_SAISON },
+  // Rien d'autre à ajouter au sol : seule une date d'arbre manque, et son
+  // absence dit « jamais défeuillé par la soif », ce qui était vrai (#391).
+  14: { sol: {}, grillesVides: MEMOIRE_DE_SAISON },
   // Le mort sur pied de #370 : sous la version 13, il était déjà en litière.
-  13: { sol: {}, grillesVides: ["herbeMorteAzoteG", "herbeMorteG"] },
+  13: { sol: {}, grillesVides: ["herbeMorteAzoteG", "herbeMorteG", ...MEMOIRE_DE_SAISON] },
 };
 
 /** Une grille de sol, telle que l'en-tête la déclare. */
