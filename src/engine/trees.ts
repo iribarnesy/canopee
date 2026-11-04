@@ -219,7 +219,7 @@ export interface TreeState {
    *
    * Elle ne **descend** jamais — une branche morte ne repousse pas. Elle monte de
    * deux façons, et l'arbre ne les distingue pas : l'ombre tue les branches
-   * basses (élagage naturel, `light.ts:baseHouppierCible`), ou le joueur les
+   * basses (élagage naturel, `light.ts:profondeurVivanteParNiveaux`), ou le joueur les
    * coupe (`hauteurElagueeM`). Un arbre rabattu la ramène à sa nouvelle
    * hauteur — un recépage repart branchu.
    *

@@ -234,7 +234,7 @@ export const CHARGE_AMORCAGE_A_UN_METRE = 0.125;
  *
  * La hauteur de base du houppier n'est pas un trait d'espèce : elle se calcule
  * par arbre, l'arbre élaguant lui-même ses branches basses passées sous leur
- * point de compensation (`baseHouppierCible`, light.ts). Un fourré d'ajoncs a
+ * point de compensation (`profondeurVivanteParNiveaux`, light.ts). Un fourré d'ajoncs a
  * donc son houppier au ras du sol et le porte entièrement ; une futaie qui
  * s'est élaguée en grandissant met le sien hors d'atteinte.
  */
