@@ -249,9 +249,6 @@ describe("service de pollinisation (§7.4, critère G4)", () => {
   // saison. Les trois mûrissent en deux à huit ans, donc elles fleurissent
   // avant la fin du banc.
   const mellifereBras = recolte(haie(["prunus_spinosa", "crataegus_monogyna", "rubus_fruticosus"]));
-  const nu = nuBras.kg;
-  const anemophile = anemophileBras.kg;
-  const mellifere = mellifereBras.kg;
 
   it("une haie qui NOURRIT fait mieux nouer le verger", () => {
     // Relevé : nu 11,52 kg, anémophile 11,62 kg (+0,9 %), mellifère 14,74 kg
@@ -262,7 +259,20 @@ describe("service de pollinisation (§7.4, critère G4)", () => {
     // mellifère 6,96 kg (+45 %) ; les pommiers se défeuillent à la soif six
     // étés sur neuf, et les récoltes baissent dans les trois bras (8,63 /
     // 8,74 / 11,54 kg sans G1, sur la tête du lot).
-    expect(mellifere).toBeGreaterThan(1.15 * nu);
+    //
+    // **Relu sur la nouaison (#438, #469, décision du propriétaire).** La ligne
+    // jugeait la nouaison sur la récolte, comme le témoin avant #391. Depuis
+    // que la pénombre conserve le feuillage des couronnes, l'ombre du pommier
+    // tient l'herbe à son pied (0,20-0,52 de couverture contre 0,64-0,96) : le
+    // verger nu se défeuille moins à la soif (4 défeuillaisons contre 10 sur
+    // les ans 5 à 12), accumule moins de stress de ravageurs (G1) et produit
+    // 6,66 kg. La haie mellifère, devenue un fourré, ombrage les pommiers (0,33
+    // de lumière à douze ans) : 6,12 kg. La récolte suit la soif et l'ombre
+    // autant que les insectes. Relevé, graine 3, meilleur service d'une
+    // semaine de récolte : nu 0,351, anémophile 0,351, mellifère 0,433
+    // (1,24 fois) ; sur main 18dbb29, 0,351, 0,351 et 0,436. La pollinisation
+    // n'a pas bougé, c'est la récolte qui a bougé. La borne ne bouge pas.
+    expect(mellifereBras.nouaison).toBeGreaterThan(1.15 * nuBras.nouaison);
   });
 
   it("une haie qui n'offre que le gîte ne le fait PAS, et c'est le témoin", () => {
@@ -283,7 +293,10 @@ describe("service de pollinisation (§7.4, critère G4)", () => {
     // (0,001 d'insectes dans les deux bras). La haie anémophile protège
     // mieux le verger ; elle ne le fait pas mieux nouer, et c'est ce que le
     // témoin dit. La borne ne bouge pas.
+    //
+    // La seconde ligne comparait encore les récoltes ; elle se lit sur le même
+    // service (#438, #469), et sa borne ne bouge pas non plus.
     expect(anemophileBras.nouaison).toBeLessThan(1.05 * nuBras.nouaison);
-    expect(mellifere).toBeGreaterThan(1.1 * anemophile);
+    expect(mellifereBras.nouaison).toBeGreaterThan(1.1 * anemophileBras.nouaison);
   });
 });

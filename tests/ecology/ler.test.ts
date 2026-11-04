@@ -446,6 +446,16 @@ describe("le dispositif à trois bras, soixante ans", () => {
    * plus sa réserve), mêmes graines : culture 0,637 / 0,639 / 0,652, arbre
    * 0,806 / 0,821 / 0,715, **total 1,444 / 1,460 / 1,367**, identique à main au
    * millième. Main en était déjà là, après #396, #412 et #420.
+   *
+   * **Relevé avec la pénombre normalisée (#438)**, mêmes graines : culture
+   * 0,619 / 0,627 / 0,621, arbre 0,750 / 0,690 / 0,807, **total 1,369 / 1,317 /
+   * 1,429**. Mais les rangs se vidaient : 9, 6 et 10 noyers d'allée vivants
+   * sur 16 à soixante ans, et l'arbre d'allée tombait sous le témoin forestier
+   * sur la graine 11 (0,920 ; 1,175 et 1,167 ailleurs). **Avec le houppier des
+   * noyers calé sur Hemery et al. (2005)**, 14, 13 et 14 vivants : culture
+   * 0,641 / 0,639 / 0,656, arbre 1,124 / 0,933 / 0,842, **total 1,765 / 1,572 /
+   * 1,499**, arbre d'allée / témoin forestier 1,424 / 1,337 / 1,472. Le terme
+   * arbre passe au-dessus des ~0,5 publiés ; H21 le dit.
    */
   it("le mélange bat la somme des parties", () => {
     const agro = bras(RANGS_AGROFORESTERIE, true);

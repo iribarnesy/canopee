@@ -388,15 +388,28 @@ describe("ce que le feu consume et qui était déjà mort", () => {
         const apres = new Set(state.trees.map((t) => t.id));
         for (const c of consumees) {
           const cetArbre = avant.get(c.id);
-          // Elle était là, et elle était DÉJÀ morte : c'est ce qui la
-          // distingue d'une victime.
+          // Elle était là, et elle était DÉJÀ morte quand le feu est passé :
+          // c'est ce qui la distingue d'une victime.
+          //
+          // **Réécrit sur son critère (#438), et c'est signalé.** L'essai
+          // demandait qu'elle soit morte au début de la semaine. Un arbre peut
+          // mourir dans le tick même du feu, avant lui, d'une autre cause (la
+          // soif, l'ombre) : le feu le trouve alors debout et mort, et le
+          // consume comme une chandelle. Le cas existait sur main (graine 11,
+          // un ajonc mort de soif), mais l'essai s'arrêtait avant, à la
+          // graine 3 ; depuis que la pénombre conserve le feuillage des
+          // couronnes, la graine 3 ne brûle plus en quarante ans, et la
+          // graine 5 tombe dessus. Le critère est inchangé : une chandelle
+          // consumée était morte avant le feu, et n'en est pas une victime.
+          const morteCetteSemaine = r.morts.find((m) => m.id === c.id && m.cause !== "feu");
           expect(cetArbre).toBeDefined();
-          expect(cetArbre?.alive).toBe(false);
+          expect(cetArbre?.alive === false || morteCetteSemaine !== undefined).toBe(true);
           // Elle n'y est plus : le feu l'a consumée pour de bon.
           expect(apres.has(c.id)).toBe(false);
           // Sa hauteur est celle qu'elle avait debout, de quoi la dessiner
-          // avant de l'abattre.
-          expect(c.hauteurM).toBeCloseTo(cetArbre?.heightM ?? -1, 6);
+          // avant de l'abattre : celle de sa mort, si elle est morte cette
+          // semaine.
+          expect(c.hauteurM).toBeCloseTo(morteCetteSemaine?.heightM ?? cetArbre?.heightM ?? -1, 6);
           // **Et sa position, et son essence** (#246). Le premier jet ne les
           // portait pas : la demande annonçait que le rendu relirait la
           // position dans l'instantané, comme le fait la tempête pour ses
