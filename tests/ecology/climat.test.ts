@@ -377,7 +377,9 @@ describe("dans une partie, le réchauffement se voit", () => {
     // 3 / 3 plantés (81 / 96 / 45 et 1 / 8 / 4 avec l'élagage sur le
     // houppier) ; sur le couvert seul (#464), 4 / 1 / 0 au figé et 41 / 72 /
     // 49 sous SSP5-8.5. Aucun hêtre planté mort de soif au figé, sur chaque
-    // graine, dans ces trois variantes comme avec la vernale de #476.
+    // graine, dans ces trois variantes comme avec la vernale de #476 ; avec
+    // l'élagage niveau par niveau (l'état codé), 5 / 3 / 0 au figé et 80 / 61 / 40
+    // sous SSP5-8.5, aucun planté au figé.
     for (const [i, f] of fige.runs.entries()) {
       const c = chauffe.runs[i];
       if (!c) throw new Error("partie manquante");
@@ -576,7 +578,7 @@ describe("dans une partie, le réchauffement se voit", () => {
       //   couvert seul (#464)        0,00 / 0,39 / 0,48   0,60 / 1,00 / 0,62
       //   cime, avec la vernale      0,52 / 0,21 / 0,44   0,65 / 1,00 / 0,67
       //   houppier, avec la vernale  0,34 / 0,33 / 0,34   0,90 / 0,91 / 0,67
-      //   (niveau par niveau : voir #471)
+      //   élagage niveau par niveau  0,31 / 0,36 / 0,03   0,95 / 1,08 / 0,83 (l'état codé)
       const partHetres = c.hetresDebout / Math.max(1, f.hetresDebout);
       const partChenes = c.chenesDebout / Math.max(1, f.chenesDebout);
       expect(partHetres, `graine ${GRAINES[i]}`).toBeLessThan(partChenes);

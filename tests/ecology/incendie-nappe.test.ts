@@ -152,8 +152,8 @@ describe("l'échelle de l'incendie compte", () => {
     // niveau régional, immobile pour la parcelle seule, remonte après le feu
     // du massif. L'écart vaut 39 à 50 cm, de l'ordre de la remontée régionale
     // (une cinquantaine de millimètres d'aquifère en deux ans, environ 50 cm
-    // de nappe). Coût : huit forêts de quarante ans au lieu de deux, soit
-    // environ quatre fois le temps de l'ancien essai (mesuré dans #471).
+    // de nappe). Coût : huit forêts de quarante ans au lieu de deux ; en CI, le
+    // fichier passe de 81 à 288 s.
     for (const graine of [4, 1, 2, 3]) {
       const isolee = echelle(0, graine);
       const massif = echelle(1, graine);
