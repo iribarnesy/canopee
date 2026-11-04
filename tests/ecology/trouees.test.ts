@@ -52,6 +52,7 @@
  */
 
 import { beforeAll, describe, expect, it } from "vitest";
+import { computeGroundLight } from "../../src/engine/light";
 import { syntheticYear } from "../../src/engine/meteo";
 import { rngStateFromSeed } from "../../src/engine/rng";
 import { createGameState, type GameState, plantAt } from "../../src/engine/state";
@@ -92,6 +93,8 @@ interface Comptage {
   bouleauTemoin: number;
   charmeTrouee: number;
   charmeTemoin: number;
+  /** lumière au sol de la zone de la trouée, en feuilles, l'été de la dernière année */
+  lumiereEteTrouee: number;
 }
 
 /**
@@ -101,7 +104,12 @@ interface Comptage {
  * que subie parce qu'une mort tirée au sort ne tomberait pas au même endroit
  * d'une graine à l'autre — il n'y aurait plus rien à apparier.
  */
-function hetraie(seed: number, ouvrir: { x: number; y: number } | null, ecart = ECART): Comptage {
+function hetraie(
+  seed: number,
+  ouvrir: { x: number; y: number } | null,
+  ecart = ECART,
+  elancement = 0,
+): Comptage {
   const station = {
     ...LIMON_RICHE.station,
     coteM: COTE,
@@ -118,6 +126,12 @@ function hetraie(seed: number, ouvrir: { x: number; y: number } | null, ecart = 
       state = plantAt(state, "fagus_sylvatica", x, y, H_CANOPEE);
     }
   }
+  // Un élancement donné remplace celui d'une tige sans histoire (H/D 50) : le
+  // diamètre s'en déduit, et le houppier avec lui (`crownRadiusM`).
+  if (elancement > 0) {
+    const diametreCm = (100 * H_CANOPEE) / elancement;
+    state = { ...state, trees: state.trees.map((t) => ({ ...t, diametreCm })) };
+  }
   // Les hêtres du couvert ne grainent pas ici : leur maturité est à quarante
   // ans et la partie en dure quinze. Toutes les recrues viennent donc du
   // paysage, ce qui laisse la seule lumière décider de leur position.
@@ -132,10 +146,26 @@ function hetraie(seed: number, ouvrir: { x: number; y: number } | null, ecart = 
       ),
     };
   }
+  let lumiereEteTrouee = 1;
   for (let w = 0; w < ANS * 52; w++) {
     const m = meteo[w % 52];
     if (!m) throw new Error("météo manquante");
     state = tick(state, m).state;
+    // Fin juillet de la dernière année, feuillage plein : ce que reçoit le sol
+    // de la zone comptée.
+    if (w === (ANS - 1) * 52 + 28) {
+      const sol = computeGroundLight(state.trees, COTE, COTE, () => 1);
+      let somme = 0;
+      let n = 0;
+      for (let y = 0; y < COTE; y++) {
+        for (let x = 0; x < COTE; x++) {
+          if (!dans(x + 0.5, y + 0.5, TROUEE, RAYON_COMPTE)) continue;
+          somme += sol[y * COTE + x] ?? 1;
+          n++;
+        }
+      }
+      lumiereEteTrouee = somme / Math.max(1, n);
+    }
   }
   const recrues = state.trees.filter((t) => t.id > dernierPlante && t.alive);
   const zone = (c: { x: number; y: number }, id?: string) =>
@@ -150,6 +180,7 @@ function hetraie(seed: number, ouvrir: { x: number; y: number } | null, ecart = 
     bouleauTemoin: zone(TEMOIN, "betula_pendula"),
     charmeTrouee: zone(TROUEE, "carpinus_betulus"),
     charmeTemoin: zone(TEMOIN, "carpinus_betulus"),
+    lumiereEteTrouee,
   };
 }
 
@@ -266,17 +297,48 @@ describe("une trouée dans un couvert fermé", () => {
 describe("une trouée dans un couvert VRAIMENT fermé", () => {
   /** Trois mètres : le recouvrement dépasse trois fois le plafond. */
   const SERRE = 3;
+  /**
+   * L'élancement des hêtres du couvert serré, H/D. **Le banc a changé (#467), et
+   * c'est signalé.** Il plantait des tiges de 15 m à l'élancement d'un arbre
+   * sans histoire (H/D 50, 30 cm de diamètre) : des troncs trapus serrés à 3 m,
+   * dont les houppiers se recouvraient sept à dix fois. Un tel peuplement
+   * n'existe pas, et avec l'élagage niveau par niveau il s'effondrait : 169
+   * hêtres, 34 ou 35 encore debout au bout de cinq ans sur quatre graines (62
+   * sur la cinquième), et le couvert « vraiment fermé » s'ouvrait (lumière
+   * d'été au sol de 0,39 à 0,74 dans la zone comptée).
+   *
+   * Les hêtres sont maintenant plantés à l'élancement d'une hêtraie serrée non
+   * éclaircie : dans les placettes témoins de Štefančík (2020, *J. For. Sci.*
+   * 66 : 492, fig. 2), hêtraies slovaques régénérées naturellement et jamais
+   * éclaircies, l'élancement des cent plus gros arbres par hectare suit
+   * h/DBH = 1,0182 − 0,0013 × âge (m/cm), soit 0,97 vers trente-cinq ans :
+   * **H/D 97**. Le critère de F7 (le couvert fermé ne recrute rien) ne bouge
+   * pas ; la prémisse, elle, se vérifie maintenant (le premier essai
+   * ci-dessous).
+   */
+  const ELANCEMENT_SERRE = 97;
   const parties: { seed: number; trouee: Comptage; fermee: Comptage }[] = [];
 
   beforeAll(() => {
     for (const seed of GRAINES) {
       parties.push({
         seed,
-        trouee: hetraie(seed, TROUEE, SERRE),
-        fermee: hetraie(seed, null, SERRE),
+        trouee: hetraie(seed, TROUEE, SERRE, ELANCEMENT_SERRE),
+        fermee: hetraie(seed, null, SERRE, ELANCEMENT_SERRE),
       });
     }
   }, 600_000);
+
+  it("la prémisse : le couvert fermé l'est encore à la fin, sur chaque graine", () => {
+    // Sans elle, « le couvert fermé ne recrute rien » pourrait casser parce que
+    // le banc s'est ouvert, pas parce que la lumière ne trie plus. Sous les
+    // essences d'ombre, dont le hêtre, le sol ne reçoit que 1 à 3 % du PAR
+    // (Hagemeier et Leuschner 2019, *Forests* 10 : 925) ; un couvert qui en
+    // laisse passer plus de 5 % n'est plus le couvert fermé dont parle F7.
+    for (const p of parties) {
+      expect(p.fermee.lumiereEteTrouee, `graine ${p.seed}`).toBeLessThan(0.05);
+    }
+  });
 
   it("le couvert fermé ne recrute RIEN, et l'ouverture recrute", () => {
     // Mesuré sur le code livré, recrues dans la zone (12,20) : 3 / 2 / 4 / 6 / 4

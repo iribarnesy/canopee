@@ -61,7 +61,47 @@ qu'un rapport (voir la note de maintenance).
 Séparer calibration et validation : caler un paramètre sur un âge, garder
 l'autre âge pour vérifier.
 
-## Ce que le dernier lot a appris (le couvert, #438 ; les semis sous le couvert, #353, instruit)
+## Ce que le dernier lot a appris (les voisins : la part du houppier qui dépasse, #467)
+
+Le lot v0.6 « voisins », empilé sur le couvert (#464, PR #471). Un voisin pèse la part de son houppier qui dépasse chaque niveau du houppier de la cible, moyennée de sa base à sa cime (light.ts, `poidsDuVoisin`). Un égal pèse 0,5, un point au sol 1, et le 0,4 des codominants comme la bande des 75 % sont tombés. La loi n'a aucune constante : elle intègre la part de houppier que suppose déjà `partHouppier`. Sur décision, l'élagage naturel se fait **niveau par niveau** : la base du houppier lit sa propre lumière (`profondeurVivanteParNiveaux`). Prédictions et mesures dans les commits de la branche, avant chaque course ; les sondes sont des copies du moteur hors dépôt. Format inchangé.
+
+### Un sommet ne voit que ce qui le dépasse, et un arbre n'est pas son sommet
+
+La première règle mesurée lisait la part du houppier voisin au-dessus de la seule cime. Elle guérissait le hêtre de canopée affamé (de 5 % à 94-100 % de lumière à la cime). Mais elle effaçait l'ombrage entre égaux, puisqu'un voisin de même hauteur ne dépasse pas une cime. La futaie serrée poussait alors comme au large (dominants à H/D 38-39) et cessait de s'éclaircir (900 à 1 056 plantés/ha à cent vingt ans au lieu de 88 à 181). Le 0,4 des codominants, posé à la main, tenait lieu de la lumière basse et diffuse que le moteur, avec son seul soleil moyen, n'a pas. Moyennée sur tout le houppier, la même loi la rend sans constante. **Une règle juste pour le point où on la lit peut être fausse pour ce qu'elle nourrit** : la cime n'est pas ce qui assimile.
+
+### Une lecture choisie pour la forme d'un calcul se mesure sur ce qu'elle porte
+
+La lecture de cime pour l'élagage était recommandée par la forme du calcul : `baseHouppierCible` part de la lumière du sommet et descend dans le feuillage de l'arbre. Elle n'avait pas été mesurée, et la sonde sur laquelle la décision s'est prise faisait lire à l'élagage la lumière du houppier. Codée, elle supprimait tout élagage d'une pineraie plantée à 2 m (part nue 0,10 pendant vingt-cinq ans, sur trois graines), et la CI comptait six essais rouges de plus. Dans une plantation équienne, ce qui tue les branches basses, ce sont les houppiers voisins à leur niveau. **Un choix fait pour la forme d'un calcul est un jugement de modélisation, et il se mesure sur le critère qu'il porte** avant d'entrer dans le moteur.
+
+### La base lit sa propre lumière, et la forme fermée se vérifie contre une dichotomie
+
+L'élagage niveau par niveau ajoute deux ombres au même niveau : celle des voisins qui le dépassent, et celle du feuillage de l'arbre au-dessus. L'extinction des voisins est linéaire par morceaux du niveau. On parcourt les morceaux depuis la cime, et l'équation se résout d'un coup là où l'ombre ne sature pas ; là où elle sature, il faudrait la fonction W de Lambert, et une dichotomie en tient lieu. L'essai unitaire compare la forme fermée à une dichotomie fine sur des voisins tirés au hasard : c'est ce qui garde le parcours des ruptures honnête. Mesuré, la pineraie plantée à 2 m garde un houppier à 0,45-0,47 de sa hauteur à vingt-cinq ans, avec 250 à 253 pins vivants sur 256. Dans les jeunes pineraies finlandaises, à 12 m de hauteur dominante au sud, il en garde 0,54 à 0,64 (Huuskonen et al. 2008). Le moteur élague donc un peu trop, ou ce peuplement serré et jamais éclairci n'a pas d'équivalent dans la source. **Avant de dire qu'un élagage est juste, chercher le rapport de houppier mesuré au même stade.**
+
+### Une branche élaguée n'est plus du combustible
+
+Avec l'élagage niveau par niveau, la base des houppiers de la lande d'ajoncs de `feu.test.ts` monte de 0,8-0,9 m à 1,2-1,5 m, et l'accessibilité du houppier au feu de surface tombe avec elle. La lande ne brûlait plus en quarante ans sur aucune des cinq graines. Depuis l'arrivée de #475 (le phosphore de l'herbe), elle brûle sur une seule (an 28,6), et l'essai passe d'une graine. Le moteur traite une branche élaguée comme partie, alors que l'ajonc garde sur pied ses rameaux morts, et c'est ce qui le rend si inflammable. Ce mécanisme, le bois mort retenu sur pied, est codé dans un lot empilé sur celui-ci. **Une loi qui retire du feuillage retire aussi du combustible**, et les essais du feu sont les premiers à le voir.
+
+### Un banc qu'on plante adulte ne vit que si tout le moteur le tient
+
+La hêtraie fermée de `trouees.test.ts` plante 169 hêtres de 15 m à 3 m. À l'élancement d'un arbre sans histoire (H/D 50), les houppiers se recouvraient sept à dix fois. Avec l'élagage niveau par niveau, ils gardaient 0,32 de la hauteur au lieu de 0,27 ; la lumière du houppier tombait de 0,075 à 0,054, et il ne restait que 34 ou 35 hêtres à cinq ans. Replantés, sur décision, à l'élancement mesuré des hêtraies serrées non éclaircies (H/D 97, Štefančík 2020), ils cassent tous au vent dans le premier mois : leur vitesse de rupture (`vitesseCritiqueVolisMs`) tombe au tiers de celle d'un arbre de plein vent, et rien ne dit au moteur qu'ils ont grandi abrités. Le peuplement de F6, qui atteint la même hauteur en grandissant, garde 1 300 tiges/ha à quarante ans. **Un arbre planté adulte n'a pas l'histoire de ses voisins** : ni le houppier qu'ils lui ont laissé, ni le vent qu'ils lui ont épargné. Un banc qui demande un peuplement fermé le fait pousser, ou il mesure le banc.
+
+### Les hêtres morts de soif au figé étaient des semis
+
+`climat` bornait à moins de cinq la moyenne des hêtres morts de soif sur soixante ans de climat figé. Avec la loi lue sur le houppier, on en comptait 5,33. Relevés mort par mort, ce sont tous des recrues que la parcelle a levées d'elle-même, et pas un hêtre planté, dans six variantes. L'essai se lit maintenant graine par graine : aucun hêtre planté mort de soif au figé, et plus de trois fois le figé sous SSP5-8.5. **Avant de relire une borne, relever un par un ce qu'elle compte.**
+
+### Une borne au cheveu bascule avec la moindre variante
+
+Deux lignes ont été relues en directions, sur décision. La première : « le mésophile paie plus cher » tenait à un arbre près (14 pour 13,5, 14 pour 14,5, 14 pour 14). La seconde : le « bien plus » d'`incendie-nappe` valait 1,498 et 1,512 pour deux écritures de la même loi. Dans le même lot, `chandelles` passe sous son seuil de 0,1 à trois dix-millièmes près (0,0997), et `glandee` lit sur une seule graine un effet que cinq graines donnent entre −6 et +14 %. **Une borne que le dernier bit d'un arrondi fait passer ou casser ne contraint plus le moteur** ; c'est le moteur qu'elle enregistre.
+
+### Points ouverts
+
+- **La lande d'ajoncs** brûle sur une graine sur cinq : le bois mort retenu sur pied arrive par le lot empilé `claude/v06-bois-mort`.
+- **La hêtraie fermée de `trouees`** : replantée à H/D 97, elle casse au vent ; décision en attente (#471).
+- **La profondeur des houppiers du hêtre** reste dans #474 : 0,62 à 0,68 de la hauteur en futaie serrée de vingt à soixante ans, contre 46 à 48 % dans les hêtraies slovaques non éclaircies (Štefančík 2020).
+- **`chandelles`** : la ligne des chutes ventées se lit en signification (plus de trois erreurs-types de zéro), sur décision ; c'est l'arrivée de main (#476) qui avait fait passer la grandeur de 0,130 à 0,10, sous le seuil sans source.
+- **`glandee`** : à la densité de référence, la perte de recrues est du tirage sur cinq graines (−6 à +14 %) ; l'attribution se lit maintenant à 0,5 sanglier par hectare, où la régénération perd 31 à 46 % pour 7,5 à 16 % de glandée, sur chaque graine (`glandee-sanglier.test.ts`).
+
+## Ce qu'un lot précédent a appris (le couvert, #438 ; les semis sous le couvert, #353, instruit)
 
 Le lot v0.6 « couvert ». La pénombre des houppiers (1 − d²/r²) vaut un demi en moyenne sur le disque, et elle était posée telle quelle sur `k · lai` : chaque couronne perdait la moitié du feuillage que l'atlas lui prête. Elle est rapportée à sa moyenne (light.ts, `MOYENNE_PENOMBRE`), sans réglage ni cas d'espèce : la surface foliaire de la couronne se conserve. Les prédictions et les mesures sont dans les commits de la branche, avant chaque course ; les sondes sont des copies du moteur hors dépôt. La correction casse douze assertions dans dix essais, instruites dans la PR. Sur décision de l'utilisateur, la correction est gardée. Six essais dont le dispositif était en cause sont réécrits sur leur critère, chacun signalé dans son commentaire : `elagage`, `elancement`, `feu`, `succession`, `maladies` et `naivete-vent`. `fertilisation` ne l'est pas, parce que la mesure complète contredit sa source (voir plus bas). Trois défauts révélés sont ouverts : #467, #468 et #469. Au second tour, sur décision : `naivete-vent` se lit comme une direction, `fruticee` perd un classement que rien ne sourçait, et `fruits` lit ses deux dernières lignes sur la nouaison (#469, fermée). `lumiere` (#467) reste rouge jusqu'à son lot (#471) ; `herbacees` (#468) a été réglé par son propre lot (#476), fusionné dans main puis dans cette branche. Au troisième tour, sur décision : le houppier du noyer est calé sur Hemery, Savill et Pryor (2005), vérifiés sur l'article. Son rapport de houppier passe de 0,5, sans source, à 0,35, leur rapport K/d à 16 cm, et l'hybride reprend celui du commun ; c'est un trait, sans cas d'espèce. `fertilisation` passe sans réécriture. Le calage de toutes les essences est ouvert (#474).
 
