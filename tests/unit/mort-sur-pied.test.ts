@@ -150,9 +150,16 @@ describe("un bloc de version 13 se relit, le mort sur pied à zéro", () => {
   it("les deux grilles arrivent vides, à leur place, et la partie continue", () => {
     // Le bloc qu'un moteur de version 13 aurait écrit : le même état sans les
     // deux grilles, sous l'ancien numéro. Sous la version 13, ce mort était
-    // déjà en litière : des grilles vides écrivent l'état qu'elle avait.
+    // déjà en litière : des grilles vides écrivent l'état qu'elle avait. Il
+    // n'a pas non plus la mémoire de saison des vernales (version 16, #468).
     const partie = avancer(createGameState(STATION, rngStateFromSeed(3)), 40).s;
-    const { herbeMorteG: _m, herbeMorteAzoteG: _n, ...solV13 } = partie.soil;
+    const {
+      herbeMorteG: _m,
+      herbeMorteAzoteG: _n,
+      herbeLumiereSaison: _l,
+      herbeVigueurSaison: _v,
+      ...solV13
+    } = partie.soil;
     const b = ecrireEtat({ ...partie, soil: solV13 as GameState["soil"] });
     new DataView(b.buffer).setUint16(8, 13);
     const relu = lireEtat(b, STATION);
@@ -179,7 +186,13 @@ describe("un bloc de version 13 se relit, le mort sur pied à zéro", () => {
     const b = ecrireEtat(partie);
     new DataView(b.buffer).setUint16(8, 13);
     expect(lireEtat(b, STATION)).toBeUndefined();
-    const { herbeMorteG: _m, herbeMorteAzoteG: _n, ...solV12 } = partie.soil;
+    const {
+      herbeMorteG: _m,
+      herbeMorteAzoteG: _n,
+      herbeLumiereSaison: _l,
+      herbeVigueurSaison: _v,
+      ...solV12
+    } = partie.soil;
     const v12 = ecrireEtat({ ...partie, soil: solV12 as GameState["soil"] });
     new DataView(v12.buffer).setUint16(8, 12);
     expect(lireEtat(v12, STATION)).toBeUndefined();
