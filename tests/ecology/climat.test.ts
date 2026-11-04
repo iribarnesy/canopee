@@ -300,6 +300,9 @@ describe("dans une partie, le réchauffement se voit", () => {
       hetresDebout: state.trees.filter(
         (t) => t.alive && cohorte.has(t.id) && t.especeId === "fagus_sylvatica",
       ).length,
+      chenesDebout: state.trees.filter(
+        (t) => t.alive && cohorte.has(t.id) && t.especeId === "quercus_pubescens",
+      ).length,
       cohorte: cohorte.size,
     };
   }
@@ -555,7 +558,28 @@ describe("dans une partie, le réchauffement se voit", () => {
       // Et le mésophile paie plus cher que le chêne pubescent, qui est chez lui
       // dans un climat qui se réchauffe : 0,38 / 0,20 / 0,39 contre 0,49 /
       // 0,78 / 0,48 pour la cohorte entière.
-      expect(c.hetresDebout, `graine ${GRAINES[i]}`).toBeLessThan(0.5 * f.hetresDebout);
+      //
+      // **Relu sur son critère (#467, décision du propriétaire), et c'est
+      // signalé.** La ligne exigeait moins de la moitié des hêtres debout du
+      // figé, un 0,5 sans source qui tenait à un arbre près : 14 hêtres pour une
+      // borne de 13,5 sur la graine 11 avec l'élagage à la cime, 14 pour 14,5
+      // sur la graine 37 du couvert seul, 14 pour 14 avec la vernale de #476.
+      // Ce qu'elle affirme est son commentaire : le hêtre paie plus cher que le
+      // chêne pubescent. Elle se lit donc comme une direction entre deux
+      // grandeurs de la même partie : la part des hêtres plantés encore debout
+      // sous SSP5-8.5 (rapportée au figé) reste sous celle des chênes, sur chaque
+      // graine. Mesuré, sonde hors dépôt, graines 11 / 23 / 37, hêtres contre
+      // chênes :
+      //
+      //   élagage à la cime          0,52 / 0,38 / 0,44   0,71 / 0,88 / 0,67
+      //   élagage sur le houppier    0,48 / 0,31 / 0,41   0,90 / 0,91 / 0,67
+      //   couvert seul (#464)        0,00 / 0,39 / 0,48   0,60 / 1,00 / 0,62
+      //   cime, avec la vernale      0,52 / 0,21 / 0,44   0,65 / 1,00 / 0,67
+      //   houppier, avec la vernale  0,34 / 0,33 / 0,34   0,90 / 0,91 / 0,67
+      //   (niveau par niveau : voir #471)
+      const partHetres = c.hetresDebout / Math.max(1, f.hetresDebout);
+      const partChenes = c.chenesDebout / Math.max(1, f.chenesDebout);
+      expect(partHetres, `graine ${GRAINES[i]}`).toBeLessThan(partChenes);
     }
   });
 });
