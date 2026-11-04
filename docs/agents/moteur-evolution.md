@@ -79,11 +79,11 @@ L'élagage niveau par niveau ajoute deux ombres au même niveau : celle des vois
 
 ### Une branche élaguée n'est plus du combustible
 
-La lande d'ajoncs de `feu.test.ts` ne brûle plus en quarante ans, sur aucune des cinq graines : la base de ses houppiers monte de 0,8-0,9 m à 1,2-1,5 m, et l'accessibilité du houppier au feu de surface tombe avec elle. Le moteur traite une branche élaguée comme partie. L'ajonc garde pourtant sur pied ses rameaux morts, et c'est ce qui le rend si inflammable. Ce mécanisme n'existe pas, et il est rapporté sans être ajouté. **Une loi qui retire du feuillage retire aussi du combustible**, et les essais du feu sont les premiers à le voir.
+Avec l'élagage niveau par niveau, la base des houppiers de la lande d'ajoncs de `feu.test.ts` monte de 0,8-0,9 m à 1,2-1,5 m, et l'accessibilité du houppier au feu de surface tombe avec elle. La lande ne brûlait plus en quarante ans sur aucune des cinq graines. Depuis l'arrivée de #475 (le phosphore de l'herbe), elle brûle sur une seule (an 28,6), et l'essai passe d'une graine. Le moteur traite une branche élaguée comme partie, alors que l'ajonc garde sur pied ses rameaux morts, et c'est ce qui le rend si inflammable. Ce mécanisme, le bois mort retenu sur pied, est codé dans un lot empilé sur celui-ci. **Une loi qui retire du feuillage retire aussi du combustible**, et les essais du feu sont les premiers à le voir.
 
-### Un banc planté loin de l'équilibre s'effondre au premier changement de lumière
+### Un banc qu'on plante adulte ne vit que si tout le moteur le tient
 
-La hêtraie fermée de `trouees.test.ts` plante 169 hêtres de 15 m à 3 m, sur l'élancement d'une tige sans histoire. Avec l'élagage niveau par niveau, les houppiers gardent 0,32 de la hauteur au lieu de 0,27 ; la lumière du houppier y tombe de 0,075 à 0,054, sous ce que coûte l'entretien d'un hêtre de cette taille. Il ne reste alors que 34 ou 35 hêtres à cinq ans sur quatre graines (62 sur la cinquième), et le couvert « vraiment fermé » s'ouvre. **Un banc dont la prémisse tient à un centième de lumière mesure le banc** ; le peuplement de F6, qui atteint la même hauteur en grandissant, garde 1 300 tiges/ha à quarante ans.
+La hêtraie fermée de `trouees.test.ts` plante 169 hêtres de 15 m à 3 m. À l'élancement d'un arbre sans histoire (H/D 50), les houppiers se recouvraient sept à dix fois. Avec l'élagage niveau par niveau, ils gardaient 0,32 de la hauteur au lieu de 0,27 ; la lumière du houppier tombait de 0,075 à 0,054, et il ne restait que 34 ou 35 hêtres à cinq ans. Replantés, sur décision, à l'élancement mesuré des hêtraies serrées non éclaircies (H/D 97, Štefančík 2020), ils cassent tous au vent dans le premier mois : leur vitesse de rupture (`vitesseCritiqueVolisMs`) tombe au tiers de celle d'un arbre de plein vent, et rien ne dit au moteur qu'ils ont grandi abrités. Le peuplement de F6, qui atteint la même hauteur en grandissant, garde 1 300 tiges/ha à quarante ans. **Un arbre planté adulte n'a pas l'histoire de ses voisins** : ni le houppier qu'ils lui ont laissé, ni le vent qu'ils lui ont épargné. Un banc qui demande un peuplement fermé le fait pousser, ou il mesure le banc.
 
 ### Les hêtres morts de soif au figé étaient des semis
 
@@ -95,11 +95,11 @@ Deux lignes ont été relues en directions, sur décision. La première : « le 
 
 ### Points ouverts
 
-- **La lande d'ajoncs ne brûle plus** : le bois mort retenu sur pied n'existe pas (voir plus haut).
-- **La hêtraie fermée de `trouees`** s'effondre ; le banc ou la charge d'entretien sont à revoir, décision en attente (#471).
+- **La lande d'ajoncs** brûle sur une graine sur cinq : le bois mort retenu sur pied arrive par le lot empilé `claude/v06-bois-mort`.
+- **La hêtraie fermée de `trouees`** : replantée à H/D 97, elle casse au vent ; décision en attente (#471).
 - **La profondeur des houppiers du hêtre** reste dans #474 : 0,62 à 0,68 de la hauteur en futaie serrée de vingt à soixante ans, contre 46 à 48 % dans les hêtraies slovaques non éclaircies (Štefančík 2020).
-- **`chandelles`** : la concentration des chutes ventées vaut 0,0997 avec l'élagage niveau par niveau, et 0,1012 avec l'élagage sur la lumière du houppier, à 0,01 d'erreur-type. Ce n'est pas l'élagage : c'est l'arrivée de main (#476) qui l'a fait passer de 0,130 à 0,10, et le seuil sans source tombe dessus. Une relecture en signification est proposée (#471).
-- **`glandee`** : sur cinq graines, la perte de recrues que le boutis inflige à la densité de référence vaut −6 à +14 % avec la loi B, −6 à +8 % sur le couvert seul ; c'est du tirage, des deux côtés.
+- **`chandelles`** : la ligne des chutes ventées se lit en signification (plus de trois erreurs-types de zéro), sur décision ; c'est l'arrivée de main (#476) qui avait fait passer la grandeur de 0,130 à 0,10, sous le seuil sans source.
+- **`glandee`** : à la densité de référence, la perte de recrues est du tirage sur cinq graines (−6 à +14 %) ; l'attribution se lit maintenant à 0,5 sanglier par hectare, où la régénération perd 31 à 46 % pour 7,5 à 16 % de glandée, sur chaque graine (`glandee-sanglier.test.ts`).
 
 ## Ce qu'un lot précédent a appris (le couvert, #438 ; les semis sous le couvert, #353, instruit)
 
