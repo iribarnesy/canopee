@@ -9,12 +9,17 @@
 
 import fc from "fast-check";
 import { describe, expect, it } from "vitest";
+import { getEspece } from "../../src/engine/especes";
 import {
+  baseHouppierCible,
   computeGroundLight,
   computeLight,
   lumieresDesArbres,
+  MAX_EXTINCTION,
   PROFONDEUR_HOUPPIER_MAX,
   poidsDuVoisin,
+  profondeurVivanteParNiveaux,
+  type VoisinsOmbre,
 } from "../../src/engine/light";
 import type { TreeState } from "../../src/engine/trees";
 import { diametreInitialCm } from "../../src/engine/trees";
@@ -25,10 +30,16 @@ function poids(rapport: number): number {
   return poidsDuVoisin(rapport, p * rapport, 1, 1 - p);
 }
 
-function arbre(id: number, x: number, y: number, heightM: number): TreeState {
+function arbre(
+  id: number,
+  x: number,
+  y: number,
+  heightM: number,
+  especeId = "fagus_sylvatica",
+): TreeState {
   return {
     id,
-    especeId: "fagus_sylvatica",
+    especeId,
     x,
     y,
     ageWeeks: 40 * 52,
@@ -116,20 +127,27 @@ describe("le poids d'un voisin, lu sur tout le houppier", () => {
 
 describe("la lumière des arbres", () => {
   it("un arbre seul ne s'ombrage pas lui-même", () => {
-    const seul = [arbre(1, 10, 10, 20)];
+    const seul = [arbre(1, 10, 10, 20, "pinus_sylvestris")];
     expect(computeLight(seul, () => 1)[0]).toBe(1);
-    const { cime } = lumieresDesArbres(seul, () => 1);
-    expect(cime[0]).toBe(1);
+    // En pleine lumière, le houppier garde toute sa profondeur.
+    const { profondeurVivante } = lumieresDesArbres(seul, () => 1);
+    expect(profondeurVivante[0]).toBe(PROFONDEUR_HOUPPIER_MAX);
   });
 
-  it("deux égaux s'ombragent sur le houppier, pas à la cime", () => {
+  it("deux pins égaux s'ombragent sur le houppier, et le bas du houppier meurt", () => {
     // Le voisin du sud, de même hauteur : son ombre tombe sur le houppier de
-    // l'autre et pèse un demi ; aucune de ses feuilles ne dépasse la cime.
+    // l'autre et pèse un demi. Aucune de ses feuilles ne dépasse la cime, mais
+    // la moitié haute de son houppier dépasse la moitié basse de l'autre : les
+    // branches basses d'un héliophile y passent sous leur compensation.
     const h = 20;
-    const egaux = [arbre(1, 10, 10, h), arbre(2, 10, 10 - 0.4 * h, h)];
-    const { houppier, cime } = lumieresDesArbres(egaux, () => 1);
+    const egaux = [
+      arbre(1, 10, 10, h, "pinus_sylvestris"),
+      arbre(2, 10, 10 - 0.4 * h, h, "pinus_sylvestris"),
+    ];
+    const { houppier, profondeurVivante } = lumieresDesArbres(egaux, () => 1);
     expect(houppier[0]).toBeLessThan(0.9);
-    expect(cime[0]).toBe(1);
+    expect(profondeurVivante[0]).toBeLessThan(PROFONDEUR_HOUPPIER_MAX);
+    expect(profondeurVivante[0]).toBeGreaterThan(0);
   });
 
   it("au sol, tout houppier pèse à plein, le petit comme le grand", () => {
@@ -151,5 +169,99 @@ describe("la lumière des arbres", () => {
       comparees++;
     }
     expect(comparees).toBeGreaterThan(5);
+  });
+});
+
+/** Saturation de l'ombre, recopiée de light.ts pour le calcul de référence. */
+function saturer(e: number): number {
+  if (e <= 2) return e;
+  const span = MAX_EXTINCTION - 2;
+  return 2 + span * (1 - Math.exp(-(e - 2) / span));
+}
+
+/** La même profondeur, par dichotomie fine sur la lumière de chaque niveau : la référence. */
+function profondeurDeReference(
+  H: number,
+  v: VoisinsOmbre,
+  facteur: number,
+  compensation: number,
+  lai: number,
+): number {
+  const lumiere = (p: number) => {
+    const y = H * (1 - p);
+    let e = 0;
+    for (let i = 0; i < v.n; i++) {
+      const d = v.profondeurM[i] ?? 0;
+      e += (v.ombre[i] ?? 0) * Math.max(0, Math.min(1, ((v.cimeM[i] ?? 0) - y) / d));
+    }
+    return facteur * Math.exp(-saturer(e)) * Math.exp(-0.5 * lai * p);
+  };
+  if (lumiere(0) <= compensation) return 0;
+  if (lumiere(PROFONDEUR_HOUPPIER_MAX) >= compensation) return PROFONDEUR_HOUPPIER_MAX;
+  let lo = 0;
+  let hi = PROFONDEUR_HOUPPIER_MAX;
+  for (let i = 0; i < 80; i++) {
+    const mid = (lo + hi) / 2;
+    if (lumiere(mid) >= compensation) lo = mid;
+    else hi = mid;
+  }
+  return lo;
+}
+
+const voisinsArb = fc
+  .array(
+    fc.record({
+      h: fc.double({ min: 0.5, max: 40, noNaN: true }),
+      part: fc.double({ min: 0.05, max: 1, noNaN: true }),
+      ombre: fc.double({ min: 0, max: 4, noNaN: true }),
+    }),
+    { maxLength: 8 },
+  )
+  .map(
+    (l): VoisinsOmbre => ({
+      n: l.length,
+      cimeM: l.map((x) => x.h),
+      profondeurM: l.map((x) => x.part * PROFONDEUR_HOUPPIER_MAX * x.h),
+      ombre: l.map((x) => x.ombre),
+    }),
+  );
+
+describe("l'élagage naturel, niveau par niveau", () => {
+  it("sans voisin, c'est la formule de la lumière uniforme", () => {
+    for (const id of ["fagus_sylvatica", "pinus_sylvestris", "betula_pendula"]) {
+      const { compensation, lai } = getEspece(id).lumiere;
+      for (const l of [1, 0.7, 0.4, 0.3, 0.2, 0.1, 0.02]) {
+        const parNiveaux = profondeurVivanteParNiveaux(16, null, l, compensation, lai);
+        expect(1 - parNiveaux).toBeCloseTo(baseHouppierCible(16, l, compensation, lai) / 16, 12);
+      }
+    }
+  });
+
+  it("la forme fermée redonne la dichotomie fine, voisins quelconques", () => {
+    fc.assert(
+      fc.property(
+        voisinsArb,
+        fc.double({ min: 1, max: 30, noNaN: true }),
+        fc.double({ min: 0.05, max: 1, noNaN: true }),
+        fc.double({ min: 0.005, max: 0.3, noNaN: true }),
+        fc.double({ min: 0.5, max: 4, noNaN: true }),
+        (v, H, facteur, compensation, lai) => {
+          const p = profondeurVivanteParNiveaux(H, v, facteur, compensation, lai);
+          expect(p).toBeCloseTo(profondeurDeReference(H, v, facteur, compensation, lai), 9);
+        },
+      ),
+    );
+  });
+
+  it("un voisin de plus n'approfondit jamais le houppier", () => {
+    fc.assert(
+      fc.property(voisinsArb, fc.double({ min: 1, max: 30, noNaN: true }), (v, H) => {
+        const { compensation, lai } = getEspece("pinus_sylvestris").lumiere;
+        const avec = profondeurVivanteParNiveaux(H, v, 1, compensation, lai);
+        const moins: VoisinsOmbre = { ...v, n: Math.max(0, v.n - 1) };
+        const sans = profondeurVivanteParNiveaux(H, moins, 1, compensation, lai);
+        expect(avec).toBeLessThanOrEqual(sans + 1e-12);
+      }),
+    );
   });
 });
