@@ -503,6 +503,23 @@ export interface SoilState {
    */
   herbeFeuillage: Grille;
   /**
+   * **La lumière de la saison**, pour les espèces qui jugent leur station sur
+   * leur saison (`herbacees.ts:JUGE_SA_SAISON`, #468) : la lumière de chaque
+   * semaine de la saison en cours, pondérée par la vigueur de l'espèce, même
+   * indexation à plat que `herbeEmprise`. C'est une **mémoire**, comme
+   * `herbeHumidite` : sans elle, une vernale ne verrait que sa pire semaine.
+   * Elle s'efface quand l'espèce dort. Nulle pour les autres espèces.
+   */
+  herbeLumiereSaison: Grille;
+  /**
+   * **Le poids de la saison** de chaque espèce, une valeur par espèce et non par
+   * cellule : la somme de ses vigueurs depuis la sortie des feuilles
+   * (`herbacees.ts:poidsDeSaison`, #468). La lumière jugée est
+   * `herbeLumiereSaison` divisée par ce poids. Il ne dépend que du calendrier,
+   * donc il vaut pour toute la parcelle.
+   */
+  herbeVigueurSaison: GrilleLongue;
+  /**
    * Biomasse herbacée présente ∈ [0,1] : elle **suit** la couverture mais ne
    * disparaît pas quand l'herbe jaunit — le foin sur pied reste le meilleur
    * combustible de l'été. Seuls le feu, la fauche et la décomposition la font
@@ -1009,6 +1026,10 @@ export function createGameState(
       // couvert, pas des souches nues. La première semaine le ramènera à ce
       // que la saison permet.
       herbeFeuillage: Float32Array.from(Array.from({ length: n }, () => depart).flat()),
+      // Aucune saison commencée au premier jour : la première sortie des
+      // feuilles ouvre la mémoire (#468).
+      herbeLumiereSaison: new Float32Array(n * N_HERBACEES),
+      herbeVigueurSaison: new Float64Array(N_HERBACEES),
       herbeBiomasse: new Float32Array(n).fill(station.herbeInitiale),
       // Rien sur pied au premier jour : la couverture déclarée par la station
       // est un feuillage qui repart, et la première saison fabrique sa matière.

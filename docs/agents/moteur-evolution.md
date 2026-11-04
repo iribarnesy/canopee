@@ -151,6 +151,105 @@ CI : sous A, `herbe.test.ts` (la fauche) et `hauteurs.test.ts` (le pin de la gra
 - **Le feu** ne rend que le phosphore de l'azote de ses cendres (le cinquième de ce qui brûle) ; celui de l'azote qui part en fumée sort avec lui, quand le potassium de la strate reste tout entier dans les cendres.
 - **La litière d'herbe** porte le rapport N:P de la plante verte, quand une graminée résorbe son phosphore un peu plus que son azote (82,1 % contre 74,6 %, Vergutz et al. 2012) *(à calibrer)*.
 
+## Ce qu'un lot précédent a appris (la vernale juge sa saison, #468 ; E9 relu sur le pin)
+
+#468 était un essai rouge dans la PR du couvert (#464) : la pénombre normalisée faisait monter à 1,90-2,03 la saisonnalité du sous-bois sous le pin, pour une borne de 1,6. Instruit d'abord sur la branche du couvert, cellule par cellule, sur trois graines. Le propriétaire a retenu deux décisions : A, la vernale juge sa station sur sa saison ; F, la ligne du pin devient une direction. Il a envoyé B en issue (#472). Prédictions et mesures dans les commits vides de `claude/v06-sous-pin` (instruction) et de `claude/v06-vernale` (le lot). **Le format passe à 16.**
+
+**Ce lot sort du périmètre de la V1.** `docs/v1.md` range la strate herbacée parmi ce qui attendra. Le propriétaire l'a accordé pour #468, parce qu'un essai rouge bloquait la PR du couvert. Je le signale ici et dans la PR, pour qu'aucun lot ne s'en serve comme précédent.
+
+### Un mécanisme documenté se vérifie sur un calendrier relevé
+
+E9, l'en-tête de `herbacees.ts` et le commentaire publié du tick disaient tous trois : « l'anémone juge sa station en mars ». Le moteur la jugeait chaque semaine de sa saison, donc sur la pire. Le calendrier relevé dans une partie (an 40, 2003) montre l'enchaînement :
+- le hêtre se feuille en semaine 18 ;
+- l'anémone reste en pleine vigueur jusqu'en semaine 21 ;
+- son emprise perd en une semaine, la 18e, tout ce qu'elle avait gagné depuis février.
+
+Dans les cellules sombres, son tapis valait au millième sa capacité à la lumière de juillet. Personne ne l'avait vu, parce que l'essai lisait une part vernale, c'est-à-dire un rapport, et que le rapport tenait. **Une phrase qui explique un mécanisme se vérifie sur la semaine où elle prétend qu'il agit.**
+
+### Une borne relevée sur le moteur à un âge donné peut mesurer un transitoire
+
+La borne de 1,6 sous le pin tenait sur main parce que l'anémone n'était pas encore arrivée. Elle avance à la vitesse de son rhizome, au plus 0,02 de parcelle par an, et commence quand le couvert se ferme :
+- **sur main**, la saisonnalité passe 1,6 vers l'an 45-50 (graines 3, 7, 11), et l'anémone tient 41-42 % du sol à l'an 60 ;
+- **avec la pénombre normalisée**, le pin se ferme dix ans plus tôt et elle atteint le même plafond dès l'an 40.
+
+La correction du couvert n'a pas créé le défaut, elle l'a avancé. **Avant d'accuser la correction qui fait casser une borne calée sur le moteur, prolonger la course de la version d'avant.**
+
+### La moyenne de la parcelle cachait la médiane
+
+À l'an 40, sous le pin corrigé, la lumière moyenne baisse peu : 0,34-0,41 contre 0,42-0,45. La médiane, elle, tombe de 0,38-0,41 à 0,27-0,33, et 40 à 43 % des cellules passent sous 0,25 (8 à 12 % sur main). Le bord sud et les trouées tiennent la moyenne pendant que le centre des couronnes s'assombrit.
+
+Le dactyle a une capacité en rampe, de 0,12 à 0,47. Calculée cellule par cellule, elle tombe de 0,71-0,76 à 0,50-0,56. **Une réponse non linéaire ne se juge pas sur la moyenne de son entrée.**
+
+### Le défaut était dans l'espèce qui manque
+
+Deux traits sont restés sur le banc des accusés : le plafond du dactyle et la saturation de l'anémone.
+- **Le dactyle recule à peu près là où son indice de lumière d'Ellenberg le place** (7, « also in the shade up to about 30% », Chytrý et al. 2018).
+- **Relever la saturation de l'anémone** demanderait 0,8 pour passer sous 1,6, en calcul statique, sans source, et enfoncerait le hêtre.
+- **Pladias classe l'une et l'autre « rare » sous le pin.** Ce qui couvre une pinède en été est une herbe de demi-ombre estivale, absente d'un atlas de trois spontanées. Le sol que le dactyle ne tient pas va donc à l'anémone par défaut.
+
+**Quand deux espèces se disputent un sol qu'aucune des deux n'occupe sur le terrain, chercher la troisième** (#472).
+
+### Remplacer une constante de sonde par un trait
+
+La sonde qui a chiffré A utilisait une moyenne glissante à 0,1 par semaine active, une constante sans source. Le lot la remplace par la moyenne de la saison entière, pondérée par la vigueur. La saison est celle que déclarent les traits de la fiche (`debutDJ`, `seuilJourH`, `finDJ`), et aucune durée n'est ajoutée.
+
+Elle ne donne pas tout à fait la même chose. Sur main, l'écart est de ±0,02 d'anémone sous le hêtre. Sur le couvert, il atteint +0,09 à +0,10 : la moyenne glissante oubliait les semaines nues plus vite, et je ne l'avais pas prédit. **Une constante qu'une sonde a dû inventer est une question posée aux traits** ; souvent, la fiche y répond déjà.
+
+### Ce que ça donne
+
+Dispositif de E9 (20 m, plantation à 3 m, limon riche, Abbeville), an 40, graines 3, 7 et 11, sondes hors dépôt. « Couvert » désigne une branche locale de mesure qui fusionne `origin/claude/v06-couvert` (8f0418c) ; elle n'a pas été poussée.
+
+| | main 18dbb29 | main + A | couvert | couvert + A |
+|---|---|---|---|---|
+| hêtre : emprise de l'anémone | 0,17-0,18 | 0,58-0,64 | 0,09-0,12 | 0,64-0,67 |
+| hêtre : part vernale | 0,48-0,51 | 0,76-0,80 | 0,37-0,47 | 0,82-0,84 |
+| hêtre : saisonnalité | 5,3-6,2 | 5,4-6,3 | 4,6-6,1 | 6,8-7,6 |
+| pin : saisonnalité | 1,32-1,42 | identique | 1,90-2,03 | identique |
+| pin : part vernale | 0,24-0,29 | identique | 0,47-0,51 | identique |
+| découvert | 1,04 ; 0,04 | identique | identique | identique |
+| lignes de l'ancien essai en échec | aucune | aucune | pin 1,6 ; gradient | pin 1,6 |
+
+Sous le pin, rien ne bouge : la lumière y est la même toute la saison. Sous le hêtre, les survivants sont les mêmes à l'an 40, et les hauteurs bougent de 0,25 m au plus.
+
+### Les prédictions fausses
+
+L'instruction (branche `claude/v06-sous-pin`) :
+- **H1** : le bord sud reste sous 0,75 de lumière, et le cœur du pin corrigé n'est pas sous 0,25. C'est la médiane qui tombe.
+- **H2**, à moitié : au bord sud du couvert, l'anémone tient 0,17-0,22, pour 0,1 au plus prédit.
+- **H3** : fausse sur une graine.
+- **T7** : sur la graine 3, la lumière baisse encore après l'an 40.
+- **U2** : juste sur la conclusion, fausse sur les chiffres.
+- **V4** : fausse sur le couvert.
+
+Le lot :
+- **W3** : fausse sur le couvert (voir plus haut).
+- **X3** : `climat.test.ts` casse en CI, et c'est le seul fichier hors `herbacees` (le brut de la graine 23, relu depuis ; voir plus bas).
+- **Y2** : juste sur la direction, fausse sur l'ampleur (graine 23 : −0,21).
+- **Z1** : sur la branche qui fusionne le couvert, `climat` casse aussi, sur une autre ligne.
+
+### Un essai par graine sur un compte rebattu
+
+`climat.test.ts` casse sur la branche, pour une seule raison : le thermomètre brut de la pullulation, sur la graine 23, vaut 1,13 pour une borne de 1,2. Sur les six graines de la campagne de #183, A déplace ce brut de −0,01 à +0,08 sur cinq d'entre elles. Sur la graine 23, la partie chauffée de main perd une cinquantaine de tiges de plus (133 survivants contre 184 avec A) et pullule plus haut. **C'est un épisode de mortalité rebattu, pas un effet de la vernale sur les ravageurs.**
+
+Sur la branche qui fusionne le couvert, c'est une autre ligne : les hêtres debout au chaud doivent être moins de la moitié de ceux du froid. Le couvert seul passait d'un demi-arbre (14 pour une borne de 14,5) ; avec A, le froid garde un hêtre de moins (28) et la borne tombe pile à 14.
+
+Les deux bornes sont posées sous le minimum d'une campagne du moteur. **Quand une correction fait tomber une borne d'un arbre ou d'une graine, mesurer d'abord ce que la même borne laissait de marge avant elle.**
+
+**Le brut est relu, sur décision du propriétaire.** Il doit dépasser 1 sur chaque graine : le réchauffement n'inverse jamais la pullulation, le défaut de #95. Il doit aussi dépasser 1,2 en moyenne sur les trois graines de l'essai (11, 23, 37), borne inchangée. Le par-hôte reste exigé graine par graine, à 1,5, et aucune graine n'est ajoutée.
+- Avec A, le brut vaut 1,400 / 1,126 / 1,437, soit 1,32 en moyenne.
+- Sur main, il vaut 1,318 / 1,334 / 1,440, soit 1,36.
+
+La relecture est signalée dans l'essai, avec les six graines de l'instruction. La ligne des hêtres debout, qui casse sur la fusion avec le couvert, n'est pas de ce lot : elle est transmise à l'agent des voisins (#471), qui relit `climat` sur la branche du couvert.
+
+### Ce qui reste ouvert
+
+- **`climat.test.ts`, les hêtres debout de la graine 37** : la ligne casse d'un arbre sur la fusion avec le couvert (14 pour 0,5 × 28), alors que le couvert seul passait d'un demi-arbre. Elle est transmise à l'agent des voisins (#471).
+- **#472 : une herbe de demi-ombre estivale.** C'est elle qui lèverait la limite de E9 sous le pin. Elle sort aussi du périmètre de la V1.
+- **La marcescence du hêtre est prêtée à l'adulte** (0,35, *à calibrer*). Svendsen 2001 (*Alces* 37 : 475-482), citant Schaffalitzky de Muckadell 1962, la tient pour un trait juvénile, limité aux branches de moins de 3 m environ ; la source primaire n'est pas ouverte (*à confirmer*). C'est un mécanisme, qui n'est pas codé.
+  - Il ne joue pas sur E9 : l'anémone sature dès 0,25 de lumière.
+  - Il joue en revanche sur la lumière d'avril sous le hêtre (0,47-0,50 avec la pénombre normalisée, 0,57-0,59 sur main).
+- **Une vernale part d'une emprise de 3,6 % dans chaque cellule** (`empriseInitiale`), comme s'il y avait partout une banque de rhizomes. Sur un ancien champ, l'anémone colonise depuis un bois ancien, de 0,2 à 0,85 m par an (Brunet et von Oheimb 1998, *Nordic Journal of Botany* 18 : 369-377). Non instruit.
+
 ## Ce qu'un lot précédent a appris (l'hydrologie : la nappe dans le profil, #380 ; le plafond de la vidange, #381 ; le point bas d'un versant, #351 ; #342 vérifiée ; #337 instruite)
 
 Le lot v0.6 de l'hydrologie. Trois défauts de comptage, corrigés dans les mécanismes existants, sans état neuf (le format reste 15) : l'aquifère et le profil comptaient deux fois l'eau de la part noyée (#380) ; une cellule pleine cédait à une voisine pleine une eau qui ressortait chez elle (#381) ; le point bas d'un versant n'avait pas de pente (#351). #342 était réglée par #391, et une sonde le montre. #337, les crues du sable, est instruite sur ce qui reste. Prédictions et mesures dans les commits de la branche, avant chaque course.
