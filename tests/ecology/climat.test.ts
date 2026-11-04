@@ -460,18 +460,50 @@ describe("dans une partie, le réchauffement se voit", () => {
     // six graines — 1,5 sous 1,69, et 1,2 sous 1,29 —, et tous deux très
     // au-dessus de 1 pour rester des affirmations.
     //
+    // ── **le brut se lit en direction par graine**, **et en ampleur sur la moyenne** (#468) ──
+    //
+    // **Relecture, décidée par le propriétaire.** Le brut était exigé au-dessus
+    // de 1,2 sur chaque graine. Cette borne n'a pas de source : elle a été posée
+    // sous un minimum du moteur, celui de la campagne ci-dessus. Le jour où la
+    // vernale s'est mise à juger sa station sur sa saison (#468), elle a cassé
+    // sur la graine 23, à 1,13. Ce n'est pas un effet de la vernale sur les
+    // ravageurs : elle rebat le tirage. Sur main, la partie chauffée de cette
+    // graine perdait une cinquantaine de tiges de plus (133 survivantes à
+    // soixante ans, contre 184 avec la vernale) et pullulait plus haut ; le
+    // témoin figé ne bouge pas. Relevé sur les six graines de la campagne de
+    // #183, brut main → vernale (par hôte entre parenthèses) :
+    //
+    //   graine        11      23      37       5      41       7
+    //   main        1,318   1,334   1,440   1,344   1,672   1,444
+    //   vernale     1,400   1,126   1,437   1,386   1,672   1,436
+    //   (par hôte)  (1,57)  (2,39)  (2,12)  (2,71)  (2,95)  (2,08)
+    //
+    // Cinq graines bougent de −0,01 à +0,08, dans les deux sens ; seule la
+    // graine 23 tombe, avec l'épisode de mortalité qui ne se produit plus.
+    //
+    // Ce qu'on exige maintenant du brut tient en deux affirmations :
+    //  - **la direction, sur chaque graine** : le réchauffement n'inverse jamais
+    //    la pullulation, ce qui était le défaut de #95 ;
+    //  - **l'ampleur, en moyenne** sur les trois graines de l'essai, à la même
+    //    borne de 1,2 : une graine dont un épisode de mortalité a été rebattu ne
+    //    fait plus tomber l'essai, trois graines qui faiblissent ensemble si.
+    //
+    // Le par-hôte reste exigé graine par graine, à 1,5. Aucune graine n'est
+    // ajoutée.
+    //
     // Que le réchauffement **tue** est affirmé par l'essai suivant, sur ce qui
     // reste **debout** de la cohorte plantée (#93, #84).
+    let rapportBrutCumule = 0;
     for (const [i, f] of fige.runs.entries()) {
       const c = chauffe.runs[i];
       if (!c) throw new Error("partie manquante");
       expect(c.pressionParHoteMax, `par hôte, graine ${GRAINES[i]}`).toBeGreaterThan(
         1.5 * f.pressionParHoteMax,
       );
-      expect(c.pressionBruteMax, `brut, graine ${GRAINES[i]}`).toBeGreaterThan(
-        1.2 * f.pressionBruteMax,
-      );
+      expect(c.pressionBruteMax, `brut, graine ${GRAINES[i]}`).toBeGreaterThan(f.pressionBruteMax);
+      rapportBrutCumule += c.pressionBruteMax / f.pressionBruteMax;
     }
+    expect(rapportBrutCumule / fige.runs.length, "brut, en moyenne").toBeGreaterThan(1.2);
   });
 
   it("et il TUE : la cohorte plantée compte moins de tiges debout, sur chacune des trois parties", () => {

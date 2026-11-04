@@ -288,6 +288,12 @@ describe("B8 — les strates basses se partagent la lumière et le sol", () => {
  * parcelle de 20 m : hêtre 2,98 et 3,45 de rapport printemps/été, 36 et 40 %
  * d'emprise vernale ; pin sylvestre 1,25 / 1,24 et 19 % ; découvert 1,04 et
  * 3 %.
+ *
+ * Relevées depuis que la vernale juge sa station sur sa saison (#468), sur les
+ * graines 3, 7 et 11 : hêtre 5,67 / 5,42 / 6,32 et 77 / 76 / 80 % (l'anémone
+ * tient 58 à 64 % du sol) ; pin 1,40 / 1,32 / 1,42 et 29 / 24 / 29 % ;
+ * découvert 1,04 et 4 %. Le hêtre est plus saisonnier qu'à l'écriture parce que
+ * le tapis de vernale ne se règle plus sur la lumière de mai.
  */
 describe("E9 — les plantes de sous-bois profitent de la fenêtre de printemps", () => {
   // Mi-avril : la fenêtre est grande ouverte — sous la hêtraie mesurée, la
@@ -324,7 +330,18 @@ describe("E9 — les plantes de sous-bois profitent de la fenêtre de printemps"
 
       // La couverture du sol suit cette saison sous le caduc, et pas ailleurs.
       expect(caduc.saisonnalite).toBeGreaterThan(2.2);
-      expect(sempervirent.saisonnalite).toBeLessThan(1.6);
+      // **Ligne réécrite (#468).** Elle disait `sempervirent.saisonnalite < 1,6`,
+      // une borne relevée sur le moteur (1,24-1,25 à l'écriture), et elle tenait
+      // parce que l'anémone n'était pas encore arrivée sous le pin. Sur main
+      // 18dbb29, la saisonnalité sous le pin passe 1,6 vers l'an 45-50 (graines
+      // 3, 7 et 11), et l'anémone y atteint à l'an 60 le plafond (41-42 % du
+      // sol) que la pénombre normalisée (#464) lui donne dès l'an 40. L'essai
+      // lisait un état transitoire. Ce qui reste vérifié est la direction, comme
+      // le demande l'en-tête : le sous-bois du pin est moins saisonnier que celui
+      // du hêtre. La limite est écrite dans E9 (partiel) : un pin clair laisse à
+      // la vernale le sol que la graminée ne tient pas, faute d'une herbe de
+      // demi-ombre estivale dans l'atlas (#472).
+      expect(sempervirent.saisonnalite).toBeLessThan(caduc.saisonnalite);
       expect(decouvert.saisonnalite).toBeLessThan(1.1);
 
       // Et ce printemps est celui de la vernale : plus l'été est sombre, plus
