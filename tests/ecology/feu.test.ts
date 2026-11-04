@@ -15,6 +15,7 @@ import { getEspece } from "../../src/engine/especes";
 import {
   accessibiliteDuHouppier,
   anisotropieDuFront,
+  baseDuCombustible,
   chargeCombustible,
   departDeFeu,
   excentriciteDuFront,
@@ -963,6 +964,67 @@ describe("il faut une SOURCE, et un combustible qui porte", () => {
     // pas bougé d'un gramme. Un pin élagué sur une lande d'herbe sèche brûle
     // toujours au sol — ce qu'il ne fait plus, c'est passer en cime.
     expect(elague.moyenne).toBeGreaterThan(0);
+  });
+
+  it("le bois mort qu'une espèce garde sur pied reste du combustible, et la scie l'emporte (#478)", () => {
+    // L'ajonc garde ses rameaux morts dans le fourré (`feu.boisMortRetenu`,
+    // especes.ts). Ils restent du combustible au niveau où ils sont morts : le
+    // combustible de l'arbre commence sous son houppier vivant, et la moyenne
+    // des deux étages, pesés par leur part du combustible fin, le descend.
+    expect(baseDuCombustible(1.4, 0, 0)).toBe(1.4); // ne rien garder : comme avant le trait
+    expect(baseDuCombustible(1.4, 0, 0.4)).toBeCloseTo(0.84, 9);
+    expect(baseDuCombustible(1.4, 0.5, 0.4)).toBeCloseTo(1.04, 9); // la scie a pris le bas
+    expect(baseDuCombustible(1.4, 1.4, 0.4)).toBe(1.4); // et tout, si elle monte jusqu'au houppier
+    expect(baseDuCombustible(0, 0, 0.4)).toBe(0); // sans élagage naturel, pas d'étage mort
+    // Le même fourré d'ajoncs, la même base de houppier vivant : élagué par
+    // l'ombre, il garde son bois mort ; élagué à la scie, il l'a perdu. Le feu
+    // de surface atteint mieux le premier.
+    const cote = 20;
+    const litiere = new Array(cote * cote).fill(100);
+    const herbe = new Array(cote * cote).fill(0);
+    const ouvert = new Array(cote * cote).fill(1);
+    const fourre = (especeId: string, hauteur: number, base: number, scie: number) =>
+      Array.from({ length: 40 }, (_, i) => ({
+        ...arbre(especeId, hauteur),
+        id: i + 1,
+        x: 2 + (i % 7) * 2.5,
+        y: 2 + Math.floor(i / 7) * 3,
+        baseHouppierM: base,
+        hauteurElagueeM: scie,
+      }));
+    const parLOmbre = chargeCombustible(
+      fourre("ulex_europaeus", 2.2, 1.4, 0),
+      herbe,
+      litiere,
+      cote,
+      ouvert,
+    );
+    const aLaScie = chargeCombustible(
+      fourre("ulex_europaeus", 2.2, 1.4, 1.4),
+      herbe,
+      litiere,
+      cote,
+      ouvert,
+    );
+    expect(parLOmbre.moyenne).toBeGreaterThan(aLaScie.moyenne);
+    // Aucune espèce n'est nommée par le mécanisme : une fiche qui ne déclare
+    // pas le trait ne garde rien, et l'ombre et la scie y reviennent au même.
+    expect(getEspece("pinus_sylvestris").feu.boisMortRetenu).toBeUndefined();
+    const pinsParLOmbre = chargeCombustible(
+      fourre("pinus_sylvestris", 14, 6, 0),
+      herbe,
+      litiere,
+      cote,
+      ouvert,
+    );
+    const pinsALaScie = chargeCombustible(
+      fourre("pinus_sylvestris", 14, 6, 6),
+      herbe,
+      litiere,
+      cote,
+      ouvert,
+    );
+    expect(pinsParLOmbre.moyenne).toBe(pinsALaScie.moyenne);
   });
 
   it("à couvert égal, une lande d'ajoncs porte le feu plus qu'une hêtraie", () => {
