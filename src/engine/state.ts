@@ -739,6 +739,33 @@ export interface TickFluxes {
   apportKKgHa: number;
   retourKKgHa: number;
   /**
+   * **le budget du phosphore**, kg/ha (#473). Le phosphore de la matière
+   * organique n'est pas un état : la litière, l'humus et le bois mort portent
+   * celui de leur azote (`phosphoreDeLAzoteOrganiqueG`, pk.ts). Ce que la roche
+   * altérée et l'atmosphère apportent, et ce que la terre emporte de matière
+   * organique hors de la parcelle referment, avec le prélèvement, l'érosion du
+   * phosphore assimilable et ce que les plantes versent au sol, le phosphore du
+   * sol chaque semaine (`tick-conservation.test.ts`,
+   * `phosphore-conservation.test.ts`).
+   */
+  apportPKgHa: number;
+  erosionPOrganiqueKgHa: number;
+  /**
+   * Le phosphore que les racines auraient pris avec leur azote si le sol l'avait
+   * eu, kg/ha : la plante prend alors son azote sans tout son phosphore, et la
+   * matière organique qu'elle fera en portera plus qu'elle n'en a pris. Il mord
+   * sous une culture fertilisée (un blé à 192 kg N/ha : 13 kg P/ha/an), à peine
+   * sous une forêt ou sur la lande (moins de 1 % des cellules-semaines mesurées).
+   */
+  phosphoreNonPrisKgHa: number;
+  /**
+   * Le phosphore qu'un flux d'azote vers la matière organique (immobilisation,
+   * humification) aurait dû prendre et que la cellule n'avait plus, kg/ha. Il ne
+   * mord pas sur les bancs mesurés ; s'il mordait, la matière organique
+   * porterait un phosphore pris nulle part.
+   */
+  phosphoreOrganiqueNonTrouveKgHa: number;
+  /**
    * **le budget de bases** de la semaine, eq/ha, terme par terme (bases.ts). Il est
    * exposé pour être **vérifié** : la variation du pool doit valoir apports +
    * litière − lessivage − charge acide, à l'arrondi près. Un pool dont on ne

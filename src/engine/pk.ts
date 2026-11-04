@@ -61,6 +61,27 @@ export const RATIO_P_SUR_N = 0.09;
 export const RATIO_K_SUR_N = 0.55;
 
 /**
+ * Le phosphore que porte un flux d'azote organique, g/m² (#473).
+ *
+ * **Le phosphore de la matière organique suit son azote.** Le moteur n'a pas de
+ * stock de phosphore organique : la litière, l'humus et le bois mort portent le
+ * leur implicitement, au rapport du prélèvement, comme ils portent leur azote.
+ * Le phosphore ne bouge donc que là où l'azote passe de la matière organique au
+ * minéral, ou du minéral à la matière organique, et du même nombre : la
+ * minéralisation de l'humus le rend, la litière qui libère son azote le rend,
+ * les décomposeurs qui immobilisent l'azote du sol, et l'humus nouveau qui y
+ * prend le sien, le prennent avec.
+ *
+ * Seule la minéralisation de l'humus suivait cette règle. La litière rendait son
+ * azote sans son phosphore, l'immobilisation prenait le sien sans phosphore :
+ * le phosphore que l'herbe avait pris avec l'azote que sa litière recycle ne
+ * revenait jamais, et celui de l'azote immobilisé revenait sans avoir été pris.
+ */
+export function phosphoreDeLAzoteOrganiqueG(azoteG: number): number {
+  return azoteG * RATIO_P_SUR_N;
+}
+
+/**
  * Le potassium que porte la strate herbacée, g/m², déduit de son azote.
  *
  * **La strate prélevait du potassium et n'en rendait jamais** (#222). Elle le
@@ -305,16 +326,28 @@ export const SATURATION_P_G_M2 = 0.08;
 export const SATURATION_K_G_M2 = 1.5;
 
 /**
- * Part du phosphore et du potassium prélevés dans l'année qui revient au sol,
- * contre 50 % pour l'azote.
+ * Part du potassium prélevé dans l'année qui revient au sol, contre 50 % pour
+ * l'azote.
  *
- * Le bois est pauvre en ces deux éléments : ils se concentrent dans les
- * feuilles, l'écorce et les racines fines, c'est-à-dire dans ce qui retombe
- * chaque année. En leur appliquant le taux de retour de l'azote, un peuplement
- * mûr enterrait la moitié de son potassium dans son bois année après année —
- * et finissait par s'étrangler, ce qu'aucune forêt ne fait *(à calibrer)*.
+ * Le bois est pauvre en potassium : il se concentre dans les feuilles,
+ * l'écorce et les racines fines, c'est-à-dire dans ce qui retombe chaque
+ * année. En lui appliquant le taux de retour de l'azote, un peuplement mûr
+ * enterrait la moitié de son potassium dans son bois année après année — et
+ * finissait par s'étrangler, ce qu'aucune forêt ne fait *(à calibrer)*.
+ *
+ * **Le phosphore avait son réglage, 0,7, et il l'a perdu** (#473). La feuille
+ * le rendait tout entier dès sa chute, à 1,4 fois le rapport du prélèvement,
+ * et son azote le rendait une seconde fois en passant par l'humus. Depuis que
+ * la réserve de l'arbre recycle l'azote résorbé (#247), une feuille qui porte
+ * plus de phosphore que son azote n'en appelle crée de la matière : à l'état
+ * stable, ce que l'arbre perd en litière vaut ce qu'il prend. Et le terrain ne
+ * le demande pas : un arbre résorbe son phosphore au moins autant que son
+ * azote (Vergutz et al. 2012, *Ecol. Monogr.* 82 : 205, méta-analyse de 86
+ * études : 62,1 % pour l'azote et 64,9 % pour le phosphore en moyenne, 58,5 %
+ * pour le phosphore des feuillus caducs ; Aerts 1996, *J. Ecol.* 84 : 597 :
+ * environ la moitié de l'un et de l'autre). La feuille porte donc le phosphore
+ * de son azote, et le rend en se décomposant (`phosphoreDeLAzoteOrganiqueG`).
  */
-export const RETOUR_LITIERE_P = 0.7;
 export const RETOUR_LITIERE_K = 0.85;
 
 /** Dépôts atmosphériques, kg/ha/an *(ordres de grandeur français)*. */

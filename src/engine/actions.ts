@@ -38,7 +38,7 @@ import { partMecanisable } from "./mecanisation";
 import { SURVIE_APRES_LABOUR, TYPES_MYCORHIZE } from "./mycorhizes";
 import { KG_PER_HA_TO_G_PER_M2, litterDecayRate } from "./nitrogen";
 import { contextePhenologique } from "./phenologie";
-import { K_SUR_K2O, potassiumDeLaStrateG } from "./pk";
+import { K_SUR_K2O, phosphoreDeLAzoteOrganiqueG, potassiumDeLaStrateG } from "./pk";
 import { altitudeParCellule } from "./relief";
 import { profondeurPenetrableCm } from "./soil";
 import type { GameState } from "./state";
@@ -2737,6 +2737,7 @@ function applyLabourer(
     k: state.soil.litterK.slice(),
   };
   const potassiumG = state.soil.potassiumG.slice();
+  const phosphoreG = state.soil.phosphoreG.slice();
   let retourneeG = 0;
   const mycorhizes = {
     ecto: state.soil.mycorhizes.ecto.slice(),
@@ -2765,6 +2766,8 @@ function applyLabourer(
       const perdu = (humusCG[i] ?? 0) * LABOUR_PERTE_HUMUS;
       humusCG[i] = (humusCG[i] ?? 0) - perdu;
       mineralNG[i] = (mineralNG[i] ?? 0) + perdu / cnHumus;
+      // Et le phosphore de cet humus avec son azote (pk.ts, #473).
+      phosphoreG[i] = (phosphoreG[i] ?? 0) + phosphoreDeLAzoteOrganiqueG(perdu / cnHumus);
       // Tout le carbone de l'humus minéralisé part en CO₂, comme dans le tick :
       // l'ancienne ligne en retranchait la masse de l'azote libéré, et un
       // onzième du carbone perdu sortait des comptes sans être émis.
@@ -2829,6 +2832,7 @@ function applyLabourer(
         mycorhizes,
         tassement,
         potassiumG,
+        phosphoreG,
       },
       carbon: {
         ...state.carbon,
