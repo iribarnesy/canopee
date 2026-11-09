@@ -19,7 +19,7 @@
  * prairies : la perte vient de la préparation du sol et de l'arrêt des apports,
  * pas de l'arbre.
  *
- * **Ce creux est mince, et il tient à la litière de la prairie** (#482). Les
+ * **Ce creux est mince, et il tient au mélange des litières** (#482). Les
  * −2,04 t C/ha de la première année qu'écrivait cet en-tête étaient périmés :
  * avant #482, main ne creusait plus que de 0,35 t C/ha, à la troisième année, et
  * repassait au-dessus du départ la cinquième. Le creux vient de la litière que
@@ -27,11 +27,15 @@
  * verte, puis celle qui repousse sur le labour, où l'humus brûlé vient de rendre
  * 68 kg N/ha, apportent une litière plus riche (C/N 62 la première année,
  * contre 83) ; la vitesse de décomposition de toute la litière de la cellule,
- * qui mêle ce qui y est tombé, monte alors de 15 % : le stock perd
- * 0,74 t C/ha en trois ans, quand celui du bras intact en gagne. Le terrain
- * montre bien moins de litière dans une prairie, et sous O2 (#470), où elle
- * n'en porte que 5,4 t C/ha, le creux disparaît : +0,30 t C/ha au plus bas. Ce
- * niveau de litière est instruit dans #482, sans décision encore.
+ * qui mêle ce qui y est tombé, monte alors de 15 % : le stock perd 0,74 t C/ha
+ * en trois ans, quand celui du bras intact en gagne. **C'est ce saut qui creuse,
+ * plus que le niveau de la litière** : une sonde qui la divise par deux ou par
+ * quatre en accélérant sa décomposition garde un creux (−0,39 et −0,13 t C/ha),
+ * alors que sous O2 (#470), où la litière tombe déjà riche (C/N 37) et ne
+ * change presque pas au labour, il disparaît (+0,30 au plus bas). Le niveau de
+ * la litière (11,4 t C/ha, plusieurs fois ce qu'une prairie abandonnée porte
+ * sur le terrain : les sources sont à la ligne I8 de docs/realisme.md) et ce
+ * mélange sont instruits dans #482, sans décision encore.
  *
  * **L'herbe sur pied est à l'inventaire depuis #482.** Elle n'y était pas : au
  * labour, elle passait à la litière et entrait au bilan le jour même, et ses

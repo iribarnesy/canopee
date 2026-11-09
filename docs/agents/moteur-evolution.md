@@ -61,7 +61,68 @@ qu'un rapport (voir la note de maintenance).
 Séparer calibration et validation : caler un paramètre sur un âge, garder
 l'autre âge pour vérifier.
 
-## Ce que le dernier lot a appris (la boucle du phosphore de l'herbe, #473 ; la fauche relue sur Davies 1985, le pin sur sept graines, le décor des ajoncs allongé)
+## Ce que le dernier lot a appris (l'inventaire de carbone, #482 : l'herbe sur pied comptée, la litière de prairie instruite)
+
+Le lot de maintenance décidé sur #470 (commentaire du propriétaire du 9 novembre), parce qu'I8 tenait à la litière en trop. C1 : l'inventaire de carbone compte l'herbe sur pied. C2 : la litière de prairie est instruite, sans qu'aucun mécanisme ni aucune constante ne change. Aucun champ d'état : le format reste 16. Prédictions (P1 à P3) et mesures dans les commits de la branche, avant chaque course ; sondes hors dépôt, sur les graines 1, 2 et 3 du banc d'I8.
+
+### Un stock qu'aucun inventaire ne compte entre au bilan le jour où il en sort
+
+La strate créditait la production primaire au moment où son carbone tombait en litière : il n'existait pour le bilan qu'une fois arrivé dans un stock compté. Tant que la chute est lente, l'écart ne se voit pas. Le labour, lui, verse toute la prairie d'un coup : ses 0,72 t C/ha entraient au bilan le jour où l'humus en perdait 0,75, et le total ne baissait que de 0,03. L'herbe sur pied est maintenant un stock, vivante et morte, au taux de carbone qu'elle porte en tombant (`CARBON_FRACTION`), et la production primaire est créditée à sa croissance. La chute, la fauche, la paille et le labour deviennent des transferts ; le feu émet ce qu'il en brûle ; le grain moissonné, qui sortait sans avoir jamais été compté, part en export émetteur (§12). Le labour coûte maintenant 0,75 t C/ha au total, le jour même. **La règle de #340, un seul total, vaut aussi pour ce qu'on n'a pas encore compté** : un compartiment laissé hors de l'inventaire masque tout transfert qui en sort.
+
+### Une correction de mesure se vérifie à ce qu'elle ne change pas
+
+Sur le banc d'I8, la litière, l'humus, les arbres et l'herbe sont identiques au millième avec et sans C1, sur les trois graines : le nouveau total est l'ancien plus l'herbe. La propriété de conservation passe sans toucher ses tolérances ; sans le crédit de croissance, elle attrape 1,12 kg C dès la première semaine de pousse. Elle exerce maintenant le labour, et vérifie qu'il n'est pas refusé : la première zone choisie l'était, un semis venu dans le disque suffisant à bloquer l'engin, et la propriété serait restée verte sans rien vérifier. **Un chemin ajouté à une propriété doit prouver qu'il est emprunté.**
+
+### Un creux mince se décompose avant de se défendre
+
+Le creux de main (−0,35 t C/ha, −0,34 avec l'herbe) n'est pas celui que l'en-tête racontait. À la troisième année, le bras labouré est à 0,95 t C/ha sous le bras intact : 0,83 de litière, 0,14 d'humus seulement. L'humus brûlé au labour est rendu aux quatre cinquièmes en trois ans, par l'humification de la litière qui se décompose plus vite. Plus vite parce que l'herbe retournée, verte, puis celle qui repousse apportent une litière plus riche (C/N 62 contre 83 la première année) : la vitesse d'une cellule est un mélange pondéré de ce qui y est tombé, elle monte de 15 % (0,373 → 0,43 par an), et elle s'applique à toute la litière, l'ancienne comprise. La prémisse du lot était que le creux tenait à la litière en trop. Il tient plutôt à ce saut : une sonde qui divise la litière par deux en doublant la constante de décomposition garde un creux (−0,39 ; le saut monte à 23 %), et la quadrupler le réduit à −0,13 sans l'effacer (litière 3,05 t C/ha, saut 27 %). Sous O2, la litière tombe déjà riche (C/N 37) et ne change presque pas au labour : le saut n'est que de 12 %, sur un stock deux fois moindre, et le creux disparaît (+0,30). **Avant de défendre un creux, le décomposer** : celui-ci ne tenait ni au labour (l'humus brûlé revient), ni à l'arbre, ni au seul niveau de la litière, mais au contraste entre ce que la prairie laisse tomber et ce que le labour y mêle.
+
+### Le niveau d'une litière se lit sur deux nombres
+
+À l'équilibre, le stock vaut les apports divisés par la vitesse. Sur la prairie du banc : 4,29 t C/ha/an d'apports, toute la production de la strate tombant en surface (elle n'a pas de racines, et rien n'est fauché ni pâturé) ; 0,374 par an de vitesse, soit la constante de `litterDecayRate` (0,6 / C/N par semaine, *à calibrer*) au C/N de ce qui tombe (83), le facteur climatique valant 0,995 en moyenne annuelle sur le limon riche. **Aucune faim d'azote ne freine cette décomposition** : la variante qui retire le frein rend les mêmes nombres. Sous O2 : 4,32 et 0,80, d'où 5,45 t C/ha. Une prairie abandonnée en porte de l'ordre de 0,8 à 2,9 t C/ha (170 à 600 g de matière sèche par m², sources à la ligne I8 de `docs/realisme.md`) ; avec les apports du moteur, il faudrait une vitesse de 1,5 à 5,4 par an pour y arriver, au-delà de ce que les sacs de litière mesurent (les feuilles de graminées sont la litière la plus rapide de la compilation de Zhang et al. 2008, *J. Plant Ecol.* 1 : 85, dont les moyennes par végétation vont de 0,18 à 1,3 par an). La constante quadruplée y arrive (3,05) en montant l'humus de 2,7 % en vingt ans. **Un stock trop haut ne dit pas lequel des deux nombres est faux** : ici, les apports le sont au moins autant que la vitesse, puisque 40 à 86 % de la production d'une prairie part sous terre (Hui et Jackson 2006, *New Phytol.* 169 : 85).
+
+### Ce que ça donne
+
+Banc d'I8 (limon riche, 50 m, prairie spontanée de vingt ans, puis 150 chênes pubescents), graines 1, 2 et 3 ; la prairie rend les mêmes nombres au millième, les creux diffèrent de 0,002 au plus. Inventaire en t C/ha, relatif au départ.
+
+| | départ | au labour | creux (année) | croisement | sans labour |
+|---|---|---|---|---|---|
+| main | 86,505 | −0,029 | −0,351 / −0,354 / −0,352 (3) | 5 | +0,204 |
+| main + C1 | 87,226 | −0,750 | −0,335 / −0,337 / −0,336 (3) | 5 | +0,204 |
+| O2 (449b765) + C1 | 81,595 | −0,754 | +0,302 / +0,301 / +0,301 (2) | 3 | +0,199 |
+
+Le budget de la litière de la prairie (ans 16 à 20) et ce que le labour en fait, lus avec l'herbe sur pied :
+
+| | apports (t C/ha/an) | C/N de ce qui tombe | vitesse (par an) | litière à 20 ans | saut au labour | creux d'I8 |
+|---|---|---|---|---|---|---|
+| main | 4,29 | 83,0 | 0,374 | 11,44 | +15 % | −0,34 (an 3) |
+| main, constante ×2 | 4,36 | 82,7 | 0,735 | 5,94 | +23 % | −0,39 (an 2) |
+| main, constante ×4 | 4,40 | 83,0 | 1,447 | 3,05 | +27 % | −0,13 (an 2) |
+| O2 | 4,32 | 37,5 | 0,798 | 5,45 | +12 % | +0,30 |
+
+Aucune de ces décompositions n'est freinée par l'azote, et le facteur climatique vaut 0,995 en moyenne annuelle. À la troisième année, le bras labouré est sous le bras intact de 0,95 t C/ha sur main (litière −0,83, humus −0,14) et de 0,23 sous O2.
+
+CI du push de C1 (cf32aaf, run 42657381866) : verte, les vérifications et les six tranches d'essais, I8, `feu.test.ts` et la propriété de conservation compris.
+
+### Les prédictions fausses
+
+- P2 A4 : la faim d'azote devait freiner la décomposition de 30 à 60 % sur main ; elle ne la freine pas du tout, et la variante sans frein rend les mêmes nombres (P2 B1, B2, C1).
+- P2 A6 : le facteur climatique devait valoir 0,4 à 0,6 ; 0,995, parce que la référence du Q10 est 12 °C et que l'été compense l'hiver.
+- P2 C2 : les apports de la première année après le labour devaient baisser de 20 à 40 % ; ils montent de 17 %, l'herbe repoussant plus riche.
+- P3 2 : l'humus devait rester à 1,5 % de main sous une décomposition plus vive ; il monte de 1,8 et 2,7 %.
+- P3 5 : la constante quadruplée devait faire mordre la faim d'azote ; elle ne mord toujours pas.
+- P3 6 : le creux devait disparaître avec la litière ; il reste (−0,39 et −0,13). C'est la prédiction qui a corrigé la prémisse du lot.
+- Hors prédiction : la propriété de conservation a d'abord labouré une zone que l'engin ne pouvait pas atteindre, et serait restée verte sans exercer le labour.
+
+### Ce qui reste ouvert
+
+- **I8 sous O2.** C1 ne le rend pas à #470 (+0,30). Ce qui creuse sur main est le saut de vitesse d'une litière pauvre que le labour enrichit ; sous O2, la litière est déjà riche. La borne (une direction, sans nombre sourcé) n'a pas bougé. Une source chiffrée existe sur le sol seul : Paul et al. 2002 (*For. Ecol. Manage.* 168 : 241), le carbone du sol d'une prairie boisée baisse de 0,63 % par an sur 0-30 cm les cinq premières années, et la litière comptée renverse cette baisse en moyenne (lu par résumé, *à confirmer*). Sur main avec C1, le sol (humus et litière) perd 0,39 t C/ha (0,45 %) au plus bas ; sous O2, il gagne. C'est une décision du propriétaire.
+- **Le niveau de la litière de prairie** (C2). Les apports sont toute la production de la strate, en surface : elle n'a pas de racines, et 40 à 86 % de la production d'une prairie part sous terre (Hui et Jackson 2006). La vitesse est la constante sans ancre de `litterDecayRate`, commune à toutes les litières. Options et recommandation dans #482 et la PR #485.
+- **Le mélange des vitesses** : une cellule n'a qu'une litière et qu'une vitesse, pondérée par l'azote de ce qui tombe. Une litière fraîche et riche accélère l'ancienne, ce qui ressemble à un amorçage mais n'est réglé sur aucune mesure.
+- **Le grain moissonné** passe dans le compteur du bois énergie, le seul export émetteur : le nom du champ ment un peu, et le changer changerait la forme du bloc.
+- **Les parties sauvegardées avant ce lot** gardent une référence figée sans l'herbe : leur bilan affiché gagne une fois l'herbe portée à la reprise. Refuser les anciens blocs serait l'autre choix.
+
+## Ce qu'un lot précédent a appris (la boucle du phosphore de l'herbe, #473 ; la fauche relue sur Davies 1985, le pin sur sept graines, le décor des ajoncs allongé)
 
 Le lot de maintenance décidé sur #461 (option 1 du rapport P8) : le phosphore que l'herbe prend avec l'azote que sa litière recycle ne reviendrait jamais au sol. Une sonde de main (compteurs seuls, aucun calcul changé) a d'abord écrit le bilan du phosphore de bout en bout, sur neuf bancs. Deux variantes ont ensuite été codées et mesurées sur la sonde et en CI : A, le phosphore suit l'azote organique à chaque passage vers le minéral et retour ; B, A sans le surplus que les feuilles d'arbre rendaient à la chute (`RETOUR_LITIERE_P` retiré). Elles referment le bilan, et deux essais tombent sous l'une et l'autre : la fauche ne coûte plus rien au pin de la lande, et les pins du sable d'une graine du banc des hauteurs, mieux nourris, tombent tous au vent ; sous B, le décor des ajoncs de `bases.test.ts` ne vide plus aucune cellule de ses bases. Le lot s'est arrêté là. Le propriétaire a retenu B, fait relire l'essai de la fauche sur Davies 1985, élargir le banc du pin à sept graines et allonger le décor des ajoncs ; la transpiration de l'herbe fauchée, qui portait la direction perdue, part dans #477. Aucun champ d'état : le format reste celui de main (16 depuis #476). Prédictions et mesures dans les commits de la branche, avant chaque course.
 
