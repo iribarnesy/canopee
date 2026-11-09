@@ -2556,6 +2556,10 @@ export function tick(state: GameState, weather: WeekWeather, essai?: ReglagesDEs
         (oldN + litiereNCellule);
       litterNG[i] = oldN + litiereNCellule;
       litterCG[i] = (litterCG[i] ?? 0) + litiereCCellule;
+    } else if (litiereCCellule > 0) {
+      // Un mort sur pied sans azote, ce qu'une plante qui a poussé ne connaît
+      // pas : son carbone tombe quand même, sans quoi il sortirait des comptes.
+      litterCG[i] = (litterCG[i] ?? 0) + litiereCCellule;
     }
     // Ce que la cellule **couvre** : la somme des feuillages. Tout le reste du
     // moteur lit cette ligne et ignore les espèces.
