@@ -44,34 +44,82 @@
  * et l'écartement de **huit** mètres du `describe` ci-dessous est l'écartement de
  * repli qu'il a fallu prendre : le seul qui reste sous le plafond parcellaire.
  *
- * Le plafond est devenu local, et la futaie vraiment dense, qui était le cas
- * intéressant et qui était hors de portée, a son propre banc :
- * `trouees-couvert-ferme.test.ts`, une hêtraie que le moteur fait pousser à
- * trois mètres. Le dispositif de repli reste ici parce qu'il mesure autre chose
- * et le mesure bien : sous un couvert **perméable**, la trouée concentre et trie,
- * là où le couvert serré, lui, oppose un zéro franc. Les deux bancs partagent
- * leur parcelle, leur trouée, leur pluie de semis et leur comptage
- * (`trouees-commun.ts`).
+ * Le plafond est devenu local (#95), et cet essai a porté un second banc : une
+ * futaie plantée à trois mètres, le couvert vraiment fermé qui était le cas
+ * intéressant. **Il est sorti d'ici avec #467**, parce que le moteur ne tient pas
+ * aujourd'hui un couvert vraiment fermé (docs/realisme.md F7). Planté adulte,
+ * il meurt de faim à l'élancement d'un arbre sans histoire (H/D 50) et casse au
+ * vent dans le premier mois à celui d'une hêtraie serrée (H/D 97, #483) ; poussé
+ * par le moteur, il laisse passer 3 à 4 % de la lumière d'été, contre 1 à 3 %
+ * sous le hêtre. Son essai est devenu l'essai d'acceptation du lot lumière
+ * (#484). Le dispositif de repli reste ici parce qu'il mesure autre chose et le
+ * mesure bien : sous un couvert **perméable**, la trouée concentre et trie.
  */
 
 import { beforeAll, describe, expect, it } from "vitest";
+import { syntheticYear } from "../../src/engine/meteo";
 import { rngStateFromSeed } from "../../src/engine/rng";
 import { createGameState, type GameState, plantAt } from "../../src/engine/state";
-import { COTE, type Comptage, compterApres, GRAINES, ouvrir, STATION } from "./trouees-commun";
+import { LIMON_RICHE } from "../../src/engine/stations";
+import { tick } from "../../src/engine/tick";
 
+const COTE = 40;
 /** Écartement de la hêtraie : couvert fermé, mais **sous** le plafond de recouvrement. */
 const ECART = 8;
 const H_CANOPEE = 15;
+/** Rayon des tiges qu'on fait mourir. */
+const RAYON_TROUEE = 8;
+/** Rayon de comptage, plus petit : la zone comptée est tout entière dans l'ouverture. */
+const RAYON_COMPTE = 6;
+/**
+ * Les deux zones sont **symétriques** par rapport au milieu de la parcelle, à la
+ * même ordonnée. C'est nécessaire : l'ombre est décalée vers le nord
+ * (`SHADOW_NORTH_OFFSET`), et deux zones à des ordonnées différentes ne
+ * seraient pas comparables.
+ */
+const TROUEE = { x: 12, y: 20 };
+const TEMOIN = { x: 28, y: 20 };
+const ANS = 15;
+const GRAINES = [1, 2, 3, 4, 5];
+
+function dans(x: number, y: number, c: { x: number; y: number }, r: number): boolean {
+  const dx = x - c.x;
+  const dy = y - c.y;
+  return dx * dx + dy * dy <= r * r;
+}
+
+interface Comptage {
+  /** recrues de toute espèce sur la parcelle entière */
+  total: number;
+  trouee: number;
+  temoin: number;
+  bouleauTrouee: number;
+  bouleauTemoin: number;
+  charmeTrouee: number;
+  charmeTemoin: number;
+}
 
 /**
  * Une hêtraie fermée de quinze mètres, quinze ans plus tard, sous une pluie de
- * semis venue du paysage. `ouvre` fait mourir de vieillesse les tiges d'un
- * disque (`ouvrir`, `trouees-commun.ts`).
+ * semis venue du paysage. `ouvrir` fait mourir de vieillesse les tiges d'un
+ * disque : c'est la trouée du cycle sylvigénétique, et elle est provoquée plutôt
+ * que subie parce qu'une mort tirée au sort ne tomberait pas au même endroit
+ * d'une graine à l'autre — il n'y aurait plus rien à apparier.
  */
-function hetraie(seed: number, ouvre: boolean): Comptage {
-  let state: GameState = createGameState(STATION, rngStateFromSeed(seed));
-  for (let x = ECART / 2; x < COTE; x += ECART) {
-    for (let y = ECART / 2; y < COTE; y += ECART) {
+function hetraie(seed: number, ouvrir: { x: number; y: number } | null, ecart = ECART): Comptage {
+  const station = {
+    ...LIMON_RICHE.station,
+    coteM: COTE,
+    gibierParHa: 0,
+    voisinage: [
+      { especeId: "betula_pendula", semisParAn: 8 },
+      { especeId: "carpinus_betulus", semisParAn: 8 },
+    ],
+  };
+  const meteo = syntheticYear(LIMON_RICHE.climat);
+  let state: GameState = createGameState(station, rngStateFromSeed(seed));
+  for (let x = ecart / 2; x < COTE; x += ecart) {
+    for (let y = ecart / 2; y < COTE; y += ecart) {
       state = plantAt(state, "fagus_sylvatica", x, y, H_CANOPEE);
     }
   }
@@ -79,7 +127,35 @@ function hetraie(seed: number, ouvre: boolean): Comptage {
   // ans et la partie en dure quinze. Toutes les recrues viennent donc du
   // paysage, ce qui laisse la seule lumière décider de leur position.
   const dernierPlante = state.nextTreeId - 1;
-  return compterApres(ouvre ? ouvrir(state) : state, dernierPlante);
+  if (ouvrir) {
+    state = {
+      ...state,
+      trees: state.trees.map((t) =>
+        dans(t.x, t.y, ouvrir, RAYON_TROUEE)
+          ? { ...t, alive: false, causeMort: "vieillesse" as const }
+          : t,
+      ),
+    };
+  }
+  for (let w = 0; w < ANS * 52; w++) {
+    const m = meteo[w % 52];
+    if (!m) throw new Error("météo manquante");
+    state = tick(state, m).state;
+  }
+  const recrues = state.trees.filter((t) => t.id > dernierPlante && t.alive);
+  const zone = (c: { x: number; y: number }, id?: string) =>
+    recrues.filter(
+      (t) => dans(t.x, t.y, c, RAYON_COMPTE) && (id === undefined || t.especeId === id),
+    ).length;
+  return {
+    total: recrues.length,
+    trouee: zone(TROUEE),
+    temoin: zone(TEMOIN),
+    bouleauTrouee: zone(TROUEE, "betula_pendula"),
+    bouleauTemoin: zone(TEMOIN, "betula_pendula"),
+    charmeTrouee: zone(TROUEE, "carpinus_betulus"),
+    charmeTemoin: zone(TEMOIN, "carpinus_betulus"),
+  };
 }
 
 describe("une trouée dans un couvert fermé", () => {
@@ -92,7 +168,7 @@ describe("une trouée dans un couvert fermé", () => {
   // le couvre et la panne se lit au lieu de bloquer.
   beforeAll(() => {
     for (const seed of GRAINES) {
-      parties.push({ seed, trouee: hetraie(seed, true), fermee: hetraie(seed, false) });
+      parties.push({ seed, trouee: hetraie(seed, TROUEE), fermee: hetraie(seed, null) });
     }
   }, 600_000);
 
