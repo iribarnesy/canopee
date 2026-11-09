@@ -2,7 +2,7 @@
  * Ce que partagent les deux bancs de la trouée (docs/realisme.md F7) :
  * `trouees.test.ts`, une hêtraie de 15 m plantée à 8 m (un couvert perméable),
  * et `trouees-couvert-ferme.test.ts`, une hêtraie que le moteur fait pousser à
- * 3 m (un couvert vraiment fermé). La même parcelle, la même trouée, la même
+ * 2 m (un couvert vraiment fermé). La même parcelle, la même trouée, la même
  * pluie de semis et le même comptage.
  */
 
@@ -130,18 +130,25 @@ export function compterApres(depart: GameState, dernier: number): Comptage {
   };
 }
 
-/** Écartement du couvert vraiment fermé, m : le recouvrement y dépasse le plafond. */
-export const SERRE = 3;
+/** Écartement du couvert vraiment fermé, m : celui de la plantation de F6. */
+export const SERRE = 2;
 /** Les années que le moteur laisse pousser le couvert avant d'ouvrir. */
 export const ANS_COUVERT = 40;
 
 /**
+ * La station du couvert vraiment fermé : la même, sans vent (`ventExposition`
+ * 0, comme la chênaie de `glandee`). Ce banc mesure le tri par la lumière ; la
+ * tempête qui casse une futaie serrée a son issue (#483).
+ */
+const STATION_CALME: Station = { ...STATION, ventExposition: 0 };
+
+/**
  * Le couvert vraiment fermé, que le moteur fait pousser : des hêtres plantés à
- * 3 m (0,3 m, le plant par défaut), quarante ans, sans pluie de semis. Rend
- * l'état au moment d'ouvrir et la lumière d'été de la zone, l'été d'avant.
+ * 2 m (0,3 m, le plant par défaut), quarante ans, sans pluie de semis ni vent.
+ * Rend l'état au moment d'ouvrir et la lumière d'été de la zone, l'été d'avant.
  */
 export function couvertFerme(seed: number): { etat: GameState; lumiere: number } {
-  let state = createGameState({ ...STATION, voisinage: [] }, rngStateFromSeed(seed));
+  let state = createGameState({ ...STATION_CALME, voisinage: [] }, rngStateFromSeed(seed));
   for (let x = SERRE / 2; x < COTE; x += SERRE) {
     for (let y = SERRE / 2; y < COTE; y += SERRE) {
       state = plantAt(state, "fagus_sylvatica", x, y);
@@ -159,6 +166,6 @@ export function couvertFerme(seed: number): { etat: GameState; lumiere: number }
 
 /** Ouvre (ou non) le couvert, fait tomber la pluie de semis et compte. */
 export function apresOuverture(couvert: GameState, trouee: boolean): Comptage {
-  const depart: GameState = { ...couvert, station: STATION };
+  const depart: GameState = { ...couvert, station: STATION_CALME };
   return compterApres(trouee ? ouvrir(depart) : depart, couvert.nextTreeId - 1);
 }
