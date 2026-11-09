@@ -71,7 +71,7 @@ La strate créditait la production primaire au moment où son carbone tombait en
 
 ### Une correction de mesure se vérifie à ce qu'elle ne change pas
 
-Sur le banc d'I8, la litière, l'humus, les arbres et l'herbe sont identiques au millième avec et sans C1, sur les trois graines : le nouveau total est l'ancien plus l'herbe. La propriété de conservation passe sans toucher ses tolérances ; sans le crédit de croissance, elle attrape 1,12 kg C dès la première semaine de pousse. Elle exerce maintenant le labour, et vérifie qu'il n'est pas refusé : la première zone choisie l'était, un semis venu dans le disque suffisant à bloquer l'engin, et la propriété serait restée verte sans rien vérifier. **Un chemin ajouté à une propriété doit prouver qu'il est emprunté.**
+Sur le banc d'I8, la litière, l'humus, les arbres et l'herbe sont identiques au millième avec et sans C1, sur les trois graines : le nouveau total est l'ancien plus l'herbe. La propriété de conservation passe sans toucher ses tolérances ; sans le crédit de croissance, elle attrape 1,12 kg C dès la première semaine de pousse. Le grand livre du rejet de souche de `feu.test.ts`, laissé tel quel, échoue de 34,5 kg C : le feu émet maintenant l'herbe qu'il brûle, et ce grand livre ne la comptait dans aucun stock. Elle exerce maintenant le labour, et vérifie qu'il n'est pas refusé : la première zone choisie l'était, un semis venu dans le disque suffisant à bloquer l'engin, et la propriété serait restée verte sans rien vérifier. **Un chemin ajouté à une propriété doit prouver qu'il est emprunté.**
 
 ### Un creux mince se décompose avant de se défendre
 
@@ -113,6 +113,7 @@ CI du push de C1 (cf32aaf, run 42657381866) : verte, les vérifications et les s
 - P3 5 : la constante quadruplée devait faire mordre la faim d'azote ; elle ne mord toujours pas.
 - P3 6 : le creux devait disparaître avec la litière ; il reste (−0,39 et −0,13). C'est la prédiction qui a corrigé la prémisse du lot.
 - Hors prédiction : la propriété de conservation a d'abord labouré une zone que l'engin ne pouvait pas atteindre, et serait restée verte sans exercer le labour.
+- Tenues, pour mémoire : tout P1 (le départ à 87,2, la perte de 0,75 au labour, le creux de −0,33 à −0,34 à l'an 3, le croisement à l'an 5, l'absence de creux sous O2, l'échec du grand livre du feu sans l'herbe) ; P2 A1, A2, A3, A5 ; P3 1, 3, 4.
 
 ### Ce qui reste ouvert
 
