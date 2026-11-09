@@ -10,7 +10,7 @@
 
 import { describe, expect, it } from "vitest";
 import { serieMeteoPour } from "../../src/data/meteo";
-import { livingCarbonKg, treeTotalCarbonKg } from "../../src/engine/carbon";
+import { CARBON_FRACTION, livingCarbonKg, treeTotalCarbonKg } from "../../src/engine/carbon";
 import { getEspece } from "../../src/engine/especes";
 import {
   accessibiliteDuHouppier,
@@ -188,12 +188,24 @@ describe("le rejet de souche ne crée ni ne détruit de carbone", () => {
      * parcelle (0,5 kg cette semaine-là) s'en allait dans `erosionCumKgC` sans
      * que ce grand livre le compte. `carbon-conservation.test.ts`, lui, le
      * comptait depuis toujours.
+     *
+     * Le cinquième est l'**herbe sur pied**, vivante et morte (#482). Elle
+     * n'était à aucun inventaire : son carbone entrait par la production
+     * primaire en tombant en litière, et le feu la brûlait sans rien émettre.
+     * Elle est un stock depuis, créditée à sa croissance, et le feu émet ce
+     * qu'il en brûle : sans elle, ce grand livre verrait le feu détruire la
+     * croissance de la semaine.
      */
     const bilan = (s: GameState) => {
       let solG = 0;
       for (let k = 0; k < s.soil.boisAuSolCG.length; k++) {
         solG += (s.soil.boisAuSolCG[k] ?? 0) + (s.soil.litterCG[k] ?? 0) + (s.soil.humusCG[k] ?? 0);
       }
+      let herbeMatiereG = 0;
+      for (let k = 0; k < s.soil.herbeMatiereSecheG.length; k++) {
+        herbeMatiereG += (s.soil.herbeMatiereSecheG[k] ?? 0) + (s.soil.herbeMorteG[k] ?? 0);
+      }
+      solG += herbeMatiereG * CARBON_FRACTION;
       let enSuspensKgC = 0;
       for (const t of s.trees) {
         if (!t.alive && t.mortSemaine === undefined) {

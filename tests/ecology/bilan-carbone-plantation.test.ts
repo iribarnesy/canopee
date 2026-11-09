@@ -15,10 +15,31 @@
  * matière (#247), une prairie installée tient son humus (Park Grass), et la
  * plantation qu'on y fait sans travailler le sol **ne creuse pas** : le stock
  * ne descend jamais sous le départ (+0,20 t C/ha au plus bas). Le creux revient
- * avec le labour, −2,04 t C/ha la première année, et le stock repasse au-dessus
- * du départ la septième. C'est ce que dit la littérature de l'afforestation des
+ * avec le labour. C'est ce que dit la littérature de l'afforestation des
  * prairies : la perte vient de la préparation du sol et de l'arrêt des apports,
  * pas de l'arbre.
+ *
+ * **Ce creux est mince, et il tient à la litière de la prairie** (#482). Les
+ * −2,04 t C/ha de la première année qu'écrivait cet en-tête étaient périmés :
+ * avant #482, main ne creusait plus que de 0,35 t C/ha, à la troisième année, et
+ * repassait au-dessus du départ la cinquième. Le creux vient de la litière que
+ * la prairie a bâtie en vingt ans, 11,4 t C/ha au labour. L'herbe retournée,
+ * verte, puis celle qui repousse sur le labour, où l'humus brûlé vient de rendre
+ * 68 kg N/ha, apportent une litière plus riche (C/N 62 la première année,
+ * contre 83) ; la vitesse de décomposition de toute la litière de la cellule,
+ * qui mêle ce qui y est tombé, monte alors de 15 % : le stock perd
+ * 0,74 t C/ha en trois ans, quand celui du bras intact en gagne. Le terrain
+ * montre bien moins de litière dans une prairie, et sous O2 (#470), où elle
+ * n'en porte que 5,4 t C/ha, le creux disparaît : +0,30 t C/ha au plus bas. Ce
+ * niveau de litière est instruit dans #482, sans décision encore.
+ *
+ * **L'herbe sur pied est à l'inventaire depuis #482.** Elle n'y était pas : au
+ * labour, elle passait à la litière et entrait au bilan le jour même, et ses
+ * 0,72 t C/ha masquaient la perte d'humus du labour (0,75). Le total part
+ * maintenant de 87,2 t C/ha, perd 0,75 t C/ha au labour, finit la première année
+ * au-dessus du départ (+0,34 : l'herbe a repoussé, l'humus remonte), descend à
+ * −0,33 et −0,34 les deux suivantes et repasse au-dessus la cinquième, sur les
+ * trois graines.
  *
  * Ce qui est épinglé ici, ce sont des **directions** vérifiées graine par graine.
  * La date du croisement est relevée en commentaire et non assertée : elle
@@ -131,8 +152,9 @@ describe("le bilan carbone d'une plantation", () => {
   }, 900_000);
 
   it("passe SOUS son point de départ dans les premières années", () => {
-    // Mesuré dans une prairie installée (85,6 t C/ha au départ) : −2,04 t C/ha
-    // après labour, la première année, sur les trois graines.
+    // Mesuré dans une prairie installée (87,2 t C/ha au départ, herbe sur pied
+    // comprise) : −0,34 t C/ha après labour, à la troisième année, sur les trois
+    // graines. La borne est une direction, sans nombre sourcé (#482).
     for (const p of parties) {
       expect(p.laboure.creux).toBeLessThan(0);
       // Et il est atteint **tôt** : pas un déclin sans fin, un creux qu'on franchit.
@@ -141,8 +163,9 @@ describe("le bilan carbone d'une plantation", () => {
   });
 
   it("puis repasse au-dessus, sans que la date du croisement soit épinglée", () => {
-    // Croisement relevé : 7ᵉ année après labour (22ᵉ–23ᵉ avant #247, quand la
-    // prairie minait son humus). Le chiffre
+    // Croisement relevé : 5ᵉ année après labour (7ᵉ quand la litière de la
+    // prairie était plus haute encore, 22ᵉ–23ᵉ avant #247, quand la prairie
+    // minait son humus). Le chiffre
     // est là pour être relu, pas pour contraindre — il tient à toute la
     // croissance, et il a d'ailleurs reculé de deux ans quand l'infradensité
     // (#68) a allégé le carbone vivant des jeunes tiges.
@@ -153,10 +176,10 @@ describe("le bilan carbone d'une plantation", () => {
   });
 
   it("le labour CREUSE le déficit et ne hâte jamais le retour, graine par graine", () => {
-    // C'est ici que le travail du sol se lit : −2,04 t C/ha avec labour contre
-    // +0,20 sans, et le retour au-dessus du départ à la septième année contre
-    // la première. Le labour retourne la prairie, et pendant qu'elle repousse
-    // elle ne rend plus rien à la litière.
+    // C'est ici que le travail du sol se lit : −0,34 t C/ha avec labour contre
+    // +0,20 sans, et le retour au-dessus du départ à la cinquième année contre
+    // la deuxième. Le labour brûle un pour cent de l'humus, et la litière de la
+    // prairie se décompose plus vite pendant que l'herbe repousse.
     for (const p of parties) {
       expect(p.laboure.creux).toBeLessThan(p.intact.creux);
       expect(p.laboure.croisement).toBeGreaterThanOrEqual(p.intact.croisement);

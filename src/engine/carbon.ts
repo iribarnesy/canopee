@@ -2,12 +2,14 @@
  * Comptabilité carbone (docs/regles.md §12). Pools suivis :
  * - biomasse vivante (dérivée des arbres, allométrie hauteur → volume → C) ;
  * - bois mort (troncs des morts et souches des coupés), debout ou couché ;
+ * - la strate herbacée sur pied, vivante et morte (#482) ;
  * - carbone de la litière (par cellule, décomposé avec l'azote) ;
  * - humus du sol (par cellule : **le** plus gros stock en tempéré) ;
  * - le tas de broyat, en attendant d'être épandu.
- * Flux : NPP (croissance + feuillage), humification (litière/bois mort →
- * humus), émissions (décompositions → CO₂), export bois énergie (brûlé chez
- * le client = émis immédiatement, §12 : le bois énergie ne stocke rien).
+ * Flux : NPP (croissance des arbres, feuillage, croissance de la strate),
+ * humification (litière/bois mort → humus), émissions (décompositions → CO₂),
+ * exports émetteurs (bois énergie brûlé chez le client, grain mangé dans
+ * l'année : §12, ils ne stockent rien).
  * Invariant testé : NPP = Δ(tous les pools) + émissions + exports, sur le
  * total que l'écran affiche (`stocksCarbone`).
  * V1 : bois d'œuvre avec durée de vie, labour qui déstocke, couplage
@@ -200,11 +202,23 @@ export interface CarbonState {
    * reprenait plus tard de l'azote au sol.
    */
   deadWoodNG: number;
-  /** production primaire nette cumulée (bois + feuillage), kg C */
+  /**
+   * Production primaire nette cumulée, kg C : le bois et le feuillage des
+   * arbres, et ce que la strate herbacée fabrique, crédité **à sa croissance**
+   * (#482). Ce qu'elle rend ensuite à la litière, coupé, retourné ou tombé, est
+   * un transfert entre deux stocks de l'inventaire et n'entre plus ici.
+   */
   nppCumKgC: number;
-  /** CO₂ émis cumulé par les décompositions, kg C */
+  /** CO₂ émis cumulé par les décompositions et le feu, kg C */
   emittedCumKgC: number;
-  /** bois énergie exporté cumulé (brûlé = émis, §12), kg C */
+  /**
+   * Les exports **émetteurs** cumulés, kg C : ce qui quitte la parcelle pour être
+   * émis dans l'année chez celui qui l'achète (§12, « exports (récoltes,
+   * bois) »). Le bois énergie et le bois mort ramassé, brûlés ; et depuis que
+   * l'herbe sur pied est à l'inventaire (#482), le grain moissonné, mangé. Le
+   * nom est resté celui du premier : le changer changerait la forme du bloc de
+   * sauvegarde.
+   */
   exportedEnergyCumKgC: number;
   /** carbone importé par les plants achetés en pépinière, kg C */
   importedPlantsCumKgC: number;
@@ -258,6 +272,8 @@ export interface CarbonInventory {
   vivantTHa: number;
   /** tout le bois mort : debout, couché, et les tués pas encore ramassés */
   boisMortTHa: number;
+  /** la strate herbacée sur pied, vivante et morte, t C/ha (#482) */
+  herbeTHa: number;
   litiereTHa: number;
   /** broyat en tas, pas encore épandu, t C/ha */
   brfTHa: number;
@@ -298,6 +314,12 @@ export interface StocksCarbone {
   boisMortKgC: number;
   /** le bois couché, cellule par cellule (boisMort.ts) */
   boisCoucheKgC: number;
+  /**
+   * La strate herbacée **sur pied** (#482) : sa matière vivante et son mort sur
+   * pied (le foin, la paille), toutes espèces, au même taux de carbone que
+   * lorsqu'elle tombe en litière.
+   */
+  herbeKgC: number;
   litiereKgC: number;
   humusKgC: number;
   /** le tas de broyat, pas encore épandu */
@@ -317,9 +339,18 @@ export interface StocksCarbone {
  * diverger : l'inventaire et la propriété appellent maintenant celle-ci.
  *
  * Un transfert d'un compartiment à l'autre — un arbre qui meurt, une chandelle
- * qui s'abat, un fût laissé au sol, un broyat mis en tas — ne change pas ce
- * total. Seul ce qui sort réellement de la parcelle le fait baisser : la
- * respiration des décomposeurs, le feu, le bois vendu, la terre emportée.
+ * qui s'abat, un fût laissé au sol, un broyat mis en tas, une herbe qui tombe,
+ * qu'on fauche ou qu'on retourne — ne change pas ce total. Seul ce qui sort
+ * réellement de la parcelle le fait baisser : la respiration des décomposeurs,
+ * le feu, le bois vendu, le grain moissonné, la terre emportée.
+ *
+ * **L'herbe sur pied y manquait** (#482). Son carbone n'entrait au bilan qu'en
+ * tombant en litière : au labour, toute la prairie y passait d'un coup et
+ * entrait au bilan le jour même, ce qui masquait la perte d'humus du labour
+ * (0,72 t C/ha d'herbe en janvier contre 0,75 d'humus, sur le banc d'I8). Elle
+ * est comptée au taux de carbone de sa matière sèche, `CARBON_FRACTION`, celui
+ * qu'elle porte déjà en tombant : le moindre écart entre les deux ferait d'un
+ * transfert une création ou une fuite.
  */
 export function stocksCarbone(state: GameState): StocksCarbone {
   let vivantKgC = 0;
@@ -342,6 +373,12 @@ export function stocksCarbone(state: GameState): StocksCarbone {
     humusG += state.soil.humusCG[i] ?? 0;
     boisCoucheG += state.soil.boisAuSolCG[i] ?? 0;
   }
+  // La matière sèche de la strate, une valeur par cellule et par espèce.
+  let herbeMatiereG = 0;
+  for (let k = 0; k < state.soil.herbeMatiereSecheG.length; k++) {
+    herbeMatiereG += (state.soil.herbeMatiereSecheG[k] ?? 0) + (state.soil.herbeMorteG[k] ?? 0);
+  }
+  const herbeKgC = (herbeMatiereG * CARBON_FRACTION) / 1000;
   const boisMortKgC = state.carbon.deadWoodKgC;
   const broyatKgC = state.stockBrf.carboneG / 1000;
   const litiereKgC = litiereG / 1000;
@@ -352,6 +389,7 @@ export function stocksCarbone(state: GameState): StocksCarbone {
     tuesRecuperablesKgC,
     boisMortKgC,
     boisCoucheKgC,
+    herbeKgC,
     litiereKgC,
     humusKgC,
     broyatKgC,
@@ -360,6 +398,7 @@ export function stocksCarbone(state: GameState): StocksCarbone {
       tuesRecuperablesKgC +
       boisMortKgC +
       boisCoucheKgC +
+      herbeKgC +
       litiereKgC +
       humusKgC +
       broyatKgC,
@@ -380,6 +419,13 @@ export function stocksCarbone(state: GameState): StocksCarbone {
  * `bilanNetTHa` vaille exactement zéro à la semaine d'arrivée quelle que soit
  * la maturation. **Conséquence voulue, et c'est le sens du jeu : arriver sur
  * une vieille chênaie et la raser fait plonger le bilan.**
+ *
+ * Depuis #482, ce total compte l'herbe sur pied. Une partie sauvegardée avant
+ * garde une référence figée sans elle : à la reprise, son bilan affiché gagne
+ * une fois l'herbe que la parcelle porte ce jour-là, de l'ordre d'une tonne de
+ * carbone par hectare au plus. Le format du bloc n'a pas monté, parce qu'aucun
+ * champ n'a changé et que le carbone ne pilote rien dans le moteur ; refuser
+ * les anciens blocs pour rejouer le journal serait l'autre choix.
  */
 export function figerCarboneDeReference(state: GameState): GameState {
   const areaHa = (state.station.coteM * state.station.coteM) / 10_000;
@@ -409,6 +455,7 @@ export function carbonInventory(
   // Tout le bois mort, où qu'il soit : debout, couché, ou tué et pas encore
   // ramassé. L'écran n'en montre qu'une case, la somme des trois.
   const boisMortTHa = enTHa(stocks.boisMortKgC + stocks.boisCoucheKgC + stocks.tuesRecuperablesKgC);
+  const herbeTHa = enTHa(stocks.herbeKgC);
   const litiereTHa = enTHa(stocks.litiereKgC);
   // Le tas de broyat est un stock comme un autre : tant qu'il n'est pas
   // épandu, son carbone est là. Il se décompose en attendant (tick.ts).
@@ -418,6 +465,7 @@ export function carbonInventory(
   return {
     vivantTHa,
     boisMortTHa,
+    herbeTHa,
     litiereTHa,
     brfTHa,
     humusTHa,

@@ -2375,9 +2375,11 @@ export function tick(state: GameState, weather: WeekWeather, essai?: ReglagesDEs
   // parcelle, et les deux tampons par cellule sont alloués une fois pour
   // toutes : la strate tourne sur toutes les cellules toutes les semaines, et
   // ce lot coûte déjà 11 % de temps de tick.
-  // Ce que la strate basse rend au sol cette semaine (#201) : le carbone
-  // entre au bilan par la production primaire (kg C sur la parcelle), l'azote
-  // par le retour de litière (g/m² cumulés, comme celui des arbres).
+  // Ce que la strate basse fabrique cette semaine, et ce qu'elle rend au sol.
+  // Le carbone entre au bilan par la production primaire **à la croissance**
+  // (kg C sur la parcelle) : l'herbe sur pied est à l'inventaire depuis #482,
+  // et ce qui en tombe n'est plus qu'un transfert. L'azote entre par le retour
+  // de litière (g/m² cumulés, comme celui des arbres).
   let herbeNppKgC = 0;
   let herbeLitiereNG = 0;
   const vigueurs = HERBACEES.map((h) => vigueurHerbacee(h, pheno));
@@ -2490,6 +2492,7 @@ export function tick(state: GameState, weather: WeekWeather, essai?: ReglagesDEs
         const critique = azoteCritiqueG(matiere + potentiel);
         const nutrition = critique > 0 ? Math.min(1, azote / critique) : 1;
         matiere += potentiel * nutrition;
+        herbeNppKgC += (potentiel * nutrition * CARBON_FRACTION) / 1000;
       }
       if (!fiche.culture && matiere > 0) {
         const avant = feuillagesAvant[s] ?? 0;
@@ -2536,10 +2539,10 @@ export function tick(state: GameState, weather: WeekWeather, essai?: ReglagesDEs
     potassiumG[i] = (potassiumG[i] ?? 0) + rendK;
     retourKSumG += rendK;
     if (litiereNCellule > 0 && litiereCCellule > 0) {
-      // Le carbone est **crédité** à la production primaire — c'est la plante
-      // qui l'a fixé — et l'azote déclaré comme un retour de litière, sans quoi
-      // le bilan du sol verrait une entrée venue de nulle part.
-      herbeNppKgC += litiereCCellule / 1000;
+      // Le carbone passe de l'herbe sur pied à la litière, deux stocks de
+      // l'inventaire : il a été crédité à la croissance (#482). L'azote est
+      // déclaré comme un retour de litière, sans quoi le bilan du sol verrait
+      // une entrée venue de nulle part.
       herbeLitiereNG += litiereNCellule;
       const oldN = litterNG[i] ?? 0;
       // La vitesse de décomposition d'une cellule est un mélange pondéré des
@@ -4217,9 +4220,16 @@ export function tick(state: GameState, weather: WeekWeather, essai?: ReglagesDEs
         // règle de la litière (#247).
         // Le foin et la paille sur pied brûlent avec elle (#370) : c'est même le
         // combustible de la lande en hiver.
+        // Son carbone part en fumée : il est à l'inventaire depuis #482, et le feu
+        // l'en fait sortir comme la litière.
         let azoteHerbe = 0;
         let azoteMortSurPied = 0;
         for (let s = 0; s < N_HERBACEES; s++) {
+          carboneFeuKgC +=
+            (((herbeMatiereSecheG[i * N_HERBACEES + s] ?? 0) +
+              (herbeMorteG[i * N_HERBACEES + s] ?? 0)) *
+              CARBON_FRACTION) /
+            1000;
           azoteHerbe += herbeAzoteG[i * N_HERBACEES + s] ?? 0;
           herbeAzoteG[i * N_HERBACEES + s] = 0;
           herbeMatiereSecheG[i * N_HERBACEES + s] = 0;
