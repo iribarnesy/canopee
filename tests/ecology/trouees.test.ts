@@ -44,144 +44,42 @@
  * et l'écartement de **huit** mètres du `describe` ci-dessous est l'écartement de
  * repli qu'il a fallu prendre : le seul qui reste sous le plafond parcellaire.
  *
- * Le plafond est devenu local, et le second `describe` plante donc à trois
- * mètres — une futaie vraiment dense, qui était le cas intéressant et qui était
- * hors de portée. Le dispositif de repli reste ici parce qu'il mesure autre
- * chose et le mesure bien : sous un couvert **perméable**, la trouée concentre et
- * trie, là où le couvert serré, lui, oppose un zéro franc.
+ * Le plafond est devenu local, et la futaie vraiment dense, qui était le cas
+ * intéressant et qui était hors de portée, a son propre banc :
+ * `trouees-couvert-ferme.test.ts`, une hêtraie que le moteur fait pousser à
+ * trois mètres. Le dispositif de repli reste ici parce qu'il mesure autre chose
+ * et le mesure bien : sous un couvert **perméable**, la trouée concentre et trie,
+ * là où le couvert serré, lui, oppose un zéro franc. Les deux bancs partagent
+ * leur parcelle, leur trouée, leur pluie de semis et leur comptage
+ * (`trouees-commun.ts`).
  */
 
 import { beforeAll, describe, expect, it } from "vitest";
-import { computeGroundLight } from "../../src/engine/light";
-import { syntheticYear } from "../../src/engine/meteo";
 import { rngStateFromSeed } from "../../src/engine/rng";
 import { createGameState, type GameState, plantAt } from "../../src/engine/state";
-import { LIMON_RICHE } from "../../src/engine/stations";
-import { tick } from "../../src/engine/tick";
+import { COTE, type Comptage, compterApres, GRAINES, ouvrir, STATION } from "./trouees-commun";
 
-const COTE = 40;
 /** Écartement de la hêtraie : couvert fermé, mais **sous** le plafond de recouvrement. */
 const ECART = 8;
 const H_CANOPEE = 15;
-/** Rayon des tiges qu'on fait mourir. */
-const RAYON_TROUEE = 8;
-/** Rayon de comptage, plus petit : la zone comptée est tout entière dans l'ouverture. */
-const RAYON_COMPTE = 6;
-/**
- * Les deux zones sont **symétriques** par rapport au milieu de la parcelle, à la
- * même ordonnée. C'est nécessaire : l'ombre est décalée vers le nord
- * (`SHADOW_NORTH_OFFSET`), et deux zones à des ordonnées différentes ne
- * seraient pas comparables.
- */
-const TROUEE = { x: 12, y: 20 };
-const TEMOIN = { x: 28, y: 20 };
-const ANS = 15;
-const GRAINES = [1, 2, 3, 4, 5];
-
-function dans(x: number, y: number, c: { x: number; y: number }, r: number): boolean {
-  const dx = x - c.x;
-  const dy = y - c.y;
-  return dx * dx + dy * dy <= r * r;
-}
-
-interface Comptage {
-  /** recrues de toute espèce sur la parcelle entière */
-  total: number;
-  trouee: number;
-  temoin: number;
-  bouleauTrouee: number;
-  bouleauTemoin: number;
-  charmeTrouee: number;
-  charmeTemoin: number;
-  /** lumière au sol de la zone de la trouée, en feuilles, l'été de la dernière année */
-  lumiereEteTrouee: number;
-}
 
 /**
  * Une hêtraie fermée de quinze mètres, quinze ans plus tard, sous une pluie de
- * semis venue du paysage. `ouvrir` fait mourir de vieillesse les tiges d'un
- * disque : c'est la trouée du cycle sylvigénétique, et elle est provoquée plutôt
- * que subie parce qu'une mort tirée au sort ne tomberait pas au même endroit
- * d'une graine à l'autre — il n'y aurait plus rien à apparier.
+ * semis venue du paysage. `ouvre` fait mourir de vieillesse les tiges d'un
+ * disque (`ouvrir`, `trouees-commun.ts`).
  */
-function hetraie(
-  seed: number,
-  ouvrir: { x: number; y: number } | null,
-  ecart = ECART,
-  elancement = 0,
-): Comptage {
-  const station = {
-    ...LIMON_RICHE.station,
-    coteM: COTE,
-    gibierParHa: 0,
-    voisinage: [
-      { especeId: "betula_pendula", semisParAn: 8 },
-      { especeId: "carpinus_betulus", semisParAn: 8 },
-    ],
-  };
-  const meteo = syntheticYear(LIMON_RICHE.climat);
-  let state: GameState = createGameState(station, rngStateFromSeed(seed));
-  for (let x = ecart / 2; x < COTE; x += ecart) {
-    for (let y = ecart / 2; y < COTE; y += ecart) {
+function hetraie(seed: number, ouvre: boolean): Comptage {
+  let state: GameState = createGameState(STATION, rngStateFromSeed(seed));
+  for (let x = ECART / 2; x < COTE; x += ECART) {
+    for (let y = ECART / 2; y < COTE; y += ECART) {
       state = plantAt(state, "fagus_sylvatica", x, y, H_CANOPEE);
     }
-  }
-  // Un élancement donné remplace celui d'une tige sans histoire (H/D 50) : le
-  // diamètre s'en déduit, et le houppier avec lui (`crownRadiusM`).
-  if (elancement > 0) {
-    const diametreCm = (100 * H_CANOPEE) / elancement;
-    state = { ...state, trees: state.trees.map((t) => ({ ...t, diametreCm })) };
   }
   // Les hêtres du couvert ne grainent pas ici : leur maturité est à quarante
   // ans et la partie en dure quinze. Toutes les recrues viennent donc du
   // paysage, ce qui laisse la seule lumière décider de leur position.
   const dernierPlante = state.nextTreeId - 1;
-  if (ouvrir) {
-    state = {
-      ...state,
-      trees: state.trees.map((t) =>
-        dans(t.x, t.y, ouvrir, RAYON_TROUEE)
-          ? { ...t, alive: false, causeMort: "vieillesse" as const }
-          : t,
-      ),
-    };
-  }
-  let lumiereEteTrouee = 1;
-  for (let w = 0; w < ANS * 52; w++) {
-    const m = meteo[w % 52];
-    if (!m) throw new Error("météo manquante");
-    state = tick(state, m).state;
-    // Fin juillet de la dernière année, feuillage plein : ce que reçoit le sol
-    // de la zone comptée.
-    if (w === (ANS - 1) * 52 + 28) {
-      const sol = computeGroundLight(state.trees, COTE, COTE, () => 1);
-      let somme = 0;
-      let n = 0;
-      for (let y = 0; y < COTE; y++) {
-        for (let x = 0; x < COTE; x++) {
-          if (!dans(x + 0.5, y + 0.5, TROUEE, RAYON_COMPTE)) continue;
-          somme += sol[y * COTE + x] ?? 1;
-          n++;
-        }
-      }
-      lumiereEteTrouee = somme / Math.max(1, n);
-    }
-  }
-  const recrues = state.trees.filter((t) => t.id > dernierPlante && t.alive);
-  const zone = (c: { x: number; y: number }, id?: string) =>
-    recrues.filter(
-      (t) => dans(t.x, t.y, c, RAYON_COMPTE) && (id === undefined || t.especeId === id),
-    ).length;
-  return {
-    total: recrues.length,
-    trouee: zone(TROUEE),
-    temoin: zone(TEMOIN),
-    bouleauTrouee: zone(TROUEE, "betula_pendula"),
-    bouleauTemoin: zone(TEMOIN, "betula_pendula"),
-    charmeTrouee: zone(TROUEE, "carpinus_betulus"),
-    charmeTemoin: zone(TEMOIN, "carpinus_betulus"),
-    lumiereEteTrouee,
-  };
+  return compterApres(ouvre ? ouvrir(state) : state, dernierPlante);
 }
 
 describe("une trouée dans un couvert fermé", () => {
@@ -194,7 +92,7 @@ describe("une trouée dans un couvert fermé", () => {
   // le couvre et la panne se lit au lieu de bloquer.
   beforeAll(() => {
     for (const seed of GRAINES) {
-      parties.push({ seed, trouee: hetraie(seed, TROUEE), fermee: hetraie(seed, null) });
+      parties.push({ seed, trouee: hetraie(seed, true), fermee: hetraie(seed, false) });
     }
   }, 600_000);
 
@@ -273,94 +171,5 @@ describe("une trouée dans un couvert fermé", () => {
     for (const p of parties) {
       expect(p.trouee.bouleauTrouee).toBeGreaterThan(p.fermee.bouleauTrouee);
     }
-  });
-});
-
-/**
- * **La limite écrite de cet essai est tombée** (#95).
- *
- * Le `describe` ci-dessus plante à **huit** mètres, et pas par choix : au-delà, le
- * plafond de recouvrement — qui se comptait sur la **parcelle entière** — bloquait
- * toute installation partout, trouée comprise. Une hêtraie serrée atteint un
- * recouvrement de 6 à 16 pour un plafond de 2,5, et l'essai ne pouvait donc pas
- * éprouver la trouée dans une futaie vraiment dense, qui est pourtant le cas
- * intéressant. Il fallait même un garde-fou — une seconde espèce tolérante,
- * dont la présence prouvait qu'il y avait quelque chose à mesurer — parce que
- * sans lui un « zéro recrue sous couvert » aurait décroché le ✅ pour la
- * mauvaise raison.
- *
- * Le plafond est devenu **local**. Cette futaie-ci est plantée à **trois** mètres, elle
- * porte un recouvrement de 6,8 à 9,5, et elle n'a besoin d'aucun garde-fou :
- * son témoin fermé ne recrute rien parce qu'il est vraiment fermé, et sa
- * trouée recrute parce qu'elle est vraiment ouverte. C'est F7 sans détour.
- */
-describe("une trouée dans un couvert VRAIMENT fermé", () => {
-  /** Trois mètres : le recouvrement dépasse trois fois le plafond. */
-  const SERRE = 3;
-  /**
-   * L'élancement des hêtres du couvert serré, H/D. **Le banc a changé (#467), et
-   * c'est signalé.** Il plantait des tiges de 15 m à l'élancement d'un arbre
-   * sans histoire (H/D 50, 30 cm de diamètre) : des troncs trapus serrés à 3 m,
-   * dont les houppiers se recouvraient sept à dix fois. Un tel peuplement
-   * n'existe pas, et avec l'élagage niveau par niveau il s'effondrait : 169
-   * hêtres, 34 ou 35 encore debout au bout de cinq ans sur quatre graines (62
-   * sur la cinquième), et le couvert « vraiment fermé » s'ouvrait (lumière
-   * d'été au sol de 0,39 à 0,74 dans la zone comptée).
-   *
-   * Les hêtres sont maintenant plantés à l'élancement d'une hêtraie serrée non
-   * éclaircie : dans les placettes témoins de Štefančík (2020, *J. For. Sci.*
-   * 66 : 492, fig. 2), hêtraies slovaques régénérées naturellement et jamais
-   * éclaircies, l'élancement des cent plus gros arbres par hectare suit
-   * h/DBH = 1,0182 − 0,0013 × âge (m/cm), soit 0,97 vers trente-cinq ans :
-   * **H/D 97**. Le critère de F7 (le couvert fermé ne recrute rien) ne bouge
-   * pas ; la prémisse, elle, se vérifie maintenant (le premier essai
-   * ci-dessous).
-   */
-  const ELANCEMENT_SERRE = 97;
-  const parties: { seed: number; trouee: Comptage; fermee: Comptage }[] = [];
-
-  beforeAll(() => {
-    for (const seed of GRAINES) {
-      parties.push({
-        seed,
-        trouee: hetraie(seed, TROUEE, SERRE, ELANCEMENT_SERRE),
-        fermee: hetraie(seed, null, SERRE, ELANCEMENT_SERRE),
-      });
-    }
-  }, 600_000);
-
-  it("la prémisse : le couvert fermé l'est encore à la fin, sur chaque graine", () => {
-    // Sans elle, « le couvert fermé ne recrute rien » pourrait casser parce que
-    // le banc s'est ouvert, pas parce que la lumière ne trie plus. Sous les
-    // essences d'ombre, dont le hêtre, le sol ne reçoit que 1 à 3 % du PAR
-    // (Hagemeier et Leuschner 2019, *Forests* 10 : 925) ; un couvert qui en
-    // laisse passer plus de 5 % n'est plus le couvert fermé dont parle F7.
-    for (const p of parties) {
-      expect(p.fermee.lumiereEteTrouee, `graine ${p.seed}`).toBeLessThan(0.05);
-    }
-  });
-
-  it("le couvert fermé ne recrute RIEN, et l'ouverture recrute", () => {
-    // Mesuré sur le code livré, recrues dans la zone (12,20) : 3 / 2 / 4 / 6 / 4
-    // avec la trouée, contre 0 / 0 / 0 / 0 / 0 sans elle — et la parcelle
-    // fermée entière n'en compte que 0 à 4. Aucun seuil n'est épinglé : ce qui
-    // est affirmé, c'est un zéro d'un côté et un non-zéro de l'autre, sur les
-    // cinq graines.
-    for (const p of parties) {
-      expect(p.fermee.trouee, `graine ${p.seed}`).toBe(0);
-      expect(p.trouee.trouee, `graine ${p.seed}`).toBeGreaterThan(0);
-    }
-  });
-
-  it("et le pionnier entre par là, alors qu'il n'entrait nulle part", () => {
-    // Le bouleau exige 50 % de lumière : sous ce couvert-là, il n'a aucune
-    // chance. Mesuré : 0 / 1 / 3 / 4 / 1 bouleaux dans la trouée. La direction
-    // ne peut pas s'exiger graine par graine — une trouée de huit mètres dans
-    // une futaie de quinze n'est pas toujours assez claire pour lui, et la
-    // graine 1 n'en installe aucun — mais le total, lui, est sans ambiguïté.
-    const dansLaTrouee = parties.reduce((s, p) => s + p.trouee.bouleauTrouee, 0);
-    const sousCouvert = parties.reduce((s, p) => s + p.fermee.bouleauTrouee, 0);
-    expect(sousCouvert).toBe(0);
-    expect(dansLaTrouee).toBeGreaterThan(3);
   });
 });
