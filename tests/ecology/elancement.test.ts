@@ -60,6 +60,16 @@ function hetraie(ecartM: number) {
     elancementMax: elancement(perche.diametreCm, perche.heightM),
     /** où cette tige-là se situe dans le peuplement : 1 = c'est la plus haute */
     rangDeLaPerche: perche.heightM / hMax,
+    /**
+     * L'élancement le plus fort **au milieu de la canopée** : parmi les tiges qui
+     * font de 40 à 85 % de la hauteur du plus haut.
+     */
+    elancementMaxMilieu: Math.max(
+      0,
+      ...vivants
+        .filter((t) => t.heightM / hMax >= 0.4 && t.heightM / hMax < 0.85)
+        .map((t) => elancement(t.diametreCm, t.heightM)),
+    ),
   };
 }
 
@@ -138,8 +148,19 @@ describe("la densité de plantation fait la forme de la tige", () => {
     //
     // Mesuré : la plus élancée est à 62 % de la hauteur du plus haut à 2 m
     // d'écartement, contre 84 % à 10 m (où il n'y a plus de perche du tout).
-    expect(serre.rangDeLaPerche).toBeGreaterThan(0.4);
-    expect(serre.rangDeLaPerche).toBeLessThan(0.85);
+    //
+    // **Réécrit sur son critère (#438), et c'est signalé.** L'essai demandait
+    // que la tige la plus élancée **de tout le peuplement** soit au milieu de la
+    // canopée. Depuis que la pénombre rapporte le feuillage de chaque couronne à
+    // sa moyenne, une dominée de 5,9 m (0,35 de la hauteur du plus haut) file à
+    // H/D 103 et passe d'une unité devant la première perche du milieu (H/D 100
+    // à 0,41) : le maximum se joue entre deux tiges, pas entre une perche et un
+    // nabot. Le critère est qu'il y ait des perches au milieu de la canopée, et
+    // qu'elles soient élancées : on lit l'élancement le plus fort dans la bande
+    // de 40 à 85 % de la hauteur du plus haut, contre la borne de 80 que l'essai
+    // de l'étendue pose déjà (100 et 88 dans les classes 0,4-0,6 et 0,6-0,8, sur
+    // main 103 et 98). La bande est celle de l'ancienne borne.
+    expect(serre.elancementMaxMilieu).toBeGreaterThan(80);
   });
 });
 

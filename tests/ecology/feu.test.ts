@@ -15,6 +15,7 @@ import { getEspece } from "../../src/engine/especes";
 import {
   accessibiliteDuHouppier,
   anisotropieDuFront,
+  baseDuCombustible,
   chargeCombustible,
   departDeFeu,
   excentriciteDuFront,
@@ -400,15 +401,28 @@ describe("ce que le feu consume et qui était déjà mort", () => {
         const apres = new Set(state.trees.map((t) => t.id));
         for (const c of consumees) {
           const cetArbre = avant.get(c.id);
-          // Elle était là, et elle était DÉJÀ morte : c'est ce qui la
-          // distingue d'une victime.
+          // Elle était là, et elle était DÉJÀ morte quand le feu est passé :
+          // c'est ce qui la distingue d'une victime.
+          //
+          // **Réécrit sur son critère (#438), et c'est signalé.** L'essai
+          // demandait qu'elle soit morte au début de la semaine. Un arbre peut
+          // mourir dans le tick même du feu, avant lui, d'une autre cause (la
+          // soif, l'ombre) : le feu le trouve alors debout et mort, et le
+          // consume comme une chandelle. Le cas existait sur main (graine 11,
+          // un ajonc mort de soif), mais l'essai s'arrêtait avant, à la
+          // graine 3 ; depuis que la pénombre conserve le feuillage des
+          // couronnes, la graine 3 ne brûle plus en quarante ans, et la
+          // graine 5 tombe dessus. Le critère est inchangé : une chandelle
+          // consumée était morte avant le feu, et n'en est pas une victime.
+          const morteCetteSemaine = r.morts.find((m) => m.id === c.id && m.cause !== "feu");
           expect(cetArbre).toBeDefined();
-          expect(cetArbre?.alive).toBe(false);
+          expect(cetArbre?.alive === false || morteCetteSemaine !== undefined).toBe(true);
           // Elle n'y est plus : le feu l'a consumée pour de bon.
           expect(apres.has(c.id)).toBe(false);
           // Sa hauteur est celle qu'elle avait debout, de quoi la dessiner
-          // avant de l'abattre.
-          expect(c.hauteurM).toBeCloseTo(cetArbre?.heightM ?? -1, 6);
+          // avant de l'abattre : celle de sa mort, si elle est morte cette
+          // semaine.
+          expect(c.hauteurM).toBeCloseTo(morteCetteSemaine?.heightM ?? cetArbre?.heightM ?? -1, 6);
           // **Et sa position, et son essence** (#246). Le premier jet ne les
           // portait pas : la demande annonçait que le rendu relirait la
           // position dans l'instantané, comme le fait la tempête pour ses
@@ -962,6 +976,67 @@ describe("il faut une SOURCE, et un combustible qui porte", () => {
     // pas bougé d'un gramme. Un pin élagué sur une lande d'herbe sèche brûle
     // toujours au sol — ce qu'il ne fait plus, c'est passer en cime.
     expect(elague.moyenne).toBeGreaterThan(0);
+  });
+
+  it("le bois mort qu'une espèce garde sur pied reste du combustible, et la scie l'emporte (#478)", () => {
+    // L'ajonc garde ses rameaux morts dans le fourré (`feu.boisMortRetenu`,
+    // especes.ts). Ils restent du combustible au niveau où ils sont morts : le
+    // combustible de l'arbre commence sous son houppier vivant, et la moyenne
+    // des deux étages, pesés par leur part du combustible fin, le descend.
+    expect(baseDuCombustible(1.4, 0, 0)).toBe(1.4); // ne rien garder : comme avant le trait
+    expect(baseDuCombustible(1.4, 0, 0.4)).toBeCloseTo(0.84, 9);
+    expect(baseDuCombustible(1.4, 0.5, 0.4)).toBeCloseTo(1.04, 9); // la scie a pris le bas
+    expect(baseDuCombustible(1.4, 1.4, 0.4)).toBe(1.4); // et tout, si elle monte jusqu'au houppier
+    expect(baseDuCombustible(0, 0, 0.4)).toBe(0); // sans élagage naturel, pas d'étage mort
+    // Le même fourré d'ajoncs, la même base de houppier vivant : élagué par
+    // l'ombre, il garde son bois mort ; élagué à la scie, il l'a perdu. Le feu
+    // de surface atteint mieux le premier.
+    const cote = 20;
+    const litiere = new Array(cote * cote).fill(100);
+    const herbe = new Array(cote * cote).fill(0);
+    const ouvert = new Array(cote * cote).fill(1);
+    const fourre = (especeId: string, hauteur: number, base: number, scie: number) =>
+      Array.from({ length: 40 }, (_, i) => ({
+        ...arbre(especeId, hauteur),
+        id: i + 1,
+        x: 2 + (i % 7) * 2.5,
+        y: 2 + Math.floor(i / 7) * 3,
+        baseHouppierM: base,
+        hauteurElagueeM: scie,
+      }));
+    const parLOmbre = chargeCombustible(
+      fourre("ulex_europaeus", 2.2, 1.4, 0),
+      herbe,
+      litiere,
+      cote,
+      ouvert,
+    );
+    const aLaScie = chargeCombustible(
+      fourre("ulex_europaeus", 2.2, 1.4, 1.4),
+      herbe,
+      litiere,
+      cote,
+      ouvert,
+    );
+    expect(parLOmbre.moyenne).toBeGreaterThan(aLaScie.moyenne);
+    // Aucune espèce n'est nommée par le mécanisme : une fiche qui ne déclare
+    // pas le trait ne garde rien, et l'ombre et la scie y reviennent au même.
+    expect(getEspece("pinus_sylvestris").feu.boisMortRetenu).toBeUndefined();
+    const pinsParLOmbre = chargeCombustible(
+      fourre("pinus_sylvestris", 14, 6, 0),
+      herbe,
+      litiere,
+      cote,
+      ouvert,
+    );
+    const pinsALaScie = chargeCombustible(
+      fourre("pinus_sylvestris", 14, 6, 6),
+      herbe,
+      litiere,
+      cote,
+      ouvert,
+    );
+    expect(pinsParLOmbre.moyenne).toBe(pinsALaScie.moyenne);
   });
 
   it("à couvert égal, une lande d'ajoncs porte le feu plus qu'une hêtraie", () => {

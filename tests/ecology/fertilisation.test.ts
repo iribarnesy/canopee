@@ -378,6 +378,19 @@ describe("et c'est la fertilisation qui rend le gradient LISIBLE (E13)", () => {
     // change presque pas — 0,853 à 0,93 contre 0,848 à 0,96 —, c'est l'allée
     // qui l'atteint plus tôt. Les graines 11 et 23 donnent la même forme
     // (0,506 et 0,601 à 33 ans, pour 1,63 et 1,50 de H/L).
+    //
+    // **La pénombre normalisée (#438) assombrissait l'allée à tout âge** :
+    // 0,983 l'an 1, sous la borne, et 0,553 l'an 15. Ce n'était ni la hauteur
+    // des noyers ni leurs semis, c'était la largeur de leur houppier : 9 m pour
+    // 18 cm de diamètre, quand Hemery et al. (2005) en mesurent 6 sur des
+    // noyers isolés. Avec le rapport de houppier calé sur eux (0,35), même
+    // graine :
+    //
+    //   an       1      3      9      15     21     33
+    //   H/L    0,32   0,40   0,65   0,91   1,16   1,66
+    //   ratio  0,994  0,983  0,894  0,781  0,665  0,501
+    //
+    // Graines 11 et 23 : 0,998 et 1,000 l'an 1, 0,824 et 0,868 l'an 15.
     const ANS = 34;
     const pur = bleContinu(ANS, 192, 0, { cote: 40, rayonM: 3 });
     const allee = bleContinu(ANS, 192, 0, { cote: 40, rayonM: 3, rangs: [16, 24] });

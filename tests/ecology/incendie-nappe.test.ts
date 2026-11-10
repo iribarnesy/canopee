@@ -38,10 +38,10 @@ const METEO = syntheticYear(VALLEE_ENGORGEE.climat);
  * station où le mécanisme est le plus lisible : une forêt qui a de l'eau à
  * volonté en consomme beaucoup, donc elle en prive beaucoup la nappe.
  */
-function foret(annees: number, partBassinSemblable = 0): GameState {
+function foret(annees: number, partBassinSemblable = 0, graine = 4): GameState {
   let state = createGameState(
     { ...VALLEE_ENGORGEE.station, coteM: 30, voisinage: [], gibierParHa: 0, partBassinSemblable },
-    rngStateFromSeed(4),
+    rngStateFromSeed(graine),
   );
   state = plantScattered(state, "alnus_glutinosa", 100, 0.5);
   for (let i = 0; i < annees * 52; i++) state = tick(state, METEO[i % 52] as never).state;
@@ -116,24 +116,53 @@ describe("la forêt tient la nappe, et l'incendie la relâche", () => {
 });
 
 describe("l'échelle de l'incendie compte", () => {
-  /** Remontée de nappe après le feu, cm, selon ce que le bassin partage. */
-  function remontee(partBassinSemblable: number): number {
-    const avant = foret(40, partBassinSemblable);
-    return suivre(avant).nappeHiver - suivre(bruler(avant)).nappeHiver;
+  /**
+   * Remontée de nappe après le feu, cm, selon ce que le bassin partage, et le
+   * niveau régional au bout du suivi, forêt intacte et forêt brûlée.
+   */
+  function echelle(partBassinSemblable: number, graine: number) {
+    const avant = foret(40, partBassinSemblable, graine);
+    const intacte = suivre(avant);
+    const brulee = suivre(bruler(avant));
+    return {
+      remontee: intacte.nappeHiver - brulee.nappeHiver,
+      regionalIntacte: intacte.state.soil.nappeRegionaleMm,
+      regionalBrulee: brulee.state.soil.nappeRegionaleMm,
+    };
   }
 
-  it("un massif qui brûle en entier fait remonter la nappe bien plus qu'une parcelle", () => {
+  it("un massif qui brûle en entier fait remonter la nappe plus qu'une parcelle, par la région", () => {
     // Le niveau régional est une donnée exogène tant que la parcelle est seule
     // à brûler : la région continue de tenir son niveau. Mais quand tout le
     // bassin subit le même sort, les alentours cessent eux aussi de
     // transpirer, et le niveau régional monte avec (nappe.ts). C'est la
     // différence entre l'incendie d'une parcelle et celui d'un massif — et
     // c'est le second que décrivaient les gestionnaires girondins.
-    const isolee = remontee(0);
-    const massif = remontee(1);
-    expect(isolee).toBeGreaterThan(0);
-    expect(massif).toBeGreaterThan(1.5 * isolee);
-  });
+    //
+    // **Relu sur son critère (#467, décision du propriétaire), et c'est
+    // signalé.** L'essai exigeait, sur la seule graine 4, une remontée du
+    // massif au-delà de 1,5 fois celle de la parcelle. Le 1,5 n'avait pas de
+    // source (il valait 2, puis 1,6 depuis #380 et #381), et il ne contraignait
+    // plus rien : 1,498 et 1,512 pour deux écritures de la même loi qui ne
+    // diffèrent que par l'arrondi de quelques opérations, 1,496 à 1,525 sur
+    // quatre graines, 1,52 à 1,65 avec l'élagage à la cime, 1,60 à 1,62 sur le
+    // couvert seul. Ce que l'essai affirme, c'est que le massif remonte plus
+    // **parce que** la région remonte avec lui. Il se lit donc sur quatre
+    // graines : la remontée du massif dépasse celle de la parcelle, et le
+    // niveau régional, immobile pour la parcelle seule, remonte après le feu
+    // du massif. L'écart vaut 39 à 50 cm, de l'ordre de la remontée régionale
+    // (une cinquantaine de millimètres d'aquifère en deux ans, environ 50 cm
+    // de nappe). Coût : huit forêts de quarante ans au lieu de deux ; en CI, le
+    // fichier passe de 81 à 288 s.
+    for (const graine of [4, 1, 2, 3]) {
+      const isolee = echelle(0, graine);
+      const massif = echelle(1, graine);
+      expect(isolee.remontee, `graine ${graine}`).toBeGreaterThan(0);
+      expect(massif.remontee, `graine ${graine}`).toBeGreaterThan(isolee.remontee);
+      expect(isolee.regionalBrulee, `graine ${graine}`).toBeCloseTo(isolee.regionalIntacte, 6);
+      expect(massif.regionalBrulee, `graine ${graine}`).toBeGreaterThan(massif.regionalIntacte);
+    }
+  }, 1_200_000);
 
   it("sans rien partager avec son bassin, la parcelle ne déplace pas la région", () => {
     // Le paramètre a un sens : à zéro, le niveau régional ne bouge pas d'un
