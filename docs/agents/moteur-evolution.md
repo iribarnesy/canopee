@@ -61,7 +61,24 @@ qu'un rapport (voir la note de maintenance).
 Séparer calibration et validation : caler un paramètre sur un âge, garder
 l'autre âge pour vérifier.
 
-## Ce que le dernier lot a appris (les voisins : la part du houppier qui dépasse, #467)
+## Ce que le dernier lot a appris (le frêne calé à quarante ans, #481)
+
+Le lot v0.6 « frêne », sur décision du propriétaire du 10 novembre (#481, point 3) : caler `pousseMaxMAn` du frêne (0,7) à quarante ans sur main 2682e27, qui porte le couvert et les voisins (#464), puis le valider à vingt ans sans y toucher. O2 (#470) le remesurera.
+
+**L'ancre est vérifiée sur la table** avant tout calage : Jansen, Sevenster et Faber 1996, p. 110, *Es* groeiklasse 6 (d'après Volquardts 1958), hdom 9,0 m à 20 ans et 16,5 m à 40 ans.
+
+### Prédictions, écrites avant la première course
+
+Banc des tables (`hauteurs-commun.ts`) : huit sujets épars sur le limon riche, sans gibier ni voisinage. Graines du banc 17 et 43, plus 4, 11 et 23 (celles des campagnes de #375). La sonde fait varier le trait en mémoire, hors dépôt.
+
+- **P1.** À 0,70, la moyenne du banc vaut 17,0 à 17,7 m à 40 ans, et 9,3 à 9,8 m à 20 ans (l'agent de #481 a mesuré 17,36 et 9,53 sur la copie des voisins).
+- **P2.** La valeur qui centre 40 ans sur 16,5 m est entre 0,66 et 0,68, au plus près de 0,67.
+- **P3.** L'élasticité de la hauteur à 40 ans au trait, entre 0,64 et 0,70, vaut 0,95 à 1,10.
+- **P4.** À la valeur retenue, 20 ans tombe entre 8,9 et 9,3 m (−1 à +3,5 %).
+- **P5.** À la valeur retenue, chaque graine reste à ±6 % de 16,5 m à 40 ans, et la moyenne des deux graines du banc à ±3 % de celle des cinq ; le banc et les cinq graines désignent la même valeur au centième près.
+- **P6.** Aucune borne ne casse dans les essais qui plantent un frêne : `hauteurs-arbustes` (le frêne), `maladies`, `trogne`, `bases`, `pompe-bases`, `glandee`, `phenologie`, `gel-pousses`, `stress-origines` et les essais unitaires.
+
+## Ce qu'un lot précédent a appris (les voisins : la part du houppier qui dépasse, #467)
 
 Le lot v0.6 « voisins », empilé sur le couvert (#464, PR #471). Un voisin pèse la part de son houppier qui dépasse chaque niveau du houppier de la cible, moyennée de sa base à sa cime (light.ts, `poidsDuVoisin`). Un égal pèse 0,5, un point au sol 1, et le 0,4 des codominants comme la bande des 75 % sont tombés. La loi n'a aucune constante : elle intègre la part de houppier que suppose déjà `partHouppier`. Sur décision, l'élagage naturel se fait **niveau par niveau** : la base du houppier lit sa propre lumière (`profondeurVivanteParNiveaux`). Prédictions et mesures dans les commits de la branche, avant chaque course ; les sondes sont des copies du moteur hors dépôt. Format inchangé.
 
