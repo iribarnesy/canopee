@@ -44,11 +44,16 @@
  * et l'écartement de **huit** mètres du `describe` ci-dessous est l'écartement de
  * repli qu'il a fallu prendre : le seul qui reste sous le plafond parcellaire.
  *
- * Le plafond est devenu local, et le second `describe` plante donc à trois
- * mètres — une futaie vraiment dense, qui était le cas intéressant et qui était
- * hors de portée. Le dispositif de repli reste ici parce qu'il mesure autre
- * chose et le mesure bien : sous un couvert **perméable**, la trouée concentre et
- * trie, là où le couvert serré, lui, oppose un zéro franc.
+ * Le plafond est devenu local (#95), et cet essai a porté un second banc : une
+ * futaie plantée à trois mètres, le couvert vraiment fermé qui était le cas
+ * intéressant. **Il est sorti d'ici avec #467**, parce que le moteur ne tient pas
+ * aujourd'hui un couvert vraiment fermé (docs/realisme.md F7). Planté adulte,
+ * il meurt de faim à l'élancement d'un arbre sans histoire (H/D 50) et casse au
+ * vent dans le premier mois à celui d'une hêtraie serrée (H/D 97, #483) ; poussé
+ * par le moteur, il laisse passer 3 à 4 % de la lumière d'été, contre 1 à 3 %
+ * sous le hêtre. Son essai est devenu l'essai d'acceptation du lot lumière
+ * (#484). Le dispositif de repli reste ici parce qu'il mesure autre chose et le
+ * mesure bien : sous un couvert **perméable**, la trouée concentre et trie.
  */
 
 import { beforeAll, describe, expect, it } from "vitest";
@@ -242,63 +247,5 @@ describe("une trouée dans un couvert fermé", () => {
     for (const p of parties) {
       expect(p.trouee.bouleauTrouee).toBeGreaterThan(p.fermee.bouleauTrouee);
     }
-  });
-});
-
-/**
- * **La limite écrite de cet essai est tombée** (#95).
- *
- * Le `describe` ci-dessus plante à **huit** mètres, et pas par choix : au-delà, le
- * plafond de recouvrement — qui se comptait sur la **parcelle entière** — bloquait
- * toute installation partout, trouée comprise. Une hêtraie serrée atteint un
- * recouvrement de 6 à 16 pour un plafond de 2,5, et l'essai ne pouvait donc pas
- * éprouver la trouée dans une futaie vraiment dense, qui est pourtant le cas
- * intéressant. Il fallait même un garde-fou — une seconde espèce tolérante,
- * dont la présence prouvait qu'il y avait quelque chose à mesurer — parce que
- * sans lui un « zéro recrue sous couvert » aurait décroché le ✅ pour la
- * mauvaise raison.
- *
- * Le plafond est devenu **local**. Cette futaie-ci est plantée à **trois** mètres, elle
- * porte un recouvrement de 6,8 à 9,5, et elle n'a besoin d'aucun garde-fou :
- * son témoin fermé ne recrute rien parce qu'il est vraiment fermé, et sa
- * trouée recrute parce qu'elle est vraiment ouverte. C'est F7 sans détour.
- */
-describe("une trouée dans un couvert VRAIMENT fermé", () => {
-  /** Trois mètres : le recouvrement dépasse trois fois le plafond. */
-  const SERRE = 3;
-  const parties: { seed: number; trouee: Comptage; fermee: Comptage }[] = [];
-
-  beforeAll(() => {
-    for (const seed of GRAINES) {
-      parties.push({
-        seed,
-        trouee: hetraie(seed, TROUEE, SERRE),
-        fermee: hetraie(seed, null, SERRE),
-      });
-    }
-  }, 600_000);
-
-  it("le couvert fermé ne recrute RIEN, et l'ouverture recrute", () => {
-    // Mesuré sur le code livré, recrues dans la zone (12,20) : 3 / 2 / 4 / 6 / 4
-    // avec la trouée, contre 0 / 0 / 0 / 0 / 0 sans elle — et la parcelle
-    // fermée entière n'en compte que 0 à 4. Aucun seuil n'est épinglé : ce qui
-    // est affirmé, c'est un zéro d'un côté et un non-zéro de l'autre, sur les
-    // cinq graines.
-    for (const p of parties) {
-      expect(p.fermee.trouee, `graine ${p.seed}`).toBe(0);
-      expect(p.trouee.trouee, `graine ${p.seed}`).toBeGreaterThan(0);
-    }
-  });
-
-  it("et le pionnier entre par là, alors qu'il n'entrait nulle part", () => {
-    // Le bouleau exige 50 % de lumière : sous ce couvert-là, il n'a aucune
-    // chance. Mesuré : 0 / 1 / 3 / 4 / 1 bouleaux dans la trouée. La direction
-    // ne peut pas s'exiger graine par graine — une trouée de huit mètres dans
-    // une futaie de quinze n'est pas toujours assez claire pour lui, et la
-    // graine 1 n'en installe aucun — mais le total, lui, est sans ambiguïté.
-    const dansLaTrouee = parties.reduce((s, p) => s + p.trouee.bouleauTrouee, 0);
-    const sousCouvert = parties.reduce((s, p) => s + p.fermee.bouleauTrouee, 0);
-    expect(sousCouvert).toBe(0);
-    expect(dansLaTrouee).toBeGreaterThan(3);
   });
 });

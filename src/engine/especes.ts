@@ -410,6 +410,25 @@ export interface EspeceV0 {
     resistanceEcorce: number;
     /** rejette de souche après un feu (châtaignier, arbousier, chêne-liège) */
     rejetteApresFeu: boolean;
+    /**
+     * Part morte du combustible fin que l'espèce garde sur pied ∈ [0,1) (#478).
+     *
+     * Une branche que l'ombre a tuée ne tombe pas forcément : l'ajonc garde ses
+     * rameaux morts dans le fourré, et c'est ce qui rend ses landes si
+     * inflammables. Ce bois mort reste du combustible au niveau où il est mort,
+     * sous le houppier vivant (`baseDuCombustible`, feu.ts). La grandeur est celle
+     * que mesurent les inventaires de combustible : la masse du combustible fin
+     * mort rapportée à tout le combustible fin sur pied. Elle est déjà l'équilibre
+     * entre ce qui meurt et ce qui tombe, si bien qu'aucune durée de chute ne
+     * s'y ajoute.
+     *
+     * **Absente, elle vaut 0** : l'espèce ne garde rien de ce que l'élagage
+     * naturel a tué, ce que le moteur faisait pour toutes avant ce trait. Ce
+     * n'est pas une mesure, c'est l'absence de donnée : aucune espèce ne change
+     * de comportement au feu sans une source. Une fiche ne le déclare qu'avec
+     * la sienne.
+     */
+    boisMortRetenu?: number;
   };
   /**
    * Exigence minérale, en multiple du seuil de carence forestier (pk.ts).
@@ -596,6 +615,16 @@ const THOMAS_2025 =
   "Thomas et al. 2025, Biological Flora: Cytisus scoparius, J. Ecology 113 (mesures de Waloff & Richards 1977, Londres)";
 const HORNOY_2011 =
   "Hornoy, Tarayre, Hervé, Gigord & Atlan 2011, PLOS ONE 6:e26275, jardin commun d'ajoncs près de Rennes (Bretagne)";
+/**
+ * **sources du bois mort retenu sur pied** (`feu.boisMortRetenu`, #478). La
+ * première est lue sur l'article (dépôt de l'université de Saint-Jacques) ; la
+ * seconde seulement dans la revue de Zouhar (2005, *Fire Effects Information
+ * System*, USDA), qui en reproduit le tableau.
+ */
+const VEGA_2024 =
+  "Vega, Álvarez-González, Arellano-Pérez, Fernández & Ruiz-González 2024, Site Quality Models and Fuel Load Dynamic Equation Systems Disaggregated by Size Fractions and Vegetative States in Gorse and High Heath Shrublands in Galicia (NW Spain), Fire 7 : 126 (165 placettes de landes à ajonc, récolte complète) — table 1 p. 5, table 4 p. 12, §4.4 p. 17";
+const EGUNJOBI_1971 =
+  "Egunjobi 1971, Ecosystem processes in a stand of Ulex europaeus L. I. Dry matter production, litter fall and efficiency of solar energy utilization, Journal of Ecology 59 : 31-38 (Nouvelle-Zélande ; fourré brûlé en décembre 1959, suivi de 1965 à 1967) — lu dans Zouhar 2005, Ulex europaeus, Fire Effects Information System, USDA Forest Service";
 const SCHELLENBERG_2021 =
   "Schellenberg & Bergmeier 2021, The Calluna life cycle concept revisited (nord-est de l'Allemagne) ; classes de hauteur JNCC 2009 (Royaume-Uni)";
 const STREUOBST_DE =
@@ -2070,8 +2099,24 @@ export const ESPECES_V0: readonly EspeceV0[] = [
     mycorhize: "arbusculaire",
     ravageurs: { sensibilite: 0.15 },
     gibier: { appetence: 0.25 },
-    feu: { inflammabilite: 0.98, resistanceEcorce: 0.0, rejetteApresFeu: true },
-    sources: [ATLAS, HORNOY_2011],
+    feu: {
+      inflammabilite: 0.98,
+      resistanceEcorce: 0.0,
+      rejetteApresFeu: true,
+      // Bois mort retenu (#478) : 0,40, la part morte du combustible fin sur pied
+      // des landes à ajonc de Galice, mesurée par récolte complète sur 165
+      // placettes (Vega et al. 2024). Elle ne dépend que de l'âge du fourré :
+      // 0,32 à deux ans, 0,40 à dix (le stade mature selon les auteurs), 0,45 à
+      // vingt-deux ans (§4.4 p. 17, équation de la table 4 p. 12). La moyenne
+      // des placettes, neuf ans et demi d'âge en moyenne, donne la même chose :
+      // 0,85 kg/m² de fin mort sur 2,16 de fin (0,39, table 1 p. 5). En
+      // Nouvelle-Zélande, Egunjobi (1971) trouve moins dans un fourré de six à
+      // sept ans et demi : 16 à 18 % des rameaux sont morts. Ce chiffre est lu dans la
+      // revue de Zouhar (2005), pas dans l'article, et il compte des rameaux
+      // entiers là où Vega compte tout le combustible fin.
+      boisMortRetenu: 0.4,
+    },
+    sources: [ATLAS, HORNOY_2011, VEGA_2024, EGUNJOBI_1971],
   },
   {
     id: "cytisus_scoparius",

@@ -34,14 +34,9 @@ import {
   RATION_SANGLIER_KG_AN,
   type Semences,
 } from "../../src/engine/glandee";
-import { syntheticYear } from "../../src/engine/meteo";
-import { rngStateFromSeed } from "../../src/engine/rng";
 import { DENSITE_REFERENCE_PAR_HA } from "../../src/engine/sanglier";
-import { createGameState, plantAt, type Station } from "../../src/engine/state";
-import { LIMON_RICHE } from "../../src/engine/stations";
-import { tick } from "../../src/engine/tick";
+import { chenaie } from "./chenaie-commun";
 
-const METEO = syntheticYear(LIMON_RICHE.climat);
 const PORTEUSES = ESPECES_V0.filter((e) => e.semences);
 
 describe("une glandée n'est pas une récolte", () => {
@@ -273,33 +268,6 @@ describe("LE POINT DU LOT : à production totale égale, l'irrégulier passe", (
   });
 });
 
-/** Une chênaie mûre, quarante ans, à une densité de sanglier donnée. */
-function chenaie(densite: number, ans: number) {
-  const COTE = 24;
-  const station: Station = {
-    ...LIMON_RICHE.station,
-    coteM: COTE,
-    voisinage: [],
-    ventExposition: 0,
-    sanglierParHa: densite,
-  };
-  let s = createGameState(station, rngStateFromSeed(3));
-  for (let y = 3; y < COTE; y += 6) {
-    for (let x = 3; x < COTE; x += 6) s = plantAt(s, "quercus_pubescens", x, y, 12);
-  }
-  const plantes = s.trees.length;
-  const parAn = new Map<number, number>();
-  for (let i = 0; i < ans * 52; i++) {
-    const w = METEO[i % METEO.length];
-    if (!w) throw new Error("météo manquante");
-    const t = tick(s, w);
-    s = t.state;
-    const n = t.naissances.length;
-    if (n > 0) parAn.set(Math.floor(i / 52), (parAn.get(Math.floor(i / 52)) ?? 0) + n);
-  }
-  return { recrues: s.trees.filter((t) => t.alive).length - plantes, parAn, etat: s };
-}
-
 describe("en partie : la régénération arrive par vagues", () => {
   it("les recrues tombent sur les années pleines, pas au fil de l'eau", () => {
     // **La signature observable du lot.** Avant, la régénération du chêne était
@@ -359,59 +327,9 @@ describe("ce que la mesure a coûté au sanglier", () => {
     expect(productionSupposee).toBeGreaterThan(10);
   });
 
-  it("la ration est petite, et ce n'est PAS elle qui fait reculer le chêne", () => {
-    // **l'attribution, et ce fichier est le seul qui puisse la faire** : il a la
-    // glandée sous la main, donc il peut séparer les deux prises du sanglier là
-    // où `sanglier.test.ts` ne voit que leur somme.
-    //
-    // Cet essai a d'abord affirmé le **contraire**, et c'était juste à l'époque. À
-    // ration ancrée (#197), le sanglier ne pesait plus sur la régénération —
-    // 71 · 71 · 71 · 77 · 70 recrues de 0 à 0,5 bête/ha, contre 97 · 82 · 60 · 22
-    // sous l'ancienne loi. On n'affirmait donc pas une décroissance qu'on ne
-    // mesurait plus, et le commentaire nommait ce qui manquait : **un boutis
-    // détruit les semis, et le moteur n'en comptait que le bon côté** (#199).
-    //
-    // Le mécanisme est arrivé, et la décroissance avec. Mesuré ici, quarante
-    // ans, mêmes graine et météo, en lisant les deux grandeurs sur la **même**
-    // partie — les recrues d'un côté, la glandée qui survit à la ration de
-    // l'autre, moyennée sur les dix dernières années :
-    //
-    //     sanglier/ha    recrues    glandée survivante    perte de glandée
-    //        0             71            0,7113                  —
-    //        0,05          65            0,7016               1,4 %
-    //        0,5           48            0,6377              10,4 %
-    //
-    // **À la densité de référence, la ration prélève 1,4 % de la glandée et la
-    // régénération perd 8,5 % : six fois plus.** L'arithmétique de #197 tient
-    // donc toujours — un sanglier ne peut pas manger une glandée —, et ce qui
-    // fait reculer le chêne est l'autre geste, celui qui laboure ce qui a levé.
-    // Le gradient complet, cinq graines, est dans `sanglier.test.ts`.
-    const aireHa = (24 * 24) / 10_000;
-    const mesure = (d: number) => {
-      const r = chenaie(d, 40);
-      const arbres = r.etat.trees.filter((t) => t.alive);
-      let somme = 0;
-      for (let an = 30; an < 40; an++) {
-        somme += glandeeRelative(arbres, "quercus_pubescens", an, r.etat.graineMarche, d, aireHa);
-      }
-      return { recrues: r.recrues, glandee: somme / 10 };
-    };
-    const sans = mesure(0);
-    const ordinaire = mesure(DENSITE_REFERENCE_PAR_HA);
-    const forte = mesure(0.5);
-    // La ration reste petite à densité ordinaire : moins d'un vingtième de la
-    // glandée, quand l'ancienne loi en mangeait 55 %.
-    expect(1 - ordinaire.glandee / sans.glandee).toBeLessThan(0.05);
-    // Et la régénération perd **bien plus** que la glandée : la ration ne peut pas
-    // rendre compte de l'écart, donc ce n'est pas elle qui l'explique. Six fois
-    // mesuré, seuil de marge à trois.
-    const perteRecrues = 1 - ordinaire.recrues / sans.recrues;
-    const perteGlandee = 1 - ordinaire.glandee / sans.glandee;
-    expect(perteRecrues).toBeGreaterThan(3 * perteGlandee);
-    // Et à forte densité le recul est net, ce qui est la moitié de G10 rendue.
-    expect(forte.recrues).toBeLessThan(0.8 * sans.recrues);
-    expect(forte.recrues).toBeGreaterThan(0);
-  }, 900_000);
+  // L'essai de la ration (« la ration est petite, et ce n'est PAS elle qui fait
+  // reculer le chêne ») est dans `glandee-sanglier.test.ts` : relu sur cinq
+  // graines (#467), il pèse trop pour partager un fichier.
 
   it("les deux termes restent de signes et d'échelles reconnaissables", () => {
     expect(PRELEVEMENT_PAR_LA_FAUNE).toBeGreaterThan(0.5);

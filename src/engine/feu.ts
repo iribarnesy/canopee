@@ -234,15 +234,53 @@ export const CHARGE_AMORCAGE_A_UN_METRE = 0.125;
  *
  * La hauteur de base du houppier n'est pas un trait d'espèce : elle se calcule
  * par arbre, l'arbre élaguant lui-même ses branches basses passées sous leur
- * point de compensation (`baseHouppierCible`, light.ts). Un fourré d'ajoncs a
+ * point de compensation (`profondeurVivanteParNiveaux`, light.ts). Un fourré d'ajoncs a
  * donc son houppier au ras du sol et le porte entièrement ; une futaie qui
- * s'est élaguée en grandissant met le sien hors d'atteinte.
+ * s'est élaguée en grandissant met le sien hors d'atteinte. La base lue ici est
+ * celle du **combustible** (`baseDuCombustible`) : le bois mort que l'espèce garde
+ * sur pied la descend sous le houppier vivant.
  */
 export function accessibiliteDuHouppier(baseHouppierM: number, chargeAuSol: number): number {
   if (baseHouppierM <= 0) return 1;
   const requise = CHARGE_AMORCAGE_A_UN_METRE * baseHouppierM ** 1.5;
   if (requise <= 0) return 1;
   return Math.min(1, chargeAuSol / requise);
+}
+
+/**
+ * Hauteur où commence le combustible du houppier d'un arbre, m : celle que lit
+ * l'amorçage du feu de cime (`accessibiliteDuHouppier`) (#478).
+ *
+ * L'élagage naturel tue les branches basses, mais une branche morte ne tombe
+ * pas forcément. Celles que l'espèce garde sur pied restent du combustible au
+ * niveau où elles sont mortes, entre la base de l'élagage à la scie, qui les a
+ * emportées, et la base du houppier vivant. Le combustible de l'arbre a alors
+ * deux étages : le houppier vivant, qui commence à sa base, et le bois mort
+ * retenu, qui commence plus bas.
+ *
+ * Les deux étages se combinent comme le moteur combine déjà les houppiers qui
+ * couvrent une même cellule : par la moyenne de leurs bases. Chaque étage y
+ * pèse ici sa part du combustible fin, et c'est exactement ce que mesure le
+ * trait (`feu.boisMortRetenu`, especes.ts) : la part morte du combustible fin
+ * sur pied. D'où
+ *
+ *     base du combustible = base − part morte × (base − hauteur élaguée)
+ *
+ * sans aucune constante de plus. Une espèce qui ne garde rien (part 0) brûle
+ * comme avant ce trait. Un arbre sans élagage naturel n'a pas d'étage mort
+ * sous son houppier, et la base ne bouge pas. Un arbre rabattu, recépé ou
+ * repartant de souche après un feu a sa base ramenée au sol : le bois mort
+ * est parti avec ce qu'on a coupé ou ce qui a brûlé.
+ */
+export function baseDuCombustible(
+  baseHouppierM: number,
+  hauteurElagueeM: number,
+  boisMortRetenu: number,
+): number {
+  const base = Math.max(0, baseHouppierM);
+  const scie = Math.min(base, Math.max(0, hauteurElagueeM));
+  const part = Math.min(1, Math.max(0, boisMortRetenu));
+  return base - part * (base - scie);
 }
 
 export function portanceDuFeu(lumiereAuSol: number): number {
@@ -282,7 +320,7 @@ export function chargeCombustible(
   const auSol = new Array<number>(n).fill(0);
   const inflammabiliteSomme = new Array<number>(n).fill(0);
   const houppiers = new Array<number>(n).fill(0);
-  /** Somme des bases de houppier couvrant la cellule, pour en tirer la moyenne. */
+  /** Somme des bases du combustible des houppiers couvrant la cellule, pour en tirer la moyenne. */
   const baseSomme = new Array<number>(n).fill(0);
   for (let i = 0; i < n; i++) {
     // Herbe (sèche en été) + litière accumulée.
@@ -325,7 +363,15 @@ export function chargeCombustible(
           inflammabiliteSomme[i] =
             (inflammabiliteSomme[i] ?? 0) +
             espece.feu.inflammabilite * (morte ? BOIS_MORT_SUR_PIED : 1);
-          baseSomme[i] = (baseSomme[i] ?? 0) + (tree.baseHouppierM ?? 0);
+          // La base du **combustible**, pas celle du feuillage vivant : le bois
+          // mort que l'espèce garde sur pied la descend (#478).
+          baseSomme[i] =
+            (baseSomme[i] ?? 0) +
+            baseDuCombustible(
+              tree.baseHouppierM ?? 0,
+              tree.hauteurElagueeM,
+              espece.feu.boisMortRetenu ?? 0,
+            );
           houppiers[i] = (houppiers[i] ?? 0) + 1;
         }
       }
