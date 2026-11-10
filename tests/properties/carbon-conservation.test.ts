@@ -131,11 +131,19 @@ describe("conservation du carbone sur le tick complet (actions comprises)", () =
       // stock ci-dessus — sans qu'aucune entrée ne la compense, parce que la
       // strate herbacée n'était pas au bilan carbone du tout. La propriété ne
       // passait simplement pas par cette action, et c'est en branchant les
-      // trois autres chemins qu'on est tombé dessus. La fauche crédite
-      // maintenant la production primaire, comme la sénescence et la paille :
-      // c'est la plante qui a fixé ce carbone.
+      // trois autres chemins qu'on est tombé dessus. La fauche créditait
+      // alors la production primaire, comme la sénescence et la paille.
+      //
+      // **Depuis #482, l'herbe sur pied est un stock** : la strate crédite la
+      // production primaire à sa croissance, et la fauche, la paille, la chute
+      // et le labour ne font plus que passer son carbone à la litière. Le grain
+      // moissonné, lui, sort de la parcelle comme un export.
       { type: "faucher", week: 3 * 52 + 30, x: 25, y: 25, rayonM: 12 },
       { type: "faucher", week: 4 * 52 + 30, x: 25, y: 25, rayonM: 12 },
+      // Et le **labour**, qui retourne l'herbe sur pied dans la litière et brûle
+      // un pour cent de l'humus : c'est au labour que l'herbe sur pied masquait
+      // la perte d'humus (#482). Loin des plants, pour ne rien changer au reste.
+      { type: "labourer", week: 2 * 52 + 38, x: 35, y: 5, rayonM: 4 },
       // Et la **moisson**, qui laisse sa paille au champ depuis le même lot.
       {
         type: "semer",
@@ -149,17 +157,24 @@ describe("conservation du carbone sur le tick complet (actions comprises)", () =
     ];
 
     let state = createGameState(STATION, rngStateFromSeed(13));
+    const labourRefuse: string[] = [];
     for (let i = 0; i < 8 * 52; i++) {
       const w = WEATHER[i % 52];
       if (!w) throw new Error("météo manquante");
       const stockAvant = totalStockKgC(state);
       const avant = state;
-      state = advanceWeek(state, w, actions).state;
+      const r = advanceWeek(state, w, actions);
+      for (const refus of r.refusals) {
+        if (refus.action === "labourer") labourRefuse.push(refus.reason);
+      }
+      state = r.state;
       // Entrées : photosynthèse + plants achetés. Sorties : CO2 + bois vendu.
       expect(residuKgC(avant, state, stockAvant)).toBeCloseTo(0, 4);
       expect(residuAfficheKgC(avant, state)).toBeCloseTo(0, 4);
     }
-    // Sanity : de vrais flux ont eu lieu.
+    // Sanity : de vrais flux ont eu lieu. Un labour refusé (un semis venu dans
+    // la zone, l'engin qui ne passe plus) rendrait son chemin muet.
+    expect(labourRefuse).toEqual([]);
     expect(state.carbon.nppCumKgC).toBeGreaterThan(100);
     expect(state.carbon.exportedEnergyCumKgC).toBeGreaterThan(0);
     expect(state.carbon.deadWoodKgC).toBeGreaterThan(0);
@@ -172,7 +187,7 @@ describe("conservation du carbone sur le tick complet (actions comprises)", () =
     // c'est celui que la propriété vient de suivre semaine après semaine.
     const inv = carbonInventory(state, 0);
     expect(
-      inv.vivantTHa + inv.boisMortTHa + inv.litiereTHa + inv.brfTHa + inv.humusTHa,
+      inv.vivantTHa + inv.boisMortTHa + inv.herbeTHa + inv.litiereTHa + inv.brfTHa + inv.humusTHa,
     ).toBeCloseTo(inv.totalTHa, 9);
     expect(inv.totalTHa * 1000 * surfaceHa(state)).toBeCloseTo(totalStockKgC(state), 6);
   });

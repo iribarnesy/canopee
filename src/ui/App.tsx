@@ -494,8 +494,8 @@ export function App() {
           return (
             <>
               Carbone (t C/ha) — vivant {inv.vivantTHa.toFixed(1)} · bois mort{" "}
-              {inv.boisMortTHa.toFixed(1)} · litière {inv.litiereTHa.toFixed(1)} · humus{" "}
-              {inv.humusTHa.toFixed(1)} ·{" "}
+              {inv.boisMortTHa.toFixed(1)} · herbe {inv.herbeTHa.toFixed(1)} · litière{" "}
+              {inv.litiereTHa.toFixed(1)} · humus {inv.humusTHa.toFixed(1)} ·{" "}
               <strong>
                 bilan net {inv.bilanNetTHa >= 0 ? "+" : ""}
                 {inv.bilanNetTHa.toFixed(1)}
