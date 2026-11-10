@@ -87,8 +87,9 @@ export function aliveCount(state: GameState, especeId: string, maxId = Infinity)
  * **Désherbe** des cellules, comme un herbicide localisé : la strate y meurt,
  * emprise comprise, et ce qu'elle portait tombe à la litière avec tout son
  * azote, son potassium revenant au sol (le même chemin que l'herbe retournée par
- * un labour, `actions.ts`). Le carbone versé est crédité à la production
- * primaire, comme le fait la fauche, pour que le bilan carbone reste fermé.
+ * un labour, `actions.ts`). C'est un transfert entre deux stocks de
+ * l'inventaire, l'herbe sur pied et la litière (#482) : la production primaire
+ * l'a compté à la croissance, et le bilan carbone reste fermé sans crédit.
  *
  * Aucun geste du jeu ne désherbe ni ne paille (#392) : ce sont les essais qui
  * en ont besoin, pour tenir un sol nu (#391) ou le pied des plants dont on tire
@@ -97,7 +98,6 @@ export function aliveCount(state: GameState, especeId: string, maxId = Infinity)
 export function desherber(state: GameState, cellules?: Iterable<number>): void {
   const s = state.soil;
   const toutes = cellules ?? s.herbeCouverture.keys();
-  let carbone = 0;
   for (const i of toutes) {
     let c = 0;
     let n = 0;
@@ -114,13 +114,12 @@ export function desherber(state: GameState, cellules?: Iterable<number>): void {
       if (c > 0)
         s.litterK[i] = (avant * (s.litterK[i] ?? 0) + n * litterDecayRate(c / n)) / (avant + n);
       s.litterNG[i] = avant + n;
-      s.litterCG[i] = (s.litterCG[i] ?? 0) + c;
     }
-    carbone += c;
+    // Le carbone y passe même sans azote : sans quoi il sortirait des comptes.
+    s.litterCG[i] = (s.litterCG[i] ?? 0) + c;
     s.herbeCouverture[i] = 0;
     s.herbeBiomasse[i] = 0;
     rabattreParEspece(s.herbeFeuillage, i * N_HERBACEES, 0);
     rabattreParEspece(s.herbeEmprise, i * N_HERBACEES, 0);
   }
-  state.carbon.nppCumKgC += carbone / 1000;
 }

@@ -2096,7 +2096,8 @@ function grainDeLaCelluleT(matiereSecheGM2: number, culture: { indiceRecolte: nu
  * part entier, au C/N de la plante, et leur potassium revient au sol (#222).
  * Le foin et la paille sur pied partent dans la même proportion, avec leur
  * azote ; leur potassium est déjà rentré, rincé à la mort des tissus (#370).
- * Rend le carbone versé, g/m², que l'appelant crédite à la production primaire.
+ * Rend le carbone versé, g/m². C'est un transfert entre deux stocks de
+ * l'inventaire (#482) : la production primaire l'a déjà compté, à la croissance.
  */
 /** La matière herbacée sur pied d'une partie, vivante et morte, copiée pour être modifiée. */
 interface HerbeSurPied {
@@ -2174,7 +2175,8 @@ function applyMoissonner(
   const potassiumG = state.soil.potassiumG.slice();
   // Ce qu'on récolte, culture par culture et cellule par cellule.
   let recolteEur = 0;
-  let pailleKgC = 0;
+  // Le carbone du grain, qui quitte la parcelle (#482).
+  let grainKgC = 0;
   let cellulesRecoltees = 0;
   // Les cellules où la moissonneuse a pris quelque chose, une fois chacune.
   const moissonnees: number[] = [];
@@ -2215,6 +2217,7 @@ function applyMoissonner(
       const azote = herbeAzoteG[k] ?? 0;
       const pailleC = matiere * (1 - culture.indiceRecolte) * CARBON_FRACTION;
       const pailleN = azote * (1 - culture.azoteDansLeGrain);
+      grainKgC += (matiere * culture.indiceRecolte * CARBON_FRACTION) / 1000;
       // **Le potassium se partage autrement** (#222) : le grain en emporte sa
       // teneur de référence (Comifer), la paille rend le reste au sol. Le
       // grain n'emporte jamais plus que ce que la plante porte.
@@ -2230,9 +2233,11 @@ function applyMoissonner(
           (oldN * (litterK[i] ?? 0) + pailleN * litterDecayRate(pailleC / pailleN)) /
           (oldN + pailleN);
         litterNG[i] = oldN + pailleN;
-        litterCG[i] = (litterCG[i] ?? 0) + pailleC;
-        pailleKgC += pailleC / 1000;
       }
+      // La paille passe de l'herbe sur pied à la litière, deux stocks de
+      // l'inventaire (#482). Elle y passe même sans azote, ce qu'une plante qui
+      // a poussé ne connaît pas : sans quoi son carbone sortirait des comptes.
+      litterCG[i] = (litterCG[i] ?? 0) + pailleC;
       herbeMatiereSecheG[k] = 0;
       herbeAzoteG[k] = 0;
       // La culture libère la place : le chaume n'occupe plus rien, et les
@@ -2275,9 +2280,14 @@ function applyMoissonner(
         litterK,
         potassiumG,
       },
-      // Le carbone de la paille est crédité à la production primaire, comme
-      // toute litière de la strate (#201) : c'est la plante qui l'a fixé.
-      carbon: { ...state.carbon, nppCumKgC: state.carbon.nppCumKgC + pailleKgC },
+      // **Le grain part, et il sera mangé dans l'année** : c'est un export
+      // émetteur, comme le bois énergie (§12, « exports (récoltes, bois) »).
+      // La paille reste au champ et ne change pas le total (#482) : la
+      // production primaire l'a comptée à la croissance.
+      carbon: {
+        ...state.carbon,
+        exportedEnergyCumKgC: state.carbon.exportedEnergyCumKgC + grainKgC,
+      },
       economy: {
         ...state.economy,
         treasuryEur: state.economy.treasuryEur + recolteEur - areaM2 * part * COUT_ENGIN_EUR_M2,
@@ -2313,7 +2323,6 @@ function applyFaucher(
     k: state.soil.litterK.slice(),
   };
   const potassiumG = state.soil.potassiumG.slice();
-  let coupeG = 0;
   const cote = state.station.coteM;
   // Les cellules où l'outil a effectivement mordu : une pelouse déjà rase ne
   // se fauche pas, et le rendu n'a rien à y montrer.
@@ -2341,7 +2350,7 @@ function applyFaucher(
       // (`hauteurDuTapisM`). Une prairie de juin de 30 à 60 cm tombe ainsi à 3
       // à 6 cm, la hauteur de coupe de ModVege (5 cm) à un ou deux centimètres
       // près, sans que la fauche ait à la connaître.
-      coupeG += verserHerbeALaLitiere(
+      verserHerbeALaLitiere(
         i,
         1 - FAUCHE_COUVERTURE_RESIDUELLE / avant,
         herbe,
@@ -2395,7 +2404,8 @@ function applyFaucher(
         litterK: litiere.k,
         potassiumG,
       },
-      carbon: { ...state.carbon, nppCumKgC: state.carbon.nppCumKgC + coupeG / 1000 },
+      // L'herbe coupée reste au sol : elle passe de l'herbe sur pied à la
+      // litière, et le total ne bouge pas (#482).
       economy: {
         ...state.economy,
         treasuryEur: state.economy.treasuryEur - coutEngin,
@@ -2738,7 +2748,6 @@ function applyLabourer(
   };
   const potassiumG = state.soil.potassiumG.slice();
   const phosphoreG = state.soil.phosphoreG.slice();
-  let retourneeG = 0;
   const mycorhizes = {
     ecto: state.soil.mycorhizes.ecto.slice(),
     arbusculaire: state.soil.mycorhizes.arbusculaire.slice(),
@@ -2782,8 +2791,9 @@ function applyLabourer(
       // où elle est, et la règle commune décide. Ce que le soc change est ce
       // qu'elle **couvre** : enfouie, elle ne paille plus le sol.
       // L'herbe retournée y passe avec elle : sa matière et tout son azote, et
-      // son potassium revient au sol.
-      retourneeG += verserHerbeALaLitiere(i, 1, herbe, litiere, potassiumG);
+      // son potassium revient au sol. C'est un transfert entre deux stocks de
+      // l'inventaire (#482) : il ne masque plus la perte d'humus du labour.
+      verserHerbeALaLitiere(i, 1, herbe, litiere, potassiumG);
       const auSol = Math.max(0, (litiere.c[i] ?? 0) - (litiereEnfouieCG[i] ?? 0));
       litiereEnfouieCG[i] = (litiereEnfouieCG[i] ?? 0) + auSol * LABOUR_ENFOUISSEMENT;
       // Sol nu : c'est tout l'objet du labour, et c'est aussi son prix. La
@@ -2837,7 +2847,6 @@ function applyLabourer(
       carbon: {
         ...state.carbon,
         emittedCumKgC: state.carbon.emittedCumKgC + emisKgC,
-        nppCumKgC: state.carbon.nppCumKgC + retourneeG / 1000,
       },
       economy: {
         ...state.economy,
