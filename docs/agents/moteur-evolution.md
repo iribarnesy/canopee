@@ -59,24 +59,56 @@ conclusion écologique se prend sur plusieurs graines, et la direction vaut mieu
 qu'un rapport (voir la note de maintenance).
 
 Séparer calibration et validation : caler un paramètre sur un âge, garder
-l'autre âge pour vérifier.
+l'autre âge pour vérifier. Et caler sur la moyenne de plusieurs graines, avec
+son erreur type : sur le banc des hauteurs, la moyenne de deux graines porte
+6 % d'incertitude (#481).
 
 ## Ce que le dernier lot a appris (le frêne calé à quarante ans, #481)
 
-Le lot v0.6 « frêne », sur décision du propriétaire du 10 novembre (#481, point 3) : caler `pousseMaxMAn` du frêne (0,7) à quarante ans sur main 2682e27, qui porte le couvert et les voisins (#464), puis le valider à vingt ans sans y toucher. O2 (#470) le remesurera.
+Le lot v0.6 « frêne », sur décision du propriétaire du 10 novembre (#481, point 3). `pousseMaxMAn` du frêne passe de 0,7 à **0,67**, calé à quarante ans sur main 2682e27, qui porte le couvert et les voisins (#464), puis validé à vingt ans sans y toucher. Un trait d'atlas, aucun mécanisme touché. O2 (#470) le remesurera. Prédictions dans le premier commit de la branche, avant la première course ; les sondes font varier le trait en mémoire, hors dépôt, sur le banc des tables (`hauteurs-commun.ts` : huit sujets épars sur le limon riche, sans gibier ni voisinage).
 
-**L'ancre est vérifiée sur la table** avant tout calage : Jansen, Sevenster et Faber 1996, p. 110, *Es* groeiklasse 6 (d'après Volquardts 1958), hdom 9,0 m à 20 ans et 16,5 m à 40 ans.
+**L'ancre est relue sur la table** avant tout calage : Jansen, Sevenster et Faber 1996, p. 110, *Es* groeiklasse 6 (d'après Volquardts 1958), hdom 9,0 m à 20 ans et 16,5 m à 40 ans.
 
-### Prédictions, écrites avant la première course
+| `pousseMaxMAn` | banc (17, 43) : 40 ans | 20 ans | neuf graines : 40 ans | 20 ans |
+|---|---|---|---|---|
+| 0,70 | 17,36 (+5,2 %) | 9,53 (+5,9 %) | 17,78 (+7,8 %), cinq graines | 9,74 (+8,2 %) |
+| 0,67 | 16,77 (+1,6 %) | 8,90 (−1,2 %) | **16,62 (+0,7 %)** | **8,97 (−0,3 %)** |
+| 0,66 | 16,59 (+0,6 %) | 8,78 (−2,5 %) | 16,38 (−0,7 %) | 8,85 (−1,7 %) |
+| 0,64 | 16,20 (−1,8 %) | 8,54 (−5,1 %) | 16,01 (−3,0 %) | 8,59 (−4,5 %) |
 
-Banc des tables (`hauteurs-commun.ts`) : huit sujets épars sur le limon riche, sans gibier ni voisinage. Graines du banc 17 et 43, plus 4, 11 et 23 (celles des campagnes de #375). La sonde fait varier le trait en mémoire, hors dépôt.
+Neuf graines : 17 et 43 (le banc), 1 à 5 (celles du pin, `hauteurs-pin.test.ts`), 11 et 23 (celles de #375). Le détail par graine est dans la PR.
 
-- **P1.** À 0,70, la moyenne du banc vaut 17,0 à 17,7 m à 40 ans, et 9,3 à 9,8 m à 20 ans (l'agent de #481 a mesuré 17,36 et 9,53 sur la copie des voisins).
-- **P2.** La valeur qui centre 40 ans sur 16,5 m est entre 0,66 et 0,68, au plus près de 0,67.
-- **P3.** L'élasticité de la hauteur à 40 ans au trait, entre 0,64 et 0,70, vaut 0,95 à 1,10.
-- **P4.** À la valeur retenue, 20 ans tombe entre 8,9 et 9,3 m (−1 à +3,5 %).
-- **P5.** À la valeur retenue, chaque graine reste à ±6 % de 16,5 m à 40 ans, et la moyenne des deux graines du banc à ±3 % de celle des cinq ; le banc et les cinq graines désignent la même valeur au centième près.
-- **P6.** Aucune borne ne casse dans les essais qui plantent un frêne : `hauteurs-arbustes` (le frêne), `maladies`, `trogne`, `bases`, `pompe-bases`, `glandee`, `phenologie`, `gel-pousses`, `stress-origines` et les essais unitaires.
+### Prédictions
+
+- **P1, juste.** À 0,70, le banc rend 17,36 m à 40 ans et 9,53 m à 20, au centième la mesure de l'agent de #481.
+- **P2, juste, pour une raison fausse.** 0,67 est retenue, mais l'élasticité qui la désignait était surestimée d'un quart (P3). Ce sont les graines 2 et 3, plus basses que le banc, qui ramènent la moyenne de neuf graines sur 0,67.
+- **P3, fausse.** L'élasticité de la hauteur à 40 ans au trait vaut 0,76 de 0,64 à 0,70 (cinq graines ; 0,77 sur le banc), pas 0,95 à 1,10.
+- **P4, juste.** 8,97 m à 20 ans sur neuf graines. Le banc lit 8,896, au bord bas de la fourchette.
+- **P5, fausse.** Les graines s'étalent de −11 à +16 % à 40 ans, pas ±6 %. Le banc reste à 2,5 % de la moyenne des cinq graines prévues, mais ne désigne pas la même valeur : vers 0,655 pour le banc, 0,635 pour ces cinq graines, 0,665 pour neuf.
+- **P6, juste en local.** Aucune borne ne casse. Les sept fichiers écologiques qui plantent ou lisent un frêne passent (100 essais), et le banc du frêne lit 16,77 et 8,90 m, dans ses bandes. Sur la machine partagée, des essais ont dépassé leur délai, sans aucune assertion fausse. La CI juge la suite complète.
+
+### Deux graines ne calent pas un trait
+
+D'une graine à l'autre, la hauteur moyenne des huit sujets à quarante ans s'écarte de 9 % (écart type), parce que chaque sujet tire sa vigueur à ±20 % et que la survie change le nombre de sujets moyennés. L'erreur type d'une moyenne de deux graines vaut donc 6 %, celle de neuf 3 %, soit ±0,025 sur le trait. Le banc, cinq graines et neuf graines désignent trois valeurs différentes (vers 0,655, 0,635 et 0,665), et 0,66 et 0,67 encadrent 16,5 m à −0,7 et +0,7 %. La règle fixée avant la mesure retient la plus proche, à un cheveu. La survie rend même une graine non monotone : la graine 4 garde sept sujets à 0,66 et six à 0,64, et elle est plus basse à 0,66. **Un calage se lit sur la moyenne de plusieurs graines, et son incertitude s'écrit à côté de la valeur.**
+
+### Une élasticité se remesure sur le moteur du jour
+
+L'agent de #481 estimait le calage vers 0,67 d'après une élasticité de 1,04, qu'il n'avait pas mesurée sur ce moteur. Sur main, elle vaut 0,74 à 0,82 selon les valeurs encadrantes : la hauteur suit moins le trait, et l'estimation aurait raté le banc de 1,6 %. Mesurer deux valeurs encadrantes coûte une campagne ; extrapoler depuis un autre moteur coûte une prédiction fausse. **Une pente se mesure sur le moteur qu'on cale, pas sur celui de la sonde précédente.**
+
+### Une course de contrôle dit si une fusion touche la mesure
+
+main a avancé pendant les sondes (#485, l'inventaire de carbone). Plutôt que de raisonner sur les fichiers touchés, une course de contrôle a refait, sur la fusion, une graine déjà mesurée (0,66, graine 17) : 16,986793487011884 m, au bit près. Les sondes faites sur 2682e27 restent valables. **Quand main avance sous une campagne, une course au bit près vaut mieux qu'un raisonnement sur le diff.**
+
+### Une classe médiane d'une gamme paire est un choix
+
+La table du frêne compte six classes, de 4 à 9. GK 6, que le banc emploie depuis le premier calage des hauteurs, est la plus basse des deux classes du milieu ; GK 7 donnerait 9,8 et 17,9 m (+8 %). L'ancre est sourcée et le choix n'a pas bougé, mais il est maintenant écrit dans `TABLE`. **Une « classe médiane » se vérifie sur le nombre de classes.**
+
+### Points ouverts
+
+- **O2 recalera le frêne** : sous l'azote du grain, il dépassait sa table de 17 % à 40 ans et de 21 % à 20 ans, à 0,7 (#481).
+- **Le banc du frêne tourne sur deux graines** (17 et 43). Elles lisent +1,6 % à 40 ans et −1,2 % à 20 : il passe, mais il ne mesure pas plus que le calage ne le dit. Le pin est passé à sept graines (#473) ; le frêne pourrait suivre, sur décision.
+- **Le banc perd jusqu'à quatre sujets sur huit** avant quarante ans (zéro sur la graine 23, quatre sur la 11). La cause n'est pas instruite. La météo synthétique ne porte pas d'année, le moteur prend donc 2026, et la chalarose y est active.
+- **GK 6 ou GK 7** : relire la convention de la classe médiane pour les gammes paires.
 
 ## Ce qu'un lot précédent a appris (l'inventaire de carbone, #482 : l'herbe sur pied comptée, la litière de prairie instruite)
 

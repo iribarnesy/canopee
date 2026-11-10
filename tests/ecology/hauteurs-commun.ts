@@ -83,7 +83,11 @@ export const TABLE: Record<string, Reference> = {
   pinus_sylvestris: { nom: "Pin sylvestre", h20: 8.1, h40: 15.5, sc: SABLE_PROFOND },
   // Jansen 1996, zwarte els, GK 6 (gamme 4→8), d'après Mitscherlich 1945.
   alnus_glutinosa: { nom: "Aulne", h20: 12.6, h40: 18.0 },
-  // Jansen 1996, es, GK 6 (gamme 4→9), d'après Volquardts 1958.
+  // Jansen 1996, es, GK 6 (gamme 4→9), d'après Volquardts 1958 : colonne hdom
+  // de la p. 110, relue sur la table pour #481. La gamme compte six classes :
+  // GK 6 est la plus basse des deux du milieu (GK 7 donne 9,8 et 17,9 m).
+  //
+  // **Calé à quarante ans depuis #481**, validé à vingt (`especes.ts`).
   fraxinus_excelsior: { nom: "Frêne", h20: 9.0, h40: 16.5 },
   // Lockow & Lockow 2009, **première** table de production du charme (avant elle,
   // on le taxait par analogie avec le hêtre) : bonité absolue HO100 = 25 m
@@ -126,7 +130,7 @@ export const TABLE: Record<string, Reference> = {
   castanea_sativa: { nom: "Châtaignier", h40: 18.7, sc: LIMON_ACIDE },
 };
 
-/** À quarante ans : garde-fou serré, puisque deux espèces y sont calées. */
+/** À quarante ans : garde-fou serré, puisque quatre essences y sont calées (hêtre, charme, pin, frêne). */
 export const TOLERANCE_CALAGE = 0.15;
 /** À vingt ans : vérification tenue à l'écart, aucune espèce n'y est calée. */
 export const TOLERANCE_TENUE_A_LECART = 0.2;

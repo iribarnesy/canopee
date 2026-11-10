@@ -2402,9 +2402,32 @@ export const ESPECES_V0: readonly EspeceV0[] = [
     nom: "Frêne commun",
     nomLatin: "Fraxinus excelsior",
     hauteurMaxM: 35,
-    // Non calé, et validé : 16,8 m simulés à quarante ans contre 16,5 m dans
-    // la table néerlandaise (es, GK 6).
-    pousseMaxMAn: 0.7,
+    /**
+     * **Calé** à quarante ans sur la table néerlandaise, et validé à vingt
+     * (#481, le 10 novembre 2026, sur main 2682e27, qui porte le couvert et les
+     * voisins ; la fusion de #485 rend les mêmes hauteurs au bit près). Jansen
+     * 1996, es GK 6 d'après Volquardts 1958, p. 110 : 16,5 m à quarante ans,
+     * 9,0 m à vingt.
+     *
+     * Il valait 0,7, « non calé, et validé » (16,8 m contre 16,5). Mais il ne
+     * tenait sa table que par une faim d'azote : la litière de l'herbe
+     * immobilisait l'azote du limon, et le facteur azote du frêne valait 0,71
+     * à 0,80 (#470). Le couvert et les voisins (#464) l'ont porté à 17,36 m
+     * sur les deux graines du banc (+5 %) et 17,78 m sur cinq (+8 %).
+     *
+     * Le calage se lit sur la moyenne de neuf graines (17 et 43, celles du
+     * banc ; 1 à 5, celles du pin ; 11 et 23), parce que d'une graine à
+     * l'autre la hauteur à quarante ans s'écarte de 9 % : deux graines ne
+     * calent pas un trait. 0,66 rend 16,38 m (−0,7 %), 0,67 rend 16,62 m
+     * (+0,7 %), et la règle fixée avant la mesure retient la plus proche. Les
+     * deux sont indiscernables : l'erreur type de la moyenne vaut 3 %, soit
+     * ±0,025 sur le trait. Vingt ans, tenu à l'écart : 8,97 m (−0,3 %). Le
+     * banc de l'essai (graines 17 et 43) lit 16,77 m et 8,90 m.
+     *
+     * **Ce calage sera refait sous O2** (#470) : l'azote du grain lève la faim,
+     * et le frêne y dépassait sa table de 17 % à 0,7.
+     */
+    pousseMaxMAn: 0.67,
     // Atlas : mésophile à hygrocline, il aime les sols frais et riches et
     // souffre vite en sol sec — c'est **le** frêne des fonds de vallée et des
     // haies bocagères.
