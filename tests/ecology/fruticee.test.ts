@@ -52,12 +52,15 @@ describe("la fruticée prend la friche, puis se fait dominer", () => {
     const vieux = etapes.get(120);
     const jeune = etapes.get(15);
     if (!vieux || !jeune) throw new Error("étape manquante");
-    // La ronce est héliophile et vit quinze ans : sous futaie, elle disparaît.
+    // La ronce vit quinze ans et ne tolère que la demi-ombre (compensation
+    // 0,06 dans l'atlas) : elle tient sous un couvert clair, et sous la futaie
+    // elle recule. La phrase disait « héliophile », ce que l'atlas ne dit pas
+    // (#438).
     expect(part(vieux, ["rubus_fruticosus"])).toBeLessThan(0.3 * part(jeune, ["rubus_fruticosus"]));
   });
 
-  it("l'aubépine est la dernière pionnière debout — mesuré sur cinq graines", () => {
-    // **L'énoncé est vrai**, **c'est la mesure qui était fausse**, et il a fallu trois
+  it("l'aubépine reste debout sur chacune des cinq graines", () => {
+    // **L'énoncé passait pour vrai**, **et c'est la mesure qu'on accusait** ; il a fallu trois
     // recalibrations pour s'en apercevoir. L'essai exigeait 5 % des tiges, puis
     // un multiple de 2, puis de 1,5 sur **une** graine — or à cent vingt ans il ne
     // reste qu'une poignée de pionnières, et un rapport entre deux ou trois
@@ -86,10 +89,22 @@ describe("la fruticée prend la friche, puis se fait dominer", () => {
     // Le classement tient au cumul des cinq des deux côtés, la phrase reste la
     // même. La graine 21 est celle des étapes du haut : sa partie n'est pas
     // refaite.
+    //
+    // **Le classement au cumul est retiré (#438, décision du propriétaire).**
+    // L'essai exigeait que l'aubépine passe devant chacune des trois autres au
+    // cumul des cinq graines. Rien ne le sourçait. Il était déjà tombé quatre
+    // fois avec le tirage, et l'atlas dit la ronce de « demi-ombre tolérée »
+    // (compensation 0,06, contre 0,10 pour l'aubépine). Depuis que la pénombre
+    // conserve le feuillage des couronnes, le couvert de cent vingt ans est plus
+    // sombre, et la ronce y tient mieux que l'aubépine, comme sa fiche le dit.
+    // Relevé à cent vingt ans, cinq graines, au cumul :
+    //
+    //     main 18dbb29 : aubépine 68, prunellier 28, ronce 52, sureau 28
+    //     branche      : aubépine 18, prunellier 17, ronce 26, sureau 5
+    //
+    // Ce qui reste affirmé, c'est l'aubépine **debout** sur chaque graine, et la
+    // ronce qui s'efface (l'essai précédent).
     const graines = [21, 11, 42, 3, 7];
-    const autres = ["prunus_spinosa", "rubus_fruticosus", "sambucus_nigra"];
-    let aubepines = 0;
-    const cumuls = new Map<string, number>();
     for (const graine of graines) {
       const fin =
         graine === 21 ? etapes.get(120) : friche("lisiere-forestiere", [120], graine).get(120);
@@ -103,44 +118,8 @@ describe("la fruticée prend la friche, puis se fait dominer", () => {
       // 7 aubépines contre 11 sureaux). Elle disait en code l'inverse de ce que
       // le commentaire ci-dessus dit en français — « un rapport entre deux ou
       // trois individus mesure le tirage, pas l'écologie » — et il a fallu
-      // quatre chutes pour s'en apercevoir. Le classement se vérifie **au cumul**,
-      // plus bas, là où les effectifs cessent d'être une poignée.
-      expect(aubepine).toBeGreaterThan(0);
-      aubepines += aubepine;
-      for (const autre of autres) cumuls.set(autre, (cumuls.get(autre) ?? 0) + n(autre));
-    }
-    // **Au cumul**, **devant chacune** — et c'est la phrase du dessus, pas une de plus.
-    //
-    // La première version exigeait le **double**, et la CI l'a fait tomber (28
-    // contre 15, soit 1,87×) : un multiple choisi sur un relevé rebascule au
-    // premier lot qui déplace le tirage — il y en a eu trois. La deuxième
-    // exigeait que l'aubépine passe les trois autres **réunies**, et #161 l'a fait
-    // tomber à son tour (33 contre 46).
-    //
-    // Cette chute-là n'était pas une régression, et c'est ce qui a décidé de la
-    // forme retenue. Vérifié espèce par espèce : aucun des survivants n'est
-    // sous sa borne de pH — pH local 5,66 à 7,50, facteurs de croissance 0,764
-    // à 1,000, l'aubépine à 7,99 m pour 8 m de potentiel. Le second seuil de pH
-    // ne les maintient donc pas en vie ; il garde des tiges ailleurs, et la
-    // succession se redistribue sur cent vingt ans. Il reste simplement **deux**
-    // **fois plus** de pionnières qu'avant, si bien que « une contre trois réunies »
-    // est devenue une barre arithmétique là où l'énoncé parle d'un classement.
-    //
-    // « La dernière debout » dit « devant », et devant tout le monde à la fois.
-    // C'est donc devant **chacune** que ça se vérifie, au cumul, ce qui écrase le
-    // tirage sans changer l'affirmation.
-    //
-    // Relevé sur les cinq graines, avant et après la stratification du budget
-    // de bases (#170), qui a fait tomber l'ancienne ligne par graine :
-    //
-    //     avant : aubépine 51, prunellier 18, ronce 24, sureau 19
-    //     après : aubépine 75, prunellier 21, ronce 16, sureau 24
-    //
-    // L'avance s'est **élargie** — de deux fois à trois fois la suivante. Ce qui a
-    // bougé n'est donc pas l'écologie mais la répartition du tirage entre
-    // graines, et c'est exactement ce que le cumul est là pour absorber.
-    for (const [autre, n] of cumuls) {
-      expect(aubepines, `cumul contre ${autre}`).toBeGreaterThan(n);
+      // quatre chutes pour s'en apercevoir.
+      expect(aubepine, `graine ${graine}`).toBeGreaterThan(0);
     }
   }, 1_500_000);
 });

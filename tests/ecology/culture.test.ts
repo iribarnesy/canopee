@@ -407,6 +407,20 @@ describe("l'ombre des arbres coûte du rendement", () => {
     // pas d'ancre : aucune allée de huit mètres ne porte des noyers de vingt-
     // cinq ans sans engrais, et le moteur dit seulement qu'elle ne nourrirait
     // plus grand-chose.
+    //
+    // **Relevé avec la pénombre normalisée, puis le houppier des noyers calé
+    // sur Hemery et al. (2005)** (#438) :
+    //
+    //     graine        4      1      7     33   2022   moyenne
+    //     pénombre
+    //       an 25    0,452  0,477  0,502  0,474  0,512    0,483
+    //       an 33    0,421  0,442  0,468  0,417  0,458    0,441
+    //     + houppier
+    //       an 25    0,525  0,577  0,612  0,592  0,570    0,575
+    //       an 33    0,434  0,458  0,559  0,538  0,524    0,503
+    //
+    // Un houppier plus étroit fait moins d'ombre et un disque racinaire plus
+    // petit (le même trait les dimensionne) ; les directions tiennent.
     expect(rapport(25)).toBeLessThan(0.95);
     expect(rapport(25)).toBeLessThan(rapport(3));
     // L'ombre gagne toujours avec l'âge, et le classement des âges reste strict.

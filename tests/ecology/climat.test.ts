@@ -242,7 +242,7 @@ describe("dans une partie, le réchauffement se voit", () => {
     const scenario = getScenario(scenarioId);
     let etpDebut = 0;
     let etpFin = 0;
-    const morts: { especeId: string; cause: string }[] = [];
+    const morts: { id: number; especeId: string; cause: string }[] = [];
     /**
      * Le sommet de la pullulation, **rapporté aux hôtes**.
      *
@@ -289,11 +289,19 @@ describe("dans une partie, le réchauffement se voit", () => {
       hetresMortsDeSoif: morts.filter(
         (m) => m.especeId === "fagus_sylvatica" && m.cause === "secheresse",
       ).length,
+      // Les mêmes, parmi les hêtres **plantés** : des arbres installés, et non les
+      // semis que la parcelle lève d'elle-même au fil de la partie.
+      hetresPlantesMortsDeSoif: morts.filter(
+        (m) => m.especeId === "fagus_sylvatica" && m.cause === "secheresse" && cohorte.has(m.id),
+      ).length,
       // Ce qui reste **debout** de la cohorte plantée : la grandeur directe, celle
       // qu'aucune imputation de cause ne peut déplacer (#84).
       cohorteDebout: state.trees.filter((t) => t.alive && cohorte.has(t.id)).length,
       hetresDebout: state.trees.filter(
         (t) => t.alive && cohorte.has(t.id) && t.especeId === "fagus_sylvatica",
+      ).length,
+      chenesDebout: state.trees.filter(
+        (t) => t.alive && cohorte.has(t.id) && t.especeId === "quercus_pubescens",
       ).length,
       cohorte: cohorte.size,
     };
@@ -351,14 +359,36 @@ describe("dans une partie, le réchauffement se voit", () => {
     // monte et de pluies d'été qui reculent, lue par les seuils d'une espèce
     // qui « aime le frais ». Sur soixante ans de climat figé, le hêtre ne
     // meurt jamais de sécheresse sur ce limon profond ; sous SSP5-8.5, si.
-    // Ce qui compte est le **rapport**, pas le compte. À climat figé, il meurt
-    // quelques hêtres de soif : un semis dense s'auto-éclaircit, et la soif
-    // est un des couteaux qui s'en charge — d'autant plus depuis que le
-    // plafond d'auto-éclaircie laisse le fourré atteindre sa vraie densité.
-    // Sous SSP5-8.5, la même parcelle en perd plus de vingt fois autant.
-    expect(fige.hetresMortsDeSoif).toBeLessThan(5);
-    expect(chauffe.hetresMortsDeSoif).toBeGreaterThan(5);
-    expect(chauffe.hetresMortsDeSoif).toBeGreaterThan(3 * Math.max(1, fige.hetresMortsDeSoif));
+    // Ce qui compte est le **rapport**, pas le compte.
+    //
+    // **Relu sur son critère (#467), et c'est signalé.** L'essai bornait à
+    // moins de cinq la moyenne des hêtres morts de soif au figé sur les trois
+    // parties, un nombre relevé sur le moteur. L'ombrage entre égaux lu sur le
+    // houppier l'a porté à 5,33 (4,67 quand l'élagage lit la cime). Relevés
+    // mort par mort, aucun de ces hêtres n'était planté : au figé, les morts de
+    // soif sont toutes des recrues que la parcelle a levées d'elle-même (5 / 8
+    // / 1 sur les graines 11, 23 et 37 ; 9 / 6 / 1 avec l'élagage sur la
+    // lumière du houppier), des semis de quelques mois à quinze ans. Ce que
+    // l'essai affirme se lit donc graine par graine : au figé, **aucun hêtre
+    // planté** ne meurt de soif (« le hêtre ne meurt jamais de sécheresse »),
+    // et sous SSP5-8.5 la parcelle en perd plus de cinq et plus de trois fois
+    // le figé (le rapport, sur chaque graine, et non plus en moyenne). Mesuré,
+    // sonde hors dépôt : sous SSP5-8.5, 61 / 101 / 40 morts de soif, dont 3 /
+    // 3 / 3 plantés (81 / 96 / 45 et 1 / 8 / 4 avec l'élagage sur le
+    // houppier) ; sur le couvert seul (#464), 4 / 1 / 0 au figé et 41 / 72 /
+    // 49 sous SSP5-8.5. Aucun hêtre planté mort de soif au figé, sur chaque
+    // graine, dans ces trois variantes comme avec la vernale de #476 ; avec
+    // l'élagage niveau par niveau (l'état codé), 5 / 3 / 0 au figé et 80 / 61 / 40
+    // sous SSP5-8.5, aucun planté au figé.
+    for (const [i, f] of fige.runs.entries()) {
+      const c = chauffe.runs[i];
+      if (!c) throw new Error("partie manquante");
+      expect(f.hetresPlantesMortsDeSoif, `graine ${GRAINES[i]}`).toBe(0);
+      expect(c.hetresMortsDeSoif, `graine ${GRAINES[i]}`).toBeGreaterThan(5);
+      expect(c.hetresMortsDeSoif, `graine ${GRAINES[i]}`).toBeGreaterThan(
+        3 * Math.max(1, f.hetresMortsDeSoif),
+      );
+    }
     // On ne compare **pas** les effectifs finaux : ils mélangent la cohorte
     // plantée et les semis nés en cours de route, et un climat plus chaud
     // allonge la saison de végétation donc en installe davantage. Un
@@ -530,7 +560,28 @@ describe("dans une partie, le réchauffement se voit", () => {
       // Et le mésophile paie plus cher que le chêne pubescent, qui est chez lui
       // dans un climat qui se réchauffe : 0,38 / 0,20 / 0,39 contre 0,49 /
       // 0,78 / 0,48 pour la cohorte entière.
-      expect(c.hetresDebout, `graine ${GRAINES[i]}`).toBeLessThan(0.5 * f.hetresDebout);
+      //
+      // **Relu sur son critère (#467, décision du propriétaire), et c'est
+      // signalé.** La ligne exigeait moins de la moitié des hêtres debout du
+      // figé, un 0,5 sans source qui tenait à un arbre près : 14 hêtres pour une
+      // borne de 13,5 sur la graine 11 avec l'élagage à la cime, 14 pour 14,5
+      // sur la graine 37 du couvert seul, 14 pour 14 avec la vernale de #476.
+      // Ce qu'elle affirme est son commentaire : le hêtre paie plus cher que le
+      // chêne pubescent. Elle se lit donc comme une direction entre deux
+      // grandeurs de la même partie : la part des hêtres plantés encore debout
+      // sous SSP5-8.5 (rapportée au figé) reste sous celle des chênes, sur chaque
+      // graine. Mesuré, sonde hors dépôt, graines 11 / 23 / 37, hêtres contre
+      // chênes :
+      //
+      //   élagage à la cime          0,52 / 0,38 / 0,44   0,71 / 0,88 / 0,67
+      //   élagage sur le houppier    0,48 / 0,31 / 0,41   0,90 / 0,91 / 0,67
+      //   couvert seul (#464)        0,00 / 0,39 / 0,48   0,60 / 1,00 / 0,62
+      //   cime, avec la vernale      0,52 / 0,21 / 0,44   0,65 / 1,00 / 0,67
+      //   houppier, avec la vernale  0,34 / 0,33 / 0,34   0,90 / 0,91 / 0,67
+      //   élagage niveau par niveau  0,31 / 0,36 / 0,03   0,95 / 1,08 / 0,83 (l'état codé)
+      const partHetres = c.hetresDebout / Math.max(1, f.hetresDebout);
+      const partChenes = c.chenesDebout / Math.max(1, f.chenesDebout);
+      expect(partHetres, `graine ${GRAINES[i]}`).toBeLessThan(partChenes);
     }
   });
 });
