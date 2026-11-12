@@ -582,6 +582,18 @@ export interface TempeteResult {
   /** volume de tige couché, m³ : ce que le joueur peut encore vendre, décoté */
   volumeM3: number;
   victimes: readonly { id: number; hauteurM: number }[];
+  /**
+   * Les arbres dont le **fût** a cassé (F17), chacun avec le volume de tige
+   * qu'il portait avant la cassure, m³.
+   *
+   * Ce bois est endommagé, mais il n'est pas par terre : un moignon reste
+   * debout. Il n'entre donc pas dans `volumeM3`, que l'économie lit comme le
+   * bois couché à vendre. Un inventaire de dégâts le compte, lui : le volume
+   * endommagé par les tempêtes de 1999 que cite `tempete.test.ts` (IFN 2003)
+   * réunit les deux ruines. C'est cette grandeur que lisent les essais du vent
+   * depuis #483 ; avant, ils ne voyaient que les chablis.
+   */
+  casses: readonly { id: number; volumeM3: number }[];
 }
 
 /**
@@ -4439,6 +4451,9 @@ export function tick(state: GameState, weather: WeekWeather, essai?: ReglagesDEs
         arbresEbranches: ebranches,
         volumeM3: verses.reduce((s, t) => s + volumeTigeM3(t.diametreCm, t.heightM), 0),
         victimes: verses.map((t) => ({ id: t.id, hauteurM: t.heightM })),
+        // `casses` garde l'arbre d'avant la cassure : c'est son volume entier
+        // qui est endommagé, pas seulement la cime tombée.
+        casses: casses.map((t) => ({ id: t.id, volumeM3: volumeTigeM3(t.diametreCm, t.heightM) })),
       };
     }
   }

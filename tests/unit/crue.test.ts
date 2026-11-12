@@ -179,6 +179,7 @@ describe("la crue dans le plan d'ellipse", () => {
           arbresEbranches: 0,
           arbresVerses: 0,
           volumeM3: 0,
+          casses: [],
         },
       },
     ]);

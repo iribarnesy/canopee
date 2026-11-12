@@ -59,11 +59,12 @@
  *    mois de troncs par terre sont donc invisibles au feu. C'est déjà vrai des
  *    arbres tués par le feu lui-même, et le corriger touche `feu.ts` plus que
  *    ce fichier.
- *  - **Le tri par l'élancement est faible**, et pour une raison mesurée
- *    ailleurs : le moteur ne produit que des H/D de 35 à 49, quand la
+ *  - **Le tri par l'élancement était faible**, et pour une raison mesurée
+ *    ailleurs : le moteur ne produisait que des H/D de 35 à 49, quand la
  *    sylviculture en mesure de 25 à 100. Deux causes ont été éliminées par la
- *    mesure (#65, #79) ; celle qui reste est l'étiolement — une tige à l'ombre
- *    stagne au lieu de filer (#97).
+ *    mesure (#65, #79) ; la troisième était l'étiolement — une tige à l'ombre
+ *    stagnait au lieu de filer. Levée par #97 : la rampe d'élancement sert
+ *    maintenant en entier (`facteurElancement`).
  */
 
 import { rngFloat, rngStateFromSeed } from "./rng";
@@ -141,10 +142,21 @@ export function rafaleDeLaSemaine(
 /**
  * Rafale au-dessous de laquelle on ne regarde même pas les arbres, m/s.
  *
- * 25 m/s (90 km/h) : en dessous, aucun arbre du moteur n'atteint sa vitesse
- * critique, et parcourir le peuplement coûterait du temps pour rien. Ce n'est
- * pas un seuil de dégât — c'est un filtre de calcul, et il doit rester **sous** le
- * plus fragile des cas possibles.
+ * 25 m/s (90 km/h). C'est un filtre de calcul, pour ne pas parcourir le
+ * peuplement à chaque coup de vent, et il a été écrit pour rester **sous** le
+ * plus fragile des cas possibles : « en dessous, aucun arbre du moteur
+ * n'atteint sa vitesse critique ».
+ *
+ * **C'est faux pour une tige élancée** (#483). Un hêtre de 15 m à H/D 97
+ * (densité 0,55) casse à 10,6 m/s de rafale à sa cime en feuilles, et à 15,2
+ * l'hiver, avec ses feuilles mortes (`vitesseCritiqueVolisMs`). À pleine
+ * exposition, ce sont des rafales de 9,7 et 14,0 m/s à 10 m, et encore 11,7 et
+ * 16,8 sous l'abri de peuplement le plus fort. L'ébranchage, qui commence aux
+ * six dixièmes de la vitesse critique (`PART_CASSE_BRANCHES`), passe aussi sous
+ * le filtre pour un arbre ordinaire : un pin isolé de 20 m à H/D 50 perd ses
+ * premières branches à 12,7 m/s à 10 m. Pour ces arbres-là, le filtre tient
+ * lieu de seuil de dégât, et rien ne le fonde. La valeur n'a pas bougé : la
+ * changer changerait toutes les parties exposées *(à calibrer)*.
  */
 export const RAFALE_MINIMALE_MS = 25;
 
@@ -175,9 +187,10 @@ export function partDeRafaleAHauteur(hauteurM: number): number {
  * Vitesse critique d'un arbre bien ancré, trapu et dénudé, m/s.
  *
  * Les modèles de risque de chablis (famille ForestGALES) donnent des vitesses
- * critiques de 15 à 45 m/s selon l'essence, le sol et la conduite. Cette borne
- * haute est celle d'un cas favorable ; tous les facteurs ci-dessous la rabotent
- * *(à calibrer)*.
+ * critiques de 15 à 45 m/s selon l'essence, le sol et la conduite *(à
+ * confirmer : cette bande n'a pas de référence, et l'instruction de #483 n'en a
+ * pas trouvé)*. Cette borne haute est celle d'un cas favorable ; tous les
+ * facteurs ci-dessous la rabotent *(à calibrer)*.
  */
 export const VITESSE_CRITIQUE_BASE_MS = 46;
 
@@ -195,20 +208,24 @@ export const PERTE_ELANCEMENT = 0.55;
  * sylviculture française : au-delà de 80 on parle de peuplement instable, en
  * dessous de 50 de peuplement ferme. La rampe est écrite sur cette gamme.
  *
- * **`ELANCEMENT_CRITIQUE` est inatteignable, et ce n'est pas la faute de ce
- * fichier.** L'allocation d'ombre de `trees.ts` plafonne H/D à 80 : la moitié
- * haute de cette rampe est donc du code mort, et en pratique le facteur ne
- * descend jamais sous 0,92 puisque les peuplements ne produisent que 35 à 49.
+ * **La rampe entière sert, depuis l'étiolement** (#97). Ce commentaire l'a dite
+ * à moitié morte : l'allocation d'ombre de `trees.ts` plafonnait H/D à 80, les
+ * peuplements ne produisaient que 35 à 49, et le facteur ne descendait pas
+ * sous 0,92. C'était vrai avant #97, et c'est périmé (#483) : une tige à
+ * l'ombre file au lieu de stagner, son diamètre encaisse le résidu, et
+ * l'élancement réalisé dépasse la fenêtre de l'allocation. Relevé à #467, à
+ * trente ans dans une hêtraie plantée à 2 m, trois graines : dominants à H/D
+ * 58 à 63, et une perche de 109 à 112 (E10). `elancement.test.ts` garde que la tige la
+ * plus élancée de ce peuplement passe la moitié de la rampe, là où le facteur
+ * vaut moins de 0,6.
  *
- * #79 a essayé d'ouvrir la fenêtre en descendant cette allocation, et la mesure
- * l'a refusé : des tiges plus fines résistent moins au **feu**, l'incendie leur
- * vole les victimes que `climat.test.ts` compte pour montrer que le
- * réchauffement tue, et une conclusion climatique se renversait pour quatre
- * points d'amplitude. Le compte rendu est sur `ALLOCATION_DIAMETRE_OMBRE`.
- *
- * Ce qui ouvrira cette rampe est ailleurs : une tige à l'ombre doit **filer** au
- * lieu de stagner (#97). Le cadran est écrit sur la bonne gamme ; c'est
- * l'aiguille qui n'y arrive pas.
+ * #79 avait d'abord essayé d'ouvrir la fenêtre en descendant cette allocation,
+ * et la mesure l'a refusé : des tiges plus fines résistent moins au **feu**,
+ * l'incendie leur vole les victimes que `climat.test.ts` compte pour montrer
+ * que le réchauffement tue, et une conclusion climatique se renversait pour
+ * quatre points d'amplitude. Le compte rendu est sur `ALLOCATION_DIAMETRE_OMBRE`.
+ * Ce qui a ouvert la rampe était ailleurs : le cadran était écrit sur la bonne
+ * gamme, c'est l'aiguille qui n'y arrivait pas.
  */
 export function facteurElancement(hauteurM: number, diametreCm: number): number {
   if (diametreCm <= 0) return 1;
@@ -633,13 +650,13 @@ export const ELANCEMENT_REFERENCE = 50;
  *
  * L'ancre n'est pas un nombre isolé, c'est un **rapport** : les modèles de la
  * famille ForestGALES calculent deux vitesses critiques — renversement et
- * rupture — et les publient dans la même bande de 15 à 45 m/s. Aucune des deux
- * ne domine par construction ; ce qui décide est le sol et le bois. La valeur
- * ci-dessous est donc posée pour que l'arbre de référence ait, sur sol ferme et
- * bien ancré, une vitesse de rupture du même ordre que sa vitesse de
+ * rupture — et les publient dans la même bande de 15 à 45 m/s *(à confirmer :
+ * la bande n'a pas de référence, voir `VITESSE_CRITIQUE_BASE_MS`)*. Aucune des
+ * deux ne domine par construction ; ce qui décide est le sol et le bois. La
+ * valeur ci-dessous est donc posée pour que l'arbre de référence ait, sur sol
+ * ferme et bien ancré, une vitesse de rupture du même ordre que sa vitesse de
  * renversement (27 m/s). Ce qui trie ensuite, c'est tout le reste
- * *(à calibrer : la bande est mesurée, l'égalité au point de référence est une
- * convention)*.
+ * *(à calibrer : l'égalité au point de référence est une convention)*.
  */
 export const VITESSE_CRITIQUE_VOLIS_MS = 42;
 

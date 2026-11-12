@@ -191,8 +191,8 @@ describe("LE CRITÈRE : un peuplement qu'on vient d'ouvrir verse", () => {
     const stationB: Station = { ...LIMON_RICHE.station, coteM: COTE_B, voisinage: [] };
     const AN = 40;
     const SUIVI = 12;
-    let couchesEclairci = 0;
-    let couchesTemoin = 0;
+    let ruinesEclairci = 0;
+    let ruinesTemoin = 0;
     let toutDeSuiteEclairci = 0;
     let toutDeSuiteTemoin = 0;
     let cohorteTotale = 0;
@@ -240,14 +240,18 @@ describe("LE CRITÈRE : un peuplement qu'on vient d'ouvrir verse", () => {
           const r = tick(s, w);
           s = r.state;
           if (!r.tempete) continue;
-          for (const vic of r.tempete.victimes) {
+          // Les **deux** ruines (#483) : `victimes` ne liste que les chablis,
+          // `casses` les volis. La naïveté fragilise le fût autant que la motte
+          // (`facteurNaivete`), et le banc ne voyait pas les dominants que
+          // l'ouverture fait casser.
+          for (const vic of [...r.tempete.victimes, ...r.tempete.casses]) {
             if (!cohorte.has(vic.id)) continue;
             const tot = i < (AN + 5) * 52;
             if (eclairciBras) {
-              couchesEclairci++;
+              ruinesEclairci++;
               if (tot) toutDeSuiteEclairci++;
             } else {
-              couchesTemoin++;
+              ruinesTemoin++;
               if (tot) toutDeSuiteTemoin++;
             }
           }
@@ -306,10 +310,10 @@ describe("LE CRITÈRE : un peuplement qu'on vient d'ouvrir verse", () => {
     // ce n'est pas la naïveté qui a baissé, **c'est le témoin qui a cessé d'être**
     // **intact**. Ce qui reste exigé, sur les deux fenêtres : plus de couchés dans
     // le bras éclairci que dans le témoin.
-    expect(couchesTemoin).toBeGreaterThan(0);
+    expect(ruinesTemoin).toBeGreaterThan(0);
     expect(toutDeSuiteTemoin).toBeGreaterThan(0);
     expect(toutDeSuiteEclairci).toBeGreaterThan(toutDeSuiteTemoin);
-    expect(couchesEclairci).toBeGreaterThan(couchesTemoin);
+    expect(ruinesEclairci).toBeGreaterThan(ruinesTemoin);
     // **Le délai** (#378) : six graines de quarante ans, puis deux bras de douze.
     // Rien ne s'y rogne : les couchés se comptent par dizaines sur les six
     // graines (49 contre 20 sur cinq ans), et une graine de moins amincit
