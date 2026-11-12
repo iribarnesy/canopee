@@ -15,7 +15,6 @@ import {
   computeGroundLight,
   computeLight,
   lumieresDesArbres,
-  MAX_EXTINCTION,
   PROFONDEUR_HOUPPIER_MAX,
   poidsDuVoisin,
   profondeurVivanteParNiveaux,
@@ -151,9 +150,9 @@ describe("la lumière des arbres", () => {
   });
 
   it("au sol, tout houppier pèse à plein, le petit comme le grand", () => {
-    // Hors saturation, les extinctions s'additionnent : la lumière sous les
-    // deux est le produit des lumières sous chacun. Feuillage à 30 % pour
-    // rester sous la saturation là où les deux ombres se recouvrent.
+    // Les extinctions s'additionnent : la lumière sous les deux est le produit
+    // des lumières sous chacun. Depuis que l'ombre ne sature plus (#484), c'est
+    // vrai partout, là où les deux ombres se recouvrent le plus aussi.
     const grand = arbre(1, 8, 8, 12);
     const petit = arbre(2, 9, 10, 6);
     const part = () => 0.3;
@@ -164,7 +163,7 @@ describe("la lumière des arbres", () => {
     for (let i = 0; i < deux.length; i++) {
       const a = sousGrand[i] ?? 1;
       const b = sousPetit[i] ?? 1;
-      if (a >= 1 || b >= 1 || -Math.log(a) - Math.log(b) > 2) continue;
+      if (a >= 1 || b >= 1) continue;
       expect(deux[i]).toBeCloseTo(a * b, 12);
       comparees++;
     }
@@ -172,14 +171,11 @@ describe("la lumière des arbres", () => {
   });
 });
 
-/** Saturation de l'ombre, recopiée de light.ts pour le calcul de référence. */
-function saturer(e: number): number {
-  if (e <= 2) return e;
-  const span = MAX_EXTINCTION - 2;
-  return 2 + span * (1 - Math.exp(-(e - 2) / span));
-}
-
-/** La même profondeur, par dichotomie fine sur la lumière de chaque niveau : la référence. */
+/**
+ * La même profondeur, par dichotomie fine sur la lumière de chaque niveau : la
+ * référence. L'extinction des voisins y passe telle quelle, sans plafond (#484) :
+ * la référence recopiait la saturation de light.ts tant qu'elle existait.
+ */
 function profondeurDeReference(
   H: number,
   v: VoisinsOmbre,
@@ -194,7 +190,7 @@ function profondeurDeReference(
       const d = v.profondeurM[i] ?? 0;
       e += (v.ombre[i] ?? 0) * Math.max(0, Math.min(1, ((v.cimeM[i] ?? 0) - y) / d));
     }
-    return facteur * Math.exp(-saturer(e)) * Math.exp(-0.5 * lai * p);
+    return facteur * Math.exp(-e) * Math.exp(-0.5 * lai * p);
   };
   if (lumiere(0) <= compensation) return 0;
   if (lumiere(PROFONDEUR_HOUPPIER_MAX) >= compensation) return PROFONDEUR_HOUPPIER_MAX;
