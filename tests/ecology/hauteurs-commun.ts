@@ -79,7 +79,8 @@ export const TABLE: Record<string, Reference> = {
   // Sologne (+21 %), 5,2 m sur la lande — dont une graine à zéro, le peuplement
   // entier parti au feu à cinq ans et demi. Les stations **encadraient** la table
   // sans la contenir, et c'est le dispositif qui manquait, pas le paramètre de
-  // l'espèce : `pousseMaxMAn` n'a pas bougé de 0,45.
+  // l'espèce : `pousseMaxMAn` n'avait pas bougé de 0,45. Il a été recalé à 0,40
+  // depuis, sur la table à quarante ans (#247, `especes.ts`).
   pinus_sylvestris: { nom: "Pin sylvestre", h20: 8.1, h40: 15.5, sc: SABLE_PROFOND },
   // Jansen 1996, zwarte els, GK 6 (gamme 4→8), d'après Mitscherlich 1945.
   alnus_glutinosa: { nom: "Aulne", h20: 12.6, h40: 18.0 },
