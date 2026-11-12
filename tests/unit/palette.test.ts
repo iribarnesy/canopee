@@ -359,8 +359,8 @@ describe("l'ombre du couvert : ce que le moteur savait et que le rendu ignorait"
   });
 
   it("**ne descend jamais au noir, même sous une hêtraie fermée**", () => {
-    // La physique dirait ~1 % de lumière sous un couvert fermé
-    // (`MAX_EXTINCTION`). La rendre au pied de la lettre ferait un trou d'encre
+    // La physique dirait 1 à 3 % de lumière sous un couvert fermé de hêtres
+    // (`light.ts`). La rendre au pied de la lettre ferait un trou d'encre
     // au milieu de la parcelle, et on ne verrait plus rien de ce qui s'y
     // passe : ni les semis, ni le bois au sol, ni les marques d'action. C'est
     // un choix de dessin, et il est borné pour qu'on ne puisse pas le

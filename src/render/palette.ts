@@ -605,8 +605,9 @@ function teinteDuTapis(tapis?: MelangeDuTapis): Teinte {
  * Le sol le plus sombre qu'un couvert fermé puisse donner, en facteur de clarté.
  *
  * **Pas zéro, et pour la même raison que l'ombre portée n'est pas noire** : le
- * sous-bois d'une hêtraie fermée reçoit ~1 % de la lumière du jour
- * (`MAX_EXTINCTION`), mais l'œil, lui, s'y adapte — un sous-bois n'est pas noir
+ * sous-bois d'une hêtraie fermée reçoit 1 à 3 % de la lumière du jour
+ * (Hagemeier et Leuschner 2019, *à confirmer* ; `light.ts`), mais l'œil, lui,
+ * s'y adapte — un sous-bois n'est pas noir
  * pour qui s'y trouve, il est sombre et vert. Rendre la physique au pied de la
  * lettre donnerait un trou d'encre au milieu de la parcelle, et on ne verrait
  * plus rien de ce qui s'y passe : ni les semis, ni le bois au sol, ni les

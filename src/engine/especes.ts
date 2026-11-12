@@ -143,9 +143,10 @@ export interface EspeceV0 {
      * pousse plus et ne meurt pas — c'est le semis qui patiente sous couvert,
      * et c'est voulu.
      *
-     * Conséquence à connaître : le hêtre (0,01) a un seuil de stress de 0,0090,
-     * **sous** le plancher de lumière du moteur (0,0111). Il ne peut donc jamais
-     * mourir d'ombre (#65, `lumiere.test.ts`).
+     * Le hêtre (0,01) a un seuil de stress de 0,0090. Il passait **sous** le
+     * plancher de lumière du moteur (0,0111), et le hêtre ne pouvait pas mourir
+     * d'ombre (#65). Le plancher est tombé avec la saturation de l'ombre (#484) :
+     * aucune espèce n'est plus hors d'atteinte (`lumiere.test.ts`).
      */
     compensation: number;
     /** saturation ∈ [0,1] : lumière au-delà de laquelle la croissance plafonne */

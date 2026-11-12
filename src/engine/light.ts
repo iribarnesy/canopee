@@ -27,33 +27,38 @@ const BEER_LAMBERT_K = 0.5;
 export const SHADOW_NORTH_OFFSET = 0.4;
 const BUCKET_M = 12;
 /**
- * Extinction maximale (saturation douce) : les couronnes superposées se
- * chevauchent et laissent des trouées de ciel, elles ne s'empilent pas en
- * couches parfaites. exp(−4,5) ≈ 1,1 % de lumière au sol — l'ordre de grandeur
- * mesuré sous les couverts les plus sombres *(à calibrer)*.
+ * ─── **l'extinction n'a pas de plafond** (#484) ─────────────────────────────────
  *
- * C'est une **asymptote** : l'extinction brute a beau valoir huit, vingt ou un
- * million, la valeur rendue tend vers 4,5 sans jamais l'atteindre. Il reste donc
- * toujours `exp(−MAX_EXTINCTION)` = 1,11 % de lumière, partout, quoi qu'on
- * empile. L'intention est juste — un sous-bois n'est jamais noir, il y a des
- * trouées de ciel et des taches de soleil — mais la **valeur** n'est pas sourcée :
- * les sous-bois mesurés descendent sous 2 % et n'ont pas de mur.
+ * Les ombres des couronnes s'additionnent telles quelles, et la lumière vaut
+ * `exp(−extinction)` jusqu'au bout : au centre des ombres de deux couronnes de
+ * hêtre superposées, il passe 0,09 % de la lumière, et il n'y a pas de mur.
  *
- * **Exportée** parce que ce plancher porte une conséquence qu'aucune simulation ne
- * révèle : une espèce dont le seuil de stress d'ombre passe dessous devient
- * immortelle à l'ombre. Ce seuil vaut `2 × STRESS_ONSET × compensation`, soit
- * 0,9 fois la compensation — et non la compensation, qui ne gouverne que
- * l'arrêt de la croissance. Le hêtre est dans ce cas (0,0090 contre 0,0111), et
- * c'est pourquoi une hêtraie plantée à deux mètres garde ses 361 tiges au bout
- * de cent vingt ans (#65).
+ * Il y avait un plafond. `saturer` laissait passer l'extinction jusqu'à un coude
+ * à 2, puis la menait doucement vers `MAX_EXTINCTION` = 4,5 : il restait
+ * toujours exp(−4,5) = 1,1 % de lumière, quoi qu'on empile. Le plafond portait
+ * *(à calibrer)*, le coude ni source ni marque. Le coude avait été posé quand le
+ * centre d'une couronne de hêtre valait `k · lai` = 1,75 ; depuis que la
+ * pénombre est rapportée à sa moyenne (#438, #464), il vaut 3,5, et une seule
+ * couronne passait le coude à l'aplomb de son tronc. Sous la hêtraie fermée que
+ * le moteur fait pousser (plantée à 2 m, quarante ans), la saturation ajoutait
+ * 1,3 à 1,5 point aux 3 à 4 % de lumière d'été au sol ; sous le hêtre, le
+ * terrain en mesure 1 à 3 % (Hagemeier et Leuschner 2019, *Forests* 10 : 925, lu
+ * par extrait *(à confirmer)*). Sans elle, le k effectif du couvert fermé
+ * (−ln(lumière) / LAI des couronnes) remonte de 0,29-0,35 à 0,39-0,44, dans la
+ * gamme mesurée sur LAI direct (0,40-0,48 en plantation, Bréda 2003,
+ * *J. Exp. Bot.* 54 : 2403, tableau 1).
  *
- * **Vingt-trois pour cent d'écart**, c'est-à-dire un équilibre sur le fil : deux
- * constantes indépendantes se croisent là, et recalibrer l'une ou l'autre
- * renverserait le résultat sans que personne l'ait décidé. Dans la réalité le
- * hêtre dominé **meurt**, par famine carbonée — un budget cumulé, pas un seuil
- * instantané (#96). `lumiere.test.ts` épingle le rapport entre les deux.
+ * Les trouées de ciel et les taches de soleil que le plafond voulait dire sont
+ * des trous **entre** les couronnes, et le moteur les a déjà : chaque couronne a
+ * un bord, la pénombre s'y estompe, et une cellule ne reçoit l'ombre que des
+ * houppiers qui la couvrent. Le plafond les ajoutait une seconde fois, partout.
+ *
+ * Il rendait aussi le hêtre immortel à l'ombre : son seuil de stress, 0,9 fois sa
+ * compensation (0,0090), passait sous 0,0111 (#65). La famine carbonée (#96)
+ * porte cette mort depuis, et le propriétaire a décidé, le 12 novembre, qu'un
+ * hêtre dominé peut mourir d'ombre (#484). `lumiere.test.ts` épingle qu'aucune
+ * espèce n'est plus hors d'atteinte.
  */
-export const MAX_EXTINCTION = 4.5;
 
 /**
  * ─── **le houppier suit le diamètre**, **pas la hauteur** ────────────────────────────
@@ -401,16 +406,6 @@ export function poidsDuVoisin(
 }
 
 /**
- * Une ou deux couronnes s'additionnent pleinement ; les empilements profonds
- * saturent (chevauchements, trouées de ciel) vers MAX_EXTINCTION.
- */
-function saturer(extinction: number): number {
-  if (extinction <= 2) return extinction;
-  const span = MAX_EXTINCTION - 2;
-  return 2 + span * (1 - Math.exp(-(extinction - 2) / span));
-}
-
-/**
  * Les houppiers voisins qui couvrent un arbre, gardés le temps de le lire : de quoi
  * relire leur ombre à n'importe quel niveau de son houppier. Un tampon réutilisé
  * d'un arbre à l'autre, pour ne rien allouer par arbre et par semaine.
@@ -430,7 +425,7 @@ export function voisinsOmbreVides(): VoisinsOmbre {
 }
 
 /**
- * Ce que les couronnes voisines éteignent, avant saturation, au point (x, y) sur
+ * Ce que les couronnes voisines éteignent au point (x, y) sur
  * un houppier qui va de `baseM` à `cimeM`. Un point au sol se lit avec `baseM` =
  * `cimeM` = 0. `selfId` écarte le houppier de l'arbre lu. Si `voisins` est donné,
  * chaque houppier qui couvre le point y est rangé, pour l'élagage.
@@ -474,9 +469,9 @@ function sommerOmbres(
   return extinction;
 }
 
-/** Extinction en un point au sol, saturée. */
+/** Extinction en un point au sol. */
 function extinctionAt(buckets: Map<number, Shadow[]>, x: number, y: number): number {
-  return saturer(sommerOmbres(buckets, x, y, 0, 0, -1, null));
+  return sommerOmbres(buckets, x, y, 0, 0, -1, null);
 }
 
 /**
@@ -499,18 +494,14 @@ function extinctionAt(buckets: Map<number, Shadow[]>, x: number, y: number): num
  * 2 m sans aucun élagage en vingt-cinq ans (part nue 0,10 sur trois graines).
  *
  * Sans voisins, c'est exactement `baseHouppierCible`. Aucune constante
- * nouvelle : la compensation et `lai` de l'espèce, `PROFONDEUR_HOUPPIER_MAX`,
- * la saturation de l'ombre.
+ * nouvelle : la compensation et `lai` de l'espèce, `PROFONDEUR_HOUPPIER_MAX`.
  *
- * **Le calcul est en forme fermée là où l'ombre ne sature pas.** L'extinction
- * des voisins est linéaire par morceaux en fonction du niveau : chaque houppier
- * voisin y entre à sa cime et pèse à plein sous sa base. On parcourt les
- * morceaux depuis la cime ; sur celui où la lumière passe sous la compensation,
- * l'équation est linéaire et se résout d'un coup. Là où l'empilement des
- * houppiers sature (extinction voisine au-delà de 2), elle demanderait la
- * fonction W de Lambert ; une dichotomie de cinquante pas la résout à 10⁻¹⁵
- * près. Ce cas ne se présente que pour une espèce dont la compensation passe
- * sous exp(−2) = 0,135, donc jamais pour le pin ou le bouleau.
+ * **Le calcul est en forme fermée.** L'extinction des voisins est linéaire par
+ * morceaux en fonction du niveau : chaque houppier voisin y entre à sa cime et
+ * pèse à plein sous sa base. On parcourt les morceaux depuis la cime ; sur celui
+ * où la lumière passe sous la compensation, l'équation est linéaire et se résout
+ * d'un coup. Tant que l'ombre saturait au-delà d'une extinction voisine de 2, ce
+ * morceau-là demandait une dichotomie ; la saturation est tombée (#484).
  *
  * Rend 1 dans les cas dégénérés (arbre sans hauteur, espèce sans seuil), soit
  * une base au sol, comme `baseHouppierCible`.
@@ -529,7 +520,7 @@ export function profondeurVivanteParNiveaux(
   // Marge de log-lumière au-dessus de la compensation, à la profondeur p, pour
   // une extinction voisine e : décroissante en p.
   const marge0 = Math.log(facteur / compensation);
-  const marge = (p: number, e: number): number => marge0 - saturer(e) - opacite * p;
+  const marge = (p: number, e: number): number => marge0 - e - opacite * p;
   const n = voisins?.n ?? 0;
   // Extinction voisine et pente au sommet (p = 0), et les ruptures de pente.
   let e = 0;
@@ -556,7 +547,7 @@ export function profondeurVivanteParNiveaux(
   for (let k = 0; k <= m; k++) {
     const p1 = k < m ? (RUPTURES_P[k] ?? P) : P;
     const e1 = e + pente * (p1 - p0);
-    if (marge(p1, e1) <= 0) return racineSurUnMorceau(p0, p1, e, pente, marge, marge0, opacite);
+    if (marge(p1, e1) <= 0) return racineSurUnMorceau(p0, p1, e, pente, marge0, opacite);
     p0 = p1;
     e = e1;
     if (k < m) pente += RUPTURES_PENTE[k] ?? 0;
@@ -583,33 +574,19 @@ function insererRupture(m: number, p: number, dPente: number): number {
 
 /**
  * La profondeur où la marge s'annule entre p0 et p1, l'extinction voisine y
- * valant e0 + pente × (p − p0). Linéaire tant qu'elle ne sature pas.
+ * valant e0 + pente × (p − p0) : une équation linéaire. La racine est gardée dans
+ * le morceau, dont l'arrondi pourrait la faire sortir d'un cheveu.
  */
 function racineSurUnMorceau(
   p0: number,
   p1: number,
   e0: number,
   pente: number,
-  marge: (p: number, e: number) => number,
   marge0: number,
   opacite: number,
 ): number {
-  let debut = p0;
-  if (e0 < 2) {
-    const p = (marge0 - e0 + pente * p0) / (pente + opacite);
-    const eP = e0 + pente * (p - p0);
-    if (p <= p1 && eP <= 2) return Math.max(p0, p);
-    // La racine est au-delà du seuil de saturation : on repart de là.
-    debut = pente > 0 ? p0 + (2 - e0) / pente : p1;
-  }
-  let lo = debut;
-  let hi = p1;
-  for (let i = 0; i < 50; i++) {
-    const mid = (lo + hi) / 2;
-    if (marge(mid, e0 + pente * (mid - p0)) > 0) lo = mid;
-    else hi = mid;
-  }
-  return lo;
+  const p = (marge0 - e0 + pente * p0) / (pente + opacite);
+  return Math.min(p1, Math.max(p0, p));
 }
 
 /**
@@ -640,7 +617,7 @@ export function lumieresDesArbres(
     }
     const baseM = tree.heightM - profondeurHouppierM(tree);
     const ext = sommerOmbres(buckets, tree.x, tree.y, tree.heightM, baseM, tree.id, voisins);
-    houppier[i] = facteurs ? Math.exp(-saturer(ext)) * facteur : Math.exp(-saturer(ext));
+    houppier[i] = facteurs ? Math.exp(-ext) * facteur : Math.exp(-ext);
     const { compensation, lai } = getEspece(tree.especeId).lumiere;
     profondeurVivante[i] = profondeurVivanteParNiveaux(
       tree.heightM,
@@ -859,7 +836,7 @@ export function couvertAuDessusDesArbres(
     if (!tree.alive) return 0;
     const baseM = tree.heightM - profondeurHouppierM(tree);
     const ext = sommerOmbres(buckets, tree.x, tree.y, tree.heightM, baseM, tree.id, null);
-    return 1 - Math.exp(-saturer(ext));
+    return 1 - Math.exp(-ext);
   });
 }
 

@@ -74,12 +74,14 @@ mécanisme : neutraliser le tirage et remesurer.
   mélange la cohorte plantée et ses propres descendants, ce qui masque
   exactement la mortalité qu'on mesure. Ne compter que les ids initiaux.
 - **Une constante peut rendre un essai impossible sans qu'aucun essai le dise.**
-  Le plancher de lumière `exp(−MAX_EXTINCTION)` vaut 0,0111 et la compensation
-  du hêtre 0,01 : aucun hêtre ne peut mourir d'ombre, nulle part, jamais. Il a
+  Le plancher de lumière `exp(−MAX_EXTINCTION)` valait 0,0111 et la compensation
+  du hêtre 0,01 : aucun hêtre ne pouvait mourir d'ombre, nulle part, jamais. Il a
   fallu une campagne de cent vingt ans pour s'en apercevoir, là où comparer deux
   nombres suffisait. Quand une simulation ne bouge pas, chercher d'abord si elle
   **peut** bouger — `lumiere.test.ts` et `elancement.test.ts` portent maintenant ces
-  bornes-là, et elles ne coûtent rien.
+  bornes-là, et elles ne coûtent rien. (Le plancher est tombé avec la saturation
+  de l'ombre, #484 ; les bornes disent maintenant qu'aucune espèce n'est hors
+  d'atteinte.)
 - **Un témoin pris après le tri n'est pas un témoin.** `tempete.test.ts` posait
   en hypothèse que les deux peuplements « arrivent à taille comparable », et le
   vérifiait sur la hauteur des **survivants** à soixante ans — c'est-à-dire après

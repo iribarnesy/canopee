@@ -33,8 +33,9 @@ export const TAILLE_TACHE_PX = 128;
 /**
  * Opacité de l'ombre d'un houppier plein, au plus.
  *
- * Une ombre de feuillage n'est pas noire : sous un couvert dense il reste ~1 %
- * de lumière (`MAX_EXTINCTION` dans `light.ts`), mais l'ombre **portée** au sol
+ * Une ombre de feuillage n'est pas noire : sous un couvert dense il reste 1 à
+ * 3 % de lumière (Hagemeier et Leuschner 2019, *à confirmer* ; `light.ts`), mais
+ * l'ombre **portée** au sol
  * qu'on dessine est celle d'un seul arbre, et le sol y reste très lisible.
  * 0,32 est un choix de dessin, assumé comme tel.
  */
@@ -104,10 +105,11 @@ export const DENSITES = 4;
  * noire : chaque couche multiplie la précédente, et un fourré de ronces éteint
  * la parcelle. C'est ce que la première capture de ce lot montrait.
  *
- * Le moteur, lui, sature déjà : `MAX_EXTINCTION` dans `light.ts` dit que les
- * couronnes se chevauchent et laissent des trouées, elles ne s'empilent pas en
- * couches parfaites. Le rendu doit faire pareil, sinon il affiche une
- * obscurité que le modèle ne calcule pas.
+ * La lumière que le moteur calcule au sol, couronnes superposées comprises, est
+ * déjà peinte cellule par cellule : c'est l'ombre du couvert (`ombreDuCouvert`,
+ * palette.ts). La tache, elle, dit qu'un arbre est là et de quel côté tombe son
+ * ombre. Empilées en multiplication, les taches compteraient une seconde fois
+ * l'obscurité que le sol montre déjà.
  *
  * D'où la marche à suivre, en trois temps :
  *

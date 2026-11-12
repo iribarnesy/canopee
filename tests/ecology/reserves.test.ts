@@ -6,7 +6,8 @@
  * lumière. L'ombre tuait 4 à 7 tiges sur une cohorte de pins de cent vingt ans
  * quand les ravageurs en prenaient 205 à 244, et le hêtre ne mourait **jamais**
  * d'ombre — 361 plantés, 361 vivants — parce que son seuil de stress passait
- * **sous** le plancher de lumière que le moteur sait produire.
+ * **sous** le plancher de lumière que le moteur savait produire (le plancher est
+ * tombé depuis avec la saturation de l'ombre, #484).
  *
  * Ce que ce fichier vérifie :
  *   1. l'ombre tolérable **décroît** avec la taille — c'est tout le mécanisme ;
@@ -106,18 +107,27 @@ describe("l'ombre tolérable décroît avec la taille, et c'est tout le mécanis
     expect(perche).toBeLessThan(adulte);
   });
 
-  it("et le semis de hêtre reste JOIGNABLE sous le couvert le plus sombre", () => {
+  it("et le semis de hêtre reste JOIGNABLE : sous le couvert, il patiente où la perche est condamnée", () => {
     // C'était l'impossibilité arithmétique de l'ancien moteur, à l'envers : il
-    // faut que le plancher de lumière (exp(−4,5) = 0,0111) puisse à la fois
-    // laisser patienter un semis et condamner une perche. Sinon le mécanisme
-    // ne sert à rien dans les parties réelles.
-    const plancher = Math.exp(-4.5);
-    expect(partPuiseeSurLesReserves(HETRE, 0.3, plancher)).toBeGreaterThan(0);
-    expect(partPuiseeSurLesReserves(HETRE, 10, plancher)).toBeGreaterThan(
-      partPuiseeSurLesReserves(HETRE, 0.3, plancher),
-    );
+    // fallait que le plancher de lumière (exp(−4,5) = 0,0111) puisse à la fois
+    // laisser patienter un semis et condamner une perche. Le plancher est tombé
+    // (#484) : sous des couronnes empilées, la lumière descend jusqu'à zéro, où
+    // semis et perche ne gagnent plus rien. Ce qui reste vrai est la fenêtre du
+    // mécanisme, entre la compensation de la feuille et celle du semis entier.
+    // Au milieu de cette fenêtre (0,011), le semis paie une part de son
+    // entretien sur ses réserves, et la perche presque tout.
+    const fenetre = (HETRE.lumiere.compensation + compensationDeLArbre(HETRE, 0.3)) / 2;
+    const semis = partPuiseeSurLesReserves(HETRE, 0.3, fenetre);
+    const perche = partPuiseeSurLesReserves(HETRE, 10, fenetre);
+    expect(semis).toBeGreaterThan(0);
+    expect(semis).toBeLessThan(1);
+    expect(perche).toBeGreaterThan(semis);
     // La perche y est quasiment à revenu nul.
-    expect(partPuiseeSurLesReserves(HETRE, 10, plancher)).toBeGreaterThan(0.95);
+    expect(perche).toBeGreaterThan(0.95);
+    // Et l'ombre la plus noire, que le moteur sait maintenant produire, ne
+    // laisse plus personne à l'abri : le hêtre dominé peut mourir d'ombre.
+    expect(partPuiseeSurLesReserves(HETRE, 0.3, 0)).toBe(1);
+    expect(partPuiseeSurLesReserves(HETRE, 10, 0)).toBe(1);
   });
 
   it("au-dessus de sa compensation d'arbre entier, la tige ne puise RIEN", () => {
@@ -130,8 +140,9 @@ describe("l'ombre tolérable décroît avec la taille, et c'est tout le mécanis
 describe("les réserves tiennent le temps qu'annonce leur ancre", () => {
   it("à revenu nul, la perche meurt dans la fenêtre de la défoliation totale", () => {
     // L'ancre est la gradation de bombyx : un arbre entièrement défolié meurt
-    // à la deuxième ou troisième année consécutive. Une perche sous le
-    // plancher de lumière est dans ce cas — elle ne gagne presque rien.
+    // à la deuxième ou troisième année consécutive. Une perche à 1,1 % de
+    // lumière (exp(−4,5), l'ancien plancher, #484) est dans ce cas — elle ne
+    // gagne presque rien.
     const ans = anneesAvantDeMourir(10, Math.exp(-4.5));
     expect(ans).toBeGreaterThan(RESERVES_ANS * 0.8);
     expect(ans).toBeLessThan(RESERVES_ANS * 2);
