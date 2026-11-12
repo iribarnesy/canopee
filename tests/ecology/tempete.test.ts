@@ -289,6 +289,13 @@ function soixanteAns(especeId: string, graine: number, ventExposition: number) {
  * Relevé à #310 (graines 3 et 11, ruines des deux modes) : pin 116 et 131
  * pour 19,8 et 19,1 m³, hêtre 39 et 44 pour 12,5 et 17,3 m³.
  *
+ * Relevé à #483 (main 52ca6ed, graines 3 et 11), le volume compté sur les deux
+ * ruines : pin 104 et 107 ruines pour 26,9 et 25,6 m³ (dont 7,0 et 6,3 de
+ * volis), hêtre 44 et 54 pour 13,3 et 16,8 m³ (dont 3,0 et 5,4). À l'allocation
+ * de 2,0 cm/m sondée pour #481, le pin casse au lieu de verser : 22,4 m³ sur
+ * les deux graines contre 10,0 et 11,4 au hêtre, là où les chablis seuls
+ * disaient 1,4 et 1,8 contre 6,4 et 6,1.
+ *
  * La colonne « tempêtes » compte les semaines où quelque chose est tombé : une
  * rafale qui passe sans rien coucher ne remonte pas (tick.ts). Les deux
  * peuplements voient donc les **mêmes** rafales et n'en retiennent pas le même

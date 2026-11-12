@@ -310,6 +310,16 @@ describe("LE CRITÈRE : un peuplement qu'on vient d'ouvrir verse", () => {
     // ce n'est pas la naïveté qui a baissé, **c'est le témoin qui a cessé d'être**
     // **intact**. Ce qui reste exigé, sur les deux fenêtres : plus de couchés dans
     // le bras éclairci que dans le témoin.
+    //
+    // **Les couchés sont devenus des ruines (#483)** : le banc comptait les seuls
+    // chablis (`victimes`), et les volis de la cohorte lui échappaient. Relevé
+    // sur main 52ca6ed, six graines, chablis seuls puis les deux ruines : 22
+    // contre 6 puis 29 contre 10 sur cinq ans, 76 contre 32 puis 103 contre 45
+    // sur douze. La cohorte y est trapue (H/D médian 43) et verse plus qu'elle ne
+    // casse. À l'allocation de 2,0 cm/m sondée pour #481, elle est plus élancée
+    // (H/D 51 à 52) et casse : les chablis seuls donnaient 15 contre 15 sur
+    // douze ans, et la direction cassait par le thermomètre ; les deux ruines
+    // donnent 167 contre 72 sur cinq ans et 330 contre 186 sur douze.
     expect(ruinesTemoin).toBeGreaterThan(0);
     expect(toutDeSuiteTemoin).toBeGreaterThan(0);
     expect(toutDeSuiteEclairci).toBeGreaterThan(toutDeSuiteTemoin);

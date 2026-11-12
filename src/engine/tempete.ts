@@ -188,9 +188,9 @@ export function partDeRafaleAHauteur(hauteurM: number): number {
  *
  * Les modèles de risque de chablis (famille ForestGALES) donnent des vitesses
  * critiques de 15 à 45 m/s selon l'essence, le sol et la conduite *(à
- * confirmer : cette bande n'a pas de référence, et l'instruction de #483 n'en a
- * pas trouvé)*. Cette borne haute est celle d'un cas favorable ; tous les
- * facteurs ci-dessous la rabotent *(à calibrer)*.
+ * confirmer : cette bande ne porte aucune référence, #483)*. Cette borne haute
+ * est celle d'un cas favorable ; tous les facteurs ci-dessous la rabotent
+ * *(à calibrer)*.
  */
 export const VITESSE_CRITIQUE_BASE_MS = 46;
 
@@ -215,9 +215,9 @@ export const PERTE_ELANCEMENT = 0.55;
  * l'ombre file au lieu de stagner, son diamètre encaisse le résidu, et
  * l'élancement réalisé dépasse la fenêtre de l'allocation. Relevé à #467, à
  * trente ans dans une hêtraie plantée à 2 m, trois graines : dominants à H/D
- * 58 à 63, et une perche de 109 à 112 (E10). `elancement.test.ts` garde que la tige la
- * plus élancée de ce peuplement passe la moitié de la rampe, là où le facteur
- * vaut moins de 0,6.
+ * 58 à 63, et une perche de 109 à 112 (E10). `elancement.test.ts` garde que la
+ * tige la plus élancée de ce peuplement passe la moitié de la rampe, là où le
+ * facteur vaut moins de 0,6.
  *
  * #79 avait d'abord essayé d'ouvrir la fenêtre en descendant cette allocation,
  * et la mesure l'a refusé : des tiges plus fines résistent moins au **feu**,
