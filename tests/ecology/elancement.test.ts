@@ -8,7 +8,6 @@
  */
 
 import { describe, expect, it } from "vitest";
-import { MAX_EXTINCTION } from "../../src/engine/light";
 import { syntheticYear } from "../../src/engine/meteo";
 import { rngStateFromSeed } from "../../src/engine/rng";
 import { createGameState, plantAt } from "../../src/engine/state";
@@ -189,10 +188,14 @@ describe("la fenêtre de la paire d'allocation, et pourquoi le moteur en sort", 
   }
 
   it("la pleine lumière plafonne l'arbre à H/D 40, l'ombre la plus noire à 79", () => {
-    // Mesuré sur le code livré : 40,1 en pleine lumière, 78,5 sous
-    // exp(−MAX_EXTINCTION), la lumière la plus faible que `light.ts` produise.
+    // Mesuré sur le code livré : 40,1 en pleine lumière, 79,3 à lumière nulle.
+    // L'ombre la plus noire était l'ancien plancher, exp(−4,5) = 1,1 % (78,4) ;
+    // depuis que l'extinction n'a plus de plafond (#484), la lumière que
+    // `light.ts` produit descend vers zéro sous les couronnes empilées, et c'est
+    // là que la fenêtre se ferme : `allocationDiametreCmParM` n'y descend pas
+    // sous l'allocation d'ombre.
     const auLarge = elancementApresUneVie(1);
-    const sousCouvert = elancementApresUneVie(Math.exp(-MAX_EXTINCTION));
+    const sousCouvert = elancementApresUneVie(0);
     expect(auLarge).toBeGreaterThan(39);
     expect(auLarge).toBeLessThan(42);
     expect(sousCouvert).toBeGreaterThan(75);

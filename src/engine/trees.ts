@@ -620,7 +620,8 @@ export function estInstalle(tree: Pick<TreeState, "ageWeeks">): boolean {
  * `fLumSurvival = min(1, 0,5 × lumière / compensation)` : le stress ne monte
  * donc **pas** au point de compensation, mais à `2 × STRESS_ONSET × compensation`,
  * soit 0,9 fois celui-ci. La compensation, elle, ne gouverne que l'arrêt de la
- * croissance. `lumiere.test.ts` compare ce seuil-là au plancher de lumière.
+ * croissance. `lumiere.test.ts` compare ce seuil-là à la lumière que le moteur
+ * peut produire.
  */
 export const STRESS_ONSET = 0.45;
 const STRESS_RECOVERY = 0.5; // facteur de survie au-dessus → récupération lente

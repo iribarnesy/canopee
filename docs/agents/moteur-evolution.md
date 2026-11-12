@@ -122,6 +122,67 @@ La consigne demandait d'écrire qu'un hêtre marcescent à H/D 97 casse à 14,3 
 - **Deux commentaires périmés restent hors du lot** : `trees.ts` (sur `ALLOCATION_DIAMETRE_OMBRE`) dit encore « le moteur couvre H/D de 35 à 49 », daté de #65 ; l'en-tête de `tempete.ts` range encore la fragilité d'après-éclaircie parmi ce que le moteur ne fait pas, alors que F18 l'a faite.
 - **Les délais explicites ne tiennent pas sur la machine partagée** : sous une charge de 24 pour 4 cœurs, quatre essais ont dépassé le leur (`prevoir`, `carbon-conservation`, `pools-positifs`, et le contraste de `naivete-vent`, 1 323 s pour 900) sans qu'une assertion soit fausse. Rejoués sur une copie hors dépôt aux délais allongés, ils passent. La CI juge.
 
+## Ce qu'un lot précédent a appris (la saturation de l'ombre retirée, #484, O1)
+
+Le lot v0.6 « saturation », sur décision du propriétaire du 12 novembre (#484, point 1). `saturer` et `MAX_EXTINCTION` sont retirés de `light.ts` : l'extinction passe telle quelle dans la lumière au sol, celle des houppiers, le couvert au-dessus des arbres et l'élagage niveau par niveau. Ni k, ni `lai`, ni le profil de pénombre ne bougent ; aucun mécanisme n'est ajouté. Le propriétaire accepte qu'un hêtre dominé puisse mourir d'ombre. Prédictions S1 à S6 dans un commentaire daté de #484 et dans le premier commit, avant toute course. Les sondes rejouent, hors dépôt, l'essai d'acceptation de `claude/v06-lumiere-couvert` (06911eb) et le banc des tables, sur une copie de la branche et une copie de main 52ca6ed.
+
+### Un seuil écrit dans l'échelle d'une loi se relit quand l'échelle change
+
+Le coude de `saturer` était à 2, posé quand le centre d'une couronne de hêtre valait `k · lai` = 1,75 : « une ou deux couronnes s'additionnent pleinement ». #464 a rapporté la pénombre à sa moyenne, ce qui a doublé le centre (3,5), et personne n'a relu le coude : une seule couronne saturait à l'aplomb de son tronc, et le commentaire mentait. Le coude n'avait ni source ni marque, donc rien ne signalait qu'il dépendait d'une échelle. **Quand un lot change l'échelle d'une loi, chercher les seuils exprimés dans cette échelle et dire ce qui les franchit maintenant.**
+
+### Un épinglage qui compare deux constantes ne voit pas tomber le mécanisme qu'elles décrivent
+
+Les quatre épinglages du plancher passaient tous sans la saturation : ils lisaient `MAX_EXTINCTION` (ou exp(−4,5) écrit en dur), pas la lumière que le moteur calcule. Ils ne bornaient plus rien et seraient restés verts. Ceux de `lumiere` lisent maintenant `lightAtPoint` sous des hêtres empilés : deux couronnes y laissent 0,09 % de la lumière, contre 1,56 % sous la saturation, et l'essai casse si un plancher revient. Un second garde-fou demande que chaque couronne de plus divise la lumière du même facteur : il casse si un plancher revient plus bas. **Un épinglage d'une propriété fait tourner le code qui la porte.**
+
+### Une référence qui recopie le code casse avec lui
+
+La dichotomie de `poids-voisin` recopiait `saturer`, coude et plafond compris. Elle a cassé sous chacune des options de l'instruction, comme il se doit pour une référence d'implémentation. Ce n'est pas une borne, mais elle se réécrit avec la loi, sur la même décision. Le chemin « au sol » du même fichier ne comparait que les cellules hors saturation ; il les compare maintenant toutes.
+
+### Une instruction rejouée sur main se vérifie relevé par relevé
+
+main avait gagné #485 et #486 depuis la copie de l'instruction (08c7171). Plutôt que de raisonner sur le diff, la sonde du couvert a tourné sur la branche, graines 1 à 5 : les 75 relevés (tous les cinq ans, couvert, trouée et témoin) sont identiques à ceux d'O1 dans l'instruction, champ par champ. Ma forme fermée et la copie à seuil infini de l'instruction donnent le même état. **Les mesures de l'instruction valent pour la PR, et c'est vérifié, pas supposé.**
+
+### Ce que ça donne
+
+Hêtraie plantée à 2 m sur 40 m, station sans vent, quarante ans, puis quinze ans de témoin et de trouée (l'essai d'acceptation, joué en sonde). Base : main sans O1, d'après l'instruction (même arbre).
+
+| graine | lumière à 40 ans | à 55 ans (témoin) | plantés/ha à 40 ans | rapport de houppier à 40 ans | k effectif à 40 ans | recrues témoin / trouée (bouleaux) |
+|---|---|---|---|---|---|---|
+| 1 | 0,036 → **0,027** | 0,065 → **0,042** | 1 644 → 1 556 | 0,63 → 0,52 | 0,34 → 0,40 | 0 / 32 (3) |
+| 2 | 0,074 → **0,069** | 0,089 → **0,090** | 1 625 → 1 569 | 0,66 → 0,56 | 0,26 → 0,30 | 0 / 18 (9) |
+| 3 | 0,034 → **0,012** | 0,042 → **0,035** | 1 806 → 1 694 | 0,64 → 0,54 | 0,29 → 0,39 | 0 / 25 (4) |
+| 4 | 0,042 → **0,041** | 0,034 → **0,033** | 1 644 → 1 556 | 0,64 → 0,51 | 0,35 → 0,40 | 0 / 12 (1) |
+| 5 | 0,033 → **0,025** | 0,030 → **0,018** | 1 625 → 1 550 | 0,66 → 0,55 | 0,35 → 0,43 | 0 / 21 (0) |
+
+- Le terrain : 1 à 3 % sous le hêtre (Hagemeier et Leuschner 2019, lu par extrait, *à confirmer*) ; k de 0,40 à 0,48 sur LAI direct (Bréda 2003) ; rapport de houppier de 0,46 à 0,48 en hêtraie non éclaircie (Štefančík 2020).
+- La prémisse de l'essai d'acceptation (moins de 5 %) ne tombe plus que sur la graine 2, aux deux instants. Là, un trou d'auto-éclaircie s'ouvre entre vingt-cinq et trente ans (0,043 → 0,054) et ne se referme pas.
+- F7 tient : le témoin ne recrute rien, la trouée recrute sur chaque graine, 17 bouleaux dans les trouées.
+
+Le banc des tables (huit sujets épars sur 60 m), main → branche, hauteur moyenne en m et écart à la table. Sur la graine 17, le pin perd tous ses sujets au vent avant quarante ans, des deux côtés (#473) :
+
+| essence (graines) | 40 ans (bande ±15 %) | 20 ans (bande ±20 %) |
+|---|---|---|
+| hêtre (17, 43) | 17,277 → 17,280 (+8,0 %) | 8,689 → 8,691 (+12,9 %) |
+| charme (17, 43) | 16,537 → 16,540 (+1,5 %) | 9,687 → 9,688 (−2,1 %) |
+| frêne (17, 43) | 16,766 → 16,816 (+1,9 %) | 8,896 → 8,897 (−1,1 %) |
+| pin (sept graines, sable profond) | 14,251 → 14,251 (−8,1 %) | 9,184 → 9,184 (+13,4 %) |
+
+### Prédictions
+
+- **S1, juste.** Les 75 relevés de la sonde sont identiques à ceux d'O1 dans l'instruction ; la prémisse casse sur la graine 2, F7 tient.
+- **S2, juste.** À 40 ans : hêtre +0,02 %, charme +0,02 %, frêne +0,30 % (+0,5 % sur la graine 17), pin à 10⁻⁶ près. Aucune essence calée ne sort de sa bande. Le pin bouge le moins : une couronne de pin éteint 1,2 au centre et ne passait pas le coude.
+- **S3, juste.** E13 passe, en local et en CI.
+- **S4, juste.** Aucun autre essai ne casse : la CI est verte sur la suite complète, `nurse`, `lisiere` et `chandelles` compris, que l'instruction n'avait pas joués sous O1.
+- **S5, juste, à un arrondi près.** Deux couronnes de hêtre laissent 0,091 % de la lumière (1,56 % sous la saturation) ; H/D 79,3 à lumière nulle ; au milieu de la fenêtre de `reserves`, le semis puise 0,50 de son entretien et la perche 0,985. Sous l'ancien plancher, la projection d'élancement donne 78,4, et non 78,5 comme le disaient l'ancien commentaire et ma prédiction.
+- **S6, juste.** `tempete`, `naivete-vent`, `volis` et `elancement` passent en CI.
+
+### Points ouverts
+
+- **Le trou de la graine 2** : seule une couronne qui s'étend vers la place libérée le refermerait. La plasticité latérale (Schröter et al. 2012) est instruite avec #474, avec la largeur, la profondeur, `partHouppier`, `lai` et le profil de pénombre. L'essai d'acceptation reste sur `claude/v06-lumiere-couvert`, rouge jusque-là.
+- **Le vent** : O1 épaissit les dominants des futaies serrées (H/D médian 70 à 73 à quarante ans, contre 75 à 79). Le re-ancrage des vitesses du vent (OM, #483) se mesurera sur main avec O1.
+- **Ce que ce lot n'a pas remesuré** : le banc de F6 (cent vingt ans), la pinède plantée à 2 m de B1 et B10, où des couronnes de pin empilées passaient aussi le coude, et la lumière d'avril des semis.
+- **Le rendu** composait les taches d'ombre en `darken` parce que « le moteur sature » ; la justification est réécrite (la lumière au sol est déjà peinte par l'ombre du couvert), et aucun nombre du rendu ne change.
+
 ## Ce qu'un lot précédent a appris (le frêne calé à quarante ans, #481)
 
 Le lot v0.6 « frêne », sur décision du propriétaire du 10 novembre (#481, point 3). `pousseMaxMAn` du frêne passe de 0,7 à **0,67**, calé à quarante ans sur main 2682e27, qui porte le couvert et les voisins (#464), puis validé à vingt ans sans y toucher. Un trait d'atlas, aucun mécanisme touché. O2 (#470) le remesurera. Prédictions dans le premier commit de la branche, avant la première course ; les sondes font varier le trait en mémoire, hors dépôt, sur le banc des tables (`hauteurs-commun.ts` : huit sujets épars sur le limon riche, sans gibier ni voisinage).

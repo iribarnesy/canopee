@@ -32,8 +32,9 @@
  *
  * **Les ombres passent par une texture de rendu**, et pas par des sprites en
  * `multiply` posés directement. Deux ombres qui se recouvrent ne doivent pas
- * être deux fois plus sombres — le moteur lui-même sature (`MAX_EXTINCTION`) —
- * donc les taches s'accumulent en `darken` dans une texture blanche, qui est
+ * être deux fois plus sombres — la lumière au sol du moteur est déjà peinte par
+ * l'ombre du couvert (`couches/ombres.ts`) — donc les taches s'accumulent en
+ * `darken` dans une texture blanche, qui est
  * ensuite composée en `multiply` en une seule fois. C'est le même schéma qu'en
  * Canvas 2D, transposé.
  */

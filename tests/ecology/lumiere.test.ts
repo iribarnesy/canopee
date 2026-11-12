@@ -7,7 +7,7 @@
 
 import { describe, expect, it } from "vitest";
 import { ESPECES_V0, getEspece } from "../../src/engine/especes";
-import { MAX_EXTINCTION } from "../../src/engine/light";
+import { lightAtPoint } from "../../src/engine/light";
 import { syntheticYear } from "../../src/engine/meteo";
 import { rngStateFromSeed } from "../../src/engine/rng";
 import { createGameState, plantAt } from "../../src/engine/state";
@@ -87,29 +87,27 @@ describe("lumière — en plein découvert, personne n'est limité", () => {
 });
 
 /**
- * **Le plancher de lumière**, et ce qu'il rend impossible.
+ * **Plus de plancher de lumière**, et ce qu'il rendait impossible (#484).
  *
- * `MAX_EXTINCTION` borne l'empilement des couronnes par une **asymptote** : quelle
- * que soit l'extinction brute — huit, vingt, un million — la valeur rendue tend
- * vers 4,5 sans l'atteindre, donc il reste toujours `exp(−MAX_EXTINCTION)` de
- * lumière. L'intention est physique et juste : des couronnes ne s'empilent pas
- * comme des filtres parfaits, elles laissent des trouées de ciel et des taches
- * de soleil. La **valeur**, elle, porte *(à calibrer)* — les sous-bois réels
- * descendent sous 2 % et n'ont pas de mur.
+ * Il y avait un plancher. `saturer` menait l'extinction des couronnes empilées
+ * vers `MAX_EXTINCTION` = 4,5 sans l'atteindre, et il restait toujours
+ * exp(−4,5) = 1,11 % de lumière, quoi qu'on empile *(à calibrer)*. Or le stress
+ * d'ombre ne monte pas au point de compensation mais à 0,9 fois celui-ci :
+ * `fLumSurvival = min(1, 0,5 × lumière / compensation)` doit passer sous
+ * `STRESS_ONSET` = 0,45. Le hêtre (0,0090) passait sous le plancher : il ne
+ * pouvait plus jamais accumuler de stress d'ombre, où qu'il soit et quoi qu'on
+ * plante autour de lui. La campagne de #65 a cherché cent vingt ans pourquoi une
+ * hêtraie plantée à deux mètres gardait ses 361 tiges ; la réponse tenait dans
+ * ces deux nombres, et ces essais les épinglaient.
  *
- * Le stress d'ombre ne monte pas au point de compensation mais à 0,9 fois
- * celui-ci : `fLumSurvival = min(1, 0,5 × lumière / compensation)` doit passer
- * sous `STRESS_ONSET` = 0,45. Une espèce dont 0,9 × la compensation passe sous
- * le plancher ne peut donc plus jamais accumuler de stress d'ombre, où qu'elle
- * soit et quoi qu'on plante autour d'elle.
- *
- * Ces essais ne coûtent aucune simulation — c'est une comparaison de deux
- * constantes — et ils auraient épargné une campagne de cent vingt ans. La
- * campagne de #65 cherchait pourquoi une hêtraie plantée à deux mètres garde
- * ses 361 tiges au bout d'un siècle ; la réponse tenait dans ces deux nombres.
+ * Le plafond est tombé sur décision du propriétaire, le 12 novembre (#484) : les
+ * ombres s'additionnent telles quelles, et un hêtre dominé peut mourir d'ombre.
+ * Ce qui reste vrai, et que ces essais bornent sans simulation : sous des
+ * couronnes empilées, la lumière que le moteur calcule passe sous le seuil de
+ * stress de toutes les espèces de l'atlas, et chaque couronne de plus la divise
+ * du même facteur.
  */
-describe("ce que le plancher de lumière rend impossible", () => {
-  const plancher = Math.exp(-MAX_EXTINCTION);
+describe("plus de plancher de lumière : aucune espèce n'est hors d'atteinte de l'ombre", () => {
   /**
    * Lumière en dessous de laquelle une espèce commence à accumuler du stress
    * d'ombre. `fLumSurvival = min(1, 0,5 × lumière / compensation)` doit passer
@@ -118,36 +116,38 @@ describe("ce que le plancher de lumière rend impossible", () => {
    */
   const seuilStress = (id: string) => 2 * STRESS_ONSET * getEspece(id).lumiere.compensation;
 
-  it("le hêtre est hors d'atteinte de l'ombre, et il est le seul", () => {
-    // Le seuil est 0,9 × compensation, pas la compensation : 0,0090 pour le
-    // hêtre, contre un plancher de 0,0111. Il reste donc toujours au hêtre 23 %
-    // de lumière de plus qu'il ne lui en faudrait pour commencer à souffrir.
-    // C'est une propriété **arithmétique** du couple de constantes, pas un résultat
-    // de simulation, et elle explique qu'une cohorte dense de hêtres ne
-    // s'éclaircit jamais (361 tiges plantées, 361 vivantes à cent vingt ans).
-    //
-    // **Vingt-trois pour cent**, **c'est peu**, et c'est le vrai enseignement. Deux
-    // constantes indépendantes se croisent à cette distance : la prochaine
-    // recalibration de l'une ou de l'autre renversera le résultat dans un sens
-    // ou dans l'autre, sans que personne ait voulu décider que le hêtre meurt
-    // ou survit. Ce que la réalité fait — le hêtre dominé **meurt**, par famine
-    // carbonée, et une hêtraie de 120 ans porte quelques centaines de tiges et
-    // non 2 256 — demande un mécanisme cumulé, pas un seuil instantané mieux
-    // placé (#96).
-    expect(seuilStress("fagus_sylvatica")).toBeLessThan(plancher);
+  /**
+   * Lumière au sol au centre de l'ombre de `n` hêtres de canopée plantés au même
+   * pied, en pleine feuille et sans élagage : la lumière que le moteur calcule
+   * sous `n` couronnes superposées.
+   */
+  function lumiereSousHetres(n: number): number {
+    let state = createGameState({ ...LIMON_FRAIS.station, voisinage: [] }, rngStateFromSeed(42));
+    for (let i = 0; i < n; i++) state = plantAt(state, "fagus_sylvatica", 20, 10, CANOPY_H);
+    return lightAtPoint(state.trees, 20, 10 + SHADOW_OFFSET, () => 1);
+  }
 
-    // Et c'est bien une exception, pas la règle : toutes les autres espèces de
-    // l'atlas peuvent être étouffées. La suivante par l'ombre est le houx
-    // (0,02), dont le seuil de stress vaut 0,018, soit 1,6 fois le plancher.
-    const exceptions = ESPECES_V0.filter((e) => seuilStress(e.id) < plancher);
-    expect(exceptions.map((e) => e.id)).toEqual(["fagus_sylvatica"]);
+  it("deux couronnes de hêtre suffisent à mettre toutes les espèces sous leur seuil, le hêtre compris", () => {
+    // Au centre de son ombre, une couronne de hêtre éteint 2 × k × lai = 3,5
+    // (la pénombre rapportée à sa moyenne, #438) : il passe 3,0 % de la lumière.
+    // Deux couronnes superposées en laissent 0,09 %, dix fois moins que le seuil
+    // de stress du hêtre (0,0090), le plus bas de l'atlas. Sous l'ancien
+    // plancher, les mêmes deux couronnes en laissaient 1,56 %, et le hêtre
+    // restait hors d'atteinte.
+    const sousDeux = lumiereSousHetres(2);
+    expect(sousDeux).toBeLessThan(seuilStress("fagus_sylvatica"));
+    const horsDAtteinte = ESPECES_V0.filter((e) => seuilStress(e.id) <= sousDeux);
+    expect(horsDAtteinte.map((e) => e.id)).toEqual([]);
   });
 
-  it("le sciaphile suivant, lui, reste tuable", () => {
-    // Le garde-fou de l'essai précédent : si le plancher montait au point de
-    // mettre tout le monde à l'abri, l'égalité ci-dessus passerait encore et ne
-    // voudrait plus rien dire.
-    expect(seuilStress("ilex_aquifolium")).toBeGreaterThan(plancher);
-    expect(seuilStress("carpinus_betulus")).toBeGreaterThan(plancher);
+  it("et la lumière n'a plus de mur : chaque couronne de plus la divise du même facteur", () => {
+    // Le garde-fou du précédent : un plancher revenu plus bas que 0,09 % le
+    // laisserait passer sans rien dire. Ici, quatre couronnes rendent le carré de
+    // ce que rendent deux, et deux le carré d'une, au dernier chiffre près.
+    const une = lumiereSousHetres(1);
+    const deux = lumiereSousHetres(2);
+    const quatre = lumiereSousHetres(4);
+    expect(deux / une).toBeCloseTo(une, 12);
+    expect(quatre / deux).toBeCloseTo(deux, 12);
   });
 });
