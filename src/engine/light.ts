@@ -44,9 +44,10 @@ const BUCKET_M = 12;
  * 1,3 à 1,5 point aux 3 à 4 % de lumière d'été au sol ; sous le hêtre, le
  * terrain en mesure 1 à 3 % (Hagemeier et Leuschner 2019, *Forests* 10 : 925, lu
  * par extrait *(à confirmer)*). Sans elle, le k effectif du couvert fermé
- * (−ln(lumière) / LAI des couronnes) remonte de 0,29-0,35 à 0,39-0,44, dans la
- * gamme mesurée sur LAI direct (0,40-0,48 en plantation, Bréda 2003,
- * *J. Exp. Bot.* 54 : 2403, tableau 1).
+ * (−ln(lumière) / LAI des couronnes) remonte de 0,29-0,35 à 0,39-0,43 sur
+ * quatre graines sur cinq, au bord de la gamme mesurée sur LAI direct
+ * (0,40-0,48 en plantation, Bréda 2003, *J. Exp. Bot.* 54 : 2403, tableau 1) ;
+ * la cinquième garde un trou d'auto-éclaircie (0,26 → 0,30).
  *
  * Les trouées de ciel et les taches de soleil que le plafond voulait dire sont
  * des trous **entre** les couronnes, et le moteur les a déjà : chaque couronne a

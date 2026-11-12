@@ -189,7 +189,7 @@ describe("la fenêtre de la paire d'allocation, et pourquoi le moteur en sort", 
 
   it("la pleine lumière plafonne l'arbre à H/D 40, l'ombre la plus noire à 79", () => {
     // Mesuré sur le code livré : 40,1 en pleine lumière, 79,3 à lumière nulle.
-    // L'ombre la plus noire était l'ancien plancher, exp(−4,5) = 1,1 % (78,5) ;
+    // L'ombre la plus noire était l'ancien plancher, exp(−4,5) = 1,1 % (78,4) ;
     // depuis que l'extinction n'a plus de plafond (#484), la lumière que
     // `light.ts` produit descend vers zéro sous les couronnes empilées, et c'est
     // là que la fenêtre se ferme : `allocationDiametreCmParM` n'y descend pas
