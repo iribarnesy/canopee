@@ -41,6 +41,7 @@ const tempete = (versRad = 0): TempeteResult => ({
     { id: 1, hauteurM: 18 },
     { id: 2, hauteurM: 22 },
   ],
+  casses: [],
 });
 
 const ARBRES = new Map([

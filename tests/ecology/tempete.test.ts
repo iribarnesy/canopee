@@ -167,13 +167,14 @@ describe("ce qui décide qu'un arbre verse", () => {
     expect(facteurPriseAuVent(0)).toBe(1);
   });
 
-  it("l'élancement compte — mais le moteur ne lui laisse qu'un cinquième de sa gamme", () => {
+  it("l'élancement compte, sur la gamme sylvicole", () => {
     // Écrit sur la gamme sylvicole réelle (H/D 40 à 100)…
     expect(facteurElancement(40, 100)).toBe(1);
     expect(facteurElancement(40, 40)).toBeLessThan(0.5);
-    // …mais le moteur ne produit que 35 à 49 (#79), où le facteur ne descend
-    // pas sous 0,92. La limite est écrite ici pour qu'on la retrouve le jour où
-    // l'amplitude s'ouvrira.
+    // …et un arbre trapu n'y perd rien. Ce commentaire disait que le moteur ne
+    // produisait que H/D 35 à 49 (#79), où le facteur ne descend pas sous 0,92 ;
+    // c'est périmé depuis l'étiolement (#97), et `elancement.test.ts` garde
+    // maintenant qu'une perche de hêtraie serrée passe la moitié de la rampe.
     expect(facteurElancement(15, 100 / 2.2)).toBeGreaterThan(0.9);
   });
 });
@@ -228,7 +229,15 @@ function soixanteAns(especeId: string, graine: number, ventExposition: number) {
   // d'arbres qu'au hêtre ». Quand un mécanisme change ce qu'une grandeur
   // **veut dire**, c'est le thermomètre qu'on change, pas le seuil.
   let verses = 0;
-  let volumeM3 = 0;
+  /**
+   * Le volume des **deux** ruines, chablis et volis (#483), pour la même raison
+   * que le compte ci-dessus. `volumeM3` du résultat ne compte que le bois
+   * couché, celui que le joueur vend ; la source de l'essai compte tout le
+   * volume endommagé (IFN 2003). Lire le premier, c'était refaire au volume la
+   * faute que #176 avait corrigée au compte : un pin qui casse au lieu de
+   * verser sortait du thermomètre.
+   */
+  let volumeEndommageM3 = 0;
   const semaines: number[] = [];
   /**
    * La plus grande hauteur **atteinte**, relevée semaine après semaine, et pas
@@ -250,14 +259,15 @@ function soixanteAns(especeId: string, graine: number, ventExposition: number) {
     if (!r.tempete) continue;
     tempetes++;
     verses += r.tempete.arbresVerses + r.tempete.arbresCasses;
-    volumeM3 += r.tempete.volumeM3;
+    volumeEndommageM3 += r.tempete.volumeM3;
+    for (const c of r.tempete.casses) volumeEndommageM3 += c.volumeM3;
     semaines.push(i % 52);
   }
   const vivants = state.trees.filter((t) => t.alive);
   return {
     tempetes,
     verses,
-    volumeM3,
+    volumeEndommageM3,
     semaines,
     hMaxAtteint,
     hMax: Math.max(0, ...vivants.map((t) => t.heightM)),
@@ -278,6 +288,13 @@ function soixanteAns(especeId: string, graine: number, ventExposition: number) {
  *
  * Relevé à #310 (graines 3 et 11, ruines des deux modes) : pin 116 et 131
  * pour 19,8 et 19,1 m³, hêtre 39 et 44 pour 12,5 et 17,3 m³.
+ *
+ * Relevé à #483 (main 52ca6ed, graines 3 et 11), le volume compté sur les deux
+ * ruines : pin 104 et 107 ruines pour 26,9 et 25,6 m³ (dont 7,0 et 6,3 de
+ * volis), hêtre 44 et 54 pour 13,3 et 16,8 m³ (dont 3,0 et 5,4). À l'allocation
+ * de 2,0 cm/m sondée pour #481, le pin casse au lieu de verser : 22,4 m³ sur
+ * les deux graines contre 10,0 et 11,4 au hêtre, là où les chablis seuls
+ * disaient 1,4 et 1,8 contre 6,4 et 6,1.
  *
  * La colonne « tempêtes » compte les semaines où quelque chose est tombé : une
  * rafale qui passe sans rien coucher ne remonte pas (tick.ts). Les deux
@@ -314,7 +331,7 @@ describe("en partie : la tempête trie, et elle ne trie pas au hasard", () => {
       // la graine 3 cessent de mourir de soif — un peuplement éclairci par un
       // défaut offrait moins de prise au vent.
       expect(pin.verses).toBeGreaterThan(hetre.verses);
-      expect(pin.volumeM3).toBeGreaterThan(hetre.volumeM3);
+      expect(pin.volumeEndommageM3).toBeGreaterThan(hetre.volumeEndommageM3);
       // Et les tempêtes sont des événements d'hiver. Pas « jamais en été » :
       // une bourrasque de juin qui couche un arbre existe, et la série en donne
       // une (semaine 22, graine 11). Ce qui est une propriété du

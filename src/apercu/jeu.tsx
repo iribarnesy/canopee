@@ -953,6 +953,7 @@ function Demo(): React.ReactElement {
               victimes: versables
                 .filter((_, i) => i % Math.max(1, Math.round(1 / partVersee)) === 0)
                 .map((t) => ({ id: t.id, hauteurM: t.heightM })),
+              casses: [],
             },
           }
         : {}),

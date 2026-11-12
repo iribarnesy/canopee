@@ -51,6 +51,10 @@ que rien ne le signale.
 Un chiffre calé **sur le moteur** n'est pas une ancre. Les hauteurs ont été
 calées sur les tables de production Jansen 1996 ; c'est le standard à viser.
 
+Un chiffre recopié d'un rapport, d'une issue ou d'une décision se recalcule
+avec les fonctions du moteur avant d'entrer dans un commentaire : le hêtre
+marcescent qui devait casser à 14,3 m/s casse à 15,2 (#483).
+
 ## Mesurer avant de conclure
 
 La variance entre graines est énorme sur ce moteur : un même peuplement brûle de
@@ -63,7 +67,62 @@ l'autre âge pour vérifier. Et caler sur la moyenne de plusieurs graines, avec
 son erreur type : sur le banc des hauteurs, la moyenne de deux graines porte
 6 % d'incertitude (#481).
 
-## Ce que le dernier lot a appris (la saturation de l'ombre retirée, #484, O1)
+## Ce que le dernier lot a appris (les thermomètres du vent, #483)
+
+Le lot de maintenance décidé par le propriétaire le 12 novembre (#483, point 1). Aucun mécanisme ne change. `TempeteResult` gagne `casses` : les volis de la semaine, chacun avec le volume de tige qu'il portait avant la cassure. Les deux essais qui ne voyaient que les chablis lisent maintenant les deux ruines : `tempete` juge sa direction en volume sur le volume endommagé, comme l'IFN 2003 qu'il cite, et `naivete-vent` compte aussi les volis de sa cohorte. `volumeM3` garde son sens, le bois couché que le joueur vend. `TempeteResult` sort du tick vers l'instantané et n'entre pas dans `ecrireEtat` : le format reste 16. Trois commentaires de `tempete.ts` sont remis d'accord avec le moteur sans qu'une valeur change, et F13 est remise d'accord avec la fiche du pin dans un commit à part. Les prédictions ont été postées sur #483 avant la première course. Les bancs tournent hors dépôt, repris des outils de l'instruction : T (`soixanteAns` de `tempete`), N (le banc apparié de `naivete-vent`), et la sonde `ALLOC_LUM` de #481 pour 2,0.
+
+**L'identité est prouvée au bit près.** À chaque fin d'année, main 52ca6ed et la branche rendent le même `stateHash` et la même empreinte de l'état sérialisé entier (`ecrireEtat`), avec les mêmes champs publiés pour chaque tempête. Deux bancs : T, pin et hêtre exposés, graines 3, 7 et 11, soixante ans (233 semaines de tempête, 223 volis) ; trois parcelles, graines 1 à 3, cinq ans. Les 405 lignes sont identiques.
+
+**Banc T**, volume endommagé (chablis + volis) en m³, graines 3 / 11 / 7. Le moteur rend au chiffre près les ruines et les volumes que la sonde de l'instruction avait reconstitués sur 2682e27.
+
+| | pin | hêtre | chablis seuls, pin contre hêtre |
+|---|---|---|---|
+| 2,5 (main) | 26,9 / 25,6 / 25,0 | 13,3 / 16,8 / 13,3 | 19,9 / 19,3 / 19,0 contre 10,3 / 11,4 / 8,6 |
+| 2,0 (sonde) | 22,4 / 22,4 / 19,6 | 10,0 / 11,4 / 10,0 | **1,4 / 1,8 / 1,5 contre 6,4 / 6,1 / 5,2** |
+
+**Banc N**, ruines de la cohorte sur les six graines (3, 7, 11, 13, 17, 19), éclairci contre témoin :
+
+| | chablis seuls, 5 ans | 12 ans | deux ruines, 5 ans | 12 ans | H/D médian de la cohorte |
+|---|---|---|---|---|---|
+| 2,5 (main) | 22 contre 6 | 76 contre 32 | 29 contre 10 | 103 contre 45 | 43 |
+| 2,0 (sonde) | 3 contre 2 | **15 contre 15** | 167 contre 72 | 330 contre 186 | 51-52 |
+
+Graine par graine, les deux ruines sur douze ans mettent l'éclairci devant sur cinq graines sur six à 2,5 (la graine 3 ne perd rien, ni dans un bras ni dans l'autre) et sur six graines sur six à 2,0.
+
+### Prédictions
+
+- **I1, juste.** L'état est identique au bit près sur les deux bancs.
+- **T1 à T5, justes.** Le moteur rend au chiffre près les nombres de l'instruction, à 2,5 comme à 2,0. Le volume des volis lu dans le moteur suit celui que la sonde reconstituait à l'arrondi près (6,98 contre 7,0), bien que la sonde prenne l'arbre du début de semaine et le moteur celui de la rafale. `tempete.test.ts` passe en entier à 2,5 (18 sur 18), et à 2,0 sur la copie sondée.
+- **N1, fausse.** Les chablis seuls rendent 22 contre 6 et 76 contre 32, pas les 25 contre 19 et 60 contre 48 que l'essai avait relevés à #438. La direction est la même, plus franche ; l'écart n'est pas instruit. La prédiction prenait un relevé écrit dans un commentaire pour l'état de main, sans le vérifier.
+- **N2, à moitié.** La direction tient sur les deux fenêtres, mais la cohorte verse plus qu'elle ne casse (29 ruines dont 7 volis sur cinq ans), et le rapport vaut 2,9 et 2,3, au-dessus de la fourchette prédite (1,1 à 1,6).
+- **N3, juste.** Les volis font 98 % des ruines de la cohorte sur cinq ans et 94 % sur douze, et l'éclairci passe devant sur les deux fenêtres. Le contraste par le bas de la graine 8 casse toujours, au chiffre près (1,212 pour moins de 0,834) ; c'est le seul assert de `naivete-vent` qui casse à 2,0, et le banc apparié passe.
+- **E1, juste.** `naivete-vent` (6 sur 6), `volis` (12 sur 12), les essais unitaires du vent et `test:rapide` (1 649 essais) passent, une fois les délais allongés sur la machine chargée.
+
+### Un thermomètre se répare dans la grandeur que lit l'essai
+
+`volumeM3` a deux lecteurs : l'économie y lit le bois à vendre, l'essai y lisait les dégâts. Le redéfinir aurait faussé le premier pour réparer le second. Un champ de plus, rempli dans le même passage, laisse chacun sur sa grandeur. La sauvegarde n'a pas à le savoir : le résultat d'un tick n'est pas l'état. **Avant de changer le sens d'une grandeur, compter ses lecteurs.**
+
+### Un thermomètre à un seul mode ne tient que tant que le moteur garde ce mode
+
+À l'allocation actuelle, la cohorte de `naivete-vent` est trapue et verse : compter les seuls chablis voyait les trois quarts de ses ruines. À 2,0, la même cohorte casse, et le banc ne voyait plus que 2 % de ses ruines sur cinq ans, 6 % sur douze. L'essai aurait cassé sans qu'aucune fragilité n'ait bougé, et rien n'aurait dit que c'était le thermomètre. C'est la règle que `tempete` avait déjà écrite pour son compte en #176, et qu'il n'avait pas étendue à son volume. **Quand un essai lit un mode de ruine, il doit les lire tous, ou dire pourquoi un seul suffit.**
+
+### Un nombre relayé se recalcule avec les fonctions du moteur
+
+La consigne demandait d'écrire qu'un hêtre marcescent à H/D 97 casse à 14,3 m/s. Recalculé avec `vitesseCritiqueVolisMs`, il casse à 15,2. Le chiffre de 14,3 prend la marcescence (0,35) pour la part foliaire, sans l'opacité de la feuille morte (0,55, `phenologie.ts`), qui la ramène à 0,19. La conclusion n'en change pas, tout reste sous le filtre de 25 m/s, mais le commentaire aurait porté un chiffre faux, recopié de rapport en décision. **Un chiffre qui entre dans un commentaire se recalcule avec le code, même quand il vient d'une décision.**
+
+### Un filtre de calcul devient un seuil de dégât dès qu'un cas passe dessous
+
+`RAFALE_MINIMALE_MS` était écrit comme un filtre « sous le plus fragile des cas possibles ». Il ne l'est plus pour les tiges élancées, ni pour l'ébranchage d'un arbre ordinaire : un pin isolé de 20 m à H/D 50 perd ses premières branches dès 12,7 m/s à 10 m. Même avec les vitesses critiques multipliées par 1,66 (OM, le point 2 de la décision), ce seuil d'ébranchage resterait vers 21 m/s, toujours sous le filtre. Le commentaire le dit maintenant ; la valeur n'a pas bougé. **Un filtre « pour aller plus vite » se revérifie chaque fois que le moteur fabrique des cas plus fragiles.**
+
+### Points ouverts
+
+- **OM se mesurera sur main** une fois ce lot et #484 fusionnés (décision du 12 novembre, point 2), contre un taux de dégâts sourcé.
+- **`RAFALE_MINIMALE_MS` est à calibrer** : le filtre tient lieu de seuil de dégât pour l'ébranchage et pour les tiges élancées.
+- **La bande de 15 à 45 m/s prêtée à ForestGALES** reste sans référence, marquée à confirmer.
+- **Deux commentaires périmés restent hors du lot** : `trees.ts` (sur `ALLOCATION_DIAMETRE_OMBRE`) dit encore « le moteur couvre H/D de 35 à 49 », daté de #65 ; l'en-tête de `tempete.ts` range encore la fragilité d'après-éclaircie parmi ce que le moteur ne fait pas, alors que F18 l'a faite.
+- **Les délais explicites ne tiennent pas sur la machine partagée** : sous une charge de 24 pour 4 cœurs, quatre essais ont dépassé le leur (`prevoir`, `carbon-conservation`, `pools-positifs`, et le contraste de `naivete-vent`, 1 323 s pour 900) sans qu'une assertion soit fausse. Rejoués sur une copie hors dépôt aux délais allongés, ils passent. La CI juge.
+
+## Ce qu'un lot précédent a appris (la saturation de l'ombre retirée, #484, O1)
 
 Le lot v0.6 « saturation », sur décision du propriétaire du 12 novembre (#484, point 1). `saturer` et `MAX_EXTINCTION` sont retirés de `light.ts` : l'extinction passe telle quelle dans la lumière au sol, celle des houppiers, le couvert au-dessus des arbres et l'élagage niveau par niveau. Ni k, ni `lai`, ni le profil de pénombre ne bougent ; aucun mécanisme n'est ajouté. Le propriétaire accepte qu'un hêtre dominé puisse mourir d'ombre. Prédictions S1 à S6 dans un commentaire daté de #484 et dans le premier commit, avant toute course. Les sondes rejouent, hors dépôt, l'essai d'acceptation de `claude/v06-lumiere-couvert` (06911eb) et le banc des tables, sur une copie de la branche et une copie de main 52ca6ed.
 
