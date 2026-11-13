@@ -13,7 +13,7 @@
 import { facteurAllelopathie, SENSIBILITE_MEDIANE } from "./allelopathie";
 import type { EspeceV0 } from "./especes";
 import { getEspece } from "./especes";
-import { crownRadiusM } from "./light";
+import { crownRadiusM, type QuartsHouppier } from "./light";
 import { partPuiseeSurLesReserves, usureParSemaine } from "./reserves";
 import { type RngState, rngFloat } from "./rng";
 import { facteurGammePh, facteurSurviePh, VIGUEUR_A_LA_BORNE } from "./soil";
@@ -228,6 +228,19 @@ export interface TreeState {
    * nu : la profondeur de couronne est un résultat de compétition.
    */
   baseHouppierM?: number;
+  /**
+   * La **mémoire des quatre quarts** du houppier, m : les rayons vers l'est, le
+   * nord, l'ouest et le sud (#474). Absente = les quatre quarts au rayon de la
+   * loi, ce qu'est tout arbre sans voisin à portée et tout arbre qui vient de
+   * naître.
+   *
+   * Un quart s'étend vers la place que lui laisse son plus proche voisin plus
+   * haut que la base du houppier, d'au plus 0,2 m par an, et ne dépasse pas une
+   * fois et demie la loi (couronnes.ts). Ce qui est lu, c'est cette mémoire bornée
+   * par la loi du jour (`light.ts:quartsDuHouppier`) : un arbre qui grossit entre
+   * deux mises à jour ne passe jamais sous sa loi.
+   */
+  rayonsHouppierM?: QuartsHouppier;
   /** nombre de recépages subis (taillis, trogne) */
   recepages: number;
   /**
