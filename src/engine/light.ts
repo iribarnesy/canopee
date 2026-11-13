@@ -31,7 +31,8 @@ const BUCKET_M = 12;
  *
  * Les ombres des couronnes s'additionnent telles quelles, et la lumière vaut
  * `exp(−extinction)` jusqu'au bout : au centre des ombres de deux couronnes de
- * hêtre superposées, il passe 0,09 % de la lumière, et il n'y a pas de mur.
+ * hêtre superposées, il passe 0,52 % de la lumière (0,09 % sous la pénombre
+ * parabolique d'avant #474), et il n'y a pas de mur.
  *
  * Il y avait un plafond. `saturer` laissait passer l'extinction jusqu'à un coude
  * à 2, puis la menait doucement vers `MAX_EXTINCTION` = 4,5 : il restait
@@ -116,11 +117,51 @@ export const ELANCEMENT_HOUPPIER_REFERENCE = 50;
 export const ELARGISSEMENT_HOUPPIER_MAX = 1.6;
 
 /**
+ * ─── **la loi de largeur est une empreinte d'ombre**, **sans source** (#474) ──────────
+ *
+ * `houppierRatio` n'a aucune source, et il ne dit pas la largeur botanique d'un
+ * houppier de futaie : il dit **l'empreinte d'ombre** du houppier, ce que le
+ * moteur projette au sol avec un seul soleil moyen. C'est la décision du
+ * propriétaire du 13 novembre (#474) : la loi est gardée telle quelle, et
+ * documentée pour ce qu'elle est.
+ *
+ * Les houppiers mesurés en futaie sont bien plus étroits. Diamètre de houppier
+ * du hêtre (rapport 0,35), en mètres, moteur / source, et leur rapport :
+ *
+ * | source | 20 cm | 30 cm | 50 cm |
+ * |---|---|---|---|
+ * | Hemery, Savill et Pryor 2005, *For. Ecol. Manage.* 215 : 285, table 1 (K = 1,133 + 15,23 d) | 7,0 / 4,2 (1,67) | 10,5 / 5,7 (1,84) | 17,5 / 8,7 (2,00) |
+ * | Ligot et al. 2014, *For. Ecol. Manage.* 327 : 189, tableau 2 (rayon = 0,742 dbh^0,516) | 7,0 / 7,0 (1,01) | 10,5 / 8,6 (1,22) | 17,5 / 11,2 (1,57) |
+ * | HETEROFOR, Jonard et al. 2020, *Geosci. Model Dev.* 13 : 905, éq. 10 et tableau 2 | 7,0 / 6,3 (1,10) | 10,5 / 7,4 (1,41) | 17,5 / 9,6 (1,83) |
+ *
+ * Et dans une hêtraie slovaque jamais éclaircie, à 93 ans, Štefančík 2017
+ * (*J. For. Sci.* 63 : 173, tableau 2) mesure 6,29 m de houppier à 37,7 cm, où le
+ * moteur en donne 13,2 (2,10 fois) ; 8,36 m à 44,4 cm en éclaircie par le haut,
+ * où il en donne 15,5 (1,86 fois). Au-delà de 20 cm, le moteur est donc **1,7 à
+ * 2,1 fois plus large** que les houppiers de futaie de Hemery et de Štefančík
+ * (1,8 à 2,1 fois au-delà de 30 cm), et jusqu'à 1,6 et 1,8 fois plus large que
+ * ceux de Ligot, mesurés dans des futaies irrégulières claires des Ardennes, et
+ * de HETEROFOR.
+ *
+ * **Pourquoi la loi est gardée.** Les largeurs mesurées ne ferment pas le couvert
+ * de ce moteur. Sur la hêtraie de quarante ans plantée à 2 m de l'essai
+ * d'acceptation de #484 (graine 2), la largeur de Hemery, au même feuillage,
+ * laisse 17 % de la lumière d'été au sol de la zone à l'ouverture et 25 % à la
+ * fin du témoin (7 et 9 % à la loi), et le témoin recrute : F7 casse (lot
+ * d'instruction, #474, 12 novembre). Le moteur suit un seul soleil moyen ;
+ * l'ombre d'un houppier y est une projection, et une cellule sous aucune
+ * couronne reçoit toute la lumière. La loi tient lieu de cette ombre-là.
+ *
  * Rayon du houppier, m. Proportionnel au **diamètre** (modèle du tube), calé pour
  * redonner `houppierRatio × hauteur` à l'élancement de référence.
  *
  * Une tige sans diamètre enregistré retombe sur l'ancienne formule : c'est un
  * semis qu'on projette, pas un arbre déformé.
+ *
+ * C'est le rayon **de la loi**. Dans un peuplement, la couronne s'étend au-delà,
+ * quart par quart, vers la place que ses voisins lui laissent (`quartsDuHouppier`,
+ * couronnes.ts) ; tout ce qui lit le houppier ailleurs que dans l'ombre (glandée,
+ * litière, ravageurs, racines, oiseaux) lit ce disque-ci.
  */
 export function crownRadiusM(heightM: number, houppierRatio: number, diametreCm: number): number {
   const h = Math.max(0, heightM);
@@ -132,10 +173,15 @@ export function crownRadiusM(heightM: number, houppierRatio: number, diametreCm:
 
 /**
  * Profondeur maximale d'un houppier, en fraction de la hauteur : un arbre venu
- * seul garde ses branches presque jusqu'au sol *(à calibrer)*.
+ * seul garde ses branches presque jusqu'au sol. **0,9 est sans source** *(à
+ * calibrer)* (#474).
  *
  * C'est un **plafond**, pas un trait d'espèce. La profondeur réelle, elle, se
- * calcule — voir `baseHouppierCible`.
+ * calcule — voir `baseHouppierCible`. Dans la hêtraie de quarante ans plantée à
+ * 2 m, le rapport de houppier médian vaut 0,51 à 0,56, contre 0,46 à 0,48 dès
+ * trente ans dans des hêtraies slovaques jamais éclaircies (Štefančík 2020,
+ * *J. For. Sci.* 66 : 492, fig. 5) ; le plafond n'y mord plus. Il fixe en
+ * revanche la profondeur sur laquelle `partHouppier` retire le feuillage.
  */
 export const PROFONDEUR_HOUPPIER_MAX = 0.9;
 
@@ -202,9 +248,15 @@ export function baseHouppierCible(
  * d'œuvre). Dans les deux cas la couronne perd sa tranche basse, et intercepte
  * moins.
  *
- * C'est **linéaire** en profondeur de couronne, donc probablement un peu fort —
- * les branches basses sont les plus ombragées, donc les moins fournies.
- * Affiner demande une source sur la distribution verticale du feuillage.
+ * C'est **linéaire** en profondeur de couronne, donc **trop fort**,
+ * qualitativement. Le feuillage d'un hêtre adulte n'est pas réparti également
+ * sur sa profondeur : il se concentre en haut. Fleck (2001, thèse de
+ * l'université de Bayreuth, sur trois houppiers adultes de hêtre et de chêne
+ * sessile du Steigerwald) trouve le maximum de surface foliaire aux trois quarts
+ * de la hauteur du houppier (72 à 78 %), et la plus forte densité foliaire dans
+ * la couche la plus haute des hêtres. La tranche basse que l'élagage retire
+ * porte donc moins que sa part. Le moteur n'a pas encore de forme sourcée pour
+ * ce profil : la loi reste linéaire, et le retrait est surestimé.
  */
 export function partHouppier(heightM: number, baseHouppierM: number): number {
   const profondeurMax = PROFONDEUR_HOUPPIER_MAX * heightM;
@@ -220,9 +272,22 @@ export function partHouppier(heightM: number, baseHouppierM: number): number {
  * ─── **la pénombre répartit le feuillage d'une couronne**, **elle ne l'enlève pas** ───
  *
  * L'ombre d'un houppier est pleine à l'aplomb du tronc et s'estompe vers le
- * bord, en `1 − d²/r²` (B3) : c'est l'épaisseur qu'on traverse à la verticale
- * d'une couronne en paraboloïde, de feuillage uniforme. Sur le disque entier,
- * ce profil vaut **un demi** en moyenne.
+ * bord, en `√(1 − d²/r²)` (B3) : c'est l'épaisseur qu'on traverse à la verticale
+ * d'une couronne en **ellipsoïde** de feuillage uniforme, la convention de
+ * SamsaraLight (Ligot, Balandier, Courbaud et al. 2014, *For. Ecol. Manage.*
+ * 327 : 189-200, qui y décrivent les houppiers en ellipsoïdes ; Courbaud et al.
+ * 2003). Sur le disque entier, ce profil vaut **deux tiers** en moyenne.
+ *
+ * **Il remplace la parabole** `1 − d²/r²` (décision du propriétaire, #474, 13
+ * novembre), qui était l'épaisseur d'un paraboloïde et n'avait pas de source. Le
+ * paraboloïde mettait la moitié de l'extinction d'une couronne à moins de 0,54 r
+ * de son centre ; l'ellipsoïde la met à moins de 0,61 r. Le bord d'une couronne
+ * porte donc plus d'ombre, et le centre moins : sous un houppier de hêtre isolé,
+ * il passe 7,2 % de la lumière à l'aplomb (3,0 % sous la parabole).
+ *
+ * Sur une couronne faite de quatre quarts d'ellipse (`quartsDuHouppier`), le même
+ * profil se lit en `√(1 − x²/rx² − y²/ry²)`, chaque quart avec ses deux rayons :
+ * une transformation affine du disque, qui garde la moyenne de deux tiers.
  *
  * Le trait `lai` dit le feuillage d'une couronne rapporté à sa projection au
  * sol : un point sous deux ou trois couronnes retrouve le LAI de peuplement
@@ -234,17 +299,92 @@ export function partHouppier(heightM: number, baseHouppierM: number): number {
  * 1996). Une couronne isolée n'interceptait que 55 à 64 % de ce que son
  * feuillage intercepte réparti uniformément (#438).
  *
- * Le profil est donc rapporté à sa moyenne : au centre l'extinction vaut deux
- * fois `k · lai`, au bord zéro, et sur le disque la couronne porte exactement
- * le feuillage que l'atlas lui prête. Le deux n'est pas un réglage, c'est
- * l'inverse de la moyenne du profil : il conserve la surface foliaire. Ce
- * qu'une couronne isolée intercepte remonte à 88-93 % de celle qui aurait le
- * même feuillage réparti uniformément ; le reste est l'agrégation du feuillage
- * au centre du houppier, que les mesures optiques retrouvent aussi (les
- * méthodes indirectes sous-estiment le LAI de 25 à 50 % pour cette raison,
- * Bréda 2003).
+ * Le profil est donc rapporté à sa moyenne : au centre l'extinction vaut une
+ * fois et demie `k · lai`, au bord zéro, et sur le disque la couronne porte
+ * exactement le feuillage que l'atlas lui prête. Le facteur n'est pas un
+ * réglage, c'est l'inverse de la moyenne du profil : il conserve la surface
+ * foliaire. Ce qu'une couronne isolée intercepte reste un peu sous ce qu'elle
+ * intercepterait avec le même feuillage réparti uniformément ; l'écart est
+ * l'agrégation du feuillage au centre du houppier, que les mesures optiques
+ * retrouvent aussi (les méthodes indirectes sous-estiment le LAI de 25 à 50 %
+ * pour cette raison, Bréda 2003).
  */
-const MOYENNE_PENOMBRE = 0.5;
+const MOYENNE_PENOMBRE = 2 / 3;
+
+/** L'épaisseur relative traversée à la verticale d'une couronne en ellipsoïde, `u` = 1 − d²/r². */
+function profilPenombre(u: number): number {
+  return Math.sqrt(u);
+}
+
+/**
+ * ─── **une couronne est faite de quatre quarts d'ellipse** (#474) ────────────────
+ *
+ * Dans un peuplement, une couronne ne reste pas un disque centré sur son tronc :
+ * elle s'étend vers la place que ses voisins lui laissent. C'est la plasticité
+ * latérale des houppiers, forte chez le hêtre : dans une vieille hêtraie, le
+ * centre d'un houppier s'écarte en moyenne de 1,95 m de son tronc, à l'opposé des
+ * voisins pris dans un rayon de 12 m (Schröter, Härdtle et von Oheimb 2012,
+ * *Eur. J. For. Res.* 131 : 787).
+ *
+ * La forme est celle de HETEROFOR (Jonard et al. 2020, *Geosci. Model Dev.*
+ * 13 : 905, §2.2.4-2.2.5) : quatre rayons, vers l'est, le nord, l'ouest et le sud,
+ * et entre deux rayons voisins un quart d'ellipse. Chaque rayon est borné entre
+ * le rayon de la loi (`crownRadiusM`) et `EXTENSION_HOUPPIER_MAX` fois celui-ci ;
+ * sa mémoire est portée par l'arbre (`TreeState.rayonsHouppierM`), et elle suit
+ * ses voisins une fois l'an (couronnes.ts).
+ *
+ * **Le feuillage est gardé** : une couronne étendue porte la surface foliaire de
+ * son disque de loi, répartie sur sa forme. Son ombre est plus large et plus
+ * claire, pas plus lourde.
+ *
+ * Une couronne dont les quatre quarts sont au rayon de la loi est le disque de
+ * toujours, calculé comme avant : c'est le cas de tout arbre sans voisin à
+ * portée, l'arbre de plein champ compris.
+ */
+
+/**
+ * Le plafond d'un quart, en multiple du rayon de la loi : `sh`, la valeur du
+ * hêtre dans HETEROFOR (Jonard et al. 2020, éq. 45 et tableau 2 : le rayon
+ * potentiel d'un arbre sans concurrence vaut sh fois le rayon moyen ; le chêne
+ * sessile y a 1,25). Appliqué à toutes les essences, sur décision du propriétaire
+ * (#474) *(à confirmer hors du hêtre)*.
+ */
+export const EXTENSION_HOUPPIER_MAX = 1.5;
+
+/** Les rayons des quatre quarts d'un houppier, m : vers l'est (+x), le nord (+y), l'ouest et le sud. */
+export type QuartsHouppier = readonly [number, number, number, number];
+
+/**
+ * Le rayon d'un quart, m : sa mémoire, bornée entre le rayon de la loi et
+ * `EXTENSION_HOUPPIER_MAX` fois celui-ci. Une mémoire absente, ou passée sous la
+ * loi parce que l'arbre a grossi depuis, rend la loi.
+ */
+export function rayonDuQuart(memoireM: number | undefined, rayonLoiM: number): number {
+  if (memoireM === undefined || !(memoireM > rayonLoiM)) return rayonLoiM;
+  return Math.min(EXTENSION_HOUPPIER_MAX * rayonLoiM, memoireM);
+}
+
+/** Les quatre quarts d'un houppier, m, autour d'un rayon de loi déjà calculé. */
+function quartsAutourDe(tree: TreeState, rayonLoiM: number): QuartsHouppier {
+  const m = tree.rayonsHouppierM;
+  if (!m) return [rayonLoiM, rayonLoiM, rayonLoiM, rayonLoiM];
+  return [
+    rayonDuQuart(m[0], rayonLoiM),
+    rayonDuQuart(m[1], rayonLoiM),
+    rayonDuQuart(m[2], rayonLoiM),
+    rayonDuQuart(m[3], rayonLoiM),
+  ];
+}
+
+/** Les quatre quarts du houppier d'un arbre, m : est, nord, ouest, sud. */
+export function quartsDuHouppier(tree: TreeState): QuartsHouppier {
+  const r = crownRadiusM(
+    tree.heightM,
+    getEspece(tree.especeId).lumiere.houppierRatio,
+    tree.diametreCm,
+  );
+  return quartsAutourDe(tree, r);
+}
 
 interface Shadow {
   /** l'arbre qui la porte : un houppier ne s'ombrage pas lui-même */
@@ -257,6 +397,11 @@ interface Shadow {
   profondeurM: number;
   /** extinction à l'aplomb du tronc : `k · lai`, rapportée à la moyenne de la pénombre */
   extinction: number;
+  /**
+   * Une couronne étendue : l'inverse du carré de ses quatre rayons (est, nord,
+   * ouest, sud), m⁻². Absent pour un disque, lu par `r2`.
+   */
+  inversesCarres?: readonly [number, number, number, number];
 }
 
 /** Ombres actives (arbres vivants, en feuilles), indexées par panier spatial. */
@@ -288,24 +433,42 @@ function buildShadowIndex(
     const r = crownRadiusM(tree.heightM, espece.lumiere.houppierRatio, tree.diametreCm);
     if (r <= 0) continue;
     const partGardee = partHouppier(tree.heightM, tree.baseHouppierM ?? 0);
+    // L'indice foliaire suit le déploiement : c'est là que la phénologie
+    // entre dans la loi de Beer-Lambert. Et l'élagage y entre aussi : une
+    // couronne dont on a retiré la tranche basse intercepte moins. La
+    // pénombre répartit ensuite ce feuillage du centre au bord sans en
+    // changer la somme (`MOYENNE_PENOMBRE`).
+    let extinction =
+      (BEER_LAMBERT_K * espece.lumiere.lai * feuillage * partGardee) / MOYENNE_PENOMBRE;
+    // Sans mémoire, les quatre quarts sont à la loi : rien à allouer.
+    const m = tree.rayonsHouppierM;
+    const rE = m ? rayonDuQuart(m[0], r) : r;
+    const rN = m ? rayonDuQuart(m[1], r) : r;
+    const rW = m ? rayonDuQuart(m[2], r) : r;
+    const rS = m ? rayonDuQuart(m[3], r) : r;
+    const etendue = rE > r || rN > r || rW > r || rS > r;
+    if (etendue) {
+      // Le feuillage du disque de la loi, réparti sur les quatre quarts : la
+      // surface d'une couronne de quarts d'ellipse vaut π/4 (rE + rW)(rN + rS).
+      extinction *= (4 * r * r) / ((rE + rW) * (rN + rS));
+    }
+    const rMax = etendue ? Math.max(rE, rN, rW, rS) : r;
     const shadow: Shadow = {
       id: tree.id,
       cx: tree.x,
       cy: tree.y + decalageNord * tree.heightM,
-      r2: r * r,
+      r2: rMax * rMax,
       heightM: tree.heightM,
       profondeurM: profondeurHouppierM(tree),
-      // L'indice foliaire suit le déploiement : c'est là que la phénologie
-      // entre dans la loi de Beer-Lambert. Et l'élagage y entre aussi : une
-      // couronne dont on a retiré la tranche basse intercepte moins. La
-      // pénombre répartit ensuite ce feuillage du centre au bord sans en
-      // changer la somme (`MOYENNE_PENOMBRE`).
-      extinction: (BEER_LAMBERT_K * espece.lumiere.lai * feuillage * partGardee) / MOYENNE_PENOMBRE,
+      extinction,
     };
-    const bx0 = Math.floor((shadow.cx - r) / BUCKET_M);
-    const bx1 = Math.floor((shadow.cx + r) / BUCKET_M);
-    const by0 = Math.floor((shadow.cy - r) / BUCKET_M);
-    const by1 = Math.floor((shadow.cy + r) / BUCKET_M);
+    if (etendue) {
+      shadow.inversesCarres = [1 / (rE * rE), 1 / (rN * rN), 1 / (rW * rW), 1 / (rS * rS)];
+    }
+    const bx0 = Math.floor((shadow.cx - rW) / BUCKET_M);
+    const bx1 = Math.floor((shadow.cx + rE) / BUCKET_M);
+    const by0 = Math.floor((shadow.cy - rS) / BUCKET_M);
+    const by1 = Math.floor((shadow.cy + rN) / BUCKET_M);
     for (let by = by0; by <= by1; by++) {
       for (let bx = bx0; bx <= bx1; bx++) {
         const key = by * 100_000 + bx;
@@ -449,8 +612,20 @@ function sommerOmbres(
     if (s.id === selfId) continue;
     const dx = x - s.cx;
     const dy = y - s.cy;
-    const d2 = dx * dx + dy * dy;
-    if (d2 > s.r2) continue;
+    // L'épaisseur relative de la couronne à la verticale du point, ∈ [0,1] : 1 −
+    // d²/r² sur un disque, 1 − x²/rx² − y²/ry² sur un quart d'ellipse, chaque
+    // quart avec ses deux rayons.
+    let u: number;
+    const inv = s.inversesCarres;
+    if (inv) {
+      const q = dx * dx * (dx >= 0 ? inv[0] : inv[2]) + dy * dy * (dy >= 0 ? inv[1] : inv[3]);
+      if (q > 1) continue;
+      u = 1 - q;
+    } else {
+      const d2 = dx * dx + dy * dy;
+      if (d2 > s.r2) continue;
+      u = 1 - d2 / s.r2;
+    }
     const poids = poidsDuVoisin(s.heightM, s.profondeurM, cimeM, baseM);
     if (poids <= 0 && !voisins) continue;
     // Pénombre : l'ombre est pleine à l'aplomb du houppier et s'estompe vers
@@ -458,7 +633,7 @@ function sommerOmbres(
     // qui crée les micro-situations d'abri — un sujet planté **en lisière** d'une
     // nurse est protégé du vent et du rayonnement sans être étouffé (ch1-A).
     // Il est rapporté à sa moyenne dans `buildShadowIndex`.
-    const penombre = 1 - d2 / s.r2;
+    const penombre = profilPenombre(u);
     if (voisins && s.profondeurM > 0) {
       const k = voisins.n++;
       voisins.cimeM[k] = s.heightM;

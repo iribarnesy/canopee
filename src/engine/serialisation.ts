@@ -90,8 +90,10 @@
  * `lireEtat` la reçoit donc de l'appelant.
  */
 
+import { couronnesALEquilibre } from "./couronnes";
 import { rngStateFromSeed } from "./rng";
 import { createGameState, type GameState, type SoilState, type Station } from "./state";
+import type { TreeState } from "./trees";
 
 /** Le nombre magique en tête de bloc — de quoi reconnaître un état d'un autre fichier. */
 const MAGIE = "CANOPEE\u0000";
@@ -250,8 +252,26 @@ const MAGIE = "CANOPEE\u0000";
  * relisent de même, la version 13 avec en plus ses deux grilles de mort sur
  * pied à zéro (`VERSIONS_RELUES`). Un moteur de version 15 refuse un bloc de
  * version 16.
+ *
+ * **17 (issue #474, la plasticité des couronnes)** : chaque arbre porte la
+ * mémoire des quatre quarts de son houppier (`rayonsHouppierM`), qui s'étendent
+ * d'au plus 0,2 m par an vers la place que leur laissent leurs voisins
+ * (couronnes.ts). La forme du bloc ne bouge pas : la mémoire voyage dans le JSON
+ * des arbres, et son absence se lit « les quatre quarts au rayon de la loi ».
+ *
+ * Mais cette absence n'est pas innocente, et c'est la différence avec la neige :
+ * relu tel quel, un peuplement fermé écrit par un moteur de version 16 aurait
+ * toutes ses couronnes au rayon de la loi, et mettrait des années à refermer, au
+ * pas de 0,2 m par an, des trouées qu'une partie de version 17 aurait déjà
+ * fermées. Un bloc de version 16 se **relit** donc avec ses couronnes posées
+ * d'un coup à leur équilibre (`couronnesALEquilibre`) : la forme que la règle
+ * donne à ce peuplement-là, sans le chemin pour y arriver. C'est une relecture,
+ * pas un refus (décision du propriétaire, #474) : la partie reprend sur l'état
+ * qu'elle avait, et seule la lumière de ses couronnes change. Les blocs de
+ * version 15, 14 et 13 se relisent de même, avec ce que leur version demandait
+ * déjà (`VERSIONS_RELUES`). Un moteur de version 16 refuse un bloc de version 17.
  */
-export const VERSION_FORMAT = 16;
+export const VERSION_FORMAT = 17;
 
 /** Ce qu'il faut ajouter au sol d'un bloc ancien pour en faire un sol de la version courante. */
 interface Relecture {
@@ -259,6 +279,11 @@ interface Relecture {
   sol: Record<string, unknown>;
   /** les grilles qu'elle n'avait pas, et qui se relisent à zéro */
   grillesVides: readonly string[];
+  /**
+   * Les arbres n'avaient pas la mémoire de leurs quarts (#474) : leurs couronnes
+   * sont posées à l'équilibre à la relecture.
+   */
+  couronnesALEquilibre?: true;
 }
 
 /**
@@ -271,14 +296,21 @@ const MEMOIRE_DE_SAISON = ["herbeLumiereSaison", "herbeVigueurSaison"] as const;
 
 const VERSIONS_RELUES: Record<number, Relecture> = {
   [VERSION_FORMAT]: { sol: {}, grillesVides: [] },
+  // Les couronnes n'ont pas la mémoire de leurs quarts : posées à l'équilibre
+  // (#474). Rien ne manque au sol.
+  16: { sol: {}, grillesVides: [], couronnesALEquilibre: true },
   // La mémoire de saison manque : vide, la vernale juge la semaine de reprise
   // comme le faisait la version 15, puis sa mémoire se remplit (#468).
-  15: { sol: {}, grillesVides: MEMOIRE_DE_SAISON },
+  15: { sol: {}, grillesVides: MEMOIRE_DE_SAISON, couronnesALEquilibre: true },
   // Rien d'autre à ajouter au sol : seule une date d'arbre manque, et son
   // absence dit « jamais défeuillé par la soif », ce qui était vrai (#391).
-  14: { sol: {}, grillesVides: MEMOIRE_DE_SAISON },
+  14: { sol: {}, grillesVides: MEMOIRE_DE_SAISON, couronnesALEquilibre: true },
   // Le mort sur pied de #370 : sous la version 13, il était déjà en litière.
-  13: { sol: {}, grillesVides: ["herbeMorteAzoteG", "herbeMorteG", ...MEMOIRE_DE_SAISON] },
+  13: {
+    sol: {},
+    grillesVides: ["herbeMorteAzoteG", "herbeMorteG", ...MEMOIRE_DE_SAISON],
+    couronnesALEquilibre: true,
+  },
 };
 
 /** Une grille de sol, telle que l'en-tête la déclare. */
@@ -558,6 +590,10 @@ export function lireEtat(octets: Uint8Array, station: Station): GameState | unde
     if (cle === "station") etat[cle] = station;
     else if (cle === "soil") etat[cle] = soil;
     else etat[cle] = entete.reste[cle];
+  }
+  // Un bloc d'avant la plasticité (#474) : les couronnes à leur équilibre.
+  if (relecture.couronnesALEquilibre && Array.isArray(etat.trees)) {
+    etat.trees = couronnesALEquilibre(etat.trees as TreeState[]);
   }
   return etat as unknown as GameState;
 }
