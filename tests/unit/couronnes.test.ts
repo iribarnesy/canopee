@@ -1,10 +1,11 @@
 /**
  * La plasticité latérale des couronnes (couronnes.ts, #474) : quatre quarts
  * d'ellipse, la règle de HETEROFOR (Jonard et al. 2020, §2.2.5), le rayon de la
- * loi pour un quart sans concurrent à 12 m, un pas d'au plus 0,2 m par an.
+ * loi pour un quart sans concurrent à 12 m, un pas d'au plus 0,2 m par an, et un
+ * concurrent qui dépasse le niveau le plus large de la couronne.
  *
- * Ce que ces essais vérifient, c'est la règle décidée le 13 novembre, nombre par
- * nombre, sur des arbres posés à la main : aucune simulation.
+ * Ce que ces essais vérifient, c'est la règle décidée les 13 et 16 novembre,
+ * nombre par nombre, sur des arbres posés à la main : aucune simulation.
  */
 
 import { describe, expect, it } from "vitest";
@@ -22,6 +23,7 @@ import {
   EXTENSION_HOUPPIER_MAX,
   indexerOmbres,
   lumiereAuPointIndexee,
+  niveauLePlusLargeM,
   quartsDuHouppier,
   SHADOW_NORTH_OFFSET,
 } from "../../src/engine/light";
@@ -30,7 +32,7 @@ import { rngStateFromSeed } from "../../src/engine/rng";
 import { ecrireEtat, lireEtat, VERSION_FORMAT } from "../../src/engine/serialisation";
 import { createGameState, plantAt, type Station } from "../../src/engine/state";
 import { LIMON_RICHE } from "../../src/engine/stations";
-import { tick } from "../../src/engine/tick";
+import { stateHash, tick } from "../../src/engine/tick";
 import { diametreInitialCm, type TreeState } from "../../src/engine/trees";
 
 /** Un hêtre de `heightM` mètres, à l'élancement d'une tige sans histoire (H/D 50). */
@@ -93,9 +95,19 @@ describe("le rayon d'équilibre d'un quart (HETEROFOR, éq. 44-45)", () => {
   });
 
   it("le plus fort prend la plus grande part, et le rayon reste entre la loi et 1,5 fois la loi", () => {
-    // Un hêtre de 20 m (r_loi 7 m) et un de 10 m (3,5 m) à 8 m : le grand prend
-    // 2/3 × 8 × 1,2 = 6,4 m, sous sa loi, donc la loi ; le petit 1/3 × 9,6 =
-    // 3,2 m, sous sa loi aussi.
+    // Un hêtre de 12 m (r_loi 4,2 m) et un de 10 m (3,5 m) à 8 m, chacun plus
+    // haut que le milieu du houppier de l'autre : le grand prend 4,2/7,7 × 8 ×
+    // 1,2 = 5,24 m, le petit 3,5/7,7 × 9,6 = 4,36 m, tous deux entre leur loi et
+    // leur plafond.
+    const r12 = crownRadiusM(12, 0.35, diametreInitialCm(12));
+    const [a, b] = rayonsDEquilibre([hetre(1, 20, 20, 12), hetre(2, 28, 20, 10)]);
+    expect(a?.[0]).toBeCloseTo((r12 / (r12 + R_LOI)) * 8 * 1.2, 12);
+    expect(b?.[2]).toBeCloseTo((R_LOI / (r12 + R_LOI)) * 8 * 1.2, 12);
+    expect(a?.[0]).toBeGreaterThan(b?.[2] as number);
+    // Un hêtre de 20 m (r_loi 7 m) et un de 10 m à 8 m : le petit prendrait
+    // 1/3 × 9,6 = 3,2 m, sous sa loi, donc la loi. Le grand ne le voit pas : à
+    // 10 m, le petit reste sous le milieu de son houppier (11 m), et le quart
+    // sans concurrent garde la loi.
     const [grand, petit] = rayonsDEquilibre([hetre(1, 20, 20, 20), hetre(2, 28, 20, 10)]);
     expect(grand?.[0]).toBeCloseTo(crownRadiusM(20, 0.35, 40), 12);
     expect(petit?.[2]).toBe(R_LOI);
@@ -119,12 +131,34 @@ describe("le rayon d'équilibre d'un quart (HETEROFOR, éq. 44-45)", () => {
     expect(a?.[2]).toBe(R_LOI);
   });
 
-  it("un voisin qui ne dépasse pas la base du houppier n'est pas un concurrent", () => {
-    // Le houppier commence à 6 m : un voisin de 5 m passe dessous, un de 7 m non.
+  it("un voisin qui ne dépasse pas le niveau le plus large de la couronne n'est pas un concurrent (16 novembre)", () => {
+    // Le houppier va de 6 à 10 m : l'ellipsoïde est le plus large à 8 m. Un
+    // voisin de 5 m passe sous la base, un de 7 m dépasse la base mais pas le
+    // milieu ; sous la lettre de HETEROFOR il était un concurrent, il ne l'est
+    // plus. Un voisin de 8,5 m l'est.
+    expect(niveauLePlusLargeM(hetre(1, 20, 20, 10, 6))).toBeCloseTo(8, 12);
     const [sousLaBase] = rayonsDEquilibre([hetre(1, 20, 20, 10, 6), hetre(2, 28, 20, 5)]);
     expect(sousLaBase?.[0]).toBe(R_LOI);
-    const [audessus] = rayonsDEquilibre([hetre(1, 20, 20, 10, 6), hetre(2, 28, 20, 7)]);
+    const [sousLeMilieu] = rayonsDEquilibre([hetre(1, 20, 20, 10, 6), hetre(2, 28, 20, 7)]);
+    expect(sousLeMilieu?.[0]).toBe(R_LOI);
+    const [audessus] = rayonsDEquilibre([hetre(1, 20, 20, 10, 6), hetre(2, 28, 20, 8.5)]);
     expect(audessus?.[0]).toBeGreaterThan(R_LOI);
+  });
+
+  it("le niveau le plus large est le milieu du houppier vivant que lit l'ombre", () => {
+    // Venu au large (base au sol), le houppier ne descend pas sous un dixième
+    // de la hauteur (`PROFONDEUR_HOUPPIER_MAX`, 0,9) : de 1 à 10 m, le plus
+    // large à 5,5 m. Une recrue de 5 m passe dessous ; une de 6 m le dispute.
+    expect(niveauLePlusLargeM(hetre(1, 20, 20, 10, 0))).toBeCloseTo(5.5, 12);
+    const [recrue5] = rayonsDEquilibre([hetre(1, 20, 20, 10, 0), hetre(2, 25, 20, 5)]);
+    expect(recrue5?.[0]).toBe(R_LOI);
+    const [recrue6] = rayonsDEquilibre([hetre(1, 20, 20, 10, 0), hetre(2, 25, 20, 6)]);
+    expect(recrue6?.[0]).toBeGreaterThan(R_LOI);
+    // Entre égaux, rien ne change : la cime de l'un dépasse toujours le milieu
+    // du houppier de l'autre.
+    const [a, b] = rayonsDEquilibre([hetre(1, 20, 20, 10, 6), hetre(2, 26, 20, 10, 6)]);
+    expect(a?.[0]).toBeCloseTo(3.6, 12);
+    expect(b?.[2]).toBeCloseTo(3.6, 12);
   });
 
   it("le saut de la portée : un concurrent à 11,9 m étend le quart jusqu'à son plafond, à 12,1 m il le laisse à la loi", () => {
@@ -286,4 +320,31 @@ describe("la plasticité dans le tick et dans la sauvegarde", () => {
       r,
     ]);
   }, 60_000);
+
+  it("un bloc de version 17 relu continue comme la partie qui ne s'est pas arrêtée, quarts compris", () => {
+    // La mémoire des quarts est de l'état : relue, la partie doit reprendre au
+    // même pas, pas repartir de la loi. Comparé dans le même processus, comme
+    // `serialisation.test.ts` (#193).
+    const avancer = (depart: ReturnType<typeof createGameState>, de: number, a: number) => {
+      let s = depart;
+      for (let w = de; w < a; w++) s = tick(s, METEO[w % 52] as (typeof METEO)[number]).state;
+      return s;
+    };
+    // Un an et demi : les deux hêtres ont fait un pas vers l'autre.
+    const moitie = avancer(deuxHetres(), 0, 78);
+    expect(moitie.trees.some((t) => t.rayonsHouppierM !== undefined)).toBe(true);
+    const relu = lireEtat(ecrireEtat(moitie), STATION);
+    if (!relu) throw new Error("le bloc de version 17 aurait dû se relire");
+    expect(stateHash(relu)).toBe(stateHash(moitie));
+    expect(relu.trees.map((t) => t.rayonsHouppierM)).toEqual(
+      moitie.trees.map((t) => t.rayonsHouppierM),
+    );
+    // Une année de plus de chaque côté, le deuxième pas compris.
+    const droit = avancer(moitie, 78, 130);
+    const repris = avancer(relu, 78, 130);
+    expect(stateHash(repris)).toBe(stateHash(droit));
+    const [ouest] = droit.trees as [TreeState];
+    const rOuest = crownRadiusM(ouest.heightM, 0.35, ouest.diametreCm);
+    expect(ouest.rayonsHouppierM?.[0]).toBeGreaterThan(rOuest);
+  }, 120_000);
 });

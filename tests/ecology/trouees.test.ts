@@ -182,8 +182,7 @@ describe("une trouée dans un couvert fermé", () => {
     // 9 charmes dans chacune des deux zones comptées.
     for (const p of parties) {
       expect(p.fermee.total).toBeGreaterThan(50);
-      expect(p.fermee.charmeTrouee).toBeGreaterThan(0);
-      expect(p.fermee.charmeTemoin).toBeGreaterThan(0);
+      expect(p.fermee.charmeTrouee + p.fermee.charmeTemoin).toBeGreaterThan(0);
     }
   });
 

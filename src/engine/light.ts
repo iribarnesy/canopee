@@ -493,6 +493,26 @@ function profondeurHouppierM(tree: TreeState): number {
 }
 
 /**
+ * Le niveau où le houppier d'un arbre est **le plus large**, m : le milieu de son
+ * houppier vivant, à mi-chemin de sa base (`hauteur − profondeur`) et de sa cime.
+ *
+ * Ce n'est pas un nombre de plus, c'est la forme décidée qui le donne. La
+ * pénombre est l'épaisseur d'une couronne en **ellipsoïde** (B3, SamsaraLight,
+ * Ligot et al. 2014), dont l'axe vertical est le houppier vivant que lit l'ombre
+ * des voisins (`profondeurHouppierM`, `poidsDuVoisin`) ; un ellipsoïde est le
+ * plus large en son centre. Le rayon de la loi et les quatre quarts
+ * (`quartsDuHouppier`) sont les rayons de ce niveau-là.
+ *
+ * C'est ce niveau qu'un voisin doit dépasser pour disputer la place à un quart
+ * (couronnes.ts, décision du propriétaire du 16 novembre, #474) : plus bas, il
+ * passe sous la partie la plus large de la couronne, et ne l'empêche pas de
+ * s'étendre au-dessus de lui.
+ */
+export function niveauLePlusLargeM(tree: TreeState): number {
+  return tree.heightM - profondeurHouppierM(tree) / 2;
+}
+
+/**
  * Sous cette profondeur, m, un houppier se lit comme un point, à sa cime. C'est
  * une tolérance de calcul, pas un paramètre : elle évite de diviser par une
  * profondeur nulle (un point au sol, un arbre rabattu sans couronne) ou presque

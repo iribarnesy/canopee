@@ -234,11 +234,12 @@ export interface TreeState {
    * loi, ce qu'est tout arbre sans voisin à portée et tout arbre qui vient de
    * naître.
    *
-   * Un quart s'étend vers la place que lui laisse son plus proche voisin plus
-   * haut que la base du houppier, d'au plus 0,2 m par an, et ne dépasse pas une
-   * fois et demie la loi (couronnes.ts). Ce qui est lu, c'est cette mémoire bornée
-   * par la loi du jour (`light.ts:quartsDuHouppier`) : un arbre qui grossit entre
-   * deux mises à jour ne passe jamais sous sa loi.
+   * Un quart s'étend vers la place que lui laisse son plus proche voisin dont
+   * la cime dépasse le niveau le plus large de la couronne (le milieu du
+   * houppier), d'au plus 0,2 m par an, et ne dépasse pas une fois et demie la
+   * loi (couronnes.ts). Ce qui est lu, c'est cette mémoire bornée par la loi du
+   * jour (`light.ts:quartsDuHouppier`) : un arbre qui grossit entre deux mises à
+   * jour ne passe jamais sous sa loi.
    */
   rayonsHouppierM?: QuartsHouppier;
   /** nombre de recépages subis (taillis, trogne) */

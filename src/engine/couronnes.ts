@@ -11,12 +11,14 @@
  *
  * La règle est celle de HETEROFOR (Jonard et al. 2020, *Geosci. Model Dev.*
  * 13 : 905, §2.2.5, éq. 44-47), décidée par le propriétaire le 13 novembre
- * (#474) :
+ * (#474), à un écart près, décidé le 16 novembre (plus bas) :
  *
  * - **la couronne a quatre quarts**, vers l'est, le nord, l'ouest et le sud ; le
  *   secteur d'un quart couvre 90°, de part et d'autre de sa direction ;
- * - **le concurrent d'un quart** est le plus proche voisin de son secteur plus
- *   haut que la base du houppier de l'arbre ;
+ * - **le concurrent d'un quart** est le plus proche voisin de son secteur dont
+ *   la cime dépasse le niveau où la couronne de l'arbre est la plus large : le
+ *   milieu de son houppier vivant, centre de l'ellipsoïde que lit la pénombre
+ *   (`niveauLePlusLargeM`, light.ts) ;
  * - **le rayon d'équilibre** du quart vaut
  *
  *       r_eq = r_pot / (r_pot + r_pot,conc) × d × r_overlap
@@ -35,6 +37,22 @@
  *   même pas, comme le Δcr borné de HETEROFOR (éq. 46-47). Le pas part du rayon
  *   lu, borné par la loi du jour : un arbre rabattu (recépage, trogne, cassure)
  *   ne garde au plus qu'une fois et demie sa nouvelle loi, et la perd au même pas.
+ *
+ * **L'écart à la lettre de HETEROFOR : le niveau le plus large, pas la base**
+ * (décision du propriétaire du 16 novembre, #474). HETEROFOR prend pour
+ * concurrent le plus proche voisin plus haut que la **base** du houppier
+ * (Jonard et al. 2020, §2.2.5). Mais HETEROFOR ne simule pas de régénération, et
+ * ce moteur, si : les recrues de 2 à 5 m d'une trouée ou d'un sous-étage
+ * dépassent la base basse d'un hêtre venu au large (vers 2 m). Sous la lettre de
+ * la règle, elles devenaient ses concurrentes, et ses quarts s'étendaient
+ * au-dessus d'elles : sur le banc de F7 (`trouees.test.ts`, hêtres de 15 m à 8 m),
+ * à la neuvième année de la graine 1, les 19 quarts étendus avaient tous une
+ * recrue pour concurrent, et le charme ne recrutait plus dans la zone de la
+ * future trouée. Un voisin plus bas que le niveau le plus large passe sous la
+ * partie la plus large de la couronne : il ne lui dispute pas la place. Le
+ * critère n'apporte aucun nombre ; il découle de la forme en ellipsoïde décidée
+ * le 13 novembre. Entre deux arbres de même hauteur, il ne change rien : la
+ * cime de l'un dépasse toujours le milieu du houppier de l'autre.
  *
  * **La règle a un saut**, et il est assumé (#474) : un concurrent à 11,9 m donne
  * un quart qui s'étend jusqu'à son plafond, un concurrent à 12,1 m un quart à la
@@ -55,6 +73,7 @@ import { getEspece } from "./especes";
 import {
   crownRadiusM,
   EXTENSION_HOUPPIER_MAX,
+  niveauLePlusLargeM,
   type QuartsHouppier,
   quartsDuHouppier,
 } from "./light";
@@ -133,7 +152,7 @@ export function rayonsDEquilibre(trees: readonly TreeState[]): (QuartsHouppier |
     const t = trees[i];
     const ri = rLoi[i] ?? 0;
     if (!t || !(ri > 0)) continue;
-    const base = Math.max(0, Math.min(t.heightM, t.baseHouppierM ?? 0));
+    const niveau = niveauLePlusLargeM(t);
     dMin.fill(Number.POSITIVE_INFINITY);
     jMin.fill(-1);
     const bx = Math.floor(t.x / PANIER_M);
@@ -145,8 +164,9 @@ export function rayonsDEquilibre(trees: readonly TreeState[]): (QuartsHouppier |
         for (const j of list) {
           if (j === i) continue;
           const v = trees[j] as TreeState;
-          // Le concurrent dépasse la base du houppier : c'est là qu'il prend de la place.
-          if (!(v.heightM > base)) continue;
+          // Le concurrent dépasse le niveau où la couronne est la plus large :
+          // plus bas, il passe dessous, et ne lui dispute pas la place.
+          if (!(v.heightM > niveau)) continue;
           const dx = v.x - t.x;
           const dy = v.y - t.y;
           const d = Math.sqrt(dx * dx + dy * dy);

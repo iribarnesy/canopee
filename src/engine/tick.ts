@@ -4542,12 +4542,13 @@ export function tick(state: GameState, weather: WeekWeather, essai?: ReglagesDEs
 
   // ── 6 ter ter. Les couronnes vers la place libre, une fois l'an (#474) ─────
   // Chaque quart de houppier fait un pas d'au plus 0,2 m vers l'équilibre que
-  // lui laisse son plus proche voisin plus haut que sa base ; un quart sans
-  // voisin à 12 m garde le rayon de la loi (couronnes.ts). Une fois l'an et pas à
-  // chaque lecture de la lumière : la recherche des concurrents est un parcours
-  // des voisins de chaque arbre, et la vitesse se compte en dizaines de
-  // centimètres par an. Placée après la tempête, comme la mémoire d'abri : les
-  // arbres qu'elle a couchés ont déjà libéré leur place.
+  // lui laisse son plus proche voisin dont la cime dépasse le milieu de son
+  // houppier ; un quart sans voisin à 12 m garde le rayon de la loi
+  // (couronnes.ts). Une fois l'an et pas à chaque lecture de la lumière : la
+  // recherche des concurrents est un parcours des voisins de chaque arbre, et la
+  // vitesse se compte en dizaines de centimètres par an. Placée après la
+  // tempête, comme la mémoire d'abri : les arbres qu'elle a couchés ont déjà
+  // libéré leur place.
   if (week === RECRUITMENT_WEEK) nextTrees = couronnesDeLAnnee(nextTrees);
 
   // ── 6 quater. Les aides publiques, une fois l'an ─────────────────────────
