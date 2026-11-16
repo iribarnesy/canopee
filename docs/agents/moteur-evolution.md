@@ -67,7 +67,29 @@ l'autre âge pour vérifier. Et caler sur la moyenne de plusieurs graines, avec
 son erreur type : sur le banc des hauteurs, la moyenne de deux graines porte
 6 % d'incertitude (#481).
 
-## Ce que le dernier lot a appris (les thermomètres du vent, #483)
+## Ce que le dernier lot a appris (les commentaires du vent et de l'allocation remis à jour, #481, #483)
+
+Le lot de maintenance décidé par le propriétaire le 16 novembre (#481), sur les propositions du compte rendu du lot joint (§ 8). Rien que des commentaires et de la documentation : aucune constante, aucune logique, aucune assertion ne bouge, et la simulation reste identique au bit près. Les deux commentaires périmés que le lot précédent laissait ouverts sont corrigés :
+- `ALLOCATION_DIAMETRE_OMBRE` et l'en-tête de l'élancement (`trees.ts`) datent les nombres de #65 et de #79 comme mesurés avant l'étiolement (#97). « H/D plafonne à 80 » ne vaut plus que pour une tige qui suivrait l'allocation ; une dominée file au-delà (perche de 109 à 112, #467).
+- L'en-tête de `tempete.ts` range la fragilité d'après-éclaircie parmi ce que F18 a fait (`abriHabituel`, `MEMOIRE_ABRI_ANS`, `PERTE_NAIVETE`), et l'acclimatation mécanique parmi ce qui manque. La puce de l'amplification climatique y est aussi remise à jour : la plomberie de F19 est faite, c'est le chiffre qui manque.
+
+`allocationDiametreCmParM` dit pourquoi l'acclimatation n'est pas ajoutée (option A) : l'interaction éclaircie × flexion n'est pas significative sur Vent-Éclair (Dongmo Keumo Jiazet et al. 2022, *Ann. For. Sci.* 79 : 44, § 4.3), et le moteur répond déjà trop à l'éclaircie (#490). `ALLOCATION_DIAMETRE_LUMIERE` porte maintenant sa marque, calée sur le moteur. Dans `realisme.md`, F15, F18 et la section sur l'écart de la paire d'allocation sont remis d'accord.
+
+### Un plafond arithmétique se relit quand un mécanisme le contourne
+
+« H/D plafonne à 80 » était vrai de toute tige tant que le diamètre suivait l'allocation. L'étiolement a fait passer les dominées à côté de la formule. `facteurElancement` et `elancement.test.ts` ont été corrigés, mais le commentaire de la constante, qui portait le plafond, est resté au présent. Le plafond tient encore pour les dominants : c'est sur lui que le lot joint de #481 est tombé. **Quand un mécanisme contourne une borne, chaque commentaire qui la cite doit dire pour qui elle tient encore.**
+
+### Une décision de ne pas faire s'écrit là où le mécanisme entrerait
+
+Le pourquoi de l'option A tenait dans un compte rendu d'issue. Le prochain lot qui aurait lu la thigmomorphogenèse sur `MEMOIRE_ABRI_ANS` aurait pu reproposer l'acclimatation. Le pourquoi est maintenant sur la fonction où un terme mécanique entrerait, avec un renvoi depuis l'en-tête du vent et depuis F18. **Ce qu'on décide de ne pas coder se documente à l'endroit où on le coderait.**
+
+### Points ouverts
+
+- **Le critère de la tempête n'est écrit dans aucun essai.** K1 à K4 vivent dans les comptes rendus de #481 et #483. `tempete.test.ts` ne cite l'IFN 2003 (6,8 % des conifères contre 3,5 % des feuillus) que pour la direction pin > hêtre, déjà jugée sur le hêtre. Aucun commentaire n'avait donc à changer avec la décision du 16 novembre.
+- **Les nombres de #79** (37–49, 37–53, le coût au feu) sont datés, pas remesurés.
+- **Les termes sans source du vent** (exposition des stations, loi du volis, `RUGOSITE_M`, part foliaire des marcescents) s'instruisent avant de redécider (1,9 ; 1,65) ; l'allongement des perches éclaircies (#490), l'auto-éclaircie du pin (#491) et le pubescent sur limon acide (#492) attendent leur lot.
+
+## Ce qu'un lot précédent a appris (les thermomètres du vent, #483)
 
 Le lot de maintenance décidé par le propriétaire le 12 novembre (#483, point 1). Aucun mécanisme ne change. `TempeteResult` gagne `casses` : les volis de la semaine, chacun avec le volume de tige qu'il portait avant la cassure. Les deux essais qui ne voyaient que les chablis lisent maintenant les deux ruines : `tempete` juge sa direction en volume sur le volume endommagé, comme l'IFN 2003 qu'il cite, et `naivete-vent` compte aussi les volis de sa cohorte. `volumeM3` garde son sens, le bois couché que le joueur vend. `TempeteResult` sort du tick vers l'instantané et n'entre pas dans `ecrireEtat` : le format reste 16. Trois commentaires de `tempete.ts` sont remis d'accord avec le moteur sans qu'une valeur change, et F13 est remise d'accord avec la fiche du pin dans un commit à part. Les prédictions ont été postées sur #483 avant la première course. Les bancs tournent hors dépôt, repris des outils de l'instruction : T (`soixanteAns` de `tempete`), N (le banc apparié de `naivete-vent`), et la sonde `ALLOC_LUM` de #481 pour 2,0.
 

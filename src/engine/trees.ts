@@ -1105,7 +1105,9 @@ export function volumeAerienM3(diametreCm: number, heightM: number): number {
  * resserrait sur 36–39 au lieu de s'étaler, parce que dans ce moteur la base
  * du houppier ne remonte pas assez pour discriminer. La lumière, elle, produit
  * un gradient **monotone** avec la densité (`elancement.test.ts`) : à 2 / 4 / 6 /
- * 10 m d'écartement, les dominants sortent à H/D 42,1 / 38,8 / 38,0 / 37,4.
+ * 10 m d'écartement, les dominants sortaient à H/D 42,1 / 38,8 / 38,0 / 37,4
+ * avant l'étiolement (#97). Depuis #467, sur trois graines, ils sortent à
+ * 58-63 / 48-53 / 37-39 à 2 / 4 / 10 m (E10).
  *
  * **Les deux constantes font deux choses à la fois, et c'est ce qui les cale :**
  * leur moyenne fixe le niveau de volume du peuplement, leur écart fixe
@@ -1116,9 +1118,10 @@ export function volumeAerienM3(diametreCm: number, heightM: number): number {
  * **gérée** ; ce banc-là n'est jamais éclairci, et accumule donc davantage.
  *
  * **Réserve honnête. J'ai d'abord accusé le mauvais coupable, et la campagne
- * de #65 l'a mesuré.** Le moteur couvre H/D de 35 à 49 quand la sylviculture
- * mesure 25–40 au large et 90–100 en perche : le bon ordre, un cinquième de
- * l'étendue. Ce commentaire a longtemps désigné le poids d'ombrage des
+ * de #65 l'a mesuré.** Le moteur couvrait alors H/D de 35 à 49 quand la
+ * sylviculture mesure 25–40 au large et 90–100 en perche : le bon ordre, un
+ * cinquième de l'étendue. C'était avant l'étiolement (#97), qui a ouvert le
+ * haut de la gamme. Ce commentaire a longtemps désigné le poids d'ombrage des
  * codominants (0,4 dans `light.ts:extinctionAt`, remplacé depuis par la part
  * du houppier voisin qui dépasse celui de la cible, #467) comme la cause, et
  * `elancement.test.ts` le répétait. **C'est faux, et le balayage le montre** :
@@ -1129,34 +1132,42 @@ export function volumeAerienM3(diametreCm: number, heightM: number): number {
  *
  * **Ces deux constantes bornent une fenêtre, et c'est de l'arithmétique.** Un
  * arbre qui pousse de bout en bout à une allocation `a` porte H/D = 100/a. La
- * fenêtre atteignable est [40 ; 80]. Elle est trop étroite d'un bout — elle
- * rend `ELANCEMENT_CRITIQUE` (tempete.ts) inatteignable — et #79 a essayé de
- * l'ouvrir en descendant l'allocation d'ombre à 1,0 ; la mesure a dit non, et le
- * compte rendu est sur la constante elle-même. (En dessous de 40, on trouve
- * quand même des tiges : c'est l'abroutissement, qui retire de la hauteur sans
- * toucher au diamètre.)
+ * fenêtre de l'allocation est [40 ; 80]. Avant l'étiolement (#97), c'était aussi
+ * celle des tiges, trop étroite d'un bout : elle rendait `ELANCEMENT_CRITIQUE`
+ * (tempete.ts) inatteignable. #79 a essayé de l'ouvrir en descendant
+ * l'allocation d'ombre à 1,0 ; la mesure a dit non, et le compte rendu est sur
+ * la constante elle-même. Depuis #97, la fenêtre ne borne plus qu'une tige qui
+ * suivrait l'allocation pas à pas : le diamètre d'une dominée encaisse le
+ * résidu, et l'élancement réalisé sort de la fenêtre par le haut
+ * (`elancement.test.ts`). (En dessous de 40, on trouve quand même des tiges :
+ * c'est l'abroutissement, qui retire de la hauteur sans toucher au diamètre.)
  *
- * **Et élargir la fenêtre n'élargirait presque pas l'amplitude, ce qui est le
- * résultat de #79.** Une hêtraie plantée à 2 m, trente ans, va de H/D 37–49 à 37–53 ;
+ * **Et élargir la fenêtre n'élargissait presque pas l'amplitude, ce qui est le
+ * résultat de #79**, mesuré avant l'étiolement (#97) et pas remesuré depuis. Une
+ * hêtraie plantée à 2 m, trente ans, allait de H/D 37–49 à 37–53 ;
  * poussée à l'absurde — allocation d'ombre à 0,5, fenêtre [40 ; 200] — elle
- * n'atteint que 38–62. Le peuplement de quatre-vingts ans plafonne à 58, et le
- * **pin**, pourtant héliophile et là où la sylviculture mesure ses perches, reste
- * plus plat encore : 41,0 à 2 m contre 38,9 à 10 m.
+ * n'atteignait que 38–62. Le peuplement de quatre-vingts ans plafonnait à 58, et
+ * le **pin**, pourtant héliophile et là où la sylviculture mesure ses perches,
+ * restait plus plat encore : 41,0 à 2 m contre 38,9 à 10 m.
  *
- * **Parce que H/D est une intégrale, pas un état, et c'est ça le verrou.** À 2 m
- * et trente ans, les dominants reçoivent 0,40 de lumière, ce qui vaut une
- * allocation instantanée de 1,75 cm/m, donc H/D 57 pour un arbre qui aurait vécu
- * là depuis toujours. Ils en portent 42. Deux causes se cumulent : toute
+ * **Parce que H/D est une intégrale, pas un état, et c'était un verrou**
+ * (relevé de #79, avant l'étiolement). À 2 m et trente ans, les dominants
+ * recevaient 0,40 de lumière, ce qui vaut une allocation instantanée de
+ * 1,75 cm/m, donc H/D 57 pour un arbre qui aurait vécu là depuis toujours. Ils
+ * en portaient 42. Deux causes se cumulent : toute
  * plantation est **ouverte** ses premières années, et le diamètre posé alors à
  * 2,5 cm/m est acquis pour toujours puisqu'un diamètre ne rétrécit jamais ; puis
  * un semis naît à H/D 50 (`diametreInitialCm`), si bien qu'une tige qui pousse
  * peu reste près de 50 quoi qu'il arrive. L'ombre n'agit donc que sur la fin de
  * la vie de l'arbre, et seulement sur ce qu'il lui reste à pousser.
  *
- * Atteindre les 90–100 de la perche demanderait un arbre qui monte **vite** en
- * restant à l'ombre. Ce moteur ne sait pas le faire : l'ombre entre dans la loi
- * du minimum, donc elle rabote la pousse totale au lieu de la rediriger vers la
- * hauteur. Il manque l'étiolement, et c'est une évolution, pas un réglage.
+ * Atteindre les 90–100 de la perche demandait un arbre qui monte **vite** en
+ * restant à l'ombre. Ce moteur ne savait pas le faire : l'ombre entrait dans la
+ * loi du minimum, donc elle rabotait la pousse totale au lieu de la rediriger
+ * vers la hauteur. Il manquait l'étiolement, une évolution et pas un réglage.
+ * #97 l'a ajouté (le bloc « l'étiolement », plus bas) : l'allongement se sert
+ * d'abord, le diamètre encaisse le résidu. Relevé à #467, à trente ans dans une
+ * hêtraie plantée à 2 m, trois graines : une perche de H/D 109 à 112 (E10).
  *
  * **La hauteur, elle, n'est pas touchée.** Elle est calée sur des tables de
  * production (Jansen 1996, `hauteurs.test.ts`) : c'est une vraie ancre, et on
@@ -1168,33 +1179,50 @@ export function volumeAerienM3(diametreCm: number, heightM: number): number {
  * Diamètre gagné par mètre de hauteur, à l'ombre : la tige file. cm/m.
  *
  * **Elle a été portée à** 1,0 **pendant** #79, **puis rendue à** 1,25, et il faut dire
- * pourquoi — sans quoi quelqu'un refera le chemin.
+ * pourquoi — sans quoi quelqu'un refera le chemin. **Les nombres de ce compte
+ * rendu datent de #79**, avant l'étiolement (#97), et n'ont pas été remesurés.
  *
- * L'argument **pour** était bon et il tient toujours : à 1,25, H/D plafonne à 80,
- * alors que `tempete.ts` porte `ELANCEMENT_CRITIQUE = 100`, le seuil sylvicole
- * d'instabilité. La moitié haute de la rampe de `facteurElancement` est donc
- * inatteignable par construction. À 1,0, la fenêtre devient [40 ; 100] et les
- * deux modules s'accordent ; le volume d'une hêtraie de 80 ans passe même de
+ * L'argument **pour** était bon à l'époque : à 1,25, H/D plafonnait à 80, alors
+ * que `tempete.ts` porte `ELANCEMENT_CRITIQUE = 100`, le seuil sylvicole
+ * d'instabilité, et la moitié haute de la rampe de `facteurElancement` était
+ * inatteignable par construction. À 1,0, la fenêtre devenait [40 ; 100] et les
+ * deux modules s'accordaient ; le volume d'une hêtraie de 80 ans passait même de
  * 490 à 456 m³/ha, soit dans la fourchette des tables.
  *
- * Ce que ça **coûte**, mesuré : une tige plus fine résiste moins au feu. Sur la
- * graine 23 du banc climatique, l'incendie de la partie réchauffée emporte 126
- * arbres au lieu de 49 — et il les **vole** aux deux causes que `climat.test.ts`
- * compte pour montrer que le réchauffement tue : la sécheresse tombe de 61 à 18,
- * les ravageurs de 31 à 6, et le rapport figé→chauffé s'effondre de 4,00 à 1,09.
- * La pullulation suit, faute d'hôtes survivants.
+ * **Ce plafond de 80 ne vaut plus que pour une tige qui suivrait l'allocation**
+ * pas à pas (100/1,25). Depuis l'étiolement, l'allongement d'une dominée se
+ * sert d'abord et son diamètre encaisse le résidu : elle file au-delà, comme le
+ * dit `facteurElancement`. Relevé à #467, à trente ans dans une hêtraie plantée
+ * à 2 m, trois graines : une perche de H/D 109 à 112 (E10). Pour les dominants,
+ * le plafond compte encore : sous un facteur de 1,65 sondé sur les vitesses
+ * critiques, le critère du banc de 1999 (#481, hors dépôt) leur demandait, chez
+ * le hêtre et le chêne pubescent, plus de H/D 80, et le lot joint de #481 est
+ * tombé là-dessus (décision du 16 novembre sur #483).
  *
- * Ce que ça **rapporte**, mesuré aussi : l'amplitude réelle de H/D passe de 37–49 à
- * 37–53 à trente ans. Quatre points. E10 reste 🟡 dans les deux cas.
+ * Ce que ça **coûtait**, mesuré : une tige plus fine résiste moins au feu. Sur la
+ * graine 23 du banc climatique, l'incendie de la partie réchauffée emportait 126
+ * arbres au lieu de 49 — et il les **volait** aux deux causes que `climat.test.ts`
+ * compte pour montrer que le réchauffement tue : la sécheresse tombait de 61 à
+ * 18, les ravageurs de 31 à 6, et le rapport figé→chauffé s'effondrait de 4,00 à
+ * 1,09. La pullulation suivait, faute d'hôtes survivants.
  *
- * Quatre points d'amplitude contre une conclusion climatique renversée, il n'y a
- * pas à hésiter. Et surtout, le verrou n'est pas là : c'est #97 (l'étiolement)
- * qui rendra `ELANCEMENT_CRITIQUE` atteignable pour de bon, en faisant filer les
- * dominés au lieu de les faire stagner. Bouger cette constante-ci n'était qu'une
- * façon d'ouvrir la fenêtre sans que rien n'aille l'occuper.
+ * Ce que ça **rapportait**, mesuré aussi : dans une hêtraie plantée à 2 m,
+ * l'amplitude réelle de H/D passait de 37–49 à 37–53 à trente ans. Quatre
+ * points. E10 restait 🟡 dans les deux cas ; il est ✅ aujourd'hui.
+ *
+ * Quatre points d'amplitude contre une conclusion climatique renversée, il n'y
+ * avait pas à hésiter. Et le verrou n'était pas là, #97 l'a montré : en faisant
+ * filer les dominées au lieu de les faire stagner, l'étiolement a rendu
+ * `ELANCEMENT_CRITIQUE` atteignable sans que cette constante bouge. La
+ * descendre n'aurait ouvert qu'une fenêtre que rien ne serait allé occuper.
  */
 export const ALLOCATION_DIAMETRE_OMBRE = 1.25;
-/** Diamètre gagné par mètre de hauteur, en pleine lumière : l'arbre épaissit. cm/m. */
+/**
+ * Diamètre gagné par mètre de hauteur, en pleine lumière : l'arbre épaissit. cm/m.
+ *
+ * *(Calée sur le moteur.)* Elle reste à 2,5 sur décision du 16 novembre (#481),
+ * tant que les termes sans source du vent n'ont pas été instruits (#483).
+ */
 export const ALLOCATION_DIAMETRE_LUMIERE = 2.5;
 /**
  * Le milieu de la gamme, et le diamètre qu'on prête à une tige sans histoire.
@@ -1204,7 +1232,36 @@ export const ALLOCATION_DIAMETRE_LUMIERE = 2.5;
  */
 export const ALLOCATION_DIAMETRE_MEDIANE = 2;
 
-/** Diamètre gagné par mètre de hauteur pour ce rapport de houppier, cm/m. */
+/**
+ * Diamètre gagné par mètre de hauteur pour la lumière que reçoit le houppier,
+ * cm/m. C'est la lumière qui pilote, et pas le rapport de houppier, essayé
+ * d'abord et écarté par la mesure (l'en-tête de l'élancement, plus haut).
+ *
+ * **Le vent n'y entre pas, et c'est une décision** (#481, option A du
+ * 16 novembre). Un arbre que le vent fléchit épaissit son fût : c'est
+ * l'acclimatation mécanique, et elle est mesurée. Ce qui compterait pour le
+ * moteur, c'est qu'elle change la réponse à une **éclaircie**, et le dispositif
+ * Vent-Éclair dit que non (Dongmo Keumo Jiazet et al. 2022, *Ann. For. Sci.*
+ * 79 : 44). Sur des perches de hêtre éclaircies ou non, haubanées ou libres de
+ * se balancer, l'interaction éclaircie × flexion n'est pas significative
+ * (F = 0,17, p = 0,69, § 4.3) : la flexion multiplie l'accroissement du volume
+ * par le même facteur chez les éclaircis et chez les témoins, 1,43 et 1,47
+ * (tab. 1).
+ *
+ * Deux conséquences :
+ *
+ *  - les constantes d'allocation, prises sur des arbres libres qui se
+ *    balancent, contiennent déjà la flexion ; un multiplicateur mécanique la
+ *    compterait deux fois ;
+ *  - le moteur ne manque pas de réponse à l'éclaircie, il en a trop. Sur un
+ *    analogue de Vent-Éclair (instruction de #481, hors dépôt, à 2,5 et à
+ *    1,9 cm/m, neuf graines au plus), l'éclaircie multiplie l'accroissement en
+ *    volume des perches par 3,1 à 3,8 par rapport aux témoins, contre 2,33 au
+ *    terrain (tab. 1). L'excès passe par l'allongement : 2,3 à 2,7 fois celui
+ *    des témoins, contre 1,12 au terrain, où l'éclaircie ne change pas
+ *    l'allongement (F = 0,03, p = 0,87, § 4.1). Un terme mécanique s'ajouterait
+ *    à cet excès au lieu de combler un manque. L'excès est l'objet de #490.
+ */
 export function allocationDiametreCmParM(lumiere: number): number {
   const l = Math.min(1, Math.max(0, lumiere));
   return ALLOCATION_DIAMETRE_OMBRE + (ALLOCATION_DIAMETRE_LUMIERE - ALLOCATION_DIAMETRE_OMBRE) * l;
