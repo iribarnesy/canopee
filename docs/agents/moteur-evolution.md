@@ -67,7 +67,89 @@ l'autre âge pour vérifier. Et caler sur la moyenne de plusieurs graines, avec
 son erreur type : sur le banc des hauteurs, la moyenne de deux graines porte
 6 % d'incertitude (#481).
 
-## Ce que le dernier lot a appris (les commentaires du vent et de l'allocation remis à jour, #481, #483)
+## Ce que le dernier lot a appris (la plasticité des houppiers, #474)
+
+Le lot v0.6 « houppiers », sur les décisions du propriétaire du 13 et du 16 novembre (#474), PR #489. Les couronnes ont quatre quarts d'ellipse qui s'étendent vers la place libre, d'au plus 0,2 m par an (`couronnes.ts`, la règle de HETEROFOR, Jonard et al. 2020) ; un quart sans concurrent à 12 m garde le rayon de la loi ; le feuillage est gardé ; la pénombre devient l'ellipsoïde (B3) ; le format de sauvegarde passe en 17, un bloc de version 16 se relisant avec ses couronnes à l'équilibre. Le 16 novembre, deux corrections : **le concurrent d'un quart doit dépasser le milieu du houppier du sujet**, le niveau où l'ellipsoïde est le plus large (`niveauLePlusLargeM`), et non plus sa base ; et le garde-fou de F7 compte ses deux zones ensemble. Le lot a été repris sur une machine neuve : les sondes, les bancs et les brouillons du premier passage étaient perdus. Les prédictions du code final ont été postées sur #474 avant toute course ; les mesures y sont aussi.
+
+Trois copies hors dépôt : main 33b6ffb, la branche, et la branche sous le critère de la base (4aed486 rejoué par interrupteur). Sans la plasticité et avec la parabole, la branche rend main au bit près : même SHA-256 de l'état complet sur la hêtraie de l'acceptation à 8 ans et sur une scène mêlée à 12 ans (hêtraie, semis du paysage, vent, quatre noyers isolés).
+
+**L'essai d'acceptation de #484** (hêtraie plantée à 2 m sur 40 m, station sans vent, quarante ans, puis quinze ans de témoin et de trouée ; joué en sonde avec ses propres fonctions). Chaque case : main / 4aed486 / branche. Le témoin ne recrute rien, dans les trois copies et sur les cinq graines.
+
+| graine | lumière à 40 ans | à 55 ans (témoin) | recrues de la trouée (bouleaux) | plantés/ha à 40 ans | baisse de 40 à 55 ans, par décennie | LAI des couronnes à 40 ans | rapport de houppier | k effectif |
+|---|---|---|---|---|---|---|---|---|
+| 1 | 0,027 / 0,024 / **0,024** | 0,042 / 0,042 / **0,042** | 32 (3) / 37 (3) / 38 (4) | 1 556 / 1 556 / 1 556 | −11,0 / −11,6 / −11,9 % | 8,6 / 8,8 / 8,8 | 0,517 / 0,507 / 0,510 | 0,40 / 0,39 / 0,40 |
+| 2 | 0,069 / 0,042 / **0,043** | 0,090 / 0,062 / **0,059** | 18 (9) / 11 (1) / 11 (3) | 1 569 / 1 513 / 1 513 | −14,1 / −12,5 / −11,1 % | 9,7 / 9,2 / 9,2 | 0,555 / 0,528 / 0,534 | 0,30 / 0,35 / 0,35 |
+| 3 | 0,012 / 0,014 / **0,014** | 0,035 / 0,037 / **0,032** | 25 (4) / 29 (2) / 21 (0) | 1 694 / 1 681 / 1 681 | −11,1 / −12,3 / −11,8 % | 9,5 / 9,2 / 9,3 | 0,538 / 0,507 / 0,511 | 0,39 / 0,41 / 0,41 |
+| 4 | 0,041 / 0,029 / **0,034** | 0,033 / 0,025 / **0,026** | 12 (1) / 13 (2) / 12 (0) | 1 556 / 1 538 / 1 538 | −10,2 / −10,3 / −10,9 % | 8,4 / 8,3 / 8,2 | 0,514 / 0,500 / 0,503 | 0,40 / 0,44 / 0,44 |
+| 5 | 0,025 / 0,022 / **0,025** | 0,018 / 0,022 / **0,022** | 21 (0) / 22 (1) / 18 (1) | 1 550 / 1 531 / 1 550 | −9,9 / −10,9 / −11,6 % | 9,2 / 8,6 / 8,7 | 0,547 / 0,537 / 0,521 | 0,43 / 0,45 / 0,44 |
+
+- La prémisse (moins de 5 %, Hagemeier et Leuschner 2019) ne tombe plus que sur la graine 2, à la fin du témoin : **0,059**. L'essai d'acceptation reste rouge.
+- La restriction ne change presque rien à ce banc (0,062 → 0,059 sur la graine 2, 9 → 8 bouleaux). Dans la hêtraie serrée, 14 à 18 % des tiges ont un quart étendu à quarante ans, contre 14 à 17 % sous le critère de la base : les dominés que la restriction ignore ne changeaient guère l'équilibre des dominants.
+- **Les bouleaux ne reviennent pas** : 8 dans les trouées, contre 17 sur main. Les quarts du bord tournés vers la trouée ont pour concurrent un hêtre planté du bord, à 7 à 12 m dans leur secteur, jamais une recrue en dix ans (graine 1 : 9 quarts sur 21 étendus dès la première année ; graine 2 : 10 sur 18). C'est la géométrie de la trouée, pas les recrues, qui les étend.
+
+**F7, le banc à 8 m.** Charmes de la partie fermée, zone de la future trouée / zone témoin, graines 1 à 5 :
+
+| | graine 1 | 2 | 3 | 4 | 5 |
+|---|---|---|---|---|---|
+| main | 2/10 | 5/6 | 7/5 | 9/6 | 5/5 |
+| l'ellipsoïde seul | 2/9 | 5/1 | 5/1 | 7/2 | 1/6 |
+| 4aed486 | **0**/10 | 6/3 | 5/1 | 8/1 | 2/2 |
+| branche | 2/10 | 5/1 | 5/1 | 7/2 | 1/6 |
+
+La partie fermée revient à l'ellipsoïde seul : les hêtres de 15 m ont le milieu de leur houppier vers 8,5 m, que les recrues n'atteignent pas en quinze ans. C'est l'ellipsoïde qui assombrit l'entre-deux des couronnes, et sur quatre graines sur cinq l'une des deux zones ne garde qu'un ou deux charmes : sans la décision 2, le garde-fou par zone casserait encore. Le comparateur apparié et le tri du bouleau passent sur les cinq graines.
+
+**Les autres bancs.** Sur la tête fusionnée, la CI passe partout sauf `nurse` (plus bas) : `trouees`, `lumiere`, `elagage`, `reserves`, `herbacees`, `vernale-saison`, `glandee`, `ravageurs`, `litiere`, `fertilisation`, `ler` et les trois fichiers de hauteurs compris. Les valeurs, relevées hors dépôt (main → branche) :
+- E13 (`fertilisation`), rapport du blé sous les noyers au blé pur, à 1 / 3 / 9 / 15 / 21 / 27 / 33 ans : 0,99397 / 0,983 / 0,894 / 0,781 / 0,665 / 0,533 / 0,502 sur main, 0,99157 / 0,986 / 0,915 / 0,814 / 0,624 / 0,499 / 0,473 sur la branche. L'allée est un peu plus sombre la première année et sous les noyers adultes, plus claire de trois à quinze ans ; la part de l'ellipsoïde et celle des quarts n'ont pas été séparées ;
+- H21 (`ler`, graine 4) : LER 1,418 → 1,365, culture 0,637 → 0,632, arbre 0,780 → 0,733 (main : relevé de l'instruction, même simulation). Les rangs sont à 13,3 m : les quarts tournés vers l'allée n'ont pas de concurrent à 12 m ;
+- F6 (`reserves`, 81 hêtres plantés sur 20 m) : 71 / 42 / 23 vivants à 20 / 40 / 60 ans sur main, 74 / 45 / 22 sur la branche ;
+- les hauteurs à 40 ans (banc des tables, graines 17 et 43 ; main : relevés de #488, même simulation) : hêtre 17,280 → 17,423 m (+0,8 %), charme 16,540 → 16,630 (+0,5 %), frêne 16,816 → 16,997 (+1,1 %), pin (sept graines, sable profond) 14,251 → 14,244 (−0,05 %). Le hêtre est au bit près de 4aed486 ; le charme et le frêne s'en écartent de 0,02 et 0,05 %, entre vingt et quarante ans. Aucune essence ne sort de sa bande.
+
+**Le coût.** Courses appariées de l'acceptation (main et branche lancées ensemble, graines 1 et 4) : +4,7 et +4,0 % de temps CPU, +1,5 et +4,6 % de temps de mur, sur une machine partagée (charge de 25 à 28 pour 4 cœurs). La recherche annuelle des concurrents prend 28 à 31 ms par appel en moyenne sur ces courses, et 0,8 ms à chaud sur la hêtraie de quarante ans (242 tiges vivantes).
+
+**`nurse` casse, et l'essai n'a pas été touché.** Trois assertions de `nurse.test.ts` (« abrité à bonne distance, il pousse mieux qu'à découvert », la même comparaison dans l'essai du sciaphile, et « à bonne distance, l'abri profite aux deux tempéraments ») tombent sur la branche, en CI comme hors dépôt. Ce n'est pas l'abri : sur les graines sans feu, le liège abrité fait 0,307 à 0,310 dm³ et le pin abrité 1,488 à 1,508 dm³, contre 0,276 et 1,311 à découvert, comme sous 4aed486. C'est un feu. Sous la branche, un incendie passe la semaine 597 (douzième année) sur la graine 11 : 137 victimes, dont le liège abrité, rabattu de 0,74 à 0,41 m, et le pin abrité, tué. L'essai écarte les paires que le feu touche en lisant `morts` ; or un arbre tué par le feu n'y entre qu'au bout de `CHABLIS_RECUPERABLE_SEMAINES`, un an plus tard (tick.ts), et un arbre rabattu n'y entre jamais. Le filtre ne voit donc ni les feux de la dernière année, ni les rabattus. Sous 4aed486, aucun feu ne passe sur cette graine en douze ans ; sous main, il passe la sixième année et tue le liège, que le filtre écarte un an plus tard. Le feu tient au tirage : la forme des ajoncs change la lumière au sol, donc ce qui brûle et quand. La réécriture du filtre (lire les victimes de l'incendie, `TickResult.incendie`) est une décision, rapportée sur #474.
+
+### Prédictions
+
+- **L'acceptation.**
+  - Graine 2 : « 0,032 à 0,042 à l'ouverture », **fausse de peu** (0,043) ; « 0,048 à 0,060 à la fin », **juste** (0,059) ; « la prémisse casse encore à la fin », **juste**.
+  - « Graines 1, 3, 4 et 5 sous 0,05 aux deux instants, à ±1 point de 4aed486 » : **juste** (au plus 0,5 point d'écart).
+  - « Le témoin ne recrute rien, la trouée recrute sur chaque graine » : **juste**.
+  - « Bouleaux des trouées : 10 à 17 » : **fausse** (8). Je croyais que les recrues étendaient les quarts du bord ; ce sont les hêtres du bord eux-mêmes.
+  - « LAI des couronnes de 8,3 à 9,8, à ±3 % de main sur chaque graine » : **fausse** (8,2 sur la graine 4 ; −6 % sur la graine 2, −5 % sur la 5).
+  - « Tiges/ha à 40 ans : 0 à −6 % » (0 à −3,6 %), « baisse de −10 à −15 % par décennie » (−10,9 à −11,9 %), « rapport de houppier de 0,50 à 0,56 » (0,503 à 0,534) : **justes**.
+  - Le saut à 12 m : « 0 à 3 arbres avant l'ouverture » (0) et « 2 à 10 dans chaque bande après » (2 à 5 entre 11 et 12 m, 2 à 6 entre 12 et 13 m) : **justes**.
+- **F7** : « la partie fermée revient à l'ellipsoïde seul, à ±1 charme par zone » : **juste** (identique, sauf la zone témoin de la graine 1, 10 contre 9) ; « le garde-fou sommé passe avec au moins 3 charmes » : **juste** (6 à 12) ; « les deux autres essais passent » : **juste**.
+- **`ler`** : **juste** (LER 1,365, culture 0,632, arbre 0,733).
+- **E13** : « passe, de 0,991 à 0,999 à un an, de 0,45 à 0,55 à 33 ans » : **juste** (0,99157 et 0,473). « À ±0,001 de 4aed486 à chaque relevé » : **juste jusqu'à quinze ans** (identique au bit près), **fausse ensuite** : 0,638 / 0,498 / 0,467 sous 4aed486 à 21 / 27 / 33 ans, contre 0,624 / 0,499 / 0,473.
+- **Les hauteurs** : « à moins de 1,5 % de main » : **juste** (−0,05 à +1,1 %) ; « au bit près de 4aed486 » : **juste pour le hêtre, fausse pour le charme et le frêne** (0,02 et 0,05 % d'écart), non vérifiée pour le pin.
+- **« Les autres bancs passent »** : **fausse**, `nurse` casse.
+- **Le coût** : « course entière +3 à +10 % » : **juste** (+4,0 et +4,7 % de CPU) ; « recherche annuelle à ±20 % de 4aed486 (31 à 48 ms) » : juste sur les courses appariées (28 à 31 ms), fausse sur deux des cinq premières courses (18 et 24 ms), sur une machine partagée.
+- **Le contrôle** : **juste**.
+
+### Une règle reprise d'un modèle se relit contre ce que ce modèle ne simule pas
+
+HETEROFOR prend pour concurrent le plus proche voisin plus haut que la base du houppier. Dans un modèle sans régénération, c'est sûr : tout voisin qui dépasse la base est un arbre du peuplement. Ce moteur fait pousser des recrues sous les arbres ouverts, et des charmes de 2 à 5 m dépassaient la base basse des hêtres du banc de F7 : les quarts s'étendaient au-dessus d'elles, et le charme cessait de recruter dans la zone de la future trouée de la graine 1. La règle était juste dans son domaine ; c'est le domaine qui avait changé. Le correctif ne prend aucun nombre : il lit la forme déjà décidée. **Avant de reprendre une règle d'un autre modèle, lister ce que ce modèle ne simule pas, et chercher où le moteur le simule.**
+
+### Une sonde perdue se reconstruit sur ses définitions, puis se valide sur main
+
+La machine du premier passage a été remplacée, et tout ce qui vivait hors dépôt a disparu (`agents/README.md`, troisième piège). Les sondes ont été réécrites à partir des définitions que #484 et #474 avaient pris soin d'écrire : le LAI des couronnes de l'intérieur (Σ `lai` × `partHouppier` × π r² sur [8, 32]²), le k effectif (−ln de la lumière sur le LAI de la zone), les plantés par hectare, le rapport de houppier médian. Rejouées sur main, elles redonnent O1 au chiffre près, graine par graine ; sous le critère de la base, elles redonnent les nombres de 4aed486 que le premier passage avait postés, F7 compris. **Une sonde reconstruite se croit quand elle redonne, sur l'ancien code, les nombres déjà publiés.**
+
+### Un garde-fou se pose au grain de ce qu'il garde
+
+Le garde-fou de F7 vérifie qu'il y a quelque chose à trier : que le charme recrute sous le couvert. Il l'exigeait dans chacune des deux zones comptées, alors que sa raison d'être porte sur la partie fermée entière. L'ellipsoïde assombrit le bord des couronnes, et la zone témoin du banc à 8 m ne garde qu'un ou deux charmes sur plusieurs graines : le garde-fou mesurait la zone, pas le dispositif. Il compte maintenant les deux zones ensemble, sur décision ; son but ne change pas. Sommé, il aurait passé aussi sous 4aed486 (4 à 10 charmes par graine). **Un garde-fou sans source s'écrit au grain de ce qu'il protège, pas plus fin.**
+
+### Un filtre qui lit un journal hérite de son calendrier
+
+Le filtre des « paires que le feu épargne » de `nurse` lit `morts`, où le feu n'inscrit ses victimes qu'un an plus tard, et jamais ses rabattus. Il a tenu tant qu'aucun feu ne tombait dans la dernière année d'une graine comptée. Un lot qui ne touche ni au feu ni à l'abri l'a fait tomber, en déplaçant un tirage. **Un essai qui écarte des cas sur un événement lit l'événement là où il est rapporté le jour même, pas là où il finit par être compté.**
+
+### Points ouverts
+
+- **La graine 2 de l'essai d'acceptation** reste à 0,059 à la fin du témoin. La plasticité referme un tiers du trou (0,090 → 0,059). D'après l'instruction du 12 novembre (A6, sous le critère de la base), le reste tient à des quarts dont le concurrent, un voisin en diagonale à 2,8 m, leur donne un équilibre sous la loi ; la restriction n'y change presque rien (0,062 → 0,059).
+- **`nurse`** attend une décision sur son filtre ; la CI reste rouge jusque-là, et la PR en brouillon.
+- **Les bouleaux des trouées** tombent de 17 à 8 : le bord se referme par ses quarts, dès l'ouverture. La borne de l'essai (plus de trois) tient.
+- `PROFONDEUR_HOUPPIER_MAX` *(à calibrer)* ; `partHouppier` linéaire, trop fort (Fleck 2001) ; sh = 1,5 et r_overlap = 1,2, valeurs du hêtre appliquées à toutes les essences *(à confirmer)* ; le saut à 12 m, assumé.
+
+## Ce qu'un lot précédent a appris (les commentaires du vent et de l'allocation remis à jour, #481, #483)
 
 Le lot de maintenance décidé par le propriétaire le 16 novembre (#481), sur les propositions du compte rendu du lot joint (§ 8). Rien que des commentaires et de la documentation : aucune constante, aucune logique, aucune assertion ne bouge, et la simulation reste identique au bit près. Les deux commentaires périmés que le lot précédent laissait ouverts sont corrigés :
 - `ALLOCATION_DIAMETRE_OMBRE` et l'en-tête de l'élancement (`trees.ts`) datent les nombres de #65 et de #79 comme mesurés avant l'étiolement (#97). « H/D plafonne à 80 » ne vaut plus que pour une tige qui suivrait l'allocation ; une dominée file au-delà (perche de 109 à 112, #467).
