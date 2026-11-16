@@ -178,8 +178,18 @@ describe("une trouée dans un couvert fermé", () => {
     // ferait passer toutes les assertions suivantes pour de mauvaises raisons —
     // et c'est exactement ce qui est arrivé à la première version.
     //
-    // Mesuré sur le code livré : 130 à 179 recrues par partie fermée, dont 3 à
-    // 9 charmes dans chacune des deux zones comptées.
+    // **Les deux zones de la partie fermée sont comptées ensemble** (décision du
+    // propriétaire du 16 novembre, #474). Le garde-fou exigeait un charme dans
+    // chacune. Mais la pénombre ellipsoïde (#474) met plus d'ombre au bord des
+    // couronnes, entre les hêtres plantés à 8 m : sur quatre graines sur cinq,
+    // l'une des deux zones n'en garde plus qu'un ou deux. Avant que le
+    // concurrent d'un quart ne doive dépasser le milieu du houppier, la zone de
+    // la future trouée de la graine 1 n'en gardait aucun. Le but ne change pas : vérifier qu'il y a
+    // quelque chose à trier, et que le charme recrute sous le couvert.
+    //
+    // Mesuré sur le code livré : 79 à 121 recrues par partie fermée ; charmes
+    // de la zone de la future trouée / de la zone témoin, graines 1 à 5 : 2/10,
+    // 5/1, 5/1, 7/2, 1/6 (avant #474 : 2/10, 5/6, 7/5, 9/6, 5/5).
     for (const p of parties) {
       expect(p.fermee.total).toBeGreaterThan(50);
       expect(p.fermee.charmeTrouee + p.fermee.charmeTemoin).toBeGreaterThan(0);

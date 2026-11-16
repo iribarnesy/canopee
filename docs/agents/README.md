@@ -163,7 +163,7 @@ Trois conséquences, et elles ne coûtent rien une fois sues :
 Le greffon Vite refuse de construire sous cent critères ou quinze étapes : un
 changement de convention casse le build au lieu de vider la page en silence.
 
-## Deux pièges de procédure, vérifiés à nos dépens
+## Trois pièges de procédure, vérifiés à nos dépens
 
 **Le mot-clé de fermeture doit être en anglais.** GitHub ne reconnaît que
 `close` / `closes` / `closed`, `fix` / `fixes` / `fixed` et `resolve` /
@@ -183,3 +183,14 @@ pas en cause.
 
 **Merger une base avec `--delete-branch` ferme les PR empilées dessus.** Arrivé
 deux fois (#24, #36). Repointer les filles d'abord : `gh pr edit <n> --base main`.
+
+**Ce qui vit hors du dépôt meurt avec la machine.** Le 16 novembre 2026, la
+machine d'un lot de #474 a été remplacée au milieu du travail : ses sondes, ses
+bancs, ses brouillons de commentaires et une modification non commitée de
+`docs/realisme.md` ont disparu. Ce qui restait, c'est ce qui était poussé et ce
+qui était posté. La reprise a pu reconstruire les sondes parce que les
+commentaires de #484 et #474 écrivaient la **définition** de chaque grandeur
+mesurée (le LAI des couronnes, le k effectif, les plantés par hectare), et les
+valider sur main parce qu'ils en écrivaient les **valeurs**. Pousser tôt et
+souvent, même un brouillon de documentation, et écrire dans l'issue comment se
+calcule un nombre en même temps que le nombre.
