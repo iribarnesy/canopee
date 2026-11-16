@@ -41,18 +41,29 @@
  * et portait le label `flux-aléatoire` ; il n'a pas eu lieu d'être. Aucune
  * partie sans tempête ne change d'un cheveu.
  *
- * ## Ce que ce lot ne fait pas
+ * ## Ce que le premier lot ne faisait pas, et ce qui en reste
  *
  *  - **La fragilité d'après-éclaircie et de lisière** : un peuplement qu'on
- *    vient d'ouvrir reste vulnérable plusieurs années, le temps que les arbres
- *    restants épaississent. Il y faudrait une mémoire par arbre de l'ouverture
- *    récente, que le moteur n'a pas.
+ *    vient d'ouvrir reste vulnérable plusieurs années. Ce n'est plus un manque,
+ *    F18 l'a faite. Chaque arbre garde la mémoire de l'abri auquel il est
+ *    habitué (`abriHabituel`, lissé sur `MEMOIRE_ABRI_ANS`), et la naïveté, la
+ *    chute de l'abri sous cette habitude, retire jusqu'à `PERTE_NAIVETE` de sa
+ *    tenue, aux deux ruines (`facteurNaivete`).
+ *  - **L'acclimatation mécanique**, elle, n'y est pas : le fût ne s'épaissit pas
+ *    sous la contrainte. La naïveté s'efface comme si l'arbre s'était endurci,
+ *    mais son diamètre ne suit que la lumière (`allocationDiametreCmParM`,
+ *    trees.ts). Ce n'est pas un oubli, c'est une décision (#481, 16 novembre),
+ *    et le pourquoi est sur cette fonction : sur le dispositif Vent-Éclair,
+ *    l'éclaircie et la flexion n'interagissent pas, si bien que les constantes
+ *    d'allocation, prises sur des arbres qui se balancent, contiennent déjà la
+ *    flexion ; et le moteur répond déjà trop à l'éclaircie (#490).
  *  - **L'amplification climatique.** L'issue a raison : la fréquence des
  *    tempêtes est le bon endroit où brancher `AMPLIFICATION_EXTREMES`, et le
- *    vent moyen le mauvais. Mais `tick` ne connaît pas le scénario — la météo
- *    lui arrive déjà dérivée par `meteoDerivee`, qui ne connaît pas la graine de
- *    partie et ne peut donc pas tirer de rafale. Les deux moitiés du mécanisme
- *    sont dans deux fonctions qui ne se voient pas ; les réunir est un lot.
+ *    vent moyen le mauvais. Les deux moitiés du mécanisme se voient depuis
+ *    (F19) : la météo de la semaine porte un facteur de rafale que
+ *    `rafaleDeLaSemaine` applique. C'est le chiffre qui manque :
+ *    `AMPLIFICATION_RAFALE` vaut 0 tant que le signe même de la tendance n'est
+ *    pas établi pour la France (`climat.ts`).
  *  - **Le bois couché ne brûle pas pendant son année de récupération.** Un
  *    chablis n'entre dans le pool de bois au sol qu'à la fin du délai, et
  *    `feu.ts` ignore un arbre mort tant qu'il n'a pas de `mortSemaine` : douze
