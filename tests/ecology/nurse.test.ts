@@ -100,7 +100,11 @@ function sujetUneGraine(
     if (!w) throw new Error("météo manquante");
     const r = advanceWeek(state, w, []);
     state = r.state;
-    if (r.morts.some((m) => m.id === id && m.cause === "feu")) brule = true;
+    // Le sujet est brûlé dès qu'il figure parmi les victimes d'un incendie, la
+    // semaine même, rabattu sur son rejet comme tué (voir `epargnees`). `morts`
+    // n'est plus lu : un mort par le feu y entre un an plus tard, après avoir
+    // figuré ici, et il n'y ajouterait rien.
+    if (r.incendie?.victimes.some((v) => v.id === id)) brule = true;
   }
   const sujet = state.trees.find((t) => t.id === id);
   if (!sujet?.alive) return { hauteurM: 0, volumeM3: 0, brule };
@@ -113,10 +117,24 @@ function sujetUneGraine(
 
 /**
  * **Les paires que le feu épargne** (#391) : les graines où ni l'un ni l'autre
- * des deux sujets comparés n'est mort par le feu. L'ajonc est un combustible ;
- * un feu qui passe tue le sujet abrité ou le sujet à découvert selon où il
- * passe, et c'est alors lui, pas l'abri, qui décide de la comparaison. Le feu
- * est un vrai coût de la nurse ; ce n'est pas ce que ces essais mesurent.
+ * des deux sujets comparés n'a été touché par le feu. L'ajonc est un
+ * combustible ; un feu qui passe tue ou rabat le sujet abrité ou le sujet à
+ * découvert selon où il passe, et c'est alors lui, pas l'abri, qui décide de la
+ * comparaison. Le feu est un vrai coût de la nurse ; ce n'est pas ce que ces
+ * essais mesurent.
+ *
+ * **Un sujet est touché dès qu'il figure parmi les victimes de l'incendie, la
+ * semaine même** (`TickResult.incendie.victimes`), rejet compris, comme les
+ * compte `arbresTues` dans le moteur : décision du propriétaire du 18 novembre
+ * 2026 (#474, #489). Le filtre lisait `morts`, et il avait deux trous. Un arbre
+ * tué par le feu reste debout, récupérable, et n'entre dans `morts` qu'au bout
+ * de `CHABLIS_RECUPERABLE_SEMAINES`, un an plus tard (tick.ts) : un feu de la
+ * dernière année ne s'y voyait pas. Et un arbre rabattu sur son rejet n'y entre
+ * jamais. Avec la plasticité des houppiers (#474), un incendie passe sur la
+ * graine 11 la semaine 597, dans la douzième et dernière année : il rabat le
+ * liège abrité de 0,74 à 0,41 m et tue le pin abrité. L'ancien filtre gardait
+ * les deux paires, et l'abri y perdait (0,000264 contre 0,000276 m³ pour le
+ * liège, 0,000999 contre 0,001311 pour le pin).
  */
 function epargnees<T extends { brule: boolean }>(a: readonly T[], b: readonly T[]) {
   return GRAINES.flatMap((_, k) => {
@@ -159,6 +177,13 @@ describe("effet nurse sur lande sèche et ventée", () => {
     // comptait ce brûlé pour zéro, faisait perdre l'abri (0,000389 contre
     // 0,000456 m³). Le seuil ne bouge pas : il en faut deux, et l'abrité doit
     // battre le découvert.
+    //
+    // **Depuis le 18 novembre 2026, « épargnée » se lit sur les victimes de
+    // l'incendie** (`epargnees`). Mesuré sur la plasticité des houppiers (#474),
+    // graines 11, 29, 47 et 1 : la 11 sort (liège abrité rabattu par le feu de
+    // la semaine 597), la 47 aussi (liège nu tué par le feu) ; sur les paires 29
+    // et 1, l'abrité fait 0,000308 m³ contre 0,000276 à découvert. Sur main, ce
+    // sont les mêmes paires, 0,000321 contre 0,000276.
     expect(abriteNu.length).toBeGreaterThanOrEqual(2);
     expect(moyenne(abriteNu.map((p) => p.a))).toBeGreaterThan(moyenne(abriteNu.map((p) => p.b)));
   });
@@ -217,7 +242,11 @@ describe("effet nurse sur lande sèche et ventée", () => {
     // lui, paie l'ombre (essai suivant).
     //
     // (Depuis #391, les deux comparaisons se font sur les paires que le feu
-    // épargne, comme pour le pin ; voir l'essai précédent.)
+    // épargne, comme pour le pin ; voir l'essai précédent. Depuis le 18 novembre
+    // 2026, sur les victimes de l'incendie : le liège collé meurt sur les quatre
+    // graines sans que le feu y soit pour rien, et la paire abrité/collé ne perd
+    // que la graine 11 sur la plasticité des houppiers, les graines 11 et 47 sur
+    // main.)
     expect(abriteColle.length).toBeGreaterThanOrEqual(2);
     expect(moyenne(abriteColle.map((p) => p.a))).toBeGreaterThan(
       moyenne(abriteColle.map((p) => p.b)),
@@ -244,6 +273,13 @@ describe("effet nurse sur lande sèche et ventée", () => {
     // À la fusion du mort sur pied (#432), un feu de plus passe sur la graine 47
     // et tue le pin à découvert : il ne restait que la paire de la graine 29. La
     // graine 1 a été ajoutée par la règle écrite à `GRAINES`.
+    //
+    // Avec la plasticité des houppiers (#474), le feu de la semaine 597 tue le
+    // pin abrité de la graine 11 dans la dernière année ; l'ancien filtre, qui
+    // lisait `morts`, ne le voyait pas, et l'abri perdait (0,000999 contre
+    // 0,001311 m³). Lu sur les victimes de l'incendie (`epargnees`, décision du
+    // 18 novembre 2026), il reste les paires 29 et 1 : 0,001498 contre 0,001311
+    // m³, et sur main 0,001535 contre 0,001310.
     const paires = epargnees(pinsAbrites, pinsNus);
     // Il en faut au moins deux, sans quoi la comparaison redevient celle d'un
     // individu à un autre.
