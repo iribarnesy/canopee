@@ -108,7 +108,9 @@ describe("un bloc de version 15 se relit, la mémoire de saison vide", () => {
   }
 
   it("les deux grilles arrivent vides, et la partie continue", () => {
-    expect(VERSION_FORMAT).toBe(16);
+    // La version 17 (#474) relit aussi les blocs de version 15, leurs couronnes
+    // posées à l'équilibre en plus de leur mémoire de saison vide.
+    expect(VERSION_FORMAT).toBe(17);
     // Mi-mars : l'anémone est sortie, sa mémoire n'est pas vide.
     const partie = avancer(createGameState(STATION, rngStateFromSeed(3)), 12);
     const iA = HERBACEES.indexOf(ANEMONE);

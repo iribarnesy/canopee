@@ -6,6 +6,7 @@
  */
 
 import { describe, expect, it } from "vitest";
+import { couronnesDeLAnnee } from "../../src/engine/couronnes";
 import { ESPECES_V0, getEspece } from "../../src/engine/especes";
 import { lightAtPoint } from "../../src/engine/light";
 import { syntheticYear } from "../../src/engine/meteo";
@@ -118,23 +119,43 @@ describe("plus de plancher de lumière : aucune espèce n'est hors d'atteinte de
 
   /**
    * Lumière au sol au centre de l'ombre de `n` hêtres de canopée plantés au même
-   * pied, en pleine feuille et sans élagage : la lumière que le moteur calcule
-   * sous `n` couronnes superposées.
+   * pied, en pleine feuille et sans élagage, après une année de plasticité des
+   * couronnes : la lumière que le moteur calcule sous `n` couronnes superposées.
+   *
+   * Deux tiges au même pied n'ont pas de direction l'une pour l'autre, et aucune
+   * autre n'est à portée (12 m) : chaque quart de chaque couronne est sans
+   * concurrent, et **garde le rayon de la loi** (décision du propriétaire, #474,
+   * 13 novembre). La plasticité n'y change rien, et c'est ce que la mise à jour
+   * de l'année vérifie ici en passant.
    */
   function lumiereSousHetres(n: number): number {
     let state = createGameState({ ...LIMON_FRAIS.station, voisinage: [] }, rngStateFromSeed(42));
     for (let i = 0; i < n; i++) state = plantAt(state, "fagus_sylvatica", 20, 10, CANOPY_H);
-    return lightAtPoint(state.trees, 20, 10 + SHADOW_OFFSET, () => 1);
+    const trees = couronnesDeLAnnee(state.trees);
+    expect(trees.every((t) => t.rayonsHouppierM === undefined)).toBe(true);
+    return lightAtPoint(trees, 20, 10 + SHADOW_OFFSET, () => 1);
   }
 
   it("deux couronnes de hêtre suffisent à mettre toutes les espèces sous leur seuil, le hêtre compris", () => {
-    // Au centre de son ombre, une couronne de hêtre éteint 2 × k × lai = 3,5
-    // (la pénombre rapportée à sa moyenne, #438) : il passe 3,0 % de la lumière.
-    // Deux couronnes superposées en laissent 0,09 %, dix fois moins que le seuil
-    // de stress du hêtre (0,0090), le plus bas de l'atlas. Sous l'ancien
-    // plancher, les mêmes deux couronnes en laissaient 1,56 %, et le hêtre
-    // restait hors d'atteinte.
+    // **Réécrit sur la décision du 13 novembre (#474).** Posé par #488 sans
+    // source, cet épinglage cassait sous la plasticité de l'instruction (P2), où
+    // un houppier sans concurrent à portée s'étalait à 1,5 fois sa loi avec le
+    // même feuillage : son centre s'éclaircissait, et deux couronnes laissaient
+    // 4,46 % de la lumière. La décision garde ces houppiers-là au rayon de la loi,
+    // et donne à la pénombre le profil ellipsoïde (SamsaraLight, Ligot et al.
+    // 2014).
+    //
+    // Au centre de son ombre, une couronne de hêtre éteint donc 1,5 × k × lai =
+    // 2,63 (l'ellipsoïde rapporté à sa moyenne de deux tiers) : il passe 7,2 % de
+    // la lumière. Deux couronnes superposées en laissent 0,52 %, sous le seuil de
+    // stress du hêtre (0,0090), le plus bas de l'atlas. Sous la parabole, elles en
+    // laissaient 0,09 % ; sous l'ancien plancher, 1,56 %, et le hêtre restait
+    // hors d'atteinte.
     const sousDeux = lumiereSousHetres(2);
+    expect(sousDeux).toBeCloseTo(
+      Math.exp(-2 * 1.5 * 0.5 * getEspece("fagus_sylvatica").lumiere.lai),
+      12,
+    );
     expect(sousDeux).toBeLessThan(seuilStress("fagus_sylvatica"));
     const horsDAtteinte = ESPECES_V0.filter((e) => seuilStress(e.id) <= sousDeux);
     expect(horsDAtteinte.map((e) => e.id)).toEqual([]);
