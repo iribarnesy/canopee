@@ -164,7 +164,7 @@ Trois conséquences, et elles ne coûtent rien une fois sues :
 Le greffon Vite refuse de construire sous cent critères ou quinze étapes : un
 changement de convention casse le build au lieu de vider la page en silence.
 
-## Quatre pièges de procédure, vérifiés à nos dépens
+## Cinq pièges de procédure, vérifiés à nos dépens
 
 **Le mot-clé de fermeture doit être en anglais.** GitHub ne reconnaît que
 `close` / `closes` / `closed`, `fix` / `fixes` / `fixed` et `resolve` /
@@ -206,3 +206,15 @@ en demander une seconde, le lendemain, PR rouge en attendant. Une instruction qu
 changer un trait cherche les essais par **ce qu'ils affirment** (mort, absence,
 exclusion) là où le facteur change, pas seulement par le nom de l'espèce, et
 met dans ses options ce que chacun deviendrait.
+
+**Le pH d'une station n'est pas celui de ses cellules dix ans plus tard.** Le
+19 novembre 2026, l'instruction de #496 donnait le troène à sa classe pour
+« seule la suberaie change », en lisant chaque station à son pH de départ, et le
+lot de code a parié sur des colonisations identiques partout ailleurs. Mais la
+colonisation de la friche (pH 6,8) fait passer des cellules sous 6,7 dès sa
+cinquième année. Le troène, qui y sème, y pousse alors plus vite qu'avant, et la
+friche se sépare de main vers la onzième année, sur les trois graines ; le limon
+riche s'en sépare vers la cinquantième. Aucun essai n'a cassé, mais ceux de la
+friche ont changé de trajectoire sans que rien l'ait annoncé. Chercher « là où le
+facteur change », c'est aussi chercher jusqu'où le sol descend pendant la course,
+et calculer le facteur, pas seulement l'état.
