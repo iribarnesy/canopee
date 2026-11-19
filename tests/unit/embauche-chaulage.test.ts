@@ -121,7 +121,7 @@ describe("chaulage (§9) : rendre un sable acide vivable pour un calcicole", () 
   const STATION = { ...LANDE_SECHE.station, coteM: 60, voisinage: [] };
   const WEATHER_LANDE = syntheticYear(LANDE_SECHE.climat);
 
-  it("le chêne pubescent survit dans la zone chaulée (pH 4,5 → 6), meurt dehors", () => {
+  it("le chêne pubescent pousse dans la zone chaulée (pH 4,5 → 6), végète dehors", () => {
     const journal = {
       stationId: STATION.id,
       seed: 3,
@@ -149,6 +149,16 @@ describe("chaulage (§9) : rendre un sable acide vivable pour un calcicole", () 
     const dansZone = state.trees.filter((t) => t.alive && t.x < 30);
     const horsZone = state.trees.filter((t) => t.alive && t.x > 30);
     expect(dansZone.length).toBe(3);
-    expect(horsZone.length).toBe(0);
+    // **Réécrit sur décision du propriétaire du 19 novembre 2026** (#492, option A).
+    // Dehors, l'essai le voulait mort, et cette mort ne tenait qu'à une borne basse
+    // sans source (5,5). La borne est passée à 4,6 sur deux relevés (l'essai Querco
+    // du WSL, Kuster et al. 2014) : à pH 4,5, un dixième dessous, il végète sans
+    // mourir (#161). Le chaulage l'en sort par la croissance, pas par la survie :
+    // c'est l'exclusion par la **défaite** que dit C7 dans `docs/realisme.md`.
+    // Mesuré à la décision : les deux témoins à 0,34 et 0,35 m à huit ans pour
+    // 0,30 m plantés, contre 0,84 à 0,95 m dans la zone chaulée. Les seuils sont
+    // ceux de la décision.
+    for (const t of horsZone) expect(t.heightM).toBeLessThan(0.5);
+    expect(Math.min(...dansZone.map((t) => t.heightM))).toBeGreaterThan(0.7);
   });
 });

@@ -201,7 +201,7 @@ chêne pubescent de 5,5 à 4,6 (#492). L'instruction qu'il avait sous les yeux
 chiffrait l'effet sur chaque station, dont « nain sur la lande ». Elle ne citait
 pas les deux essais qui affirment sa **mort** sur cette lande (`tolerances`,
 `embauche-chaulage`) : la décision ne les couvrait pas, et le lot de code a dû
-en demander une seconde, PR rouge en attendant. Une instruction qui propose de
+en demander une seconde, le lendemain, PR rouge en attendant. Une instruction qui propose de
 changer un trait cherche les essais par **ce qu'ils affirment** (mort, absence,
 exclusion) là où le facteur change, pas seulement par le nom de l'espèce, et
 met dans ses options ce que chacun deviendrait.

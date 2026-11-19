@@ -109,11 +109,13 @@ Les six autres stations sont identiques.
 - Elle est **identique au bit près** pour le hêtre et le châtaignier sur le limon acide, le pin sur le sable profond et le chêne-liège sur la suberaie, à cinquante ans, ainsi que pour le pubescent sur le limon riche à trente ans.
 - Ce dernier diffère à cinquante ans, avec 388 vivants des deux côtés. Sous un peuplement serré, des cellules du limon riche passent sous pH 6,165 entre la 32e et la 37e année, là où l'ancienne borne commençait à freiner sa croissance.
 
-**Deux essais cassent, et ils attendent une décision** : `tolerances.test.ts` (« le chêne pubescent, calcicole, meurt sur ce sable acide (pH 4,5 — bio-indication) ») et `embauche-chaulage.test.ts` (« le chêne pubescent survit dans la zone chaulée (pH 4,5 → 6), meurt dehors »).
+**Deux essais cassaient, et ils ont été réécrits sur décision** : `tolerances.test.ts` (« le chêne pubescent, calcicole, meurt sur ce sable acide (pH 4,5 — bio-indication) ») et `embauche-chaulage.test.ts` (« le chêne pubescent survit dans la zone chaulée (pH 4,5 → 6), meurt dehors »).
 - À pH 4,5, un dixième sous sa borne, la marge de survie commune (`MARGE_SURVIE_PH`, #161) le fait végéter sans mourir.
 - Sur la lande, 8 pubescents sur 10 vivent à quinze ans, à 0,41 m en moyenne pour 0,30 m plantés.
 - Hors de la zone chaulée, les deux témoins vivent à huit ans : 0,34 et 0,35 m, contre 0,84 à 0,95 m dans la zone.
-- Ni la borne ni les essais n'ont été touchés. Une réécriture qui garde leur sens, l'exclusion par la défaite et non par la mort, est proposée sur #492.
+- Le premier lot n'a touché ni la borne ni les essais : il a proposé sur #492 une réécriture qui garde leur sens, l'exclusion par la défaite et non par la mort (C7).
+- **Décision du propriétaire du 19 novembre 2026** (option A) : les deux essais sont réécrits avec les seuils proposés. La moyenne du pubescent de la lande reste sous 0,6 m. Hors de la zone chaulée, chaque témoin vivant reste sous 0,5 m ; dans la zone, les 3 plants vivent et le plus petit dépasse 0,7 m.
+- Les réécritures passent sur le lot et sur main. Le texte de la décision dit « à 30 ans » ; dans l'essai, 30 borne les identifiants de la cohorte plantée, et le bloc dure quinze ans. Le code décidé n'en change pas.
 
 ### Prédictions
 
@@ -121,7 +123,7 @@ Les six autres stations sont identiques.
 - **Quatre-vingts ans**, à ±5 % des plants et ±0,2 m de l'instruction (sur 4142015), avec moins de 0,5 m gagnés entre soixante et quatre-vingts ans : **juste** (à 1 % et 0,05 m près ; 0,20 m gagnés).
 - **La suberaie** : « 0 installé sur main » ; « 35 à 60 installés avec le lot » (50 à 57) ; « 0 à 5 vivants à soixante ans » (1 ou 2) ; « plus de 70 % des morts à l'ombre » (91 à 96 %). **Toutes justes.**
 - **Les voisinages** : le pubescent à 4 semis sur le limon acide et à 8 sur la suberaie, et six stations identiques : **juste**. « Les substituts du limon acide passent de 8 à 6 » : **fausse**, ils restent à 8 (plus bas, pourquoi).
-- **Les deux essais de la lande cassent** : **juste**, 8 vivants sur 10 sous 0,5 m (prédit 6 à 10) et 2 sur 2.
+- **Les deux essais de la lande cassent** : **juste**, 8 vivants sur 10 sous 0,5 m (prédit 6 à 10) et 2 sur 2. Ils sont réécrits depuis, sur décision.
 - **Les autres essais** : « seuls ces deux-là cassent » : **juste** en CI, sur les trois courses de la branche ; toutes les autres tranches sont vertes, l'essai ajouté compris. « Ceux qui font vivre un pubescent plus de trente ans sur limon bougent un peu » : vu sur `climat.test.ts`, où des cellules du limon riche descendent à pH 6,125 sous lui. « Tous les autres au bit près » : **non vérifié en entier**. Une copie instrumentée du lot notait chaque appel où le facteur de pH du pubescent diffère de l'ancienne borne. Sa course de la suite a été arrêtée au bout d'environ 470 essais sur 2 545 : la machine, partagée, en aurait mis plusieurs heures.
 - **Le contrôle** : « identique au bit près, sauf le pubescent du limon riche à cinquante ans » : **juste**.
 - **L'essai ajouté** : « 14 à 16 vivants sur 16, 0,8 à 1,6 m ; 0 sur main » : **juste** (15 sur 16, 0,96 m ; 0 sur main).
@@ -140,7 +142,6 @@ J'ai calculé à la main, sur les listes de `paysage.ts`, la part des substituts
 
 ### Points ouverts
 
-- Les deux essais de la lande : une décision est demandée sur #492. La réécriture proposée (la moyenne du pubescent de la lande sous 0,6 m ; les témoins hors de la zone chaulée sous 0,5 m, ceux de la zone au-dessus de 0,7 m) passe sur le lot et sur main, jouée hors dépôt.
 - L'acidification sous peuplement, qui fait caler le pubescent vers soixante ans (décision 2).
 - Les autres bornes de pH sans relevé qui tuent sur une station du jeu (décision 3).
 - La lecture de la figure de Zimmermann et al. 2025 reste *(à confirmer)* : les données Dryad ont été refusées à l'instruction.
