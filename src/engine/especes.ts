@@ -850,11 +850,34 @@ export const ESPECES_V0: readonly EspeceV0[] = [
     pousseMaxMAn: 0.35,
     // Atlas : xérophile, thermophile ; craint les sols engorgés.
     eau: { seuilConfortSecheresse: 0.35, seuilStressSecheresse: 0.1, toleranceEngorgement: 0.05 },
-    // pH (#279) : **aucun relevé**, les deux bornes *(à confirmer)*. Sa classe de
-    // Landolt (R 3) proposerait 4,5 à 7,5 ; l'Atlas européen le dit
-    // « indifferent to pH », calcicole au nord de son aire et fréquent sur sol
-    // acide dans les pays chauds (Pasta et al. 2016), sans nombre.
-    ph: [5.5, 8.5],
+    // pH (#279). Bas 4,6 : relevé, décidé par le propriétaire le 18 novembre
+    // 2026 (#492). C'est l'essai Querco du WSL : des pubescents de quatre
+    // provenances plantés à deux ans, puis suivis trois saisons (2007-2009) sur
+    // un Alisol acide d'Argovie titrant 3,93 en pH CaCl₂ de 0 à 15 cm (Kuster et
+    // al. 2014, *PLoS ONE* 9 : e89724, tableau 1), soit 4,58 en pH eau par la
+    // conversion CaCl₂ + 0,65 (Saenger et al. 2023). Des pubescents adultes en
+    // peuplement naturel, au nord de l'aire, descendent au même endroit : vers
+    // 4,0 en pH CaCl₂, soit 4,65 en pH eau, sous les arbres purs d'un peuplement
+    // mixte près du lac de Neuchâtel (Zimmermann et al. 2025, *Evol. Appl.* 18 :
+    // e70076, figure 6 lue sur l'image *(à confirmer sur les données)*). Sa
+    // classe de Landolt (R 3, 4,5 à 7,5) ne sert pas : la règle met le relevé
+    // avant la classe. L'Atlas européen le dit « indifferent to pH », calcicole
+    // au nord de son aire et fréquent sur sol acide dans les pays chauds (Pasta
+    // et al. 2016), sans nombre. L'ancienne borne 5,5 n'avait aucune source, et
+    // elle tuait en dix-huit semaines un plant de limon acide (pH 5,0).
+    //
+    // Haut 8,5 *(à confirmer)* : sans relevé. Six chênaies pubescentes de Crimée
+    // le porteraient à 8,44 au moins (7,9 en surface sur calcaire, Koba et al.
+    // 2025, *Dokuchaev Soil Bull.* 125 : 111) si leur norme est bien l'extrait
+    // au KCl *(à confirmer)*.
+    //
+    // **L'effet attendu, et laissé tel quel.** Le moteur acidifie le sol sous un
+    // peuplement (`bases.ts`) : sous des pubescents plantés serré, le limon
+    // acide passe de 5,0 à 4,62 en cinquante ans, et leur facteur de pH de 0,62
+    // à 0,10. Vers soixante ans (pH 4,5), ils ne poussent plus. La vitesse de
+    // cette acidification n'a pas d'ancre ; elle est instruite à part, pour
+    // toutes les essences (#492, décision 2).
+    ph: [4.6, 8.5],
     // Atlas : héliophile, couronne claire de coteau sec.
     // Marcescent, surtout jeune : le trait est ici une moyenne sur la vie de
     // l'arbre, plus basse que ce qu'on observe sur un taillis *(à calibrer)*.
