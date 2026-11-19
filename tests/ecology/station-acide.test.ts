@@ -15,6 +15,7 @@ import { rngStateFromSeed } from "../../src/engine/rng";
 import { createGameState, plantScattered } from "../../src/engine/state";
 import { LIMON_ACIDE, LIMON_RICHE, STATIONS_V0 } from "../../src/engine/stations";
 import { tick } from "../../src/engine/tick";
+import { phFactor, phFactorSurvie } from "../../src/engine/trees";
 
 /** Hauteur moyenne des sujets plantés après `ans` années, moyennée sur deux graines. */
 function apres(
@@ -73,5 +74,33 @@ describe("les acidiphiles y sont enfin chez eux", () => {
   it("le houx aussi, lui qui s'arrête juste au pH de la station de référence", () => {
     const surAcide = apres(LIMON_ACIDE.station, LIMON_ACIDE.climat, "ilex_aquifolium", 12);
     expect(surAcide.vivants).toBeGreaterThan(0);
+  });
+}, 300_000);
+
+describe("le prunellier y tient, sur la foi des haies de Westphalie (#496)", () => {
+  it("planté sur le limon acide, il vit et pousse", () => {
+    // Sa borne basse de pH est passée de 5,5, une valeur de l'atlas du jeu sans
+    // source, à 4,3 sur décision du propriétaire du 19 novembre 2026. Wittig 1976
+    // (*Abh. Westf. Mus. Naturk.* 38(3), tableau 1) a mesuré trois haies du
+    // Rubo elegantispinosi-Prunetum à pH eau 5,0, 4,4 et 4,3, chacune la moyenne
+    // de dix échantillons, et le prunellier est présent dans les trois. Sous
+    // l'ancienne borne, un plant du limon acide (pH 5,0) mourait de son sol en
+    // dix-huit semaines : 400 sur 400 sur le banc de #492.
+    const prunellier = getEspece("prunus_spinosa");
+    // Au pH de la plus acide des trois haies, sa survie est pleine.
+    expect(phFactorSurvie(prunellier, 4.3)).toBe(1);
+    // Au pH du limon acide, il passe le seuil où un semis s'installe
+    // (`regeneration.ts`, 0,2) : il y est à plein régime, et c'est ce qui le
+    // ramène dans la pluie de graines du bocage.
+    expect(phFactor(prunellier, LIMON_ACIDE.station.phInitial)).toBeGreaterThan(0.2);
+
+    // Mesuré à la décision, dans ce décor : 15 vivants sur 16 à cinq ans (un mort
+    // de l'engorgement d'hiver, la semaine 13), 1,77 m en moyenne pour 0,30 m
+    // plantés. Sous l'ancienne borne : 0 sur 16, quinze morts du pH à la semaine
+    // 18. Les seuils gardent la direction : la plupart vivent, et ils ont au moins
+    // quadruplé.
+    const r = apres(LIMON_ACIDE.station, LIMON_ACIDE.climat, "prunus_spinosa", 5);
+    expect(r.vivants).toBeGreaterThanOrEqual(12);
+    expect(r.hauteurMoyenne).toBeGreaterThan(1.2);
   });
 }, 300_000);

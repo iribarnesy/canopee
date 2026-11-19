@@ -1290,9 +1290,23 @@ export const ESPECES_V0: readonly EspeceV0[] = [
     pousseMaxMAn: 0.5,
     // Atlas : « gel des fleurs = risque ; sec » — xérophile, floraison très précoce.
     eau: { seuilConfortSecheresse: 0.4, seuilStressSecheresse: 0.15, toleranceEngorgement: 0.05 },
-    // pH (#279) : **aucun relevé**, les deux bornes *(à confirmer)* ; sa classe
-    // de Landolt (R 4) proposerait 5,5 à 8,5. Les sources citées sont
-    // horticoles : PFAF « prefers a pH in the range 6.5 to 7.5 », une
+    // pH (#279). Bas 6,0 : relevé, de plantation, décidé par le propriétaire le
+    // 19 novembre 2026 (#496) ; la valeur ne change pas. Deux vergers d'abricotiers
+    // greffés sur myrobolan à Prislonica, près de Čačak (Serbie), sans calcaire :
+    // pH KCl 4,92 de 0 à 30 cm sous 380 arbres plantés en 2015 (Milošević,
+    // Milošević et Glišić 2021, *Turk. J. Agric. For.* 45(6), art. 12), et 5,09
+    // sous un verger de 'Vera' de vingt ans (Milošević et Milošević 2011, *Plant
+    // Soil Environ.* 57(7)). Lus en KCl normal, la conversion de Kabała les met à
+    // 6,06 et 6,23 en pH eau : le relevé tombe sur la borne, qu'il ne peut
+    // qu'élargir. Deux réserves *(à confirmer)* : **la méthode**, car l'équipe
+    // écrit « pH in KCl 0.01 mol/L », la force d'un extrait au CaCl₂, et lu ainsi
+    // (+ 0,65) le verger de 2021 donnerait 5,6 ; **le porte-greffe**, car ce sont
+    // les racines du myrobolan (*Prunus cerasifera*) qui lisent ce sol, pas
+    // celles d'un abricotier franc. Sa classe de Landolt (R 4, 5,5 à 8,5) ne sert
+    // pas : la règle met le relevé avant la classe.
+    //
+    // Haut 7,8 *(à confirmer)*, sans relevé ; la classe dirait 8,5. Les sources
+    // citées sont horticoles : PFAF « prefers a pH in the range 6.5 to 7.5 », une
     // préférence (#278) ; l'ancien « optimum 6,7 » n'y est pas.
     ph: [6, 7.8],
     lumiere: { compensation: 0.25, saturation: 0.75, lai: 1.8, houppierRatio: 0.45, caduc: true },
@@ -1425,9 +1439,24 @@ export const ESPECES_V0: readonly EspeceV0[] = [
     pousseMaxMAn: 0.4,
     // Atlas : arbuste pionnier, « drageonne, nurse », haies — Europe entière.
     eau: { seuilConfortSecheresse: 0.5, seuilStressSecheresse: 0.18, toleranceEngorgement: 0.15 },
-    // pH (#279) : **aucun relevé**, les deux bornes *(à confirmer)*. Sa classe de
-    // Landolt (R 3) proposerait 4,5 à 7,5.
-    ph: [5.5, 8.5],
+    // pH (#279). Bas 4,3 : relevé, décidé par le propriétaire le 19 novembre 2026
+    // (#496). Ce sont les haies sur talus de la baie de Westphalie (Wittig 1976,
+    // *Abh. Westf. Mus. Naturk.* 38(3), tableau 1) : trois haies du Rubo
+    // elegantispinosi-Prunetum titrent 5,0, 4,4 et 4,3 en pH eau, chacune la
+    // moyenne de dix échantillons pris à 4-5 cm, et le prunellier est présent
+    // dans les trois (cotes +, + et 1 des tableaux 12 et 13, relues sur l'image
+    // des pages). La mesure est à l'eau : pas de conversion. Ce sont des
+    // moyennes, et la borne est la plus basse des trois, pas un minimum. Sa
+    // classe de Landolt (R 3, 4,5 à 7,5) ne sert pas : la règle met le relevé
+    // avant la classe. L'ancienne borne, 5,5, venait de l'atlas du jeu sans
+    // source ; elle tuait tout plant en dix-huit semaines sur le limon acide
+    // (pH 5,0), en cinq sur le sable et la lande.
+    //
+    // Haut 8,5 *(à confirmer)*, sans relevé lu ; la classe dirait 7,5. Wittig
+    // range aussi six haies de Corno-Prunetum à pH eau 7,9 à 8,4, où le
+    // prunellier est de constance V, mais sa présence dans chacune n'a pas été
+    // vérifiée.
+    ph: [4.3, 8.5],
     lumiere: { compensation: 0.12, saturation: 0.7, lai: 2.2, houppierRatio: 0.6, caduc: true },
     racines: { profondeurMaxCm: 100 },
     tBaseCroissanceC: 5,
@@ -1985,9 +2014,13 @@ export const ESPECES_V0: readonly EspeceV0[] = [
     // Atlas : « semi-persistant ; calcicole ; très mellifère (juin) ; supporte
     // la taille → haies ». Ourlets et lisières, surtout sur calcaire.
     eau: { seuilConfortSecheresse: 0.5, seuilStressSecheresse: 0.2, toleranceEngorgement: 0.2 },
-    // pH (#279) : **aucun relevé**. Haut 8,5 : sa classe de Landolt (R 4, 5,5 à
-    // 8,5) ; bas 6,0 *(à confirmer)*, que la classe porterait à 5,5.
-    ph: [6, 8.5],
+    // pH (#279) : **aucun relevé** ; les deux bornes sont sa classe de Landolt :
+    // R 4, « neutre à basique », 5,5 à 8,5 (Landolt et al. 2010, *Flora
+    // indicativa*, lue sur InfoFlora). Le bas y est passé sur décision du
+    // propriétaire du 19 novembre 2026 (#496), sans relevé : il était à 6,0,
+    // une valeur de l'atlas du jeu sans source. Seule la suberaie (pH 5,2)
+    // change : le troène y mourait de son sol en cinq semaines, il y végète.
+    ph: [5.5, 8.5],
     // **Semi-persistant** : il ne se dénude jamais tout à fait. C'est le seul de
     // l'atlas dans ce cas, et c'est ce qui lui vaut sa place dans les haies —
     // il abrite encore en février (phenologie.ts).
