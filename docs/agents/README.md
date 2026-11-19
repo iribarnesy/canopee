@@ -163,7 +163,7 @@ Trois conséquences, et elles ne coûtent rien une fois sues :
 Le greffon Vite refuse de construire sous cent critères ou quinze étapes : un
 changement de convention casse le build au lieu de vider la page en silence.
 
-## Trois pièges de procédure, vérifiés à nos dépens
+## Quatre pièges de procédure, vérifiés à nos dépens
 
 **Le mot-clé de fermeture doit être en anglais.** GitHub ne reconnaît que
 `close` / `closes` / `closed`, `fix` / `fixes` / `fixed` et `resolve` /
@@ -194,3 +194,14 @@ mesurée (le LAI des couronnes, le k effectif, les plantés par hectare), et les
 valider sur main parce qu'ils en écrivaient les **valeurs**. Pousser tôt et
 souvent, même un brouillon de documentation, et écrire dans l'issue comment se
 calcule un nombre en même temps que le nombre.
+
+**Une décision qui change un trait ne couvre que les essais qu'on lui a
+montrés.** Le 18 novembre 2026, le propriétaire a passé la borne basse de pH du
+chêne pubescent de 5,5 à 4,6 (#492). L'instruction qu'il avait sous les yeux
+chiffrait l'effet sur chaque station, dont « nain sur la lande ». Elle ne citait
+pas les deux essais qui affirment sa **mort** sur cette lande (`tolerances`,
+`embauche-chaulage`) : la décision ne les couvrait pas, et le lot de code a dû
+en demander une seconde, PR rouge en attendant. Une instruction qui propose de
+changer un trait cherche les essais par **ce qu'ils affirment** (mort, absence,
+exclusion) là où le facteur change, pas seulement par le nom de l'espèce, et
+met dans ses options ce que chacun deviendrait.
