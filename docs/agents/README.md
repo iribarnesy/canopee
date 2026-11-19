@@ -113,8 +113,9 @@ que si le jeu l'affiche porte son label moteur **et** `rendu`.
 
 Le **moteur** est largement en avance sur ce que le jeu sait montrer : 134
 critères de réalisme sur 162 sont acquis et 27 partiels (le score fait foi dans
-`docs/realisme.md`, recompté par `npm run check:realisme`), et les issues
-ouvertes portent des mécanismes de plus en plus fins.
+`docs/realisme.md`, recompté par `npm run check:realisme` ; revérifié le
+19 novembre 2026 au lot de documentation de #495, qui n'en déplace aucun), et
+les issues ouvertes portent des mécanismes de plus en plus fins.
 
 Le **jeu**, lui, est un bac à sable sans jeu : une vingtaine de gestes jouables,
 un HUD, une sauvegarde, une économie qui peut mener à la faillite — et aucune

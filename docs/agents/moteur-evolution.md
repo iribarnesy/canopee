@@ -67,7 +67,35 @@ l'autre âge pour vérifier. Et caler sur la moyenne de plusieurs graines, avec
 son erreur type : sur le banc des hauteurs, la moyenne de deux graines porte
 6 % d'incertitude (#481).
 
-## Ce que le dernier lot a appris (la borne basse de pH du chêne pubescent, #492)
+## Ce que le dernier lot a appris (le facteur de la litière ancré sur la vitesse du pH, #495)
+
+Le lot de documentation décidé par le propriétaire le 19 novembre (#495, décision 2), après l'instruction de l'acidification sous peuplement. Rien que des commentaires et de la documentation : aucune constante, aucune logique, aucune assertion ne bouge, et la sortie esbuild de `bases.ts` et de `bases.test.ts` est identique au bit près.
+- Le commentaire d'`AMPLIFICATION_CHARGE` (`bases.ts`) dit sur quoi le facteur 3 est ancré : la **vitesse du pH**, avec les relevés et leurs nombres (Calhoun, Geescroft, RENECOFOR, Augusto et al. 2002, Reich et al. 2005). Il dit aussi sur quoi il ne l'est pas : les **flux**, où la litière dépasse de deux à quatre fois la fourchette des acides faibles (Breeuwsma et de Vries 1984). Il reste *(à calibrer)* en tant que flux, et ne disparaîtra qu'une fois remplacé par le budget de protons (#498, v0.7). Les « essais de conversion » qu'il citait sans les nommer sont donnés pour non retrouvés. Le commentaire de la pompe, qui appelait ce terme « un budget de protons », est remis d'accord.
+- Park Grass perd son *(à confirmer)* dans `bases.test.ts` et à la ligne C10 de `realisme.md` : 0,7 unité en 125 ans sur 0-23 cm (Johnston, Goulding et Poulton 1986). C10 porte en plus le verdict de l'instruction. Aucun seuil ne bouge.
+- L'issue v0.7 du budget de protons est #498 (décision 3) : l'acide carbonique, le terme du bois et celui de la litière, les fourchettes que la vitesse devra tenir une fois ces termes en place, et les interactions relevées par l'instruction.
+
+### Un facteur de compensation se documente par la grandeur qui l'ancre
+
+Le facteur 3 était juste, et son commentaire ne disait pas en quoi. Il le réglait sur une vitesse de pH, puis en parlait comme du budget de protons qu'il remplace, et le commentaire de la pompe reprenait le mot. Mesuré, il tient la vitesse dans les relevés et met les flux hors des leurs : la litière fait 70 à 88 % des deux termes du peuplement (litière et bois) sur le limon acide, deux à quatre fois les acides faibles, pendant que le bois reste au plancher de l'accumulation de biomasse. Les deux lectures appellent des corrections opposées : qui lit les flux veut le baisser, qui lit la vitesse veut le garder. L'option B de #495 (le facteur à 1) l'a montré : la litière rentre dans sa fourchette, et la vitesse sort des siennes. **Un facteur qui compense des termes absents se documente avec la grandeur qui l'ancre, celles qui ne l'ancrent pas, et ce qui devra le remplacer.**
+
+### Une ancre sans nom se perd
+
+« Les essais de conversion mesurent 0,2 à 0,5 unité en vingt à quatre-vingts ans » : ni auteur, ni lieu, ni tableau. Personne n'a pu les relire, et il a fallu une instruction entière pour reconstruire une ancre. Le plus proche que #495 ait trouvé, Achilles et al. 2021, parle du sous-sol, sous fort dépôt *(à confirmer)*. **Une source s'écrit avec ses auteurs, son année et son tableau, ou elle ne se retrouvera pas.**
+
+### Un renvoi recopié se relit à la page
+
+Le compte rendu de l'instruction, puis la décision, rangeaient Park Grass au tableau 6 de Johnston et al. 1986. Le tableau 6 est celui de Geescroft : les 0,7 unité en 125 ans de Park Grass sont dans le texte de la page 9, qui compare les deux sites, et la série elle-même est au tableau 1. De même, le calcium des litières de Reich et al. 2005 vaut « 1,5 à 1,7 fois l'atlas » pour le hêtre et le pin, mais 1,4 pour le bouleau et 1,9 pour le chêne pédonculé face au pubescent. **Un renvoi ou une fourchette recopiés d'un rapport se relisent dans la source, ligne par ligne, avant d'entrer dans un commentaire ou une issue.**
+
+### Points ouverts
+
+- **Le budget de protons** (#498, v0.7) : l'acide carbonique, le bois, la litière. Le moteur n'a ni dépôt acide ni tampon carbonaté.
+- **Le bouleau** a le mauvais signe face à Reich et al. ; à pH 4,3, le moteur acidifie moins qu'eux, contre le plancher de 4,1 (#443).
+- **La colonne `litiere.calciumMgG`** : Reich et al. la mesurent plus haut que l'atlas sur quatre des cinq essences communes, et le charme, plus bas, y passe sous le hêtre. La reprendre demande de replacer le seuil de 9 mg/g sur la même échelle : un lot à part.
+- **Le banc dense** (#491) gonfle le terme du bois : pin 241 à 270 t C/ha, bouleau 380 à 386 à cinquante ans *(à comparer aux tables de production)*.
+- **L'épaisseur de l'horizon** : les signaux les plus forts du terrain sont dans les 5 ou 10 premiers centimètres (Augusto et al. 2002), et le moteur n'a qu'une couche de surface de 30 à 35 cm.
+- **Le pubescent planté sur le limon acide** cale toujours vers soixante ans : conséquence connue et acceptée le 19 novembre.
+
+## Ce qu'un lot précédent a appris (la borne de pH du pubescent, #492, #497)
 
 Le lot v0.6 « pubescent », sur la décision 1 du propriétaire du 18 novembre (#492), PR #497. **Une donnée change, et rien d'autre** : la borne basse de pH du chêne pubescent passe de 5,5, sans source, à 4,6, marquée « relevé ». C'est l'essai Querco du WSL, des pubescents plantés puis suivis trois saisons sur un sol à pH CaCl₂ 3,93 (Kuster et al. 2014, *PLoS ONE* 9 : e89724), soit 4,58 en pH eau par la conversion du dépôt, + 0,65 (Saenger et al. 2023). Des pubescents adultes du lac de Neuchâtel descendent au même endroit (vers 4,65, Zimmermann et al. 2025, *Evol. Appl.* 18 : e70076, lu sur une figure *(à confirmer)*). La borne haute reste 8,5 *(à confirmer)*. Aucun mécanisme ne bouge, aucun paramètre commun, aucun cas particulier par essence ; un essai est ajouté dans `station-acide.test.ts`. Les prédictions ont été postées sur #492 avant toute course, et les mesures y sont aussi. Le matériel de l'instruction (la sonde, le banc du pubescent, celui de la colonisation) a servi tel quel, sur une copie du code du lot.
 

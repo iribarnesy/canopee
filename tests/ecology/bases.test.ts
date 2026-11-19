@@ -211,9 +211,14 @@ describe("en partie : le sol dérive, et pas n'importe comment", () => {
     //
     // La borne ci-dessous vient du dehors : les témoins non amendés de
     // Rothamsted perdent de l'ordre d'un **demi-point** de pH par siècle, soit un
-    // quart de point sur cinquante ans *(à confirmer sur les séries de Park
-    // Grass)*. On laisse une fois cette marge, et on exige surtout ce que le
-    // premier jet violait de trois unités : rester dans les dixièmes.
+    // quart de point sur cinquante ans. Les parcelles non fumées de Park Grass
+    // perdent 0,7 unité en 125 ans sur 0-23 cm (Johnston, Goulding et Poulton
+    // 1986, *Soil Use Manage.* 2 : 3, p. 9, en regard du tab. 6 ; la série est
+    // au tab. 1). C'est une prairie fauchée, sous dépôt acide : le sol nu des
+    // deux limons, sans l'un ni l'autre, va trois à neuf fois moins vite dans le
+    // banc de #495, et la borne ne le serre pas. On laisse une fois cette marge,
+    // et on exige surtout ce que le premier jet violait de trois unités : rester
+    // dans les dixièmes.
     for (const sc of [LANDE_SECHE, LIMON_ACIDE, LIMON_RICHE]) {
       const nu = parcelle(sc, null, 50);
       expect(Math.abs(nu.ph - nu.ph0)).toBeLessThan(0.5);
