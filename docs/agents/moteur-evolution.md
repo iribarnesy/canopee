@@ -122,7 +122,7 @@ Les six autres stations sont identiques.
 - **La suberaie** : « 0 installé sur main » ; « 35 à 60 installés avec le lot » (50 à 57) ; « 0 à 5 vivants à soixante ans » (1 ou 2) ; « plus de 70 % des morts à l'ombre » (91 à 96 %). **Toutes justes.**
 - **Les voisinages** : le pubescent à 4 semis sur le limon acide et à 8 sur la suberaie, et six stations identiques : **juste**. « Les substituts du limon acide passent de 8 à 6 » : **fausse**, ils restent à 8 (plus bas, pourquoi).
 - **Les deux essais de la lande cassent** : **juste**, 8 vivants sur 10 sous 0,5 m (prédit 6 à 10) et 2 sur 2.
-- **Les autres essais** : « seuls ces deux-là cassent » : **juste** en CI, sur les deux courses de la branche ; toutes les autres tranches sont vertes, l'essai ajouté compris.
+- **Les autres essais** : « seuls ces deux-là cassent » : **juste** en CI, sur les trois courses de la branche ; toutes les autres tranches sont vertes, l'essai ajouté compris. « Ceux qui font vivre un pubescent plus de trente ans sur limon bougent un peu » : vu sur `climat.test.ts`, où des cellules du limon riche descendent à pH 6,125 sous lui. « Tous les autres au bit près » : **non vérifié en entier**. Une copie instrumentée du lot notait chaque appel où le facteur de pH du pubescent diffère de l'ancienne borne. Sa course de la suite a été arrêtée au bout d'environ 470 essais sur 2 545 : la machine, partagée, en aurait mis plusieurs heures.
 - **Le contrôle** : « identique au bit près, sauf le pubescent du limon riche à cinquante ans » : **juste**.
 - **L'essai ajouté** : « 14 à 16 vivants sur 16, 0,8 à 1,6 m ; 0 sur main » : **juste** (15 sur 16, 0,96 m ; 0 sur main).
 
@@ -140,7 +140,7 @@ J'ai calculé à la main, sur les listes de `paysage.ts`, la part des substituts
 
 ### Points ouverts
 
-- Les deux essais de la lande : une décision est demandée sur #492, avec une réécriture proposée.
+- Les deux essais de la lande : une décision est demandée sur #492. La réécriture proposée (la moyenne du pubescent de la lande sous 0,6 m ; les témoins hors de la zone chaulée sous 0,5 m, ceux de la zone au-dessus de 0,7 m) passe sur le lot et sur main, jouée hors dépôt.
 - L'acidification sous peuplement, qui fait caler le pubescent vers soixante ans (décision 2).
 - Les autres bornes de pH sans relevé qui tuent sur une station du jeu (décision 3).
 - La lecture de la figure de Zimmermann et al. 2025 reste *(à confirmer)* : les données Dryad ont été refusées à l'instruction.
