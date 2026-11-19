@@ -95,7 +95,89 @@ Le compte rendu de l'instruction, puis la décision, rangeaient Park Grass au ta
 - **L'épaisseur de l'horizon** : les signaux les plus forts du terrain sont dans les 5 ou 10 premiers centimètres (Augusto et al. 2002), et le moteur n'a qu'une couche de surface de 30 à 35 cm.
 - **Le pubescent planté sur le limon acide** cale toujours vers soixante ans : conséquence connue et acceptée le 19 novembre.
 
-## Ce qu'un lot précédent a appris (la plasticité des houppiers, #474)
+## Ce qu'un lot précédent a appris (la borne de pH du pubescent, #492, #497)
+
+Le lot v0.6 « pubescent », sur la décision 1 du propriétaire du 18 novembre (#492), PR #497. **Une donnée change, et rien d'autre** : la borne basse de pH du chêne pubescent passe de 5,5, sans source, à 4,6, marquée « relevé ». C'est l'essai Querco du WSL, des pubescents plantés puis suivis trois saisons sur un sol à pH CaCl₂ 3,93 (Kuster et al. 2014, *PLoS ONE* 9 : e89724), soit 4,58 en pH eau par la conversion du dépôt, + 0,65 (Saenger et al. 2023). Des pubescents adultes du lac de Neuchâtel descendent au même endroit (vers 4,65, Zimmermann et al. 2025, *Evol. Appl.* 18 : e70076, lu sur une figure *(à confirmer)*). La borne haute reste 8,5 *(à confirmer)*. Aucun mécanisme ne bouge, aucun paramètre commun, aucun cas particulier par essence ; un essai est ajouté dans `station-acide.test.ts`. Les prédictions ont été postées sur #492 avant toute course, et les mesures y sont aussi. Le matériel de l'instruction (la sonde, le banc du pubescent, celui de la colonisation) a servi tel quel, sur une copie du code du lot.
+
+**Le banc du limon acide** (400 plants de 0,5 m à 2 m sur 40 m, année synthétique, sans tempête, cinquante ans) rend **au bit près** la course de l'instruction, où la borne était posée à l'exécution sur c19b247 :
+
+| graine | plants vivants/ha | h dom. | m³/ha | morts des plants | pH du sol à 50 ans | f pH an 1 → an 50 |
+|---|---|---|---|---|---|---|
+| 1 | 2 306 | 8,07 m | 114,6 | 31 (27 ravageurs, 4 engorgement) | 4,62 | 0,621 → 0,095 |
+| 2 | 2 362 | 8,14 m | 116,4 | 22 (16 ravageurs, 6 engorgement) | 4,62 | 0,621 → 0,095 |
+| 3 | 2 381 | 8,03 m | 117,6 | 19 (15 ravageurs, 4 engorgement) | 4,62 | 0,621 → 0,092 |
+
+Sur main, il ne reste aucune tige : 398 plants meurent du pH à la semaine 18, deux de l'engorgement à la semaine 13.
+
+**L'effet connu, écrit et laissé tel quel.** Le moteur acidifie le sol sous un peuplement (`bases.ts`), et le facteur de pH du pubescent suit le sol. Prolongé à quatre-vingts ans (graine 1), à 50, 60, 70 et 80 ans :
+- le pH du sol : 4,62, 4,52, 4,43, 4,35 ;
+- le facteur de pH : 0,095, 0,047, 0,040, 0,034 ;
+- les plants vivants sur 400 : 369, 340, 321, 303 ;
+- la hauteur dominante : 8,15, 8,29, 8,41, 8,49 m.
+
+Dès soixante ans, il ne pousse plus. Les ravageurs, qui lisent sa vigueur, emportent 66 plants entre cinquante et quatre-vingts ans. La vitesse de cette acidification n'a pas d'ancre : elle est instruite à part, pour toutes les essences (décision 2 de #492). Le commentaire de la fiche le dit.
+
+**La suberaie (#244), colonisation spontanée** : une parcelle nue de 40 m, soixante ans, année synthétique. Ce n'est pas le banc de #212.
+
+| graine | main : installés | lot : installés | vivants à 60 ans (h max) | morts relevées |
+|---|---|---|---|---|
+| 1 | 0 | 51 | 1 (0,5 m) | 45 ombre, 2 boutis |
+| 2 | 0 | 57 | 2 (7,0 m) | 48 ombre, 2 ravageurs, 2 boutis |
+| 3 | 0 | 50 | 1 (10,3 m) | 42 ombre, 3 boutis, 1 ravageurs |
+
+Sur main, le pubescent n'est pas dans la pluie de graines du massif. Avec 4,6, il y entre à 8 semis par an, et c'est l'ombre qui tue ceux qui s'installent, vers huit à dix ans. La question de #244 sur les ronces et la lumière se pose donc après la borne, comme l'instruction l'avait dit.
+
+**Les voisinages calculés au chargement** (`stations.ts`) ne changent que sur deux stations :
+- le bocage du limon acide garde le pubescent, à 4 semis par an ;
+- le massif de la suberaie le prend pour substitut, à 8 semis par an ; le pin, le bouleau et le pommier y passent de 4 à 2.
+
+Les six autres stations sont identiques.
+
+**Le contrôle.** On compare l'empreinte SHA-256 de l'état complet (arbres et pH du sol) entre main c19b247 et le lot, graine 1, voisinage vide, tempêtes comprises.
+- Elle est **identique au bit près** pour le hêtre et le châtaignier sur le limon acide, le pin sur le sable profond et le chêne-liège sur la suberaie, à cinquante ans, ainsi que pour le pubescent sur le limon riche à trente ans.
+- Ce dernier diffère à cinquante ans, avec 388 vivants des deux côtés. Sous un peuplement serré, des cellules du limon riche passent sous pH 6,165 entre la 32e et la 37e année, là où l'ancienne borne commençait à freiner sa croissance.
+
+**Deux essais cassaient, et ils ont été réécrits sur décision** : `tolerances.test.ts` (« le chêne pubescent, calcicole, meurt sur ce sable acide (pH 4,5 — bio-indication) ») et `embauche-chaulage.test.ts` (« le chêne pubescent survit dans la zone chaulée (pH 4,5 → 6), meurt dehors »).
+- À pH 4,5, un dixième sous sa borne, la marge de survie commune (`MARGE_SURVIE_PH`, #161) le fait végéter sans mourir.
+- Sur la lande, 8 pubescents sur 10 vivent à quinze ans, à 0,41 m en moyenne pour 0,30 m plantés.
+- Hors de la zone chaulée, les deux témoins vivent à huit ans : 0,34 et 0,35 m, contre 0,84 à 0,95 m dans la zone.
+- Le premier lot n'a touché ni la borne ni les essais : il a proposé sur #492 une réécriture qui garde leur sens, l'exclusion par la défaite et non par la mort (C7).
+- **Décision du propriétaire du 19 novembre 2026** (option A) : les deux essais sont réécrits avec les seuils proposés. La moyenne du pubescent de la lande reste sous 0,6 m. Hors de la zone chaulée, chaque témoin vivant reste sous 0,5 m ; dans la zone, les 3 plants vivent et le plus petit dépasse 0,7 m.
+- Les réécritures passent sur le lot et sur main. Le texte de la décision dit « à 30 ans » ; dans l'essai, 30 borne les identifiants de la cohorte plantée, et le bloc dure quinze ans. Le code décidé n'en change pas.
+
+### Prédictions
+
+- **Le banc au bit près** de la course de l'instruction : **juste**, sur les trois graines.
+- **Quatre-vingts ans**, à ±5 % des plants et ±0,2 m de l'instruction (sur 4142015), avec moins de 0,5 m gagnés entre soixante et quatre-vingts ans : **juste** (à 1 % et 0,05 m près ; 0,20 m gagnés).
+- **La suberaie** : « 0 installé sur main » ; « 35 à 60 installés avec le lot » (50 à 57) ; « 0 à 5 vivants à soixante ans » (1 ou 2) ; « plus de 70 % des morts à l'ombre » (91 à 96 %). **Toutes justes.**
+- **Les voisinages** : le pubescent à 4 semis sur le limon acide et à 8 sur la suberaie, et six stations identiques : **juste**. « Les substituts du limon acide passent de 8 à 6 » : **fausse**, ils restent à 8 (plus bas, pourquoi).
+- **Les deux essais de la lande cassent** : **juste**, 8 vivants sur 10 sous 0,5 m (prédit 6 à 10) et 2 sur 2. Ils sont réécrits depuis, sur décision.
+- **Les autres essais** : « seuls ces deux-là cassent » : **juste** en CI, sur les trois courses de la branche ; toutes les autres tranches sont vertes, l'essai ajouté compris. « Ceux qui font vivre un pubescent plus de trente ans sur limon bougent un peu » : vu sur `climat.test.ts`, où des cellules du limon riche descendent à pH 6,125 sous lui. « Tous les autres au bit près » : **non vérifié en entier**. Une copie instrumentée du lot notait chaque appel où le facteur de pH du pubescent diffère de l'ancienne borne. Sa course de la suite a été arrêtée au bout d'environ 470 essais sur 2 545 : la machine, partagée, en aurait mis plusieurs heures.
+- **Le contrôle** : « identique au bit près, sauf le pubescent du limon riche à cinquante ans » : **juste**.
+- **L'essai ajouté** : « 14 à 16 vivants sur 16, 0,8 à 1,6 m ; 0 sur main » : **juste** (15 sur 16, 0,96 m ; 0 sur main).
+
+### Une borne posée à l'exécution prédit le code, sauf ce qu'un module calcule au chargement
+
+L'instruction avait changé la borne à l'exécution, et le banc du code la rend au bit près. Mais `stations.ts` calcule les voisinages au chargement, avec `especeTenable`. Une borne posée après l'import ne les atteint pas : le banc de colonisation de l'instruction devait recalculer l'entourage lui-même. Dans le code, la borne change les voisinages de deux stations dès le chargement, et c'est par là, et non par la croissance, qu'elle atteindrait un essai qui garde leur voisinage par défaut. **Avant de tenir une course à trait modifié pour la prédiction du code, lister ce que les modules calculent de ce trait au chargement.**
+
+### Un essai qui affirme une conséquence d'une borne hérite de son statut
+
+Les deux essais qui cassent ne citent aucune source pour la mort qu'ils affirment : c'était la conséquence d'une borne sans source et de la marge de survie commune. Personne ne les avait reliés à la borne. L'instruction chiffrait bien « nain sur la lande », mais ne les citait pas, et la décision ne les couvrait donc pas. **Un changement de trait se prépare en cherchant les essais par ce qu'ils affirment** (mort, absence, exclusion) là où le facteur change, et pas seulement par le nom de l'espèce ; ils entrent dans les options soumises au propriétaire (`agents/README.md`, quatrième piège).
+
+### Une prédiction se calcule avec les fonctions du moteur
+
+J'ai calculé à la main, sur les listes de `paysage.ts`, la part des substituts du bocage, et trouvé 6 semis par an. Le moteur rend 8. La liste porte deux fois le fusain et le troène, et l'arrondi de `voisinageSemencier` absorbe la différence : 13 semis retirés par côté sur main, 11 avec le lot, 4 par substitut dans les deux cas. Le lot des thermomètres du vent (#483) disait déjà qu'un nombre relayé se recalcule avec les fonctions du moteur. C'est vrai aussi d'une prédiction : appeler `entourageDeLaStation` ne simule rien, et cet appel aurait donné le bon nombre.
+
+### Points ouverts
+
+- L'acidification sous peuplement, qui fait caler le pubescent vers soixante ans (décision 2).
+- Les autres bornes de pH sans relevé qui tuent sur une station du jeu (décision 3).
+- La lecture de la figure de Zimmermann et al. 2025 reste *(à confirmer)* : les données Dryad ont été refusées à l'instruction.
+- La borne haute, 8,5 *(à confirmer)* : Koba et al. 2025 la porteraient à 8,44 si leur norme est bien l'extrait au KCl.
+- Le fusain et le troène figurent deux fois dans la liste du bocage (`paysage.ts`), sans doute par mégarde : c'est signalé dans le compte rendu de #492, sans correction.
+- La note de #244 (la borne explique le zéro du pubescent, décision 4) n'est pas écrite par ce lot.
+
+## Ce qu'un lot précédent a appris (la plasticité des houppiers, #474, #489)
 
 Le lot v0.6 « houppiers », sur les décisions du propriétaire des 13, 16 et 18 novembre (#474), PR #489. Les couronnes ont quatre quarts d'ellipse qui s'étendent vers la place libre, d'au plus 0,2 m par an (`couronnes.ts`, la règle de HETEROFOR, Jonard et al. 2020) ; un quart sans concurrent à 12 m garde le rayon de la loi ; le feuillage est gardé ; la pénombre devient l'ellipsoïde (B3) ; le format de sauvegarde passe en 17, un bloc de version 16 se relisant avec ses couronnes à l'équilibre. Le 16 novembre, deux corrections : **le concurrent d'un quart doit dépasser le milieu du houppier du sujet**, le niveau où l'ellipsoïde est le plus large (`niveauLePlusLargeM`), et non plus sa base ; et le garde-fou de F7 compte ses deux zones ensemble. Le 18 novembre, une troisième : le filtre de `nurse` lit les victimes de l'incendie la semaine même. Le lot a été repris sur une machine neuve : les sondes, les bancs et les brouillons du premier passage étaient perdus. Les prédictions du code final ont été postées sur #474 avant toute course ; les mesures y sont aussi.
 
