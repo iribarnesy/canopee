@@ -67,7 +67,35 @@ l'autre âge pour vérifier. Et caler sur la moyenne de plusieurs graines, avec
 son erreur type : sur le banc des hauteurs, la moyenne de deux graines porte
 6 % d'incertitude (#481).
 
-## Ce que le dernier lot a appris (la plasticité des houppiers, #474)
+## Ce que le dernier lot a appris (le facteur de la litière ancré sur la vitesse du pH, #495)
+
+Le lot de documentation décidé par le propriétaire le 19 novembre (#495, décision 2), après l'instruction de l'acidification sous peuplement. Rien que des commentaires et de la documentation : aucune constante, aucune logique, aucune assertion ne bouge, et la sortie esbuild de `bases.ts` et de `bases.test.ts` est identique au bit près.
+- Le commentaire d'`AMPLIFICATION_CHARGE` (`bases.ts`) dit sur quoi le facteur 3 est ancré : la **vitesse du pH**, avec les relevés et leurs nombres (Calhoun, Geescroft, RENECOFOR, Augusto et al. 2002, Reich et al. 2005). Il dit aussi sur quoi il ne l'est pas : les **flux**, où la litière dépasse de deux à quatre fois la fourchette des acides faibles (Breeuwsma et de Vries 1984). Il reste *(à calibrer)* en tant que flux, et ne disparaîtra qu'une fois remplacé par le budget de protons (#498, v0.7). Les « essais de conversion » qu'il citait sans les nommer sont donnés pour non retrouvés. Le commentaire de la pompe, qui appelait ce terme « un budget de protons », est remis d'accord.
+- Park Grass perd son *(à confirmer)* dans `bases.test.ts` et à la ligne C10 de `realisme.md` : 0,7 unité en 125 ans sur 0-23 cm (Johnston, Goulding et Poulton 1986). C10 porte en plus le verdict de l'instruction. Aucun seuil ne bouge.
+- L'issue v0.7 du budget de protons est #498 (décision 3) : l'acide carbonique, le terme du bois et celui de la litière, les fourchettes que la vitesse devra tenir une fois ces termes en place, et les interactions relevées par l'instruction.
+
+### Un facteur de compensation se documente par la grandeur qui l'ancre
+
+Le facteur 3 était juste, et son commentaire ne disait pas en quoi. Il le réglait sur une vitesse de pH, puis en parlait comme du budget de protons qu'il remplace, et le commentaire de la pompe reprenait le mot. Mesuré, il tient la vitesse dans les relevés et met les flux hors des leurs : la litière fait 70 à 88 % des deux termes du peuplement (litière et bois) sur le limon acide, deux à quatre fois les acides faibles, pendant que le bois reste au plancher de l'accumulation de biomasse. Les deux lectures appellent des corrections opposées : qui lit les flux veut le baisser, qui lit la vitesse veut le garder. L'option B de #495 (le facteur à 1) l'a montré : la litière rentre dans sa fourchette, et la vitesse sort des siennes. **Un facteur qui compense des termes absents se documente avec la grandeur qui l'ancre, celles qui ne l'ancrent pas, et ce qui devra le remplacer.**
+
+### Une ancre sans nom se perd
+
+« Les essais de conversion mesurent 0,2 à 0,5 unité en vingt à quatre-vingts ans » : ni auteur, ni lieu, ni tableau. Personne n'a pu les relire, et il a fallu une instruction entière pour reconstruire une ancre. Le plus proche que #495 ait trouvé, Achilles et al. 2021, parle du sous-sol, sous fort dépôt *(à confirmer)*. **Une source s'écrit avec ses auteurs, son année et son tableau, ou elle ne se retrouvera pas.**
+
+### Un renvoi recopié se relit à la page
+
+Le compte rendu de l'instruction, puis la décision, rangeaient Park Grass au tableau 6 de Johnston et al. 1986. Le tableau 6 est celui de Geescroft : les 0,7 unité en 125 ans de Park Grass sont dans le texte de la page 9, qui compare les deux sites, et la série elle-même est au tableau 1. De même, le calcium des litières de Reich et al. 2005 vaut « 1,5 à 1,7 fois l'atlas » pour le hêtre et le pin, mais 1,4 pour le bouleau et 1,9 pour le chêne pédonculé face au pubescent. **Un renvoi ou une fourchette recopiés d'un rapport se relisent dans la source, ligne par ligne, avant d'entrer dans un commentaire ou une issue.**
+
+### Points ouverts
+
+- **Le budget de protons** (#498, v0.7) : l'acide carbonique, le bois, la litière. Le moteur n'a ni dépôt acide ni tampon carbonaté.
+- **Le bouleau** a le mauvais signe face à Reich et al. ; à pH 4,3, le moteur acidifie moins qu'eux, contre le plancher de 4,1 (#443).
+- **La colonne `litiere.calciumMgG`** : Reich et al. la mesurent plus haut que l'atlas sur quatre des cinq essences communes, et le charme, plus bas, y passe sous le hêtre. La reprendre demande de replacer le seuil de 9 mg/g sur la même échelle : un lot à part.
+- **Le banc dense** (#491) gonfle le terme du bois : pin 241 à 270 t C/ha, bouleau 380 à 386 à cinquante ans *(à comparer aux tables de production)*.
+- **L'épaisseur de l'horizon** : les signaux les plus forts du terrain sont dans les 5 ou 10 premiers centimètres (Augusto et al. 2002), et le moteur n'a qu'une couche de surface de 30 à 35 cm.
+- **Le pubescent planté sur le limon acide** cale toujours vers soixante ans : conséquence connue et acceptée le 19 novembre.
+
+## Ce qu'un lot précédent a appris (la plasticité des houppiers, #474)
 
 Le lot v0.6 « houppiers », sur les décisions du propriétaire des 13, 16 et 18 novembre (#474), PR #489. Les couronnes ont quatre quarts d'ellipse qui s'étendent vers la place libre, d'au plus 0,2 m par an (`couronnes.ts`, la règle de HETEROFOR, Jonard et al. 2020) ; un quart sans concurrent à 12 m garde le rayon de la loi ; le feuillage est gardé ; la pénombre devient l'ellipsoïde (B3) ; le format de sauvegarde passe en 17, un bloc de version 16 se relisant avec ses couronnes à l'équilibre. Le 16 novembre, deux corrections : **le concurrent d'un quart doit dépasser le milieu du houppier du sujet**, le niveau où l'ellipsoïde est le plus large (`niveauLePlusLargeM`), et non plus sa base ; et le garde-fou de F7 compte ses deux zones ensemble. Le 18 novembre, une troisième : le filtre de `nurse` lit les victimes de l'incendie la semaine même. Le lot a été repris sur une machine neuve : les sondes, les bancs et les brouillons du premier passage étaient perdus. Les prédictions du code final ont été postées sur #474 avant toute course ; les mesures y sont aussi.
 

@@ -517,8 +517,9 @@ export function basesBoisEq(carboneG: number, calciumLitiereMgG: number): number
  *
  * ## Pourquoi le débit n'est **pas** amplifié
  *
- * La surface reçoit `(calcium − protons) × AMPLIFICATION_CHARGE`, un budget de
- * **protons** dont le calcium n'est qu'un terme. Ici on déplace du calcium, une
+ * La surface reçoit `(calcium − protons) × AMPLIFICATION_CHARGE` : un terme net
+ * de protons, multiplié pour tenir la vitesse du pH tant que le budget de
+ * protons n'est pas écrit (#498). Ici on déplace du calcium, une
  * masse : elle ne se multiplie pas par trois en descendant d'un horizon. Les
  * deux nombres ne sont donc pas symétriques, et ils n'ont pas à l'être — ils
  * ne disent pas la même chose. Conséquence pratique, et c'est ce que le banc
@@ -541,22 +542,68 @@ export function prelevementProfondEq(
 }
 
 /**
- * Ce par quoi il faut multiplier le budget calcium pour obtenir la charge
- * réelle.
+ * Ce par quoi on multiplie l'effet net d'une litière sur le complexe : un
+ * facteur ancré sur la **vitesse du pH**, pas sur les flux.
  *
- * Le calcium de la litière n'est qu'**un** terme du budget de protons d'un sol. La
- * nitrification de l'azote de cette même litière en produit, la fuite d'acides
- * organiques du mor en produit, et les deux suivent le même flux de
- * décomposition — donc le même signal entre essences. Faute de les modéliser
- * séparément (il y faudrait un budget de protons complet, ce qui est un autre
- * lot), le terme net est multiplié.
+ * Le calcium de la litière n'est qu'**un** terme du budget de protons d'un sol.
+ * La fuite d'acides organiques du mor en produit d'autres, la nitrification de
+ * l'azote de cette même litière aussi quand le nitrate quitte le sol (le cycle
+ * de l'azote est neutre tant qu'il reste fermé, de Vries et Breeuwsma 1984,
+ * *Neth. J. Agric. Sci.* 32 : 159), et tous suivent le même flux de
+ * décomposition, donc le même signal entre essences. Faute de les modéliser
+ * séparément, le terme net est multiplié.
  *
- * Trois, et pas un : sans lui, cinquante ans de hêtraie sur limon ne déplaçaient
- * le pH que de 0,05 unité, quand les essais de conversion mesurent 0,2 à 0,5
- * unité en vingt à quatre-vingts ans. Avec, on est dans la fourchette basse de
- * ce qui se mesure, ce qui est la bonne place pour un moteur dont la litière
- * elle-même est environ moitié moindre qu'en forêt réelle *(à calibrer, et le
- * jour où le budget de protons sera écrit, ce facteur doit **disparaître**)*.
+ * ## Ce qui l'ancre : la vitesse du pH (#495)
+ *
+ * Avec 3, la couche de surface perd 0,4 à 0,8 unité de pH en cinquante ans sous
+ * les litières pauvres du banc de #495 (1,15 sous le pin du limon riche).
+ * L'instruction a trouvé cette vitesse dans les fourchettes des relevés de pH
+ * répétés (main c19b247, trois graines, pH eau sur 0-30 cm) :
+ *
+ *  - *boisement d'une terre ouverte* : à Calhoun (Markewitz et al. 1998,
+ *    *Soil Sci. Soc. Am. J.* 62 : 1428), un ancien champ planté de pin à encens
+ *    perd environ 0,7 unité en trente-quatre ans, dont 0,43 par le
+ *    fonctionnement interne du site *(à confirmer : la part du dépôt, 38 %,
+ *    vient d'un résumé)*. Le pin du moteur perd 0,43 au même âge sur le limon
+ *    acide ;
+ *  - à Geescroft (Johnston, Goulding et Poulton 1986, *Soil Use Manage.* 2 : 3,
+ *    tab. 6), une terre marnée laissée à la chênaie perd 0,73 unité en vingt et
+ *    un ans et 1,46 en cinquante (0-35 cm reconstitué), encore 1,0 sans les 30 %
+ *    du dépôt. Le moteur va **moins vite** : 0,19 et 0,80 sous le chêne
+ *    pubescent du limon riche ;
+ *  - *peuplement mûr* : sur les placettes RENECOFOR (données Zenodo 8391353,
+ *    recalculées placette par placette), les feuillus partis de 4,3 à 4,8
+ *    varient de +0,01 en quinze ans en moyenne, avec un quartile bas de −0,12.
+ *    Le hêtre mûr du moteur perd 0,08 en quinze ans, dans l'interquartile ;
+ *  - *contrastes entre essences* : pin − hêtre −0,27 en surface chez Augusto
+ *    et al. 2002 (*Ann. For. Sci.* 59 : 233, tab. VII), −0,25 dans le moteur à
+ *    cinquante ans ; tilleul − pin +0,63 en trente ans chez Reich et al. 2005
+ *    (*Ecology Letters* 8 : 811), frêne − pin +0,61 dans le moteur.
+ *
+ * À 1, la vitesse tombe au bas de ces relevés : la moitié de la part interne
+ * de Calhoun (−0,23), un contraste pin − hêtre de −0,11, et un frêne qui ne
+ * remonte plus le sol que de 0,02 à 0,03 en trente ans.
+ *
+ * ## Ce qui ne l'ancre pas : les flux
+ *
+ * Une fois le couvert fermé, le facteur fait produire à la litière 1 160 eq/ha/an
+ * sous le hêtre, 1 760 sous le chêne pubescent et 2 940 sous le pin. Les acides
+ * faibles d'un sol non calcaire en produisent 100 à 700 (Breeuwsma et de Vries
+ * 1984, *Neth. J. Agric. Sci.* 32 : 161) : la litière du moteur **dépasse cette
+ * fourchette** de deux à quatre fois. Le facteur compense ainsi, au moins en
+ * partie, ce que le moteur n'a pas ou a trop peu : un bois au plancher de
+ * l'accumulation de biomasse sous le hêtre et le pin (500 à 2 000 eq/ha/an,
+ * même source), l'acide carbonique et les dépôts acides. En tant que flux, il
+ * reste donc *(à calibrer)*.
+ *
+ * Il ne disparaîtra qu'une fois **remplacé** par ces termes, dans le budget de
+ * protons (#498) : l'acide carbonique, le bois et la litière, chacun dans sa
+ * fourchette, et la vitesse du pH toujours dans celles ci-dessus. Le retirer
+ * seul ramènerait le moteur sous les relevés.
+ *
+ * Le premier réglage invoquait des « essais de conversion » mesurant 0,2 à 0,5
+ * unité en vingt à quatre-vingts ans, sans les nommer. L'instruction de #495 ne
+ * les a pas retrouvés ; les relevés ci-dessus en tiennent lieu.
  */
 export const AMPLIFICATION_CHARGE = 3;
 
