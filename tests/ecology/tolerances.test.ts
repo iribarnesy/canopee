@@ -51,15 +51,25 @@ describe("sécheresse (lande sableuse, RU faible)", () => {
     // d'un tiers en trente ans n'y a rien d'anormal, et elle s'est révélée le
     // jour où les arbres ont cessé d'être bridés par l'azote — plus vigoureux,
     // ils transpirent plus, et le sable ne suit pas. Ce qui compte est le
-    // **contraste** avec les deux essais suivants : le chêne pubescent est balayé,
-    // le hêtre reste dessous.
+    // **contraste** avec les deux essais suivants : le chêne pubescent ne quitte
+    // pas le sol, le hêtre reste dessous.
     expect(aliveCount(state, "pinus_sylvestris", 30)).toBeGreaterThan(5);
     // Croissance lente : sable pauvre, vent, et concurrence de la lande.
     expect(meanHeight(state, "pinus_sylvestris", 30)).toBeGreaterThan(1.2);
   });
 
-  it("le chêne pubescent, calcicole, meurt sur ce sable acide (pH 4,5 — bio-indication)", () => {
-    expect(aliveCount(state, "quercus_pubescens", 30)).toBe(0);
+  it("le chêne pubescent, sous sa borne de pH, ne pousse pas sur ce sable acide (pH 4,5 — bio-indication)", () => {
+    // **Réécrit sur décision du propriétaire du 19 novembre 2026** (#492, option A).
+    // L'essai le voulait mort, et cette mort ne tenait qu'à une borne basse sans
+    // source (5,5). La borne est passée à 4,6 sur deux relevés (l'essai Querco du
+    // WSL, Kuster et al. 2014) : à pH 4,5, un dixième dessous, la marge de survie
+    // commune (#161) le laisse en vie sans croissance. Ce qui l'exclut est la
+    // **défaite**, pas l'exécution, comme le dit C7 dans `docs/realisme.md`.
+    // Mesuré à la décision, graine 42, sur les 30 plants de la cohorte et au bout
+    // des quinze ans du bloc : 8 pubescents vivants sur 10, 0,41 m en moyenne
+    // (0,45 au plus) pour 0,30 m plantés, contre 3,0 m au pin. Le seuil de la
+    // décision, 0,6 m, garde la direction.
+    expect(meanHeight(state, "quercus_pubescens", 30)).toBeLessThan(0.6);
   });
 
   it("le hêtre reste sous le pin", () => {

@@ -77,6 +77,32 @@ describe("les acidiphiles y sont enfin chez eux", () => {
   });
 }, 300_000);
 
+describe("le chêne pubescent y tient, sur la foi de deux relevés (#492)", () => {
+  it("planté sur le limon acide, il vit et pousse", () => {
+    // Sa borne basse de pH est passée de 5,5, sans source, à 4,6 sur décision du
+    // propriétaire du 18 novembre 2026. L'essai Querco du WSL a suivi trois
+    // saisons des pubescents plantés sur un sol à pH CaCl₂ 3,93 (Kuster et al.
+    // 2014, *PLoS ONE* 9 : e89724), soit 4,58 en pH eau par la conversion du
+    // dépôt, + 0,65 (Saenger et al. 2023). Sous l'ancienne borne, un plant du
+    // limon acide (pH 5,0) mourait de son sol en dix-huit semaines, sans avoir
+    // poussé : 0 vivant sur 16 dans ce décor, morts à la semaine 18 (#492).
+    const pubescent = getEspece("quercus_pubescens");
+    // Au pH du sol de Querco, sa survie est pleine : c'est là qu'il a vécu.
+    expect(phFactorSurvie(pubescent, 3.93 + 0.65)).toBe(1);
+    // Au pH du limon acide, il passe le seuil où un semis s'installe
+    // (`regeneration.ts`, 0,2) : il vaut 0,62.
+    expect(phFactor(pubescent, LIMON_ACIDE.station.phInitial)).toBeGreaterThan(0.2);
+
+    // Mesuré à la décision : 15 vivants sur 16 à cinq ans (un mort de
+    // l'engorgement d'hiver, la semaine 13), 0,96 m en moyenne pour 0,30 m
+    // plantés. Les seuils gardent la direction : la plupart vivent, et ils ont
+    // au moins doublé.
+    const r = apres(LIMON_ACIDE.station, LIMON_ACIDE.climat, "quercus_pubescens", 5);
+    expect(r.vivants).toBeGreaterThanOrEqual(12);
+    expect(r.hauteurMoyenne).toBeGreaterThan(0.6);
+  });
+}, 300_000);
+
 describe("le prunellier y tient, sur la foi des haies de Westphalie (#496)", () => {
   it("planté sur le limon acide, il vit et pousse", () => {
     // Sa borne basse de pH est passée de 5,5, une valeur de l'atlas du jeu sans
