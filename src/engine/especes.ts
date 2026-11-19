@@ -1297,13 +1297,14 @@ export const ESPECES_V0: readonly EspeceV0[] = [
     // Milošević et Glišić 2021, *Turk. J. Agric. For.* 45(6), art. 12), et 5,09
     // sous un verger de 'Vera' de vingt ans (Milošević et Milošević 2011, *Plant
     // Soil Environ.* 57(7)). Lus en KCl normal, la conversion de Kabała les met à
-    // 6,06 et 6,23 en pH eau : le relevé tombe sur la borne, qu'il ne peut
-    // qu'élargir. Deux réserves *(à confirmer)* : **la méthode**, car l'équipe
-    // écrit « pH in KCl 0.01 mol/L », la force d'un extrait au CaCl₂, et lu ainsi
-    // (+ 0,65) le verger de 2021 donnerait 5,6 ; **le porte-greffe**, car ce sont
-    // les racines du myrobolan (*Prunus cerasifera*) qui lisent ce sol, pas
-    // celles d'un abricotier franc. Sa classe de Landolt (R 4, 5,5 à 8,5) ne sert
-    // pas : la règle met le relevé avant la classe.
+    // 6,06 et 6,23 en pH eau : le plus bas tombe sur la borne à 0,06 près, et un
+    // relevé ne fait qu'élargir une borne, donc 6,0 reste. Deux réserves *(à
+    // confirmer)* : **la méthode**, car l'équipe écrit « pH in KCl 0.01 mol/L »,
+    // la force d'un extrait au CaCl₂, et lu ainsi (+ 0,65) le verger de 2021
+    // donnerait 5,6 ; **le porte-greffe**, car ce sont les racines du myrobolan
+    // (*Prunus cerasifera*) qui lisent ce sol, pas celles d'un abricotier franc.
+    // Sa classe de Landolt (R 4, 5,5 à 8,5) ne sert pas : la règle met le relevé
+    // avant la classe.
     //
     // Haut 7,8 *(à confirmer)*, sans relevé ; la classe dirait 8,5. Les sources
     // citées sont horticoles : PFAF « prefers a pH in the range 6.5 to 7.5 », une
@@ -2018,8 +2019,12 @@ export const ESPECES_V0: readonly EspeceV0[] = [
     // R 4, « neutre à basique », 5,5 à 8,5 (Landolt et al. 2010, *Flora
     // indicativa*, lue sur InfoFlora). Le bas y est passé sur décision du
     // propriétaire du 19 novembre 2026 (#496), sans relevé : il était à 6,0,
-    // une valeur de l'atlas du jeu sans source. Seule la suberaie (pH 5,2)
-    // change : le troène y mourait de son sol en cinq semaines, il y végète.
+    // une valeur de l'atlas du jeu sans source. Sur les stations du jeu, seule
+    // la suberaie (pH 5,2) change d'état : le troène y mourait de son sol en
+    // cinq semaines, il y reste nain. Ailleurs, il pousse plus vite là où le sol
+    // est entre 5,5 et 6,7 : sur la vallée engorgée (pH 6,5), où l'engorgement
+    // le tue quand même, et dans les cellules de la friche et du limon riche
+    // qu'un peuplement a acidifiées.
     ph: [5.5, 8.5],
     // **Semi-persistant** : il ne se dénude jamais tout à fait. C'est le seul de
     // l'atlas dans ce cas, et c'est ce qui lui vaut sa place dans les haies —
