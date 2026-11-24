@@ -67,7 +67,63 @@ l'autre âge pour vérifier. Et caler sur la moyenne de plusieurs graines, avec
 son erreur type : sur le banc des hauteurs, la moyenne de deux graines porte
 6 % d'incertitude (#481).
 
-## Ce que le dernier lot a appris (le facteur de la litière ancré sur la vitesse du pH, #495)
+## Ce que le dernier lot a appris (les bornes de pH sans relevé, #496)
+
+Le lot v0.6 « bornes de pH », sur les points 1, 3 et 4 de la décision du propriétaire du 19 novembre 2026 (#496), PR #499. **Trois fiches changent dans `especes.ts`, et rien d'autre** :
+- **le prunellier**, borne basse 5,5 → **4,3, relevé**. Wittig 1976 a mesuré trois haies de Westphalie à pH eau 5,0, 4,4 et 4,3 (moyennes de dix échantillons), et le prunellier est présent dans les trois, relu sur l'image des tableaux. La borne haute 8,5 reste *(à confirmer)* ;
+- **l'abricotier**, 6,0 **inchangé, marqué relevé**. Deux vergers greffés sur myrobolan, en Serbie, titrent 4,92 et 5,09 en pH KCl (Milošević et al. 2021 et 2011), soit 6,06 et 6,23 en pH eau par Kabała. La méthode (« KCl 0.01 mol/L », qui donnerait 5,6 lue comme un CaCl₂) et le porte-greffe restent *(à confirmer)* ;
+- **le troène**, 6,0 → **5,5, la valeur de sa classe** (R 4, Landolt et al. 2010), sur décision et sans relevé.
+
+Le sureau, le charme et le pommier gardent leurs bornes : leurs relevés étaient proposés, ils ne sont pas retenus pour l'instant (décision 2). Le noyer, le cornouiller, le saule, le genêt et la callune gardent aussi les leurs. Aucun mécanisme ne bouge, aucun paramètre commun, aucun cas particulier par essence. Un essai est ajouté dans `station-acide.test.ts`. Les prédictions ont été postées sur #496 avant toute course, et les mesures y sont aussi. Le matériel de l'instruction (la sonde de #492, ses bancs de plantation et de colonisation) a servi tel quel : la sonde tourne avec l'`especes.ts` du lot, sans écraser aucune borne.
+
+**Le banc du prunellier** (400 plants de 0,5 m sur 40 m, année synthétique, sans tempête, cinquante ans) rend **au bit près** les courses de l'instruction, qui posaient la borne à l'exécution sur c19b247. Graines 1 / 2 / 3 :
+
+| station (pH) | main | le lot : plants/ha à 50 ans | h dom. | morts des plants | pH du sol à 50 ans |
+|---|---|---|---|---|---|
+| limon acide (5,0) | 400 morts, dont 398 du pH, semaines 14 à 18 | 2 488 / 2 488 / 2 488 | 3,99 / 3,98 / 3,99 m | 2 de l'engorgement, semaine 17 | 5,09 |
+| sable (4,8) | 400 morts du pH, semaine 5 | 2 500 / 2 500 / 2 500 | 3,98 / 3,97 / 3,97 m | aucun | 4,96 |
+| lande (4,5) | 400 morts du pH, semaine 5 | 2 475 / 2 500 / 2 500 | 3,64 / 3,80 / 3,78 m | 4 / 0 / 0 | 4,61 / 4,67 / 4,67 |
+| suberaie (5,2) | nains de 1,21 à 1,23 m | 2 394 / 2 138 / 2 256 | 2,27 / 3,95 / 3,97 m | 16 / 58 / 39, surtout des ravageurs | 5,28 / 5,30 / 5,31 |
+
+Sur la suberaie, la graine 1 brûle la 30e et la 43e année. Sous les fourrés, le sol ne s'acidifie pas : il remonte un peu, par le calcium de la litière (#495, #498).
+
+**Le troène sur la suberaie** (100 plants sur 20 m) rend au bit près l'instruction sous 5,5 : nains de 1,28 / 1,29 / 1,31 m à cinquante ans, aucun mort, contre 100 morts du pH à la semaine 5 sur main. **L'abricotier** rend main au bit près, sur la suberaie (100 morts du pH à la semaine 5) comme par empreinte sur le limon riche.
+
+**Le bocage du limon acide** (colonisation spontanée de #244, code réel, 40 m, soixante ans). Le prunellier entre dans la pluie de graines à 6 semis par an, et les trois substituts, le hêtre, le pin et le bouleau, passent de 8 à 6. Contre c19b247, la course rend l'instruction au bit près : 85 / 77 / 67 installés, 8 / 1 / 1 vivants à soixante ans. Main a reçu entre-temps le pubescent à 4,6 (#497), qui sème déjà dans ce bocage (4 par an) ; contre 78c5dd1, il y a 81 / 75 / 70 prunelliers installés, et 0 / 6 / 4 vivants à soixante ans (près de 4 m). L'ombre (38 à 49) et l'engorgement (13 à 25) tuent presque tous les autres. Sur main : aucun.
+
+**Le contrôle** compare l'empreinte SHA-256 de l'état complet (arbres et pH du sol) entre main et le lot, sur le code réel, tempêtes comprises. Il a tourné deux fois : contre c19b247, puis contre 78c5dd1 après la fusion du pubescent (#497) dans la branche. Les verdicts sont les mêmes ; les nombres ci-dessous sont ceux de 78c5dd1.
+- **Plantations** de 100 plants sur 20 m, vingt ans, graine 1. L'empreinte est **identique au bit près** pour treize essences : le sureau, le pommier, le cornouiller, le saule, le châtaignier et le pubescent sur le limon acide (98 pubescents vivants des deux côtés depuis #497) ; le charme, la callune et l'ajonc sur la lande ; le noyer sur le sable ; le fusain sur la suberaie ; le genêt sur le limon riche ; l'abricotier sur la suberaie et le limon riche. C'est vrai aussi du prunellier et du troène plantés sur le limon riche. Elle diffère, comme prévu, pour le prunellier du limon acide (0 → 108 vivants) et le troène de la suberaie (0 → 100). Elle diffère aussi pour le troène de la vallée engorgée (pH 6,5), où son facteur passe de 0,764 à 1,000 : les 100 plants y meurent de l'engorgement aux semaines 6 à 9 dans les deux copies (trois graines), mais un peu plus hauts sur le lot (0,5007 m contre 0,5005 m).
+- **Colonisations** de 20 m, soixante ans. Elles sont identiques au bit près sur la lande, le sable, la suberaie, la vallée et le limon pauvre. Le limon acide diffère dès la première année, comme prévu, puisque sa pluie de graines change : 0, 0 et 1 prunelliers vivants à soixante ans. **La friche et le limon riche diffèrent aussi, sur les trois graines, et je ne l'avais pas prédit.** Le sol s'y acidifie sous la colonisation : sur la friche (pH 6,8), des cellules passent sous 6,665 dès la cinquième année (95 sur 400 à onze ans, graine 1), et le troène, semencier de la lisière (10 semis par an), y pousse plus vite que sous l'ancienne borne. Les trajectoires se séparent la 11e ou la 12e année sur la friche, entre la 46e et la 59e sur le limon riche. À soixante ans : de 7 à 10 troènes vivants sur la friche, contre 7 à 9 sur main ; de 14 / 9 / 29 sur le limon riche, contre 14 / 9 / 23.
+
+**L'essai ajouté** (`station-acide.test.ts`, le décor du houx : 8 plants de 0,3 m sur 40 m, graines 11 et 29) affirme une survie pleine à pH 4,3, et un facteur au-dessus du seuil d'installation sur le limon acide. Il exige ensuite au moins 12 vivants sur 16 à cinq ans, à plus de 1,2 m en moyenne. Mesuré : 15 sur 16 (un mort de l'engorgement d'hiver, semaine 13), 1,77 m. Il casse sur main dès la survie (0 à pH 4,3), et la simulation y rend 0 sur 16, dont quinze morts du pH à la semaine 18.
+
+**Aucun essai existant ne casse.** La suite complète passe en CI, les six tranches, sur la tête d'avant la fusion (416f823, contre c19b247) et sur la tête fusionnée avec 78c5dd1 (bc730df). Les essais qui gardent la pluie de graines par défaut de la friche (`succession`, `brousse`, `prairie-de-fauche`, `gibier`) ou de la lisière sur le limon riche (`fruticee`) tournent sur une station que le banc de colonisation voit se séparer de main ; ils passent. La séparation n'a été mesurée que sur ce banc, pas dans chaque essai. Aucun essai n'a été touché, sauté ni desserré.
+
+### Prédictions
+
+- **P1, le prunellier au bit près des courses de l'instruction**, sur les quatre stations et les trois graines : **juste**.
+- **P2, le troène sur la suberaie au bit près** : **juste**. **P3, l'abricotier au bit près de main** : **juste**.
+- **P4, les autres essences identiques par empreinte**, et le prunellier et le troène du limon riche aussi : **juste**, contre les deux main (A2). **A1, les bancs de plantation au bit près après la fusion** : **juste** (les douze courses du prunellier et les six du troène et de l'abricotier).
+- **P5, seul le voisinage du limon acide change** (le prunellier à 6, les substituts de 8 à 6) : **juste**, contre les deux main. Je l'avais calculé avec les fonctions du moteur, comme le demandait le lot du pubescent. **P5a, la colonisation du limon acide au bit près de l'instruction** : **juste** contre c19b247. Contre 78c5dd1 (addendum A3) : « 60 à 90 installés, 0 à 8 vivants » : **juste** (70 à 81, 0 à 6).
+- **P5b, les colonisations des autres stations identiques**, « à 70 % », avec la friche et le limon riche en réserve : **fausse** pour ces deux-là, sur les trois graines (plus bas, pourquoi).
+- **P6, le troène de la vallée meurt de l'engorgement dans les deux copies, aux mêmes semaines à trois près** : **juste** (semaines 6 à 9 des deux côtés).
+- **P7, l'essai ajouté** : « 0 sur 16 sur main, 15 ou 16 sur le lot, de 1,0 à 2,0 m » : **juste** (15, 1,77 m).
+- **Les essais** : « aucun essai existant ne casse » : **juste**, en CI sur les deux têtes. « Les essais de la friche et du limon riche changent de trajectoire sans qu'une assertion tombe » (A5) : **juste pour les assertions** ; leur trajectoire n'a pas été relevée essai par essai.
+
+### Un état ne résume pas un facteur, et le sol bouge pendant la course
+
+L'instruction rangeait chaque borne, station par station, en états au pH de départ : mort, nain, pas d'installation, pas tenable, vivant. Sous sa classe, le troène « ne changeait que la suberaie ». C'était vrai des états au départ, pas du facteur, et pas du sol de la sixième année. Sur la friche, la colonisation acidifie des cellules de 6,8 sous 6,665 dès la cinquième année, et le troène y pousse plus vite que sous l'ancienne borne ; la vallée garde son état (mort de l'engorgement), mais pas sa croissance. Ma prédiction regardait le pH de départ et pariait sur « identique ». **Avant de prédire qu'une borne ne change rien sur une station, chercher le pH le plus bas que ses cellules atteignent pendant la course, et calculer le facteur, pas seulement l'état.**
+
+### Points ouverts
+
+- Le sureau, le charme et le pommier ont des relevés publiés (Wittig 1976, Passarge 1998, Szwedo et Żmuda 1994), consignés sur #496 et non retenus pour l'instant.
+- La borne haute du prunellier, 8,5 *(à confirmer)* : les six haies de Corno-Prunetum de Wittig (pH eau 7,9 à 8,4) la porteraient si sa présence y était vérifiée haie par haie.
+- La méthode et le porte-greffe de l'abricotier *(à confirmer)*.
+- Le fusain, le cornouiller et le troène restent hors du bocage du limon acide, faute de relevé.
+- La friche s'acidifie de 6,8 à 6,4 en onze ans sous sa colonisation, et jusqu'à 5,1-5,5 en soixante ans. C'est la vitesse que règle `AMPLIFICATION_CHARGE` (#495, #500), et c'est elle qui amène le troène dans la plage où sa borne a changé : un budget de protons (#498) la déplacerait.
+- La remontée du pH sous les fourrés à litière riche en calcium (5,0 → 5,09 sous le prunellier) relève du même budget (#498).
+
+## Ce qu'un lot précédent a appris (l'acidification sous peuplement, #495, #500)
 
 Le lot de documentation décidé par le propriétaire le 19 novembre (#495, décision 2), après l'instruction de l'acidification sous peuplement. Rien que des commentaires et de la documentation : aucune constante, aucune logique, aucune assertion ne bouge, et la sortie esbuild de `bases.ts` et de `bases.test.ts` est identique au bit près.
 - Le commentaire d'`AMPLIFICATION_CHARGE` (`bases.ts`) dit sur quoi le facteur 3 est ancré : la **vitesse du pH**, avec les relevés et leurs nombres (Calhoun, Geescroft, RENECOFOR, Augusto et al. 2002, Reich et al. 2005). Il dit aussi sur quoi il ne l'est pas : les **flux**, où la litière dépasse de deux à quatre fois la fourchette des acides faibles (Breeuwsma et de Vries 1984). Il reste *(à calibrer)* en tant que flux, et ne disparaîtra qu'une fois remplacé par le budget de protons (#498, v0.7). Les « essais de conversion » qu'il citait sans les nommer sont donnés pour non retrouvés. Le commentaire de la pompe, qui appelait ce terme « un budget de protons », est remis d'accord.
