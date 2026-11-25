@@ -405,21 +405,41 @@ function remettreLesGrandeurs(g: GrandeursDuTick): void {
   lastSatisfactionEau = g.satisfactionEau;
 }
 
-/** Retenir ce qu'une semaine simulée vient de mesurer. */
-function retenirLeTick(t: {
+/**
+ * Aucune semaine simulée : une parcelle neuve, à l'arrivée du joueur. Ce n'est
+ * pas zéro — rien n'a été mesuré, et l'interface le dit (« — »).
+ */
+const SANS_GRANDEURS: GrandeursDuTick = {
+  fluxes: undefined,
+  debordement: undefined,
+  lumiereAuSol: undefined,
+  pollinisateurs: undefined,
+  oiseauxDePassage: undefined,
+  satisfactionEau: undefined,
+};
+
+/** Ce qu'une semaine simulée vient de mesurer, pris ensemble. */
+function grandeursDe(t: {
   fluxes: TickFluxes;
   debordementParCellule: Float32Array;
   lumiereAuSol: Float32Array;
   pollinisateurs: Float32Array;
   oiseauxDePassage: readonly FrequentationDeGuilde[];
   satisfactionEau: ReadonlyMap<number, number>;
-}): void {
-  lastFluxes = t.fluxes;
-  lastDebordement = t.debordementParCellule;
-  lastLumiereAuSol = t.lumiereAuSol;
-  lastPollinisateurs = t.pollinisateurs;
-  lastOiseauxDePassage = t.oiseauxDePassage;
-  lastSatisfactionEau = t.satisfactionEau;
+}): GrandeursDuTick {
+  return {
+    fluxes: t.fluxes,
+    debordement: t.debordementParCellule,
+    lumiereAuSol: t.lumiereAuSol,
+    pollinisateurs: t.pollinisateurs,
+    oiseauxDePassage: t.oiseauxDePassage,
+    satisfactionEau: t.satisfactionEau,
+  };
+}
+
+/** Retenir ce qu'une semaine simulée vient de mesurer. */
+function retenirLeTick(t: Parameters<typeof grandeursDe>[0]): void {
+  remettreLesGrandeurs(grandeursDe(t));
 }
 
 /**
@@ -1126,8 +1146,12 @@ function performAction(action: GameAction): EffetDeLAction {
  * relisait la série depuis son début, et le joueur revivait les sécheresses,
  * les hivers et les tempêtes que la parcelle venait de traverser (#348).
  */
-function faireVieillir(depart: GameState, annees: number): GameState {
+function faireVieillir(
+  depart: GameState,
+  annees: number,
+): { etat: GameState; grandeurs: GrandeursDuTick } {
   let etat = depart;
+  let grandeurs = SANS_GRANDEURS;
   const semaines = annees * 52;
   const anneeBase = anneeDepart - annees;
   for (let k = 0; k < semaines; k++) {
@@ -1140,6 +1164,7 @@ function faireVieillir(depart: GameState, annees: number): GameState {
     // repart de zéro à son arrivée.
     retenirCeQuiArrive(step, k - semaines, etat.trees);
     etat = step.state;
+    grandeurs = grandeursDe(step);
     if (k % 260 === 0)
       post({ type: "progress", done: k, total: semaines, phase: "vieillissement" });
   }
@@ -1148,7 +1173,41 @@ function faireVieillir(depart: GameState, annees: number): GameState {
   // années repartent avec lui, et celles d'avant l'arrivée deviennent
   // négatives, comme celles de l'histoire des arbres (#397). Le temps qu'il
   // fait, lui, ne repart pas de zéro (`meteoDeLaPartie`).
-  return remettreLeCompteurAZero(etat);
+  //
+  // **Ce que la dernière semaine a mesuré part avec l'état** (#505). C'est la
+  // semaine qui précède l'arrivée, et c'est elle que le joueur regarde, en
+  // pause, au premier écran : la nappe, l'herbe, les mycorhizes, la lumière
+  // sous les arbres. Les jeter laissait les panneaux dire « nappe à 0,00 m »
+  // et éclairer le sol comme s'il n'y avait pas d'arbres. Les identifiants
+  // ne changent pas en remettant le compteur à zéro : la soif de chaque arbre
+  // et les arbres des oiseaux de passage restent les bons.
+  return { etat: remettreLeCompteurAZero(etat), grandeurs };
+}
+
+/**
+ * La parcelle telle que le joueur la trouve en arrivant, vieillie s'il le faut,
+ * et les grandeurs du dernier tick **remises en place** : celles de la dernière
+ * semaine de vieillissement, ou aucune sur une parcelle neuve.
+ *
+ * **Avant `ouvrirLaSemaine`**, qui pose le point de reprise de la semaine 0
+ * avec les grandeurs du moment : posé avant elles, il emportait celles de la
+ * partie d'avant, ou rien.
+ *
+ * **Le point zéro du carbone se fige ici** (#202) : c'est l'instant exact où le
+ * joueur prend la main. Ce qu'il trouve sur la parcelle — les arbres venus tout
+ * seuls pendant la maturation compris — est son acquis, pas son mérite. La
+ * partie neuve comme le rejeu d'une sauvegarde passent par ici : une partie
+ * vieillie reprise sans ce point zéro voyait son bilan carbone sauter au
+ * chargement (#338).
+ */
+function arriverSurLaParcelle(neuf: GameState): GameState {
+  if (maturationAns <= 0) {
+    remettreLesGrandeurs(SANS_GRANDEURS);
+    return neuf;
+  }
+  const { etat, grandeurs } = faireVieillir(neuf, maturationAns);
+  remettreLesGrandeurs(grandeurs);
+  return figerCarboneDeReference(etat);
 }
 
 const post = (msg: FromWorker, transfer: Transferable[] = []) =>
@@ -1227,75 +1286,6 @@ function loadWeather(stationId: string, mode: "reelle" | "synthetique"): WeekWea
   return syntheticYear(station.climat);
 }
 
-function emptyFluxes(): TickFluxes {
-  return {
-    basesApportEqHa: 0,
-    basesLessiveEqHa: 0,
-    basesLitiereEqHa: 0,
-    basesAcideEqHa: 0,
-    basesAcideNonTamponneEqHa: 0,
-    basesPreleveEqHa: 0,
-    basesBoisEqHa: 0,
-    basesBoisProfondEqHa: 0,
-    basesApportProfondEqHa: 0,
-    basesExportEqHa: 0,
-    saturationMoyenne: 0,
-    saturationProfondeMoyenne: 0,
-    partInondee: 0,
-    erosionArracheeKgM2: 0,
-    erosionSortieKgM2: 0,
-    boisRetenueMm: 0,
-    boisSedimentPiegeKgM2: 0,
-    erosionNKgHa: 0,
-    erosionNHumusKgHa: 0,
-    vidangeNappeMm: 0,
-    apportRegionalMm: 0,
-    apportEauLibreMm: 0,
-    nappeProfondeurCm: 0,
-    erosionPKgHa: 0,
-    erosionKKgHa: 0,
-    rainMm: 0,
-    neigeMm: 0,
-    fonteMm: 0,
-    manteauNeigeMm: 0,
-    etpMm: 0,
-    evapMm: 0,
-    nappeMm: 0,
-    transpirationMm: 0,
-    drainageMm: 0,
-    overflowMm: 0,
-    waterloggingMean: 0,
-    ruissellementEntrantMm: 0,
-    ruissellementSortantMm: 0,
-    herbeCouvertureMean: 0,
-    broutageKg: 0,
-    depositionKgHa: 0,
-    ravageurMoyen: 0,
-    auxiliairesMoyen: 0,
-    mycorhizesMoyen: 0,
-    mineralizationKgHa: 0,
-    uptakeKgHa: 0,
-    uptakeArbresKgHa: 0,
-    uptakeHerbeKgHa: 0,
-    minageEctoKgHa: 0,
-    leachedKgHa: 0,
-    phosphoreMoyenGM2: 0,
-    potassiumMoyenGM2: 0,
-    uptakePKgHa: 0,
-    uptakeKKgHa: 0,
-    leachedKKgHa: 0,
-    apportKKgHa: 0,
-    retourKKgHa: 0,
-    apportPKgHa: 0,
-    erosionPOrganiqueKgHa: 0,
-    phosphoreNonPrisKgHa: 0,
-    phosphoreOrganiqueNonTrouveKgHa: 0,
-    litterfallKgHa: 0,
-    litterDecayKgHa: 0,
-    fixationKgHa: 0,
-  };
-}
-
 function postSnapshot() {
   if (!state || !sc) return;
   // Le worker **assemble**, il ne décide pas : la traduction état → instantané
@@ -1305,7 +1295,7 @@ function postSnapshot() {
     weather: meteoDeLaPartie(state.week),
     anneeCivile: anneeDepart + Math.floor(state.week / 52),
     paysage: resumeBordures(bordures),
-    fluxes: lastFluxes ?? emptyFluxes(),
+    fluxes: lastFluxes,
     debordementParCellule: lastDebordement,
     lumiereAuSol: lastLumiereAuSol,
     pollinisateurs: lastPollinisateurs,
@@ -2199,13 +2189,9 @@ function init(
   compteAnnee = COMPTE_VIDE;
   aCompter = new Map();
   actionsDeLaSemaine = [];
-  // **le point zéro du bilan carbone se fige ici, et pas ailleurs** (#202) :
-  // c'est l'instant exact où le joueur prend la main. Ce qu'il trouve sur la
-  // parcelle — les arbres venus tout seuls pendant la maturation compris — est
-  // son acquis, pas son mérite.
-  ouvrirLaSemaine(
-    maturationAns > 0 ? figerCarboneDeReference(faireVieillir(neuf, maturationAns)) : neuf,
-  );
+  // Le vieillissement, le point zéro du carbone (#202) et les grandeurs de la
+  // dernière semaine (#505) : `arriverSurLaParcelle`.
+  ouvrirLaSemaine(arriverSurLaParcelle(neuf));
   journal = [];
   pendingRefusals = [];
   pendingEvents = [];
@@ -2220,12 +2206,6 @@ function init(
   pendingIncendie = undefined;
   pendingTempete = undefined;
   pendingCrues = [];
-  lastFluxes = undefined;
-  lastDebordement = undefined;
-  lastLumiereAuSol = undefined;
-  lastPollinisateurs = undefined;
-  lastOiseauxDePassage = undefined;
-  lastSatisfactionEau = undefined;
   weeksPerSecond = 0;
   bankruptcyAnnounced = false;
   droughtYearFlagged = -1;
@@ -2325,8 +2305,10 @@ function rejouerLeJournal(save: SaveGame): GameState {
   // compris** : `init` le fige à l'arrivée du joueur (#202), et le rejeu ne le
   // faisait pas — une partie vieillie reprenait avec le point zéro du profil
   // nu, et son bilan carbone sautait au chargement. Comparer les deux voies de
-  // reprise l'a montré (#338).
-  if (maturationAns > 0) replayed = figerCarboneDeReference(faireVieillir(replayed, maturationAns));
+  // reprise l'a montré (#338). Les grandeurs de la dernière semaine de
+  // vieillissement aussi (#505) : une sauvegarde de la semaine 0 n'a aucune
+  // semaine à rejouer, et c'est elles que le premier instantané montre.
+  replayed = arriverSurLaParcelle(replayed);
   // Le cumul se **refait** pendant le rejeu (#188). Rien d'autre ne pourrait le
   // rendre : les kilos cueillis il y a dix ans ne sont plus nulle part dans
   // l'état, et le journal de sauvegarde porte les actions, pas ce qu'elles

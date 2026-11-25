@@ -356,7 +356,15 @@ export interface Snapshot {
   stockBrfKg: number;
   /** pression de gibier locale ∈ [0,1] (la chasse la fait baisser, l'immigration la relève) */
   pressionGibier: number;
-  fluxes: TickFluxes;
+  /**
+   * Les flux de la dernière semaine simulée : nappe, herbe, mycorhizes,
+   * broutage, érosion… **Absents tant qu'aucune semaine n'a tourné** — au
+   * premier instantané d'une parcelle neuve —, et l'interface dit alors « — »
+   * plutôt que zéro : rien n'a été mesuré, ce n'est pas une nappe à 0,00 m. Une
+   * parcelle vieillie arrive avec ceux de sa dernière semaine de vieillissement
+   * (#505).
+   */
+  fluxes?: TickFluxes;
   trees: SnapshotTree[];
   soilWater: Float32Array;
   soilPh: Float32Array;

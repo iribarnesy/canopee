@@ -335,7 +335,13 @@ export interface EntreesSnapshot {
   anneeCivile: number;
   /** nom du paysage autour de la parcelle (paysage.ts) */
   paysage: string;
-  fluxes: TickFluxes;
+  /**
+   * Les flux de la dernière semaine simulée (`TickResult`). Absents tant
+   * qu'aucune semaine n'a tourné, c'est-à-dire au premier instantané d'une
+   * parcelle neuve ; une parcelle vieillie arrive avec ceux de sa dernière
+   * semaine de vieillissement (#505).
+   */
+  fluxes?: TickFluxes;
   /**
    * Débordement de la dernière semaine simulée, mm par cellule
    * (`TickResult`). Absent au premier instantané : aucun tick n'a tourné.
@@ -478,8 +484,10 @@ export function construireSnapshot(e: EntreesSnapshot): Snapshot {
     soilDebordementMm: e.debordementParCellule
       ? Float32Array.from(e.debordementParCellule)
       : new Float32Array(nCells),
-    // Au premier instantané, aucun tick n'a tourné : sans arbres tout le sol
-    // est éclairé, et c'est bien ce que le tick calculera.
+    // Au premier instantané d'une parcelle neuve, aucun tick n'a tourné : sans
+    // arbres tout le sol est éclairé, et c'est bien ce que le tick calculera.
+    // Une parcelle vieillie, elle, arrive avec la lumière de sa dernière semaine
+    // de vieillissement (#505) : sous ses arbres, le sol est à l'ombre.
     soilLumiere: e.lumiereAuSol
       ? Float32Array.from(e.lumiereAuSol)
       : new Float32Array(nCells).fill(1),
