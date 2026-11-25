@@ -18,8 +18,10 @@ import {
   capitale,
   causeDite,
   de,
+  degatsDeLaTempete,
   departDit,
   direLaPlantation,
+  direLaTempete,
   direLeDepart,
   direLInstallation,
   estFeminin,
@@ -32,6 +34,7 @@ import {
   piedsDe,
   pluriel,
   s,
+  type TempeteADire,
   uneEssence,
   uneFaune,
 } from "../../src/game/mots";
@@ -376,5 +379,46 @@ describe("la faune et son arbre, dans le journal (#368)", () => {
     expect(direLeDepart(fiche("buse_variable"), undefined, "arbreDisparu")).toBe(
       "Le couple de buses variables quitte la parcelle : son arbre n'est plus là",
     );
+  });
+});
+
+describe("la tempête dite (#503)", () => {
+  /** 30 m/s : une rafale de 108 km/h. */
+  const tempete = (
+    verses: number,
+    casses: number,
+    ebranches: number,
+    volumeM3 = 0,
+  ): TempeteADire => ({
+    rafaleMs: 30,
+    arbresVerses: verses,
+    arbresEbranches: ebranches,
+    volumeM3,
+    casses: Array.from({ length: casses }, (_, i) => ({ id: i, volumeM3: 0.5 })),
+  });
+
+  it("une tempête qui ne fait que casser ne s'annonce plus « 0 arbre couché »", () => {
+    // Le moteur la rapporte dès qu'elle a cassé un fût ; le journal ne lisait
+    // que les couchés.
+    const phrase = direLaTempete(tempete(0, 2, 0));
+    expect(phrase).toBe("Tempête : rafale à 108 km/h, 2 arbres cassés net");
+    expect(phrase).not.toMatch(/0 arbre|couché|m³/);
+  });
+
+  it("dit les trois dégâts, du plus grave au plus léger, et le bois couché à sortir", () => {
+    expect(direLaTempete(tempete(3, 1, 12, 4.2))).toBe(
+      "Tempête : rafale à 108 km/h, 3 arbres couchés, 1 cassé net, 12 ébranchés" +
+        " — 4.2 m³ de bois couché à sortir dans l'année, avant qu'il ne se déprécie",
+    );
+  });
+
+  it("ne dit que ce qu'il y a, et accorde au singulier", () => {
+    expect(degatsDeLaTempete(tempete(0, 0, 1))).toBe("1 arbre ébranché");
+    expect(degatsDeLaTempete(tempete(1, 0, 5))).toBe("1 arbre couché, 5 ébranchés");
+    expect(degatsDeLaTempete(tempete(0, 0, 0))).toBe("");
+  });
+
+  it("parle en minuscules", () => {
+    expect(direLaTempete(tempete(2, 0, 0, 1))).not.toMatch(/TEMPÊTE/);
   });
 });
