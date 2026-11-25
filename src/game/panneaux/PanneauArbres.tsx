@@ -43,7 +43,8 @@ function ListeDesEssences({
   vivants: readonly SnapshotTree[];
   semees: ReadonlySet<string>;
   choix: Record<string, boolean>;
-  surBascule: (especeId: string, actif: boolean) => void;
+  /** absent quand rien ne se cueille d'office : la pastille n'a rien à décider */
+  surBascule?: ((especeId: string, actif: boolean) => void) | undefined;
   surSelectionner: (especeId: string) => void;
 }) {
   // Le **même** recensement que l'éclaircie par essence (#156) : compter deux fois
@@ -127,22 +128,24 @@ function ListeDesEssences({
                 </div>
               )}
             </button>
-            <button
-              type="button"
-              style={{ ...btn(active), marginRight: 0, whiteSpace: "nowrap" }}
-              onClick={() => surBascule(e.especeId, !active)}
-              title={
-                active
-                  ? choisi
-                    ? "cueillie d'office parce que vous l'avez demandé"
-                    : "cueillie d'office parce que vous l'avez semée"
-                  : choisi
-                    ? "laissée sur pied parce que vous l'avez demandé"
-                    : "laissée sur pied : vous ne l'avez pas semée"
-              }
-            >
-              {active ? "🧺 cueillie" : "· laissée"}
-            </button>
+            {surBascule && (
+              <button
+                type="button"
+                style={{ ...btn(active), marginRight: 0, whiteSpace: "nowrap" }}
+                onClick={() => surBascule(e.especeId, !active)}
+                title={
+                  active
+                    ? choisi
+                      ? "cueillie d'office parce que vous l'avez demandé"
+                      : "cueillie d'office parce que vous l'avez semée"
+                    : choisi
+                      ? "laissée sur pied parce que vous l'avez demandé"
+                      : "laissée sur pied : vous ne l'avez pas semée"
+                }
+              >
+                {active ? "🧺 cueillie" : "· laissée"}
+              </button>
+            )}
           </li>
         );
       })}
@@ -159,7 +162,13 @@ export function PanneauArbres({
 }: {
   snapshot: Snapshot;
   vivants: readonly SnapshotTree[];
-  recolteAuto: { semees: string[]; choix: Record<string, boolean> };
+  /**
+   * Ce que la récolte automatique cueille ; **absent quand elle ne cueille
+   * rien** — dans un niveau, où la récolte se fait à la main (#514), ou quand
+   * on l'a coupée. Le bouton d'une essence dirait sinon « 🧺 cueillie » d'une
+   * essence que personne ne cueillera.
+   */
+  recolteAuto?: { semees: string[]; choix: Record<string, boolean> } | undefined;
   reglerRecolteAuto: (especeId: string, actif: boolean) => void;
   /** sélectionner toutes les tiges d'une essence, pour agir dessus */
   surSelectionnerEssence: (especeId: string) => void;
@@ -187,15 +196,15 @@ export function PanneauArbres({
       <dd>
         <span className="detail">
           La pastille dit la part de l'essence qui souffre, le liseré est sa couleur — celle de la
-          carte et du choix des plants. Le bouton décide de ce qui se cueille tout seul quand le
-          temps passe vite : par défaut ce que vous avez semé, le reste se récolte à la main en
-          sélectionnant l'arbre.
+          carte et du choix des plants.
+          {recolteAuto &&
+            " Le bouton décide de ce qui se cueille tout seul quand le temps passe vite : par défaut ce que vous avez semé, le reste se récolte à la main en sélectionnant l'arbre."}
         </span>
         <ListeDesEssences
           vivants={vivants}
-          semees={new Set(recolteAuto.semees)}
-          choix={recolteAuto.choix}
-          surBascule={reglerRecolteAuto}
+          semees={new Set(recolteAuto?.semees)}
+          choix={recolteAuto?.choix ?? {}}
+          surBascule={recolteAuto && reglerRecolteAuto}
           surSelectionner={surSelectionnerEssence}
         />
       </dd>

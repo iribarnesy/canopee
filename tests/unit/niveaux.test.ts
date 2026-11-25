@@ -327,4 +327,21 @@ describe("le libellé", () => {
     if (!ligne) throw new Error("palier manquant");
     expect(libelleDuPalier(ligne)).toBe("Planter des fruitiers — 5 / 12 arbres");
   });
+
+  it("garde les chiffres d'un palier atteint qui tient", () => {
+    const a = avancementDuNiveau(NIVEAU, etat({ ...CUMULS_VIDES, plantes: 12 }));
+    const ligne = a.paliers[0];
+    if (!ligne) throw new Error("palier manquant");
+    expect(libelleDuPalier(ligne)).toBe("Planter des fruitiers — 12 / 12 arbres");
+  });
+
+  it("tait ceux d'un palier acquis dont la grandeur est redescendue (#514)", () => {
+    // Les premières pommes mûres du verger : vues une fois, puis cueillies.
+    // « ✔ … — 0 / 12 » dirait le contraire de la coche.
+    const acquis = new Set(["planter"]);
+    const a = avancementDuNiveau(NIVEAU, etat({ ...CUMULS_VIDES, plantes: 0 }), acquis);
+    const ligne = a.paliers[0];
+    if (!ligne) throw new Error("palier manquant");
+    expect(libelleDuPalier(ligne)).toBe("Planter des fruitiers");
+  });
 });

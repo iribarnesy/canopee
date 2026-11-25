@@ -221,6 +221,17 @@ export interface Palier {
   /** un mot pour savoir par où commencer, si ce n'est pas évident */
   aide?: string;
   /**
+   * **Ce que ce palier apprend**, en une phrase courte : le bouton qu'il ouvre
+   * et ce qu'il fait (#514). Le panneau du niveau l'annonce quand on arrive sur
+   * le palier, au-dessus de l'aide.
+   *
+   * C'est le côté tutoriel que le propriétaire a demandé le 25 novembre 2026 :
+   * « on apprend petit à petit à se servir des différents boutons ». L'aide dit
+   * par où commencer **ce** palier ; cette phrase dit ce qu'on y gagne, et ce
+   * qui servira encore au palier d'après.
+   */
+  apprend?: string;
+  /**
    * Les gestes que ce palier **enseigne** : leurs boutons paraissent quand on
    * arrive sur lui, et restent ensuite (#507, `gestesOuverts`).
    */
@@ -371,8 +382,17 @@ export function paliersFranchis(avancement: Avancement): string[] {
   return avancement.paliers.filter((p) => p.atteint).map((p) => p.palier.id);
 }
 
-/** L'énoncé chiffré d'un palier : « Récolter des fruits — 40 / 200 kg ». */
+/**
+ * L'énoncé chiffré d'un palier : « Récolter des fruits — 40 / 200 kg ».
+ *
+ * **Un palier acquis dont la grandeur est redescendue se dit sans chiffres**
+ * (#514). Le tutoriel du verger a des paliers qui se lisent sur un état
+ * passager — des pommes mûres sur l'arbre, qui n'y sont plus une fois
+ * cueillies —, et « ✔ Voir mûrir les premières pommes — 0 / 1 kg » disait le
+ * contraire de la coche. Ce qu'on a vu une fois, on l'a vu.
+ */
 export function libelleDuPalier(a: AvancementPalier): string {
+  if (a.atteint && a.valeur < a.palier.cible) return a.palier.quoi;
   return `${a.palier.quoi} — ${arrondi(a.valeur)} / ${arrondi(a.palier.cible)} ${a.palier.unite}`;
 }
 

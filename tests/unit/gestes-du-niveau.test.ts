@@ -13,8 +13,8 @@
  *    gestes ouverts passerait même si un panneau oubliait de la consulter.
  * 2. **Le bac à sable n'a rien perdu** : sans niveau, chaque geste a son bouton.
  * 3. **Les gestes s'ouvrent par palier** quand la fiche le demande : celui
- *    qu'un palier enseigne paraît quand on y arrive, pas avant — c'est ce que
- *    le tour de tutoriel des niveaux (#514) écrira.
+ *    qu'un palier enseigne paraît quand on y arrive, pas avant — c'est le tour
+ *    de tutoriel des niveaux, et le verger l'écrit (#514).
  */
 
 import { createElement } from "react";
@@ -170,11 +170,57 @@ function rendreLaSelection(gestes: GestesOuverts): string[] {
 const VERGER = niveauParId("verger");
 if (!VERGER) throw new Error("le verger n'est plus livré");
 
-describe("le verger ne montre que ce qu'il enseigne (#507)", () => {
-  const ouverts = gestesOuverts(VERGER);
+/**
+ * Un avancement de `niveau` où les `n` premiers paliers sont atteints. Les
+ * mesures ne servent pas ici — c'est l'avancement qu'on donne qui décide.
+ */
+function apresPaliers(niveau: Niveau, n: number): Avancement {
+  const paliers = niveau.paliers.map((palier, i) => ({
+    palier,
+    valeur: i < n ? 1 : 0,
+    atteint: i < n,
+    part: i < n ? 1 : 0,
+  }));
+  const courant = paliers.find((p) => !p.atteint);
+  return {
+    paliers,
+    ...(courant ? { courant } : {}),
+    issue: courant ? "en-cours" : "reussi",
+  };
+}
 
-  it("déclare planter, protéger et récolter — les trois gestes de son objectif", () => {
+describe("le verger ne montre que ce qu'il enseigne (#507), un geste à la fois (#514)", () => {
+  /** Sur le dernier palier : tout ce que le niveau ouvre est ouvert. */
+  const ouverts = gestesOuverts(VERGER, apresPaliers(VERGER, VERGER.paliers.length - 1));
+
+  it("ouvre en tout planter, protéger et récolter — les trois gestes de son objectif", () => {
     expect(ouverts && [...ouverts].sort()).toEqual(["planter", "proteger", "recolter"]);
+  });
+
+  it("les ouvre un à un : planter, protéger après le gibier, récolter aux premières pommes", () => {
+    const parPalier = VERGER.paliers.map((p, n) => [
+      p.id,
+      [...(gestesOuverts(VERGER, apresPaliers(VERGER, n)) ?? [])].sort(),
+    ]);
+    expect(parPalier).toEqual([
+      ["planter", ["planter"]],
+      ["gibier", ["planter"]],
+      ["proteger", ["planter", "proteger"]],
+      ["agrandir", ["planter", "proteger"]],
+      ["fruits", ["planter", "proteger"]],
+      ["recolter", ["planter", "proteger", "recolter"]],
+    ]);
+  });
+
+  it("dit à chaque palier ce qu'il apprend, et nomme le bouton qu'il ouvre", () => {
+    for (const palier of VERGER.paliers) {
+      expect(palier.apprend, palier.id).toBeTruthy();
+      // Une phrase courte : elle se lit dans le panneau, pendant qu'on joue.
+      expect(palier.apprend?.length ?? 0, palier.id).toBeLessThan(110);
+      for (const geste of palier.gestes ?? []) {
+        expect(palier.apprend, `${palier.id} → ${geste}`).toContain(BOUTON[geste]);
+      }
+    }
   });
 
   it("n'ouvre dans le panneau des gestes que la sélection et la plantation", () => {
@@ -214,7 +260,8 @@ describe("le bac à sable montre tout", () => {
 
   it("vaut aussi pour un niveau qui ne déclare rien", () => {
     const { gestes: _, ...sansListe } = VERGER;
-    expect(gestesOuverts(sansListe)).toBeUndefined();
+    const sansRien = { ...sansListe, paliers: VERGER.paliers.map(({ gestes: _g, ...p }) => p) };
+    expect(gestesOuverts(sansRien)).toBeUndefined();
   });
 });
 
@@ -241,22 +288,7 @@ describe("les gestes s'ouvrent par palier", () => {
     ],
   };
 
-  /** Un avancement où les `n` premiers paliers sont atteints. */
-  function apres(n: number): Avancement {
-    const paliers = TUTORIEL.paliers.map((palier, i) => ({
-      palier,
-      valeur: i < n ? 1 : 0,
-      atteint: i < n,
-      part: i < n ? 1 : 0,
-    }));
-    const courant = paliers.find((p) => !p.atteint);
-    return {
-      paliers,
-      ...(courant ? { courant } : {}),
-      issue: courant ? "en-cours" : "reussi",
-    };
-  }
-
+  const apres = (n: number) => apresPaliers(TUTORIEL, n);
   const ouverts = (n: number) => [...(gestesOuverts(TUTORIEL, apres(n)) ?? [])].sort();
 
   it("n'ouvre au départ que les gestes de la fiche", () => {

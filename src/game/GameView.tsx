@@ -2283,7 +2283,7 @@ export function GameView({ surPartie }: { surPartie?: (enPartie: boolean) => voi
               <PanneauArbres
                 snapshot={snapshot}
                 vivants={vivants}
-                recolteAuto={game.recolteAuto}
+                recolteAuto={game.autoHarvest ? game.recolteAuto : undefined}
                 reglerRecolteAuto={game.reglerRecolteAuto}
                 // Cliquer une essence sélectionne toutes ses tiges **vivantes** :
                 // c'est ce qui rend la liste agissante. Les chandelles en sont

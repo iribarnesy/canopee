@@ -30,8 +30,9 @@ fermées depuis le 23 et le 24 septembre 2026).*
 niveau est une **fiche** — un énoncé, des paliers qui lisent l'instantané et les
 cumuls de gestes rapportés, un temps imparti, la faillite, la mémoire des
 paliers acquis — et un seul code les joue toutes. `niveauxLivres.ts` en livre
-un, « Le verger » : douze pommiers en terre, à l'abri du gibier, puis deux cents
-kilos de pommes, en vingt ans. `useNiveau.ts` le suit pendant la partie,
+un, « Le verger » : douze pommiers en terre, le gibier qui vient les brouter, la
+protection, douze de plus sous manchon, les premières pommes, puis deux tonnes
+de pommes cueillies à la main, en vingt ans. `useNiveau.ts` le suit pendant la partie,
 `panneaux/PanneauNiveau.tsx` annonce les paliers avec une aide sous le palier
 courant, et `panneaux/FinDeNiveau.tsx` dit si l'objectif est atteint et ce qui
 s'est passé. Le niveau se joue de bout en bout et se gagne.
@@ -41,9 +42,22 @@ déclare (`gestes`), et un palier peut en ouvrir d'autres quand on arrive sur lu
 (`Palier.gestes`) : c'est la prise du tour de tutoriel. `gestesOuverts` en tire
 ce que montrent le panneau des gestes, le volet de sélection, la case du manchon
 et l'avis des fruits mûrs ; une fiche qui ne déclare rien, comme le bac à sable,
-les montre tous. Le verger ouvre planter, protéger et récolter. Ce qui manque :
-les trois autres niveaux et l'enchaînement de l'un à l'autre (les décisions du
+les montre tous. Ce qui manque : les trois autres niveaux (les décisions du
 propriétaire du 25 novembre sont dans `v1.md`).
+
+**Le verger est le premier niveau-tutoriel (#514).** Ses paliers ouvrent les
+gestes un à un : planter d'entrée, protéger quand le gibier a brouté un premier
+plant (le bouton sur l'arbre, puis la case du manchon à la plantation), récolter
+quand les premières pommes sont mûres. Chaque palier dit en une
+phrase ce qu'il apprend (`Palier.apprend`), le panneau du niveau l'annonce sur
+le palier courant, et le temps s'arrête quand on en franchit un en cours de
+route (`useNiveau.ts`). **La récolte automatique est coupée dans les niveaux**
+(`recolteAutoPermise`, `recolteAuto.ts`) : l'écran la coupe quand la partie
+devient un niveau, le volet de la partie retire sa case et le volet des arbres
+ses pastilles, et « Tout récolter » ne cueille que ce qu'on a semé ; le bac à
+sable la garde. Un niveau se gagne donc en cueillant : les deux tonnes du verger
+tombent à la septième cueillette, vers l'an 13, sur les trois graines mesurées
+(tableau et temps réel en tête de `niveauxLivres.ts`).
 
 **L'accueil n'est plus un banc d'essai (#189).** Les niveaux sont la porte. Les
 quatorze réglages — station, graine, scénario climatique, entourage des quatre
