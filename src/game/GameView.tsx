@@ -1,8 +1,11 @@
 /**
- * L'écran de jeu : parcelle en vue **oblique** (les arbres montrent leur hauteur,
- * triés du fond vers l'avant) sur le sol en vue de dessus, HUD, fil
- * d'événements, actions (planter, couper, récolter, chauler, embaucher).
- * Rendu Canvas 2D — l'isométrique complète viendra comme couche visuelle.
+ * L'écran de jeu : l'accueil (les niveaux, le bac à sable et ses réglages, les
+ * parties sauvegardées), puis la partie — la parcelle en fond d'écran, et
+ * par-dessus le bandeau, les gestes, les volets, les avis, le panneau du niveau
+ * et sa fin.
+ *
+ * Ce fichier ne dessine pas : la parcelle est la scène PixiJS de `src/render`,
+ * en isométrique, que `VueParcelle` monte et à qui il donne la caméra.
  */
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";

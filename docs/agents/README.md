@@ -117,10 +117,23 @@ critères de réalisme sur 162 sont acquis et 27 partiels (le score fait foi dan
 19 novembre 2026 au lot de documentation de #495, qui n'en déplace aucun), et
 les issues ouvertes portent des mécanismes de plus en plus fins.
 
-Le **jeu**, lui, est un bac à sable sans jeu : une vingtaine de gestes jouables,
-un HUD, une sauvegarde, une économie qui peut mener à la faillite — et aucune
-notion d'objectif, de niveau, de progression ni de fin. C'est là qu'est l'écart,
-et c'est ce que la V1 comble.
+Le **jeu** a un niveau jouable de bout en bout, « Le verger » (#188), un accueil
+dont les niveaux sont la porte et le bac à sable un mode à part (#189), et la
+scène PixiJS de `src/render` branchée par `VueParcelle.tsx`. Ce qui lui manque,
+c'est ce qui fait apprendre un joueur seul : les trois autres niveaux et leur
+enchaînement, le coût d'un geste avant le clic, un sol qui s'appauvrit et qui se
+voit (état des lieux du 25 novembre 2026, résumé dans [`jeu.md`](jeu.md)). C'est
+là qu'est l'écart, et c'est ce que la V1 comble.
+
+**La v0.6 est arrêtée le 25 novembre 2026, avec la priorité au jeu.** Côté jeu,
+sa liste est celle des lots sortis de l'état des lieux : **#501 à #517, plus
+#446** ; côté moteur, ce qui y était déjà (#474, #481, #483, #484). L'ordre est
+celui que le propriétaire a décidé le même jour : d'abord les défauts (D0 à D5 :
+#501 à #505 et #446), puis le groupe qui bloque un joueur seul (B0 à B11 : #506
+à #517), puis le test humain ; le confort vient après, et les encadrés (#408)
+attendent le test. **Le test humain conclut la v0.6**, avant le tag. Les autres
+décisions du 25 novembre — quatre niveaux, gestes limités, niveaux verrouillés,
+tutoriel — sont dans [`../v1.md`](../v1.md).
 
 Conséquence pratique pour les deux agents du moteur : **le moteur n'est pas le
 chemin critique.** Un mécanisme de plus ne rapproche pas d'une version finie.
