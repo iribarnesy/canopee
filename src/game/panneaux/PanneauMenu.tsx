@@ -1,9 +1,14 @@
 /**
  * Le volet **partie** : ce qui concerne la partie plutôt que la parcelle — la
  * récolte automatique, la porte de sortie, et comment on pilote la vue.
+ *
+ * Les commandes de la caméra ne sont plus écrites **que** là : une ligne
+ * d'aide les pose sur la vue à l'arrivée (#510, `AideCamera`). Elles restent
+ * ici, avec le reste, pour qui les a oubliées une fois l'aide partie.
  */
 
 import type { GameApi } from "../useGame";
+import { COMMANDES_DE_LA_CAMERA } from "./AideCamera";
 import { btn } from "./styles";
 
 export function PanneauMenu({
@@ -82,8 +87,8 @@ export function PanneauMenu({
         </button>
       </p>
       <p style={{ margin: 0, color: "var(--encre-douce)", fontSize: 13 }}>
-        Glisser pour déplacer · molette pour zoomer · ← → pour tourner d'un quart de tour · maj+clic
-        = sélection multiple · Échap referme les volets
+        {COMMANDES_DE_LA_CAMERA} d'un quart de tour · maj+clic = sélection multiple · Échap referme
+        les volets
       </p>
     </>
   );

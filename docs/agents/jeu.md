@@ -82,9 +82,10 @@ action et mener à la faillite. La sauvegarde garde huit parties dans
 **Ce qui manque pour qu'un joueur apprenne seul**, d'après le même relevé : le
 coût d'un geste avant le clic (seuls planter, le manchon et l'embauche le
 disent), un sol qui s'appauvrit et qui se voit avant l'irréversible, des plants
-qu'on voit à l'échelle de la parcelle, des commandes de caméra hors du menu. La
-liste des lots de la v0.6 est dans [`README.md`](README.md), « Où en est le
-projet ».
+qu'on voit à l'échelle de la parcelle. Les commandes de la caméra, elles, ne sont
+plus cachées dans le menu : une ligne d'aide les pose sur la vue à l'arrivée et
+s'efface au premier glissement, zoom ou quart de tour (#510). La liste des lots
+de la v0.6 est dans [`README.md`](README.md), « Où en est le projet ».
 
 ## La règle qui évite les pires bugs
 
