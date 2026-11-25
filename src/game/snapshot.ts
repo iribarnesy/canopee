@@ -43,7 +43,7 @@ import type {
 import type { TreeState } from "../engine/trees";
 import { diametreTeteCm, volumeCaviteL } from "../engine/trogne";
 import { feuillageRevenuDe } from "./pousses";
-import type { GameEvent, Snapshot, SnapshotTree } from "./protocol";
+import type { GameEvent, Snapshot, SnapshotTree, SolALArrivee } from "./protocol";
 
 /**
  * Un arbre, tel que le rendu doit pouvoir le **dessiner**. Aucun filtre ici : les
@@ -259,6 +259,28 @@ export function nappeParCellule(state: GameState): Float32Array {
 export function potassiumEnTeneurDAnalyse(state: GameState): Float32Array {
   const profil = state.station.profil;
   return Float32Array.from(state.soil.potassiumG, (g) => teneurPotassiumMgKg(profil, g));
+}
+
+/**
+ * **Le sol à l'arrivée du joueur** (#509) : ce que la carte comparera à
+ * l'instantané de la semaine, relevé une fois, à l'instant où il prend la main.
+ *
+ * Chaque grandeur se lit **comme l'instantané la lit** — la même grille, la
+ * même conversion, la même fonction du moteur —, de sorte que l'écart affiché
+ * soit celui du sol et pas celui de deux manières de compter. Le phosphore
+ * fait exception d'écriture, pas de grandeur : l'interface le lit dans les flux
+ * du dernier tick (`phosphoreMoyenGM2`), qui n'existent pas encore à l'arrivée
+ * sur une parcelle neuve ; le tick le calcule comme la moyenne de la grille
+ * qu'il laisse à l'état (`tick.ts`), et c'est cette moyenne qu'on prend ici.
+ */
+export function releverLeSol(state: GameState): SolALArrivee {
+  return {
+    ph: Float32Array.from(state.soil.ph),
+    azote: Float32Array.from(state.soil.mineralNG),
+    potassium: potassiumEnTeneurDAnalyse(state),
+    humusTHa: carbonInventory(state).humusTHa,
+    phosphoreMoyenGM2: somme(state.soil.phosphoreG) / Math.max(1, state.soil.phosphoreG.length),
+  };
 }
 
 /**

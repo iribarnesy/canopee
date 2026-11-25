@@ -18,11 +18,12 @@ import { ESPECES_V0 } from "../../engine/especes";
 import type { Orientation } from "../../render/projection";
 import type { Snapshot, StationInfo } from "../protocol";
 import {
-  CALQUES,
   type Calque,
+  calquesDeLaCarte,
   couleurDeLaCellule,
   enCss,
   enK2O,
+  etendueALArrivee,
   etendueDuCalque,
   type FicheDeCalque,
   ficheDuCalque,
@@ -36,6 +37,11 @@ import {
   LARGEUR_DU_LOSANGE,
   transformeDeLaCarte,
 } from "./carteOrientee";
+import {
+  type GrandeurDepuisLArrivee,
+  MOIS_DE_L_ARRIVEE,
+  solDepuisLArrivee,
+} from "./solDepuisLArrivee";
 import { btn } from "./styles";
 
 /**
@@ -173,12 +179,15 @@ function Legende({
   fiche,
   station,
   etendue,
+  arrivee,
   survolee,
   plage,
 }: {
   fiche: FicheDeCalque;
   station: StationInfo;
   etendue: { bas: number; haut: number; moyenne: number } | undefined;
+  /** La moyenne de la parcelle à l'arrivée du joueur, sur la même règle (#509). */
+  arrivee: number | undefined;
   survolee: number | undefined;
   plage: { bas: number; haut: number; libelle: string } | undefined;
 }) {
@@ -211,6 +220,26 @@ function Legende({
               minWidth: 2,
               border: "2px solid var(--encre)",
               borderRadius: 3,
+              pointerEvents: "none",
+            }}
+          />
+        )}
+        {/*
+          Où était la parcelle à l'arrivée (#509) : un trait en tirets, sur la
+          même règle. Le cadre de l'étendue qui s'en écarte, c'est le sol qui a
+          bougé depuis.
+        */}
+        {arrivee !== undefined && Number.isFinite(arrivee) && (
+          <div
+            title="moyenne de la parcelle à votre arrivée"
+            style={{
+              position: "absolute",
+              top: -7,
+              bottom: -7,
+              left: pourcent(arrivee),
+              width: 0,
+              marginLeft: -1,
+              borderLeft: "2px dashed var(--encre)",
               pointerEvents: "none",
             }}
           />
@@ -274,6 +303,98 @@ function Legende({
   );
 }
 
+/**
+ * **Le sol depuis votre arrivée** (#509) : chaque grandeur suivie, maintenant
+ * et à l'arrivée, et ce qui a bougé entre les deux.
+ *
+ * Un tableau et non une phrase par grandeur : c'est la colonne de l'écart qui
+ * se lit, de haut en bas, et c'est elle qu'un expert du sol viendra contester.
+ */
+function DepuisLArrivee({
+  lignes,
+  surEcart,
+}: {
+  lignes: readonly GrandeurDepuisLArrivee[];
+  /** ouvre le calque de l'écart de pH, où l'on voit **où** il a bougé */
+  surEcart: () => void;
+}) {
+  const cellule = { padding: "2px 0 2px 10px", textAlign: "right" as const };
+  return (
+    <div style={{ marginTop: 12, fontSize: 12.5 }}>
+      <div
+        style={{
+          fontFamily: "system-ui, sans-serif",
+          fontSize: 10.5,
+          fontWeight: 700,
+          letterSpacing: "0.06em",
+          textTransform: "uppercase",
+          color: "var(--encre-douce)",
+        }}
+      >
+        Depuis votre arrivée
+      </div>
+      <table
+        style={{
+          width: "100%",
+          borderCollapse: "collapse",
+          fontVariantNumeric: "tabular-nums",
+          marginTop: 2,
+        }}
+      >
+        <thead>
+          <tr style={{ color: "var(--encre-douce)", fontSize: 11 }}>
+            <th style={{ textAlign: "left", fontWeight: 400 }} />
+            <th style={{ ...cellule, fontWeight: 400 }}>maintenant</th>
+            <th style={{ ...cellule, fontWeight: 400 }}>à l'arrivée</th>
+            <th style={{ ...cellule, fontWeight: 400 }}>écart</th>
+          </tr>
+        </thead>
+        <tbody>
+          {lignes.map((l) => (
+            <tr key={l.id} style={{ borderTop: "1px solid var(--trait)" }}>
+              <td style={{ padding: "2px 0", verticalAlign: "top" }}>
+                {l.libelle}
+                {l.unite && <span style={{ color: "var(--encre-douce)" }}> · {l.unite}</span>}
+                {l.selonLaCellule && (
+                  <div className="detail" style={{ fontSize: 11, color: "var(--encre-douce)" }}>
+                    de {l.selonLaCellule.bas} à {l.selonLaCellule.haut} selon la cellule —{" "}
+                    <button
+                      type="button"
+                      onClick={surEcart}
+                      style={{
+                        border: "none",
+                        background: "none",
+                        padding: 0,
+                        font: "inherit",
+                        color: "var(--foret)",
+                        textDecoration: "underline",
+                        cursor: "pointer",
+                      }}
+                    >
+                      voir où
+                    </button>
+                  </div>
+                )}
+                {l.note && (
+                  <div style={{ fontSize: 11, color: "var(--encre-douce)" }}>{l.note}</div>
+                )}
+              </td>
+              <td style={{ ...cellule, verticalAlign: "top" }}>
+                <strong>{l.maintenant ?? "—"}</strong>
+              </td>
+              <td style={{ ...cellule, verticalAlign: "top" }}>{l.aLArrivee}</td>
+              <td style={{ ...cellule, verticalAlign: "top" }}>{l.ecart ?? "—"}</td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+      <div style={{ fontSize: 11, color: "var(--encre-douce)", marginTop: 2 }}>
+        relevé à votre arrivée sur la parcelle, en {MOIS_DE_L_ARRIVEE} de l'an 1
+      </div>
+    </div>
+  );
+}
+
 export function CarteDuSol({
   snapshot,
   station,
@@ -290,7 +411,10 @@ export function CarteDuSol({
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const [calqueId, setCalqueId] = useState<Calque>("eau");
   const [survol, setSurvol] = useState<{ x: number; y: number } | undefined>();
-  const fiche = ficheDuCalque(calqueId);
+  // L'écart de pH n'existe que si la partie a son relevé d'arrivée (#509) : une
+  // partie reprise d'un bloc plus ancien retombe sur le premier calque.
+  const calques = calquesDeLaCarte(station);
+  const fiche = calques.find((c) => c.id === calqueId) ?? ficheDuCalque("eau");
   const cellules = station.coteM * station.coteM;
 
   useEffect(() => {
@@ -311,6 +435,20 @@ export function CarteDuSol({
     () => etendueDuCalque(ficheDuCalque("potassium"), snapshot, station, cellules),
     [snapshot, station, cellules],
   );
+  /**
+   * Le même calque à l'arrivée du joueur (#509), compté de la même façon : la
+   * ligne sous la carte écrit « 6.4 · 7.0 à l'arrivée », la légende pose un
+   * trait là où la parcelle était.
+   */
+  const arrivee = useMemo(
+    () => etendueALArrivee(fiche, station, cellules),
+    [fiche, station, cellules],
+  );
+  /** Chaque grandeur suivie, maintenant et à l'arrivée (#509). */
+  const depuisLArrivee = useMemo(
+    () => solDepuisLArrivee(snapshot, station, cellules),
+    [snapshot, station, cellules],
+  );
 
   // La plage de pH de l'essence choisie vient du catalogue du moteur ; on ne
   // la reconstitue pas, on la lit (docs/agents/jeu.md).
@@ -328,6 +466,8 @@ export function CarteDuSol({
   const surEau = iSurvolee !== undefined && station.enEau?.[iSurvolee] === true;
   const valeurSurvolee =
     iSurvolee !== undefined ? fiche.lire(snapshot, station, iSurvolee) : undefined;
+  const arriveeSurvolee =
+    iSurvolee !== undefined ? fiche.aLArrivee?.(station, iSurvolee) : undefined;
 
   function surPointeur(e: React.PointerEvent<HTMLDivElement>) {
     const canvas = canvasRef.current;
@@ -373,7 +513,7 @@ export function CarteDuSol({
       </div>
 
       <p style={{ margin: "6px 0 0" }}>
-        {CALQUES.map((c) => (
+        {calques.map((c) => (
           <button
             key={c.id}
             type="button"
@@ -395,6 +535,7 @@ export function CarteDuSol({
         fiche={fiche}
         station={station}
         etendue={etendue}
+        arrivee={arrivee?.moyenne}
         survolee={valeurSurvolee}
         plage={plage}
       />
@@ -434,6 +575,9 @@ export function CarteDuSol({
                     · {fiche.auBulletin.format(valeurSurvolee)} {fiche.auBulletin.unite} au bulletin
                   </span>
                 )}
+                {arriveeSurvolee !== undefined && (
+                  <span> · {fiche.format(arriveeSurvolee)} à l'arrivée</span>
+                )}
               </>
             )}
             <span style={{ color: "var(--encre-douce)" }}>
@@ -448,7 +592,13 @@ export function CarteDuSol({
               <strong>{fiche.format(etendue.haut)}</strong> {fiche.unite} · moyenne{" "}
               {fiche.format(etendue.moyenne)}
               {fiche.auBulletin &&
-                ` (${fiche.auBulletin.format(etendue.moyenne)} ${fiche.auBulletin.unite} au bulletin)`}{" "}
+                ` (${fiche.auBulletin.format(etendue.moyenne)} ${fiche.auBulletin.unite} au bulletin)`}
+              {arrivee && (
+                <>
+                  {" "}
+                  · <strong>{fiche.format(arrivee.moyenne)}</strong> à l'arrivée
+                </>
+              )}{" "}
               — survolez la carte pour lire une cellule
             </span>
           )
@@ -462,6 +612,10 @@ export function CarteDuSol({
           </>
         )}
       </p>
+
+      {depuisLArrivee && (
+        <DepuisLArrivee lignes={depuisLArrivee} surEcart={() => setCalqueId("ecartPh")} />
+      )}
 
       <dl className="stats" style={{ marginTop: 12 }}>
         <dt>Sol</dt>

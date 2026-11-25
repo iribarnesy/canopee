@@ -107,6 +107,7 @@ import type {
   GameEvent,
   PolitiqueHoraire,
   SaveGame,
+  SolALArrivee,
   StationInfo,
   ToWorker,
 } from "./protocol";
@@ -119,7 +120,7 @@ import {
 } from "./recolteAuto";
 import { ecrireReprise, empreinteDeLaPartie, lireReprise } from "./reprise";
 import { estUneTempeteAVoir } from "./scenes";
-import { construireSnapshot, transferablesDuSnapshot } from "./snapshot";
+import { construireSnapshot, releverLeSol, transferablesDuSnapshot } from "./snapshot";
 import {
   accumulerLesSuivis,
   ajouterAuJournal,
@@ -773,6 +774,9 @@ let lastOiseauxDePassage: readonly FrequentationDeGuilde[] | undefined;
 // La soif de chaque arbre la dernière semaine (#372), par identifiant : une
 // coupe en pause retire l'arbre de l'état, et l'instantané ne le cherche plus.
 let lastSatisfactionEau: ReadonlyMap<number, number> | undefined;
+// Le sol tel que le joueur l'a trouvé (#509) : relevé à l'arrivée, il part avec
+// la station et dans le bloc de reprise, et ne bouge plus de la partie.
+let solALArrivee: SolALArrivee | undefined;
 let droughtYearFlagged = -1;
 // Terre perdue depuis le début de l'année civile de jeu, kg/m².
 let erosionAnnee = 0;
@@ -1199,15 +1203,22 @@ function faireVieillir(
  * partie neuve comme le rejeu d'une sauvegarde passent par ici : une partie
  * vieillie reprise sans ce point zéro voyait son bilan carbone sauter au
  * chargement (#338).
+ *
+ * **Le sol d'arrivée se relève ici, pour la même raison** (#509) : c'est le
+ * repère de la carte du sol, « pH 6,4 — 7,0 à l'arrivée ». Le rejeu repasse par
+ * ici et le retrouve au bit près ; la reprise depuis le bloc le relit.
  */
 function arriverSurLaParcelle(neuf: GameState): GameState {
   if (maturationAns <= 0) {
     remettreLesGrandeurs(SANS_GRANDEURS);
+    solALArrivee = releverLeSol(neuf);
     return neuf;
   }
   const { etat, grandeurs } = faireVieillir(neuf, maturationAns);
   remettreLesGrandeurs(grandeurs);
-  return figerCarboneDeReference(etat);
+  const arrivee = figerCarboneDeReference(etat);
+  solALArrivee = releverLeSol(arrivee);
+  return arrivee;
 }
 
 const post = (msg: FromWorker, transfer: Transferable[] = []) =>
@@ -2129,6 +2140,10 @@ function stationInfo(): StationInfo {
     meteoLabel: serie
       ? `${serie.stationMeteo} ${serie.periode[0]}-${serie.periode[1]} (Météo-France)`
       : "année synthétique répétée",
+    // Le sol trouvé à l'arrivée (#509) : il ne bouge plus de la partie, il part
+    // donc une fois avec la station. Absent d'une partie reprise d'un bloc
+    // d'avant lui.
+    ...(solALArrivee ? { solALArrivee } : {}),
   };
 }
 
@@ -2254,6 +2269,7 @@ function blocDeReprise(save: SaveGame): Uint8Array | undefined {
         pollinisateurs: lastPollinisateurs,
         oiseauxDePassage: lastOiseauxDePassage,
         satisfactionEau: lastSatisfactionEau,
+        solALArrivee,
       },
       empreinteDeLaPartie(save, state.week),
     );
@@ -2287,6 +2303,9 @@ function repartirDuBloc(octets: Uint8Array, save: SaveGame): GameState | undefin
   lastPollinisateurs = annexes.pollinisateurs;
   lastOiseauxDePassage = annexes.oiseauxDePassage;
   lastSatisfactionEau = annexes.satisfactionEau;
+  // Un bloc d'avant #509 n'a pas de sol d'arrivée : la carte montrera l'état
+  // seul, et la partie reprend quand même sans rejouer.
+  solALArrivee = annexes.solALArrivee;
   return lu.etat;
 }
 
@@ -2412,6 +2431,9 @@ self.addEventListener("message", (event: MessageEvent<ToWorker>) => {
       semaineDuBloc = undefined;
       relecture = undefined;
       semaineDuDernierInstantane = 0;
+      // Le sol d'arrivée de la partie d'avant ne vaut rien pour celle-ci : le
+      // bloc le rend, le rejeu le relève en repassant par l'arrivée (#509).
+      solALArrivee = undefined;
       const depart =
         (msg.etat ? repartirDuBloc(msg.etat, msg.save) : undefined) ?? rejouerLeJournal(msg.save);
       // Rien à verser au compte : ni le bloc ni le rejeu ne passent par les

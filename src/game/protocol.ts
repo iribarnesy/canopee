@@ -772,6 +772,40 @@ export interface StationInfo {
    * sauvegarde ne les a jamais vus passer.
    */
   bordures: DecorBordures;
+  /**
+   * **Le sol tel que le joueur l'a trouvé** (#509), relevé à l'instant où il
+   * prend la main, vieillissement compris (`arriverSurLaParcelle`, worker.ts).
+   *
+   * La carte du sol montrait l'état et jamais l'écart : le moteur fait baisser
+   * le pH de 0,4 à 0,8 en cinquante ans sous peuplement (#495), et un joueur ne
+   * pouvait le voir qu'en se souvenant du chiffre de départ. `phInitial` et
+   * `potassiumEchangeableMgKg` ne servent pas de repère : ils précèdent le
+   * vieillissement, et une friche de vingt ans n'est plus à son pH de station.
+   *
+   * Il part une fois, avec la station, parce qu'il ne change plus. Absent d'une
+   * partie reprise depuis un bloc écrit avant lui : la carte montre alors
+   * l'état seul, comme avant.
+   */
+  solALArrivee?: SolALArrivee;
+}
+
+/**
+ * Le sol à l'arrivée du joueur (#509) : les grandeurs que l'instantané publie,
+ * **dans les mêmes unités**, relevées une fois par `releverLeSol` (snapshot.ts).
+ * La carte compare donc deux lectures de la même règle, jamais une lecture et
+ * une estimation.
+ */
+export interface SolALArrivee {
+  /** pH par cellule, comme `Snapshot.soilPh` */
+  ph: Float32Array;
+  /** azote minéral par cellule, g/m², comme `Snapshot.soilN` */
+  azote: Float32Array;
+  /** potassium échangeable par cellule, mg K/kg, comme `Snapshot.soilPotassiumMgKg` */
+  potassium: Float32Array;
+  /** carbone de l'humus, t C/ha, comme `Snapshot.inventory.humusTHa` */
+  humusTHa: number;
+  /** phosphore assimilable, moyenne de la parcelle, g/m², comme `TickFluxes.phosphoreMoyenGM2` */
+  phosphoreMoyenGM2: number;
 }
 
 export type ToWorker =
