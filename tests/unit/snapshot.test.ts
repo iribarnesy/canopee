@@ -796,7 +796,9 @@ describe("le potassium de chaque cellule, comme une analyse de terre (#435, #452
     expect(snapshot.potassiumReserveMoyenGM2).toBeCloseTo(moyenne, 9);
     // Une réserve, et non l'échangeable une seconde fois : elle le dépasse de
     // loin (dix fois au départ, `RESERVE_K_SUR_ECHANGEABLE`).
-    expect(snapshot.potassiumReserveMoyenGM2).toBeGreaterThan(e.fluxes.potassiumMoyenGM2 * 2);
+    const echangeable = e.fluxes?.potassiumMoyenGM2;
+    expect(echangeable).toBeDefined();
+    expect(snapshot.potassiumReserveMoyenGM2).toBeGreaterThan((echangeable ?? 0) * 2);
   });
 
   it("la conversion inverse est celle du moteur, sur chaque station (#452)", () => {

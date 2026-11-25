@@ -67,7 +67,9 @@ tick), `nappeCm` (champ figé), `enEau`, `eau`, `coteM`, `ruMm`, `phInitial`,
 `nappeEquilibreCm`, `ventExposition`, `meteoLabel`.
 
 **À chaque instantané** (`Snapshot`) : la semaine, la météo, la neige, l'année
-civile, le CO₂, l'économie, l'inventaire carbone, la biodiversité, les `fluxes` du tick, la
+civile, le CO₂, l'économie, l'inventaire carbone, la biodiversité, les `fluxes` du tick
+(absents au premier instantané d'une parcelle neuve, qu'aucune semaine n'a encore
+mesurée ; une parcelle vieillie arrive avec ceux de sa dernière semaine, #505), la
 pression de gibier, le stock de BRF, le paysage, le contexte phénologique
 (`pheno`), et la réserve de potassium non échangeable en moyenne de parcelle
 (`potassiumReserveMoyenGM2`, g/m², #435).
