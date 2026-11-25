@@ -316,6 +316,19 @@ export interface SnapshotTree {
    * cette semaine est la dernière simulée est un arbre qui vient de roussir.
    */
   gelPousseSemaine?: number;
+  /**
+   * Semaine où la soif lui a fait tomber ses feuilles ; absent = jamais (#391,
+   * #446). Un feuillu installé lâche son feuillage encore vert plutôt que de
+   * laisser casser son bois, et le refait sur la même courbe qu'après un gel
+   * des pousses (gelPousses.ts, `refeuillaison`).
+   *
+   * Elle ne se déduit pas de la soif de la semaine (`satisfactionEau`) : il y
+   * faut aussi l'embolie déjà acquise, un feuillage entièrement refait, la
+   * saison, l'âge de l'arbre et son essence. C'est une règle du moteur (tick.ts),
+   * et le jeu la lit au lieu de la refaire. Sans ce champ, un hêtre défeuillé
+   * en août se dessinait en plein feuillage.
+   */
+  defeuillaisonSemaine?: number;
 }
 
 /** Événement de jeu pour le fil d'actualité (morts, gels, récoltes, ventes…). */

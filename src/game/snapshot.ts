@@ -42,7 +42,7 @@ import type {
 } from "../engine/tick";
 import type { TreeState } from "../engine/trees";
 import { diametreTeteCm, volumeCaviteL } from "../engine/trogne";
-import { feuillageRevenu } from "./pousses";
+import { feuillageRevenuDe } from "./pousses";
 import type { GameEvent, Snapshot, SnapshotTree } from "./protocol";
 
 /**
@@ -180,6 +180,9 @@ export function arbreDuSnapshot(
     frotteSemaine: t.frotteSemaine,
     brouteSemaine: t.brouteSemaine,
     gelPousseSemaine: t.gelPousseSemaine,
+    // La soif qui l'a défeuillé (#446) : la date seule, que le dessin et la
+    // fiche composent avec la courbe du moteur comme celle du gel.
+    defeuillaisonSemaine: t.defeuillaisonSemaine,
     // Une chandelle n'a plus soif : la valeur que le tick a mesurée la semaine
     // où l'arbre est mort ne dit plus rien de lui.
     ...(t.alive && satisfactionEau !== undefined ? { satisfactionEau } : {}),
@@ -498,8 +501,9 @@ export function construireSnapshot(e: EntreesSnapshot): Snapshot {
     // couvrir, et le givre de la semaine qui s'ouvre se juge sous les houppiers
     // qu'on voit.
     //
-    // Avec le feuillage **revenu** après un gel des pousses (#425), comme le tick
-    // le compte : un arbre aux pousses grillées ne couvre plus ce qu'il a perdu.
+    // Avec le feuillage **revenu** après un gel des pousses (#425) ou une
+    // défeuillaison de soif (#446), comme le tick le compte : un arbre aux
+    // pousses grillées ou aux feuilles tombées ne couvre plus ce qu'il a perdu.
     soilCouvertAuDessus: Float32Array.from(
       couvertAuDessusDuSol(
         state.trees,
@@ -507,7 +511,7 @@ export function construireSnapshot(e: EntreesSnapshot): Snapshot {
         dims.heightM,
         (t) =>
           partFoliaireOmbrageanteDans(getEspece(t.especeId), pheno) *
-          feuillageRevenu(t.gelPousseSemaine, state.week),
+          feuillageRevenuDe(t, state.week),
       ),
     ),
     // Au premier instantané, aucun tick n'a tourné : l'habitat n'est pas de
