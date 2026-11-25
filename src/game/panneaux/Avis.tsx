@@ -6,6 +6,7 @@
  */
 
 import { type CSSProperties, useMemo, useState } from "react";
+import { type GestesOuverts, gesteOuvert } from "../niveaux";
 import type { SnapshotTree } from "../protocol";
 import { refusDit } from "../refus";
 import type { AvisDuGel } from "../useAvisDuGel";
@@ -27,9 +28,15 @@ export function Avis({
   rejouer,
   voirLesMorts,
   gel,
+  gestes,
 }: {
   game: GameApi;
   vivants: readonly SnapshotTree[];
+  /**
+   * Les gestes que le niveau montre (#507) ; absent = tous. L'avis des fruits
+   * mûrs porte le bouton « Tout récolter » : sans le geste, il ne paraît pas.
+   */
+  gestes?: GestesOuverts;
   /**
    * Rejouer l'ellipse de la semaine, s'il y a quelque chose à revoir (#157).
    *
@@ -258,7 +265,7 @@ export function Avis({
           </button>
         </div>
       )}
-      {fruitsPrets.length > 0 && !game.autoHarvest && (
+      {fruitsPrets.length > 0 && !game.autoHarvest && gesteOuvert(gestes, "recolter") && (
         <div style={panel}>
           🍎 <strong>{fruitsPrets.reduce((s, t) => s + t.fruitsKg, 0).toFixed(0)} kg</strong> de
           fruits mûrs sur {fruitsPrets.length} arbres.

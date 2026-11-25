@@ -132,6 +132,13 @@ const VERGER: Niveau = {
   // partie jouée dans le navigateur les a franchis à l'an 9 : dix ans de marge
   // pour qui s'y prend mal.
   semainesImparties: 20 * 52,
+  // **Les trois gestes de l'objectif, et rien d'autre** (#507) : planter,
+  // protéger — le manchon à la plantation, ou « Protéger » sur l'arbre
+  // sélectionné, comme le dit l'aide du deuxième palier —, récolter. Le
+  // premier niveau ouvrait treize boutons, labourer et moissonner compris, et
+  // proposait de lever l'écorce d'un pommier. La liste est plate : les ouvrir
+  // un à un, palier par palier, est le tour de tutoriel du verger (#514).
+  gestes: ["planter", "proteger", "recolter"],
   paliers: [
     {
       id: "planter",

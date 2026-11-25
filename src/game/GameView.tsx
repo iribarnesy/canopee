@@ -71,7 +71,7 @@ import { PanneauNiveau } from "./panneaux/PanneauNiveau";
 import { PanneauScores } from "./panneaux/PanneauScores";
 import { PanneauSelection } from "./panneaux/PanneauSelection";
 import { PanneauSuivis } from "./panneaux/PanneauSuivis";
-import { type Mode, useReglagesDeGeste } from "./panneaux/reglages";
+import { type Mode, useGarderLesGestesOuverts, useReglagesDeGeste } from "./panneaux/reglages";
 import { btn, SCENE, VOLET } from "./panneaux/styles";
 import { Angle, BoutonDeVolet, useVolets, Volet } from "./panneaux/Volet";
 import { arbresAPoser, donneesSolDe } from "./parcelle";
@@ -1323,6 +1323,8 @@ export function GameView({ surPartie }: { surPartie?: (enPartie: boolean) => voi
   const crue = useCrue(snapshot, station);
   const faune = useFaune(snapshot, station, crue.lameMm);
   const enNiveau = useNiveau(game);
+  // Un niveau ne montre que les gestes qu'il enseigne (#507).
+  useGarderLesGestesOuverts(geste, enNiveau.gestes);
 
   /**
    * Lancer un niveau : ses réglages sont ceux de sa fiche, et rien n'est
@@ -2115,6 +2117,7 @@ export function GameView({ surPartie }: { surPartie?: (enPartie: boolean) => voi
             rejouer={ellipse.rejouable ? ellipse.rejouer : undefined}
             voirLesMorts={voirLesMorts}
             gel={avisDuGel}
+            gestes={enNiveau.gestes}
           />
         </div>
       </div>
@@ -2182,6 +2185,7 @@ export function GameView({ surPartie }: { surPartie?: (enPartie: boolean) => voi
                 tous={snapshot.trees}
                 selectedTrees={selectedTrees}
                 setSelectedIds={setSelectedIds}
+                gestes={enNiveau.gestes}
                 suivis={suivis.suivis}
                 basculerSuivi={suivis.basculer}
                 histoire={
@@ -2221,6 +2225,7 @@ export function GameView({ surPartie }: { surPartie?: (enPartie: boolean) => voi
                 game={game}
                 snapshot={snapshot}
                 geste={geste}
+                gestes={enNiveau.gestes}
                 surChoisirEssence={() => volets.basculer("bg", "essences")}
                 // Le centre de la cellule, comme le clic : `survol` donne des
                 // indices entiers, et viser le coin décalerait le recensement
@@ -2246,6 +2251,7 @@ export function GameView({ surPartie }: { surPartie?: (enPartie: boolean) => voi
                 setAvecManchon={geste.setAvecManchon}
                 seulementTenables={geste.seulementTenables}
                 setSeulementTenables={geste.setSeulementTenables}
+                gestes={enNiveau.gestes}
               />
             </Volet>
           ) : volets.estOuvert("bg", "sol") ? (

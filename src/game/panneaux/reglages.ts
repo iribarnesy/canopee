@@ -6,9 +6,10 @@
  * savoir quel geste appliquer et sur quel rayon.
  */
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { CULTURE_PAR_DEFAUT, type GesteDuChamp } from "../cultures";
 import { bornerLaDose, ENGRAIS, type FormeEngrais } from "../fertilisation";
+import { type GestesOuverts, gesteOuvert } from "../niveaux";
 
 export type Mode =
   | "selection"
@@ -163,4 +164,21 @@ export function useReglagesDeGeste(): ReglagesDeGeste {
     seulementTenables,
     setSeulementTenables,
   };
+}
+
+/**
+ * **Un geste que le niveau ne montre pas ne reste pas armé** (#507).
+ *
+ * Les réglages survivent d'une partie à l'autre : qui a chaulé dans le bac à
+ * sable puis lance le verger y arriverait le chaulage armé, sans bouton pour le
+ * voir ni le désarmer, et son premier clic sur la parcelle chaulerait. On revient
+ * donc à la sélection. Le manchon suit la même règle : c'est le geste
+ * « protéger », posé en même temps que le plant.
+ */
+export function useGarderLesGestesOuverts(geste: ReglagesDeGeste, ouverts: GestesOuverts): void {
+  const { mode, setMode, avecManchon, setAvecManchon } = geste;
+  useEffect(() => {
+    if (mode !== "selection" && !gesteOuvert(ouverts, mode)) setMode("selection");
+    if (avecManchon && !gesteOuvert(ouverts, "proteger")) setAvecManchon(false);
+  }, [mode, setMode, avecManchon, setAvecManchon, ouverts]);
 }

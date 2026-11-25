@@ -15,6 +15,7 @@
 import { ESPECES_V0 } from "../../engine/especes";
 import { especeTenable } from "../../engine/paysage";
 import { SPECIES_COLORS } from "../../ui/couleurs";
+import { type GestesOuverts, gesteOuvert } from "../niveaux";
 import type { Snapshot, StationInfo } from "../protocol";
 import { portraitDEspece } from "./portraits";
 
@@ -43,6 +44,7 @@ export function PanneauEssences({
   setAvecManchon,
   seulementTenables,
   setSeulementTenables,
+  gestes,
 }: {
   snapshot: Snapshot;
   station: StationInfo;
@@ -52,6 +54,12 @@ export function PanneauEssences({
   setAvecManchon: (v: boolean) => void;
   seulementTenables: boolean;
   setSeulementTenables: (v: boolean) => void;
+  /**
+   * Les gestes que le niveau montre (#507) ; absent = tous. Le manchon est le
+   * geste « protéger » posé avec le plant : un niveau qui ne l'enseigne pas
+   * encore ne le propose pas ici.
+   */
+  gestes?: GestesOuverts;
 }) {
   const ph = phMoyen(snapshot, station.phInitial);
   const liste = ESPECES_V0.map((e) => ({ e, tient: especeTenable(e, ph, station.ruMm) }));
@@ -134,18 +142,24 @@ export function PanneauEssences({
       </div>
 
       <div style={{ color: "var(--encre-douce)", fontSize: 13, marginTop: 10 }}>
-        <label style={{ cursor: "pointer" }}>
-          <input
-            type="checkbox"
-            checked={avecManchon}
-            onChange={(ev) => setAvecManchon(ev.target.checked)}
-          />{" "}
-          🛡️ poser un manchon en même temps (+8 €, +30 min par plant)
-        </label>
-        <br />
-        Clic sur la parcelle = 1 plant (1 h, espacement ≥ 1 m). Sans manchon, un plant appétent se
-        fait brouter tant qu'il n'a pas sa flèche hors d'atteinte — vous pourrez toujours en poser
-        un après coup en sélectionnant l'arbre.
+        {gesteOuvert(gestes, "proteger") ? (
+          <>
+            <label style={{ cursor: "pointer" }}>
+              <input
+                type="checkbox"
+                checked={avecManchon}
+                onChange={(ev) => setAvecManchon(ev.target.checked)}
+              />{" "}
+              🛡️ poser un manchon en même temps (+8 €, +30 min par plant)
+            </label>
+            <br />
+            Clic sur la parcelle = 1 plant (1 h, espacement ≥ 1 m). Sans manchon, un plant appétent
+            se fait brouter tant qu'il n'a pas sa flèche hors d'atteinte — vous pourrez toujours en
+            poser un après coup en sélectionnant l'arbre.
+          </>
+        ) : (
+          <>Clic sur la parcelle = 1 plant (1 h, espacement ≥ 1 m).</>
+        )}
       </div>
     </>
   );
