@@ -67,7 +67,52 @@ l'autre âge pour vérifier. Et caler sur la moyenne de plusieurs graines, avec
 son erreur type : sur le banc des hauteurs, la moyenne de deux graines porte
 6 % d'incertitude (#481).
 
-## Ce que le dernier lot a appris (les bornes de pH sans relevé, #496)
+## Ce que le dernier lot a appris (le renversement de ForestGALES, #483)
+
+Le lot moteur de la v0.6, sur le point 1 de la décision du propriétaire du 25 novembre 2026 (#483), PR #521. **La cible de l'instruction de l'ancrage est codée**, et rien d'autre :
+- **le renversement suit la méthode TMC de `fgr`** (`tempete.ts`). La vitesse en feuille est `u = √(C_reg · SW / T_C)` :
+  - le C_reg du pin sylvestre de `fgr` pour toutes les essences : sol A 140,1 / 162,9 N·m/kg (137 pins tirés, Nicoll et al. 2006), sol B 124,2 / 144,4 ;
+  - la classe d'enracinement lue sur l'arbre (sous ou au-dessus de 80 cm) ;
+  - la densité verte de 850 kg/m³ et le volume du moteur (facteur de forme 0,5 *(à confirmer)*) ;
+  - `T_C = 111,604 · dbh² · h`.
+  - La constante 46, la rampe d'élancement et `facteurAncrage` sortent du calcul ;
+- **un trait de station**, `classeSolForestGales` : A sur sept stations, B au fond de vallée. Il est optionnel, avec A par défaut, comme `fgr` ;
+- **la prise au vent de l'arbre nu** vaut 0,20 *(à confirmer)* (Koizumi et al. 2010), ancrée sur l'arbre en feuille ; **la perte d'un sol saturé** vaut 0,225 (Défossez et al. 2021) ;
+- **les trois termes du 18 novembre**, avec lesquels la cible a toujours été mesurée :
+  - la chaîne de l'OMM W-a, avec la rugosité de Davenport et Wieringa portée par chaque paysage (`Paysage.rugositeM`) ;
+  - l'exposant 1/2 du volis ;
+  - la part foliaire active.
+
+  La décision du 25 novembre ne les nomme pas : c'est une des confirmations demandées ;
+- **le diagnostic hors domaine** (`domaineDuRenversement`) : le poids de tige vert est comparé au `msw` du pin de `fgr` (469 et 576 kg en sol A, 0 en sol B), puis à 2068 kg. Le labo le lit (`horsDomaineDuVent`, et une ligne dans le panneau de la sonde). Il est sans effet sur la simulation, et aucun message de jeu ne le porte ;
+- **le banc P sans tempête** (décision du 19 novembre) : `hauteurs-pin.test.ts` coupe la rafale par le facteur de rafale de la météo.
+
+**Aucun format de sauvegarde ne change** : la station n'est pas sérialisée (`lireEtat` la reçoit), et le jeu étale celle de `STATIONS_V0`. `src/game` n'est pas touché. Un essai est ajouté, `forestgales.test.ts` (fonctions pures). `facteurAncrage` et `facteurElancement` restent exportés, hors de tout calcul, parce que deux essais les importent.
+
+MESURES
+
+### Prédictions
+
+PREDICTIONS
+
+### Une forme sourcée peut retirer une dépendance qu'un essai affirmait
+
+La forme de ForestGALES fait tomber l'élancement du renversement : le poids de tige et `T_C` vont tous deux comme `d² · h`. Deux essais de `volis.test.ts` affirmaient des propriétés de l'ancienne rampe. Le premier : un pin de 20 m à H/D 50 casse avant de verser sur sol ferme. Le second : une perche s'ébranche plus qu'un arbre trapu sous le seul renversement. Aucun ne lit un nombre de la cible, et aucune des trois instructions ne les avait cités. Il a suffi de dix minutes de calcul à la main pour les trouver avant la suite, mais la décision ne les couvre pas, et la PR attend. **Une instruction qui change une forme cherche les essais qui affirment une dépendance (plus élancé, donc plus fragile ; plus lourd, donc plus tenu), pas seulement ceux qui lisent un nombre, et met leur sort dans les options.**
+
+### Un raccourci de sonde devient une règle écrite
+
+La sonde reconnaissait le paysage d'une station à la valeur de son exposition (`ventExposition` vaut 0,6875 sur le bocage), et traitait toute autre valeur comme un facteur de site sur le terrain de la station. C'est commode dans une sonde, et c'est une règle dans un moteur : les essais posent l'exposition à la main (1 pour exposé, 0,15 pour abrité), et ils doivent garder leur sens. Le code écrit donc la rugosité sur le paysage, la retrouve par le côté qui fait l'exposition (`rugositeDuVent`), et dit en clair ce que devient une exposition posée à la main. **Avant de coder une sonde, relever chaque raccourci qu'elle prend et l'écrire comme une règle, avec le cas qu'elle couvre.**
+
+### Points ouverts
+
+- **Trois essais cassent**, décrits sur #483 avec une réécriture proposée : `tempete.test.ts` (« un sol gorgé », seuil posé sur 0,45) et deux essais de `volis.test.ts` (plus haut).
+- **Le sort de `facteurAncrage` et `facteurElancement`**, et de leurs essais.
+- **Le banc I est ouvert** : 5,3 % à 36 m/s sur la météo réelle de 1987, sous I1 ; I2 casse. Le sol du moteur ne se gorge pas : #518 (v0.7).
+- **Les valeurs à confirmer** : la prise au vent de 0,20, le facteur de forme de 0,5, la rugosité du massif forestier (1,0 m, au-delà des 0,5 m de l'OMM).
+- **Le banc V n'est pas épinglé en essai** : il pousse 54 états, ce qui n'est pas bon marché.
+- **Ce que `fgr` a et le moteur non** : le facteur de lisière, la flèche (DLF), la concurrence dans `T_C`, le module de rupture du bois pour le volis (la constante de 27,3 m/s reste *(à calibrer)*).
+
+## Ce qu'un lot précédent a appris (les bornes de pH sans relevé, #496, #499)
 
 Le lot v0.6 « bornes de pH », sur les points 1, 3 et 4 de la décision du propriétaire du 19 novembre 2026 (#496), PR #499. **Trois fiches changent dans `especes.ts`, et rien d'autre** :
 - **le prunellier**, borne basse 5,5 → **4,3, relevé**. Wittig 1976 a mesuré trois haies de Westphalie à pH eau 5,0, 4,4 et 4,3 (moyennes de dix échantillons), et le prunellier est présent dans les trois, relu sur l'image des tableaux. La borne haute 8,5 reste *(à confirmer)* ;

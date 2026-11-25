@@ -114,7 +114,8 @@ que si le jeu l'affiche porte son label moteur **et** `rendu`.
 Le **moteur** est largement en avance sur ce que le jeu sait montrer : 134
 critères de réalisme sur 162 sont acquis et 27 partiels (le score fait foi dans
 `docs/realisme.md`, recompté par `npm run check:realisme` ; revérifié le
-19 novembre 2026 au lot de documentation de #495, qui n'en déplace aucun), et
+25 novembre 2026 au lot du renversement de ForestGALES, #483, qui n'en déplace
+aucun), et
 les issues ouvertes portent des mécanismes de plus en plus fins.
 
 Le **jeu**, lui, est un bac à sable sans jeu : une vingtaine de gestes jouables,
@@ -164,7 +165,7 @@ Trois conséquences, et elles ne coûtent rien une fois sues :
 Le greffon Vite refuse de construire sous cent critères ou quinze étapes : un
 changement de convention casse le build au lieu de vider la page en silence.
 
-## Cinq pièges de procédure, vérifiés à nos dépens
+## Six pièges de procédure, vérifiés à nos dépens
 
 **Le mot-clé de fermeture doit être en anglais.** GitHub ne reconnaît que
 `close` / `closes` / `closed`, `fix` / `fixes` / `fixed` et `resolve` /
@@ -218,3 +219,16 @@ riche s'en sépare vers la cinquantième. Aucun essai n'a cassé, mais ceux de l
 friche ont changé de trajectoire sans que rien l'ait annoncé. Chercher « là où le
 facteur change », c'est aussi chercher jusqu'où le sol descend pendant la course,
 et calculer le facteur, pas seulement l'état.
+
+**Couper un mécanisme pour un banc, c'est chercher le robinet qui ne coupe que
+lui.** Le 19 novembre 2026, le propriétaire a décidé de couper les tempêtes du
+banc des hauteurs du pin (#483). Le seul commutateur en vue était
+`ventExposition = 0`, qui arrête aussi le dessèchement par le vent : la hauteur
+mesurée aurait été celle d'un site abrité, pas celle de la table. La sonde de
+l'instruction coupait la rafale à la source, par une variable à elle. Le moteur
+avait déjà le même robinet : le facteur de rafale de la météo
+(`facteurRafale`, posé pour F19), qui ne sert qu'à la rafale. Mis à zéro dans
+l'essai, il rend les sept graines de la sonde **au bit près**, sans une ligne
+de moteur. Avant d'ajouter un commutateur ou de détourner un champ, chercher le
+paramètre qui ne touche que le mécanisme visé, et vérifier au bit près qu'il
+reproduit ce qu'on veut reproduire.
