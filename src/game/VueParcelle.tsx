@@ -18,6 +18,10 @@
  *    lui-même. Le glissement, le zoom au curseur et le quart de tour sont
  *    tous des fonctions **pures**, testées ; ce fichier ne fait que les appeler.
  *
+ * Il dit aussi comment s'en servir, tant qu'on ne s'en est pas servi : la
+ * ligne d'aide de la caméra (#510) s'efface au premier geste, et c'est ici
+ * qu'on sait qu'il a eu lieu.
+ *
  * **Ce qu'il ne fait pas** : dessiner. Aucun canvas, aucun tracé, aucune
  * couleur. La frontière est la même que partout ailleurs dans le dépôt — la
  * géométrie est pure et testée, le DOM est mince et ne contient pas de règles.
@@ -62,6 +66,7 @@ import {
   type TempsQuIlFait,
 } from "../render/temps/pluie";
 import type { CelluleVoilee } from "../render/temps/voile";
+import { AideCamera } from "./panneaux/AideCamera";
 
 export interface VueParcelleProps {
   sol: DonneesSol;
@@ -426,6 +431,12 @@ export function VueParcelle(props: VueParcelleProps): React.ReactElement {
   const cible = useRef<{ x: number; y: number } | undefined>(undefined);
   /** La dernière cellule annoncée au jeu, pour ne l'annoncer qu'aux changements. */
   const celluleAnnoncee = useRef("");
+  /**
+   * Le joueur a-t-il déjà glissé, zoomé ou tourné la vue (#510) ? Tant que non,
+   * l'aide de la caméra reste posée. Un état de la vue et non du jeu : il
+   * repart à chaque arrivée sur une parcelle, comme la caméra elle-même.
+   */
+  const [pilotee, setPilotee] = useState(false);
 
   const altitudeMax = useRef(0);
   altitudeMax.current = props.sol.altitudesM.reduce((m, z) => Math.max(m, z), 0);
@@ -642,6 +653,7 @@ export function VueParcelle(props: VueParcelleProps): React.ReactElement {
     const curseur = { sx: e.clientX - r.left, sy: e.clientY - r.top };
     const facteur = e.deltaY < 0 ? PAS_DE_ZOOM : 1 / PAS_DE_ZOOM;
     setVue((v) => (v ? zoomer(v, facteur, curseur, altitudeMax.current) : v));
+    setPilotee(true);
   }, []);
 
   const surAppui = useCallback((e: React.PointerEvent<HTMLDivElement>) => {
@@ -685,6 +697,9 @@ export function VueParcelle(props: VueParcelleProps): React.ReactElement {
     glisse.current = { x: e.clientX, y: e.clientY };
     parcouru.current += Math.abs(dx) + Math.abs(dy);
     setVue((v) => (v ? deplacer(v, dx, dy) : v));
+    // Un clic bouge toujours d'un pixel ou deux : seul un vrai glissement
+    // chasse l'aide, pas le clic qui plante un arbre.
+    if (parcouru.current > SEUIL_DE_CLIC_PX) setPilotee(true);
   }, []);
 
   const surRelachement = useCallback((e: React.PointerEvent<HTMLDivElement>) => {
@@ -710,29 +725,36 @@ export function VueParcelle(props: VueParcelleProps): React.ReactElement {
   const surTouche = useCallback((e: React.KeyboardEvent<HTMLDivElement>) => {
     // Les deux quarts de tour, au clavier : c'est le geste le plus utile de la
     // vue isométrique, et le plus pénible à découvrir sans raccourci.
-    if (e.key === "a" || e.key === "ArrowLeft") setVue((v) => (v ? tournerVue(v, -1) : v));
-    if (e.key === "e" || e.key === "ArrowRight") setVue((v) => (v ? tournerVue(v, 1) : v));
+    const sens =
+      e.key === "a" || e.key === "ArrowLeft" ? -1 : e.key === "e" || e.key === "ArrowRight" ? 1 : 0;
+    if (sens === 0) return;
+    setVue((v) => (v ? tournerVue(v, sens) : v));
+    setPilotee(true);
   }, []);
 
   return (
-    <div
-      ref={hote}
-      className="vue-parcelle"
-      // Le conteneur reçoit le focus pour que la rotation au clavier marche
-      // sans qu'on ait à cliquer d'abord sur un bouton. La vue **est** interactive :
-      // on y glisse, on y zoome, on la tourne — et `role="application"` est
-      // justement le rôle qui dit « ce conteneur gère ses propres touches ».
-      // biome-ignore lint/a11y/noNoninteractiveTabindex: voir ci-dessus
-      tabIndex={0}
-      role="application"
-      aria-label="Vue de la parcelle"
-      onWheel={surMolette}
-      onPointerDown={surAppui}
-      onPointerMove={surGlissement}
-      onPointerUp={surRelachement}
-      onPointerCancel={surRelachement}
-      onKeyDown={surTouche}
-      style={{ width: "100%", height: "100%", touchAction: "none", cursor: "grab" }}
-    />
+    <>
+      <div
+        ref={hote}
+        className="vue-parcelle"
+        // Le conteneur reçoit le focus pour que la rotation au clavier marche
+        // sans qu'on ait à cliquer d'abord sur un bouton. La vue **est** interactive :
+        // on y glisse, on y zoome, on la tourne — et `role="application"` est
+        // justement le rôle qui dit « ce conteneur gère ses propres touches ».
+        // biome-ignore lint/a11y/noNoninteractiveTabindex: voir ci-dessus
+        tabIndex={0}
+        role="application"
+        aria-label="Vue de la parcelle"
+        onWheel={surMolette}
+        onPointerDown={surAppui}
+        onPointerMove={surGlissement}
+        onPointerUp={surRelachement}
+        onPointerCancel={surRelachement}
+        onKeyDown={surTouche}
+        style={{ width: "100%", height: "100%", touchAction: "none", cursor: "grab" }}
+      />
+      {/* À côté de l'hôte et non dedans : la scène PixiJS y pose son canvas. */}
+      {pret && <AideCamera estompee={pilotee} />}
+    </>
   );
 }
