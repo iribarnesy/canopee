@@ -12,7 +12,7 @@ import type { Bordures } from "../engine/paysage";
 import type { Relief } from "../engine/relief";
 import { BILAN_VIDE, type Bilan } from "./bilan";
 import { CUMULS_VIDES, type Cumuls } from "./niveaux";
-import { type ChoixRecolte, especesRecoltees } from "./recolteAuto";
+import { type ChoixRecolte, especesRecoltees, recolteAutoPermise } from "./recolteAuto";
 
 let uid = 0;
 export type WithUid<T> = T & { uid: number };
@@ -59,6 +59,10 @@ export interface GameApi {
   fermerLesRefus: () => void;
   events: WithUid<GameEvent>[];
   speed: number;
+  /**
+   * La récolte automatique cueille-t-elle ? **Jamais dans un niveau** (#514) :
+   * voir `recolteAutoPermise`.
+   */
   autoHarvest: boolean;
   setAutoHarvest: (enabled: boolean) => void;
   /** message de pause automatique (fruits mûrs…) */
@@ -615,6 +619,12 @@ export function useGame(): GameApi {
     rangerLeNiveau: (id, acquis) => {
       setNiveauRange({ id, acquis: [...acquis] });
       send({ type: "niveau", id, acquis: [...acquis] });
+      // C'est ici que la partie devient un niveau : `newGame` a lancé un bac à
+      // sable, qui cueille d'office, et le niveau qu'on range le coupe.
+      if (!recolteAutoPermise(id)) {
+        send({ type: "autoHarvest", enabled: false });
+        setAutoHarvestState(false);
+      }
     },
     politiqueHoraire,
     setPolitiqueHoraire: (politique) => send({ type: "politiqueHoraire", politique }),
@@ -697,15 +707,18 @@ export function useGame(): GameApi {
       // Sa lecture est asynchrone ; une autre partie lancée entre-temps garde
       // la main, et cette reprise-ci n'a plus lieu.
       const partie = idPartie.current;
+      // La sauvegarde dit si c'est un niveau : l'écran ne l'apprendra du worker
+      // qu'après la reprise, trop tard pour la première semaine.
+      const cueillirDOffice = recolteAutoPermise(save.niveauId);
       const reprendre = (etat?: Uint8Array) => {
         if (idPartie.current !== partie) return;
         if (etat) workerRef.current?.postMessage({ type: "resume", save, etat }, [etat.buffer]);
         else send({ type: "resume", save });
-        send({ type: "autoHarvest", enabled: true });
+        send({ type: "autoHarvest", enabled: cueillirDOffice });
       };
       if (id) lireLeBloc(id).then(reprendre, () => reprendre());
       else reprendre();
-      setAutoHarvestState(true);
+      setAutoHarvestState(cueillirDOffice);
       setSpeedState(0);
     },
     dispatch: (action) => {

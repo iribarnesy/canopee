@@ -51,6 +51,7 @@
 
 import type { EtatDuNiveau, Niveau } from "./niveaux";
 import type { ProfilDepart } from "./profils";
+import { arbresMurs, SEUIL_PARCELLE_KG } from "./recolteAuto";
 
 /** L'espèce du premier niveau : le pommier de `especes.ts`. */
 const POMMIER = "malus_domestica";
@@ -70,6 +71,21 @@ const POMMIER = "malus_domestica";
  */
 function pommiers(e: EtatDuNiveau) {
   return e.snapshot.trees.filter((t) => t.especeId === POMMIER && !t.chandelle);
+}
+
+/**
+ * Les kilos de pommes **mûres** sur les arbres, mesurés comme le worker les
+ * mesure pour arrêter le temps (`arbresMurs`) : une seule règle de ce qui est
+ * mûr (#191). `fruitsKg` n'est non nul que pendant la fenêtre de récolte.
+ */
+function pommesMures(e: EtatDuNiveau) {
+  const porteurs = e.snapshot.trees.map((t) => ({
+    id: t.id,
+    especeId: t.especeId,
+    alive: !t.chandelle,
+    fruitsKg: t.fruitsKg,
+  }));
+  return arbresMurs(porteurs, new Set([POMMIER])).kg;
 }
 
 /**
@@ -107,38 +123,47 @@ const VERGER_DE_PLAINE: ProfilDepart = {
 };
 
 /**
- * **Premier niveau** — planter, protéger, récolter.
+ * **Premier niveau** — planter, voir venir le gibier, protéger, attendre,
+ * récolter : un tour de tutoriel (#514).
  *
- * Les trois paliers sont les trois gestes dans l'ordre où l'on en a besoin,
- * ce que `v1.md` demande des objectifs intermédiaires : *« faire de la place
- * dans la forêt, planter les fruitiers, découvrir que le gibier les mange, y
- * répondre »*. Ici la place est déjà là — c'est un premier niveau — et il
- * reste planter, protéger, récolter.
+ * Les paliers sont les gestes dans l'ordre où l'on en a besoin, ce que `v1.md`
+ * demande des objectifs intermédiaires : *« faire de la place dans la forêt,
+ * planter les fruitiers, découvrir que le gibier les mange, y répondre »*. Ici
+ * la place est déjà là — c'est un premier niveau.
+ *
+ * **Chaque bouton paraît quand on en a besoin, et pas avant** (#507, #514) :
+ * planter d'entrée ; protéger quand le gibier a brouté un premier plant —
+ * la case du manchon comprise, si bien qu'on découvre le chevreuil avant de
+ * savoir s'en garder ; récolter quand les premières pommes sont mûres. Chaque
+ * palier dit en une phrase ce qu'il apprend (`apprend`), et le temps s'arrête
+ * quand on en franchit un en cours de route (`useNiveau.ts`), pour qu'on la
+ * lise. Les deux paliers d'attente apprennent les boutons du temps.
+ *
+ * **La récolte se fait à la main** : la récolte automatique est coupée dans
+ * les niveaux (`recolteAutoPermise`). Elle remplissait seule le dernier palier,
+ * et le niveau se gagnait en deux gestes et neuf « +1 an ». Chaque automne, le
+ * temps s'arrête sur les pommes mûres et le joueur cueille ; les fruits non
+ * cueillis tombent trois semaines plus tard.
  *
  * **L'argent ne compte pas.** Le plafond horaire, lui, continue de compter :
  * c'est une contrainte physique et non économique (`EconomyState.active`).
- * Un premier niveau se perd faute d'avoir protégé ses arbres, pas faute
+ * Un premier niveau se perd faute d'avoir protégé ou cueilli, pas faute
  * d'avoir su lire une trésorerie.
  */
 const VERGER: Niveau = {
   id: "verger",
   nom: "Le verger",
-  enonce: "Planter un verger, le protéger du gibier, et en récolter deux cents kilos de pommes.",
+  enonce: "Planter un verger, le protéger du gibier, et en récolter une tonne de pommes.",
   depart: VERGER_DE_PLAINE,
   seed: 7,
   meteo: "synthetique",
   economie: false,
-  // Vingt ans. La mesure ci-dessus donne deux cents kilos vers l'an 10, et la
-  // partie jouée dans le navigateur les a franchis à l'an 9 : dix ans de marge
-  // pour qui s'y prend mal.
+  // Vingt ans. La tonne tombe à la septième cueillette, vers l'an 13 (tableau
+  // en tête de ce fichier) : sept ans de marge pour qui manque des automnes.
   semainesImparties: 20 * 52,
-  // **Les trois gestes de l'objectif, et rien d'autre** (#507) : planter,
-  // protéger — le manchon à la plantation, ou « Protéger » sur l'arbre
-  // sélectionné, comme le dit l'aide du deuxième palier —, récolter. Le
-  // premier niveau ouvrait treize boutons, labourer et moissonner compris, et
-  // proposait de lever l'écorce d'un pommier. La liste est plate : les ouvrir
-  // un à un, palier par palier, est le tour de tutoriel du verger (#514).
-  gestes: ["planter", "proteger", "recolter"],
+  // **Pas de liste d'entrée** : chaque palier ouvre ses gestes (#514). Le
+  // niveau en montre trois en tout — planter, protéger, récolter —, comme la
+  // liste plate de #507, mais un à un.
   paliers: [
     {
       id: "planter",
@@ -146,7 +171,23 @@ const VERGER: Niveau = {
       mesure: (e) => pommiers(e).length,
       cible: 12,
       unite: "pommiers",
+      apprend:
+        "Planter : on choisit l'essence, puis chaque clic sur la parcelle met un plant en terre.",
       aide: "Gestes → Planter, puis « changer… » pour choisir le pommier. Une autre essence ne compte pas.",
+      gestes: ["planter"],
+    },
+    {
+      id: "gibier",
+      quoi: "Laisser venir le gibier",
+      // **Lu sur l'arbre, pas deviné** : le moteur date le dernier
+      // abroutissement de chaque tige (`brouteSemaine`). Le chevreuil vient au
+      // printemps, quand les pousses sont tendres — en avril sur les trois
+      // graines mesurées.
+      mesure: (e) => pommiers(e).filter((t) => t.brouteSemaine !== undefined).length,
+      cible: 1,
+      unite: "pommier brouté",
+      apprend: "Le temps : ▶ le fait couler, « +1 mois » avance d'un mois et s'arrête.",
+      aide: "Au printemps, le chevreuil vient manger les pousses tendres. Regardez ce qu'il fait de vos plants.",
     },
     {
       id: "proteger",
@@ -154,20 +195,38 @@ const VERGER: Niveau = {
       mesure: (e) => pommiers(e).filter((t) => t.protege).length,
       cible: 12,
       unite: "protégés",
-      aide: "Un plant brouté repart de zéro. Le manchon se pose à la plantation, ou après.",
+      apprend: "Protéger : on sélectionne des arbres, puis « Protéger » leur pose un manchon.",
+      aide: "« Les arbres » → Pommier les sélectionne tous d'un clic. Un plant brouté repart de zéro.",
+      gestes: ["proteger"],
+    },
+    {
+      id: "fruits",
+      quoi: "Voir mûrir les premières pommes",
+      // **La même mesure de ce qui est mûr que le worker**, qui arrête le temps
+      // dessus (`arbresMurs`, #191) : le palier tombe à l'instant de la pause,
+      // et c'est lui qui ouvre la récolte.
+      mesure: (e) => pommesMures(e),
+      cible: SEUIL_PARCELLE_KG,
+      unite: "kg",
+      apprend:
+        "« +1 an » fait passer une année d'un coup ; le temps s'arrête quand les pommes sont mûres.",
+      aide: "Un pommier ne porte rien avant six ou sept ans.",
     },
     {
       id: "recolter",
-      quoi: "Récolter des pommes",
+      quoi: "Récolter une tonne de pommes",
       // **Des pommes**, et pas des fruits. La première version lisait le total
       // toutes essences, et l'essai dans le navigateur l'a prise en faute de la
       // pire façon : une partie où l'on ne plante **rien** affichait
       // « 1549 / 200 kg ». Le bocage sème, la parcelle se couvre de noisetiers
-      // et de prunelliers, et la récolte automatique les cueille.
+      // et de prunelliers, et la récolte automatique les cueillait.
       mesure: (e) => e.cumuls.fruitsParEspece[POMMIER] ?? 0,
-      cible: 200,
+      cible: 1000,
       unite: "kg",
-      aide: "Un pommier ne donne rien avant sept ans, et les fruits se perdent trois semaines après leur maturité.",
+      apprend:
+        "Récolter : « Tout récolter » dans l'avis, ou « Récolter » sur les pommiers sélectionnés.",
+      aide: "Les pommes tombent trois semaines après leur maturité : ce qui n'est pas cueilli est perdu. Le verger donne un peu plus chaque année.",
+      gestes: ["recolter"],
     },
   ],
 };

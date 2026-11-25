@@ -121,6 +121,26 @@ export function useNiveau(game: GameApi): NiveauEnCours {
     if (fini) arreter.current(0);
   }, [fini]);
 
+  // **Un palier franchi en cours de route arrête aussi le temps** (#514), le
+  // temps de lire le suivant : c'est lui qui annonce le bouton qui vient de
+  // paraître (`Palier.apprend`). Le gibier qui broute un premier plant en
+  // avril, au milieu d'un « +1 an », ne s'apprend pas en janvier.
+  //
+  // Seulement quand le temps coule : un palier franchi d'un geste, en pause,
+  // n'a rien à arrêter, et une pause du worker — les fruits mûrs — a déjà son
+  // avis, qu'un second arrêt effacerait. La première mesure d'une partie, neuve
+  // ou reprise, n'est pas un franchissement : elle sert de point de départ.
+  const franchis = avancement ? paliersFranchis(avancement).length : undefined;
+  const dejaFranchis = useRef<number | undefined>(undefined);
+  const vitesse = useRef(game.speed);
+  vitesse.current = game.speed;
+  useEffect(() => {
+    const avant = dejaFranchis.current;
+    dejaFranchis.current = franchis;
+    if (franchis === undefined || avant === undefined) return;
+    if (franchis > avant && vitesse.current > 0) arreter.current(0);
+  }, [franchis]);
+
   // **Les gestes suivent l'avancement** : un palier atteint ouvre ceux du
   // suivant (#507). Gelés avec lui pendant une relecture, ils ne se referment
   // pas quand on remonte le temps.

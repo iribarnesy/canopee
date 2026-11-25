@@ -29,6 +29,25 @@
  * jeu dans un navigateur.
  */
 
+/**
+ * **Dans un niveau, rien ne se cueille d'office** (#514). Le bac à sable, lui,
+ * garde la récolte automatique.
+ *
+ * Le propriétaire l'a décidé le 25 novembre 2026 : un niveau enseigne les
+ * gestes, et récolter en est un. Le verger demandait « Récolter des pommes »,
+ * et la récolte automatique remplissait ce palier toute seule : deux gestes,
+ * neuf « +1 an », et l'objectif était atteint sans que le joueur ait cueilli
+ * une pomme (état des lieux du 25 novembre, § 4.2).
+ *
+ * La règle est ici, et pas dans le worker, pour la même raison que les autres
+ * de ce module : le worker ne sait pas qu'il joue un niveau (`useNiveau.ts`).
+ * C'est l'écran qui lui dit de cueillir ou non, au moment où la partie devient
+ * un niveau, et le volet de la partie qui retire la case.
+ */
+export function recolteAutoPermise(niveauId: string | undefined): boolean {
+  return niveauId === undefined;
+}
+
 /** En dessous, un arbre n'a rien qui vaille un geste. */
 export const SEUIL_ARBRE_KG = 0.5;
 /** En dessous, la parcelle entière n'a rien qui vaille une action. */

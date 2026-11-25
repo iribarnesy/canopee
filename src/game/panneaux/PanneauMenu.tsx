@@ -1,8 +1,10 @@
 /**
  * Le volet **partie** : ce qui concerne la partie plutôt que la parcelle — la
- * récolte automatique, la porte de sortie, et comment on pilote la vue.
+ * récolte automatique (hors des niveaux), la porte de sortie, et comment on
+ * pilote la vue.
  */
 
+import { recolteAutoPermise } from "../recolteAuto";
 import type { GameApi } from "../useGame";
 import { btn } from "./styles";
 
@@ -21,16 +23,19 @@ export function PanneauMenu({
 }) {
   return (
     <>
-      <p style={{ margin: "0 0 8px" }}>
-        <label>
-          <input
-            type="checkbox"
-            checked={game.autoHarvest}
-            onChange={(e) => game.setAutoHarvest(e.target.checked)}
-          />{" "}
-          🧺 récolte auto
-        </label>
-      </p>
+      {/* Pas de case dans un niveau : la récolte s'y fait à la main (#514). */}
+      {recolteAutoPermise(game.niveauRange.id) && (
+        <p style={{ margin: "0 0 8px" }}>
+          <label>
+            <input
+              type="checkbox"
+              checked={game.autoHarvest}
+              onChange={(e) => game.setAutoHarvest(e.target.checked)}
+            />{" "}
+            🧺 récolte auto
+          </label>
+        </p>
+      )}
       {/*
         LA CONSIGNE HORAIRE (#133), et de quoi la lever. Une consigne qu'on ne
         peut pas révoquer n'est pas un choix, c'est un piège : celle-ci

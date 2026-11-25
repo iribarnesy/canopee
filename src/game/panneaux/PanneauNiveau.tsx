@@ -53,6 +53,24 @@ function Ligne({ ligne, courant }: { ligne: AvancementPalier; courant: boolean }
         <span style={{ flex: 1 }}>{libelleDuPalier(ligne)}</span>
       </div>
       {!ligne.atteint && <Jauge ligne={ligne} />}
+      {/* **Ce que le palier apprend** (#514), annoncé quand on arrive sur lui :
+          c'est le tour de tutoriel. Une phrase, détachée du reste, parce que
+          c'est elle qui nomme le bouton qui vient de paraître. */}
+      {courant && ligne.palier.apprend && (
+        <div
+          style={{
+            fontSize: "0.86em",
+            fontWeight: 400,
+            margin: "4px 0 0",
+            padding: "3px 6px",
+            borderLeft: "3px solid var(--foret)",
+            background: "rgba(60, 90, 40, 0.08)",
+            borderRadius: 3,
+          }}
+        >
+          {ligne.palier.apprend}
+        </div>
+      )}
       {/* L'aide ne s'affiche que sur le palier COURANT : les trois d'un coup
           feraient un mode d'emploi, et personne ne lit un mode d'emploi. */}
       {courant && ligne.palier.aide && (
