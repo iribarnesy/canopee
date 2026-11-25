@@ -216,6 +216,6 @@ describe("l'instantané", () => {
     expect(snap.manteauNeigeMm).toBe(18);
     expect(snap.neigeMm).toBeCloseTo(5, 12);
     // La neige de la semaine simulée voyage aussi, dans les flux.
-    expect(snap.fluxes.neigeMm).toBe(18);
+    expect(snap.fluxes?.neigeMm).toBe(18);
   });
 });

@@ -17,6 +17,12 @@
  * Une seule partie pour les quatre cas, qui se suivent : la vieillir coûte
  * l'essentiel du temps. Le dernier vient de #393 : le premier instantané d'une
  * relecture montrait les grandeurs du présent sur la semaine relue.
+ *
+ * Deux cas de plus viennent de #505, et encadrent les autres : **l'arrivée**.
+ * Sur une parcelle vieillie, le premier écran disait « nappe à 0,00 m »,
+ * « herbe 0 % », « mycorhizes 0 % » et éclairait le sol sous six cents arbres :
+ * `init` jetait ce que la dernière semaine de vieillissement avait mesuré. Sur
+ * une parcelle neuve, rien n'a été mesuré, et l'instantané ne l'invente pas.
  */
 
 import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
@@ -30,6 +36,12 @@ let ecoute: ((e: { data: unknown }) => void) | undefined;
 const envoyer = (data: unknown) => ecoute?.({ data });
 const globaux = globalThis as unknown as Record<string, unknown>;
 const avant = { self: globaux.self, postMessage: globaux.postMessage };
+
+function premierInstantane(): Snapshot {
+  const m = recus.find((r) => r.type === "snapshot");
+  if (m?.type !== "snapshot") throw new Error("aucun instantané");
+  return m.snapshot;
+}
 
 function dernierInstantane(): Snapshot {
   for (let i = recus.length - 1; i >= 0; i--) {
@@ -108,6 +120,38 @@ afterAll(() => {
 });
 
 describe("les grandeurs du dernier tick (#387)", () => {
+  it("l'arrivée sur une parcelle vieillie montre sa dernière semaine, pas des zéros (#505)", () => {
+    const arrivee = premierInstantane();
+    expect(arrivee.week).toBe(0);
+    // Aucune semaine du joueur n'a tourné : ce qui suit vient du vieillissement.
+    const flux = arrivee.fluxes;
+    expect(flux, "les flux de la dernière semaine de vieillissement").toBeDefined();
+    // La nappe à sa profondeur, sous une friche qui a de l'herbe et des
+    // mycorhizes : l'arrivée disait « 0.00 m », « 0 % » et « 0 % ».
+    expect(flux?.nappeProfondeurCm).toBeGreaterThan(50);
+    expect(flux?.herbeCouvertureMean).toBeGreaterThan(0);
+    expect(flux?.mycorhizesMoyen).toBeGreaterThan(0);
+    // Le sol à l'ombre de ses fourrés, et non éclairé partout comme une
+    // parcelle nue.
+    expect(Math.min(...arrivee.soilLumiere)).toBeLessThan(0.9);
+    // La soif de chaque arbre aussi : une grandeur du tick comme les autres.
+    const aLArrivee = grandeurs(arrivee);
+    expect(aLArrivee.soif.length).toBeGreaterThan(10);
+
+    // Une sauvegarde de la semaine 0 n'a aucune semaine à rejouer : le rejeu
+    // vieillit la parcelle à nouveau, et doit en rendre les mêmes grandeurs.
+    const n = recus.length;
+    envoyer({ type: "requestSave" });
+    const m = recus.slice(n).find((r) => r.type === "save");
+    if (m?.type !== "save") throw new Error("pas de sauvegarde");
+    const save = JSON.parse(JSON.stringify(m.save)) as SaveGame;
+    expect(save.weeks).toBe(0);
+    envoyer({ type: "resume", save });
+    const reprise = dernierInstantane();
+    expect(reprise.week).toBe(0);
+    expect(grandeurs(reprise)).toEqual(aLArrivee);
+  });
+
   it("un abattage en pause ne laisse pas d'oiseau sur un arbre abattu", () => {
     avancer(10);
     const avantLaCoupe = dernierInstantane();
@@ -210,5 +254,40 @@ describe("les grandeurs du dernier tick (#387)", () => {
       envoyer({ type: "arreterLaRelecture" });
       expect(dernierInstantane().week).toBe(84);
     }
+  });
+
+  it("une parcelle neuve n'a rien mesuré, et l'instantané ne l'invente pas (#505)", () => {
+    // En dernier : une partie neuve remplace celle des cas précédents.
+    const n = recus.length;
+    envoyer({
+      type: "init",
+      stationId: FRICHE_LIMON.station.id,
+      seed: 7,
+      meteo: "synthetique",
+      scenario: "ssp245",
+      bordures: bordersUniformes("bocage"),
+      relief: FRICHE_LIMON.station.relief,
+      eau: SANS_EAU,
+      nappeCm: FRICHE_LIMON.station.profondeurNappeEquilibreCm ?? 300,
+      partBassin: 0,
+      maturationAns: 0,
+      anneeDepart: 2026,
+      economie: false,
+      faune: true,
+    });
+    const neuve = recus.slice(n).find((r) => r.type === "snapshot");
+    if (neuve?.type !== "snapshot") throw new Error("aucun instantané");
+    expect(neuve.snapshot.week).toBe(0);
+    // Pas de flux du tout, et non des zéros : l'interface dit « — ». Et rien de
+    // la partie précédente, vieillie et jouée jusqu'en semaine 84.
+    expect(neuve.snapshot.fluxes).toBeUndefined();
+    expect(neuve.snapshot.oiseauxDePassage ?? []).toEqual([]);
+    expect(neuve.snapshot.trees).toEqual([]);
+    // Sans arbres, tout le sol est éclairé : c'est ce que le tick calculera.
+    expect(Math.min(...neuve.snapshot.soilLumiere)).toBe(1);
+
+    // La première semaine jouée les mesure.
+    avancer(1);
+    expect(dernierInstantane().fluxes?.nappeProfondeurCm).toBeGreaterThan(0);
   });
 });
