@@ -120,6 +120,14 @@ Vérifier dans le navigateur soi-même plutôt que de demander à l'utilisateur 
 regarder : ouvrir l'aperçu, recharger, lire la console et le DOM, prendre une
 capture pour montrer le résultat.
 
+`npm run apercu:jeu` photographie l'écran de jeu sans navigateur visible, en
+partant d'un niveau (`NIVEAU="Le verger"`) ou du bac à sable (`STATION`, `ANS`),
+au mois voulu (`MOIS`) ; les variables sont en tête de `scripts/capture-jeu.mjs`.
+**Dans un conteneur sans carte graphique, comptez cinq à quinze minutes** : la
+scène tourne en GL logiciel, à une image par seconde, et un vieillissement de
+quarante ans en prend six. Le script dit où il en est et s'arrête de lui-même
+au bout de `LIMITE_MIN`.
+
 Et pour ce rôle plus que pour les autres : **une capture vaut une description.**
 Ce qui se juge ici, c'est si c'est agréable — un critère qu'aucun test
 automatisé ne rend.
