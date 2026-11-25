@@ -46,7 +46,55 @@
  *
  * Et le temps réel, que `v1.md` veut entre dix et trente minutes : le moteur
  * tient environ sept semaines par seconde sur ce peuplement, donc vingt ans
- * demandent deux minutes et demie de simulation. La contrainte n'est pas là.
+ * demandent deux minutes et demie de simulation. Juste, et c'était le défaut :
+ * la récolte automatique cueillait seule le dernier palier, et le niveau tenait
+ * en deux gestes et neuf « +1 an » (état des lieux du 25 novembre 2026, § 4.2).
+ *
+ * ## Le tutoriel, remesuré à la main (#514)
+ *
+ * Le propriétaire a tranché le 25 novembre 2026 : la récolte automatique est
+ * coupée dans les niveaux, les gestes s'apprennent un à un, et chaque niveau
+ * dure de dix à trente minutes, le verger compris. Le niveau s'allonge par ce
+ * qu'il demande de faire — planter deux fois, protéger, cueillir chaque
+ * automne —, pas par une vitesse bridée.
+ *
+ * Mesuré par le worker, comme le joue `verger-tutoriel.test.ts` : douze
+ * pommiers plantés nus la première semaine, protégés la semaine du premier
+ * broutage, douze autres plantés sous manchon la même semaine, cueillis la
+ * semaine où ils mûrissent ; météo synthétique, quinze ans.
+ *
+ * | graine | 1er broutage | 1res pommes mûres | cumul après chaque automne, de l'an 7 à l'an 13, kg | deux tonnes | pommiers à l'an 15 | tiges à l'an 15 |
+ * |---|---|---|---|---|---|---|
+ * | **7** | semaine 15 | semaine 351, an 7 | 163, 371, 631, 944, 1313, 1732, 2203 | 7e cueillette, an 13 | 24 sur 24 | 3 498 |
+ * | 1 | semaine 15 | semaine 351, an 7 | 179, 405, 688, 1031, 1436, 1896, 2411 | 7e cueillette, an 13 | 24 sur 24 | 3 495 |
+ * | 2 | semaine 15 | semaine 351, an 7 | 180, 409, 694, 1042, 1453, 1920, 2442 | 7e cueillette, an 13 | 24 sur 24 | 3 448 |
+ *
+ * Ce qui en sort :
+ *
+ * 1. **Les trois graines disent la même chose**, à dix pour cent près : la
+ *    météo synthétique répète la même année, la graine ne change que le
+ *    tirage. Le chevreuil vient en avril de la première année, les pommes
+ *    mûrissent en septembre de la septième.
+ * 2. **Gagnable partout, gagné nulle part d'avance.** Sans cueillette, le
+ *    compteur reste à zéro. Deux tonnes demandent sept automnes ; deux cents
+ *    kilos, l'ancien objectif, n'en demanderaient que deux. Manquer une cueillette
+ *    coûte un an au plus (l'essai le vérifie), et vingt ans impartis en laissent
+ *    sept de marge.
+ * 3. **Le temps réel**, mesuré en jouant dans le navigateur (Playwright, build
+ *    de production, graine 7, un joueur qui lit chaque palier et n'hésite
+ *    jamais) : **16,7 minutes** de l'accueil à l'écran de fin, dont 2,1 où la
+ *    partie avance seule, 2,8 de lecture et de clics (six secondes par palier
+ *    ou par avis, une et demie entre deux clics), et le reste en latence du
+ *    rendu logiciel du conteneur, qui tourne à quelques images par seconde. Un
+ *    pommier y est mort la première année, arraché par le sanglier ; les deux
+ *    tonnes sont tombées quand même à la septième cueillette (2 070 kg). Sur
+ *    une machine qui a une carte graphique, la latence tombe, et ce joueur-là
+ *    finirait en cinq minutes environ : c'est un plancher, il sait où est
+ *    chaque bouton. Un joueur qui découvre lit l'énoncé, parcourt les
+ *    essences, cherche comment sélectionner ses pommiers, regarde pousser son
+ *    verger : dix à quinze minutes, estimées et non mesurées. Le test humain
+ *    le dira ; s'il faut allonger, c'est la cible du dernier palier, environ
+ *    cinq cents kilos par automne de plus.
  */
 
 import type { EtatDuNiveau, Niveau } from "./niveaux";
@@ -123,8 +171,8 @@ const VERGER_DE_PLAINE: ProfilDepart = {
 };
 
 /**
- * **Premier niveau** — planter, voir venir le gibier, protéger, attendre,
- * récolter : un tour de tutoriel (#514).
+ * **Premier niveau** — planter, voir venir le gibier, protéger, planter sous
+ * manchon, attendre, récolter : un tour de tutoriel (#514).
  *
  * Les paliers sont les gestes dans l'ordre où l'on en a besoin, ce que `v1.md`
  * demande des objectifs intermédiaires : *« faire de la place dans la forêt,
@@ -134,7 +182,8 @@ const VERGER_DE_PLAINE: ProfilDepart = {
  * **Chaque bouton paraît quand on en a besoin, et pas avant** (#507, #514) :
  * planter d'entrée ; protéger quand le gibier a brouté un premier plant —
  * la case du manchon comprise, si bien qu'on découvre le chevreuil avant de
- * savoir s'en garder ; récolter quand les premières pommes sont mûres. Chaque
+ * savoir s'en garder, et qu'on plante la seconde moitié du verger protégée ;
+ * récolter quand les premières pommes sont mûres. Chaque
  * palier dit en une phrase ce qu'il apprend (`apprend`), et le temps s'arrête
  * quand on en franchit un en cours de route (`useNiveau.ts`), pour qu'on la
  * lise. Les deux paliers d'attente apprennent les boutons du temps.
@@ -153,13 +202,14 @@ const VERGER_DE_PLAINE: ProfilDepart = {
 const VERGER: Niveau = {
   id: "verger",
   nom: "Le verger",
-  enonce: "Planter un verger, le protéger du gibier, et en récolter une tonne de pommes.",
+  enonce: "Planter un verger, le protéger du gibier, et en récolter deux tonnes de pommes.",
   depart: VERGER_DE_PLAINE,
   seed: 7,
   meteo: "synthetique",
   economie: false,
-  // Vingt ans. La tonne tombe à la septième cueillette, vers l'an 13 (tableau
-  // en tête de ce fichier) : sept ans de marge pour qui manque des automnes.
+  // Vingt ans. Les deux tonnes tombent à la septième cueillette, vers l'an 13
+  // (tableau en tête de ce fichier) : sept ans de marge pour qui manque des
+  // automnes.
   semainesImparties: 20 * 52,
   // **Pas de liste d'entrée** : chaque palier ouvre ses gestes (#514). Le
   // niveau en montre trois en tout — planter, protéger, récolter —, comme la
@@ -200,6 +250,20 @@ const VERGER: Niveau = {
       gestes: ["proteger"],
     },
     {
+      id: "agrandir",
+      quoi: "Avoir vingt-quatre pommiers à l'abri",
+      // **Le second bouton du même geste.** Protéger ouvre aussi la case du
+      // manchon à la plantation (#507) ; sans ce palier, elle paraissait et ne
+      // servait jamais. C'est le contrôle d'acquis que `v1.md` demande : on a vu
+      // ce que le gibier fait d'un plant nu, on plante protégé.
+      mesure: (e) => pommiers(e).filter((t) => t.protege).length,
+      cible: 24,
+      unite: "protégés",
+      apprend:
+        "Le manchon se pose aussi en plantant : cocher « poser un manchon » avant de cliquer.",
+      aide: "Planter, puis « changer… » : la case est sous la liste des essences. Douze pommiers de plus.",
+    },
+    {
       id: "fruits",
       quoi: "Voir mûrir les premières pommes",
       // **La même mesure de ce qui est mûr que le worker**, qui arrête le temps
@@ -214,14 +278,14 @@ const VERGER: Niveau = {
     },
     {
       id: "recolter",
-      quoi: "Récolter une tonne de pommes",
+      quoi: "Récolter deux tonnes de pommes",
       // **Des pommes**, et pas des fruits. La première version lisait le total
       // toutes essences, et l'essai dans le navigateur l'a prise en faute de la
       // pire façon : une partie où l'on ne plante **rien** affichait
       // « 1549 / 200 kg ». Le bocage sème, la parcelle se couvre de noisetiers
       // et de prunelliers, et la récolte automatique les cueillait.
       mesure: (e) => e.cumuls.fruitsParEspece[POMMIER] ?? 0,
-      cible: 1000,
+      cible: 2000,
       unite: "kg",
       apprend:
         "Récolter : « Tout récolter » dans l'avis, ou « Récolter » sur les pommiers sélectionnés.",

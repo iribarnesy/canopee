@@ -14,8 +14,8 @@
  * des pommes mûres. Il défend quatre choses :
  *
  *  1. les gestes s'ouvrent un à un — planter, puis protéger quand le gibier a
- *     brouté un premier plant, puis récolter quand les premières pommes sont
- *     mûres ;
+ *     brouté un premier plant (et douze pommiers de plus, sous manchon), puis
+ *     récolter quand les premières pommes sont mûres ;
  *  2. dans un niveau, **rien ne se cueille d'office** : des pommes mûres
  *     restent sur l'arbre tant que le joueur ne les cueille pas ;
  *  3. l'objectif tombe, avant la fin du temps imparti ;
@@ -44,6 +44,8 @@ const POMMIER = "malus_domestica";
 const VERGER = niveauParId("verger");
 if (!VERGER) throw new Error("le verger n'est plus livré");
 const NIVEAU = VERGER;
+/** Ce que demande le dernier palier : deux tonnes de pommes. */
+const NIVEAU_CIBLE = NIVEAU.paliers.find((p) => p.id === "recolter")?.cible ?? Number.NaN;
 
 const recus: FromWorker[] = [];
 let ecoute: ((e: { data: unknown }) => void) | undefined;
@@ -87,6 +89,14 @@ function avancerDe(semaines: number, weeksPerSecond: number): FromWorker[] {
 const plusUnMois = () => avancerDe(4, 4);
 /** « +1 an » va à ×13 ; ×52 rend la même partie, en moins de pas d'horloge. */
 const plusUnAn = () => avancerDe(52, 52);
+
+/** Douze places en deux rangs, à huit mètres sur dix. */
+function grille(y0: number): { x: number; y: number }[] {
+  const positions = [];
+  for (let i = 0; i < 6; i++)
+    for (let j = 0; j < 2; j++) positions.push({ x: 30.5 + 8 * i, y: y0 + 10 * j });
+  return positions;
+}
 
 function pommiers(): SnapshotTree[] {
   return dernier().snapshot.trees.filter((t) => t.especeId === POMMIER && !t.chandelle);
@@ -147,12 +157,9 @@ describe("le verger, joué comme un tutoriel (#514)", () => {
   it("n'ouvre d'abord que la plantation, sans la case du manchon", () => {
     expect([...ouverts()]).toEqual(["planter"]);
     // La case du manchon suit le geste « protéger » (#507) : on plante nu.
-    const positions = [];
-    for (let i = 0; i < 6; i++)
-      for (let j = 0; j < 2; j++) positions.push({ x: 30.5 + 8 * i, y: 44.5 + 10 * j });
     envoyer({
       type: "action",
-      action: { type: "planter", especeId: POMMIER, positions, avecManchon: false },
+      action: { type: "planter", especeId: POMMIER, positions: grille(44.5), avecManchon: false },
     });
     expect(pommiers()).toHaveLength(12);
     const a = ouLonEnEst();
@@ -178,6 +185,17 @@ describe("le verger, joué comme un tutoriel (#514)", () => {
       action: { type: "proteger", treeIds: pommiers().map((t) => t.id) },
     });
     expect(pommiers().filter((t) => t.protege)).toHaveLength(12);
+    expect(ouLonEnEst().courant?.palier.id).toBe("agrandir");
+  });
+
+  it("fait planter douze pommiers de plus, sous manchon cette fois", () => {
+    // La case du manchon est ouverte avec « protéger » : on plante protégé.
+    expect(gesteOuvert(ouverts(), "proteger")).toBe(true);
+    envoyer({
+      type: "action",
+      action: { type: "planter", especeId: POMMIER, positions: grille(64.5), avecManchon: true },
+    });
+    expect(pommiers().filter((t) => t.protege)).toHaveLength(24);
     expect(ouLonEnEst().courant?.palier.id).toBe("fruits");
   });
 
@@ -219,10 +237,10 @@ describe("le verger, joué comme un tutoriel (#514)", () => {
   // Deux moitiés, pour que chacune tienne dans le temps d'un essai.
   let cueillettes = 0;
 
-  it("cueille chaque automne, et la tonne ne tombe pas en trois cueillettes", () => {
+  it("cueille chaque automne, et les deux tonnes ne tombent pas en trois cueillettes", () => {
     while (cueillettes < 3) if (unAutomne()) cueillettes++;
     expect(pommesCueillies()).toBeGreaterThan(0);
-    expect(pommesCueillies()).toBeLessThan(1000);
+    expect(pommesCueillies()).toBeLessThan(NIVEAU_CIBLE);
     expect(ouLonEnEst().issue).toBe("en-cours");
   });
 
@@ -233,9 +251,9 @@ describe("le verger, joué comme un tutoriel (#514)", () => {
       a = ouLonEnEst();
     }
     expect(a.issue).toBe("reussi");
-    expect(pommesCueillies()).toBeGreaterThanOrEqual(1000);
-    // **Pas d'avance** : une tonne demande une cueillette par automne pendant
-    // des années, et ne tombe pas avant la dixième année.
+    expect(pommesCueillies()).toBeGreaterThanOrEqual(NIVEAU_CIBLE);
+    // **Pas d'avance** : deux tonnes demandent une cueillette par automne pendant
+    // des années, et elles ne tombent pas avant la dixième année.
     expect(cueillettes).toBeGreaterThanOrEqual(5);
     expect(dernier().snapshot.week).toBeGreaterThan(10 * 52);
   });

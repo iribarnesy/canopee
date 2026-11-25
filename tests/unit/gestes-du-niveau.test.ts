@@ -206,6 +206,7 @@ describe("le verger ne montre que ce qu'il enseigne (#507), un geste à la fois 
       ["planter", ["planter"]],
       ["gibier", ["planter"]],
       ["proteger", ["planter", "proteger"]],
+      ["agrandir", ["planter", "proteger"]],
       ["fruits", ["planter", "proteger"]],
       ["recolter", ["planter", "proteger", "recolter"]],
     ]);

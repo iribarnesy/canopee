@@ -8,6 +8,7 @@
 import { type CSSProperties, useMemo, useState } from "react";
 import { type GestesOuverts, gesteOuvert } from "../niveaux";
 import type { SnapshotTree } from "../protocol";
+import { SEUIL_ARBRE_KG } from "../recolteAuto";
 import { refusDit } from "../refus";
 import type { AvisDuGel } from "../useAvisDuGel";
 import type { GameApi } from "../useGame";
@@ -54,7 +55,15 @@ export function Avis({
   /** La gelée qui commence, et ce qu'elle fait (#355). */
   gel?: AvisDuGel | undefined;
 }) {
-  const fruitsPrets = useMemo(() => vivants.filter((t) => t.fruitsKg > 0.5), [vivants]);
+  // **Ce que la pause annonce, et rien d'autre** (#191, #514) : les essences
+  // semées, au seuil du worker. « Tout récolter » cueillait aussi les ronces,
+  // et l'avis disait 104 kg sous une pause qui en annonçait 76 ; dans un niveau,
+  // où c'est le bouton de la récolte, il faisait 416 h sur 60 en une semaine.
+  const actives = game.recolteAuto.actives;
+  const fruitsPrets = useMemo(
+    () => vivants.filter((t) => t.fruitsKg > SEUIL_ARBRE_KG && actives.has(t.especeId)),
+    [vivants, actives],
+  );
   /** La case reste cochée d'une facture à l'autre : c'est une intention, pas un clic. */
   const [seSouvenir, setSeSouvenir] = useState(false);
 
