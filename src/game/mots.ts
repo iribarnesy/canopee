@@ -16,6 +16,7 @@
 
 import { getEspece } from "../engine/especes";
 import type { CauseDepart, EspeceFaune, UniteDeFaune } from "../engine/faune";
+import type { TempeteResult } from "../engine/tick";
 import type { CauseMort } from "../engine/trees";
 
 /**
@@ -441,4 +442,58 @@ const MOIS = [
 export function moisDeLaSemaine(semaine: number): string {
   const s = ((Math.floor(semaine) % 52) + 52) % 52;
   return MOIS[Math.min(11, Math.floor(s / SEMAINES_PAR_MOIS))] ?? "";
+}
+
+// ── **la tempête dite** (#503) ──────────────────────────────────────────────────
+
+/** Ce que la phrase lit d'une tempête : la rafale, les trois dégâts, le bois couché. */
+export type TempeteADire = Pick<
+  TempeteResult,
+  "rafaleMs" | "arbresVerses" | "arbresEbranches" | "volumeM3" | "casses"
+>;
+
+/**
+ * Ce qu'une tempête a fait aux arbres : « 3 arbres couchés, 5 cassés net,
+ * 12 ébranchés ». Les **trois** dégâts que le moteur rapporte, et seulement ceux
+ * qu'il y a.
+ *
+ * Le journal ne lisait que les couchés, alors que le moteur rapporte la tempête
+ * dès qu'elle a couché, cassé ou ébranché un arbre (tick.ts) : une tempête qui
+ * ne faisait que casser des fûts s'annonçait « 0 arbre couché ». Les cassés se
+ * lisent dans `casses`, la liste des fûts, comme le bilan les lit.
+ *
+ * « Arbre » porte sur le premier dégât, les suivants le reprennent. Rend une
+ * chaîne vide si la tempête n'a rien fait, ce que le moteur ne rapporte pas.
+ */
+export function degatsDeLaTempete(t: TempeteADire): string {
+  const degats: [number, string][] = [
+    [t.arbresVerses, "couché"],
+    [t.casses.length, "cassé"],
+    [t.arbresEbranches, "ébranché"],
+  ];
+  return degats
+    .filter(([n]) => n > 0)
+    .map(([n, participe], i) => {
+      const nom = i === 0 ? `arbre${s(n)} ` : "";
+      return `${n} ${nom}${participe}${s(n)}${participe === "cassé" ? " net" : ""}`;
+    })
+    .join(", ");
+}
+
+/**
+ * La ligne du journal d'une tempête : la rafale, les dégâts, et le bois couché à
+ * sortir s'il y en a.
+ *
+ * Le volume est celui des **couchés** seulement (`volumeM3`) : c'est le bois par
+ * terre que le joueur peut vendre dans l'année. Un fût cassé reste debout, et
+ * l'économie ne le compte pas ; la phrase ne le mêle donc pas au bois à sortir.
+ */
+export function direLaTempete(t: TempeteADire): string {
+  const degats = degatsDeLaTempete(t);
+  // Un volume qui s'écrirait « 0.0 m³ à sortir » ne dit rien d'utile.
+  const bois =
+    t.arbresVerses > 0 && t.volumeM3 >= 0.05
+      ? ` — ${t.volumeM3.toFixed(1)} m³ de bois couché à sortir dans l'année, avant qu'il ne se déprécie`
+      : "";
+  return `Tempête : rafale à ${Math.round(t.rafaleMs * 3.6)} km/h${degats ? `, ${degats}` : ""}${bois}`;
 }

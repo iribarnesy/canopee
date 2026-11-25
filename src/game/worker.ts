@@ -90,7 +90,9 @@ import {
   accord,
   causeDite,
   de,
+  degatsDeLaTempete,
   direLaPlantation,
+  direLaTempete,
   direLeDepart,
   direLInstallation,
   estFeminin,
@@ -1750,15 +1752,11 @@ function stepWeeks(n: number) {
       event("🌊", `Crue : la nappe affleure sur ${Math.round(part * 100)} % de la parcelle`);
     }
     // Tempête : elle arrive en une semaine et doit se dire, sinon des arbres
-    // s'escamotent.
+    // s'escamotent. Ses trois dégâts, et pas les seuls couchés (#503) : une
+    // tempête qui ne faisait que casser des fûts s'annonçait « 0 arbre couché ».
     if (ticked.tempete) {
       const t = ticked.tempete;
-      event(
-        "🌬️",
-        `TEMPÊTE : rafale à ${Math.round(t.rafaleMs * 3.6)} km/h, ${t.arbresVerses} arbre` +
-          `${t.arbresVerses > 1 ? "s couchés" : " couché"} — ${t.volumeM3.toFixed(1)} m³ ` +
-          `à sortir dans l'année avant que le bois ne se déprécie`,
-      );
+      event("🌬️", direLaTempete(t));
       // **Elle arrête le temps, désormais (#128).** Elle ne le faisait pas, et
       // le raisonnement écrit ici était : « un chablis reste récupérable un an,
       // le joueur a le temps de décider ». C'est vrai de la **décision** et faux du
@@ -1767,7 +1765,7 @@ function stepWeeks(n: number) {
       if (weeksPerSecond > 1 && estUneTempeteAVoir(t.arbresVerses)) {
         weeksPerSecond = 0;
         scenePosee = true;
-        pause(`Tempête : ${t.arbresVerses} arbres couchés`, { scene: sceneDeLaSemaine() });
+        pause(`Tempête : ${degatsDeLaTempete(t)}`, { scene: sceneDeLaSemaine() });
       }
     }
     // **Une mortalité de masse est une scène**, et c'est la troisième que le
