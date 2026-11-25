@@ -61,7 +61,7 @@ import type { GameState, Station, TickFluxes } from "../engine/state";
 import { stateHash } from "../engine/tick";
 import type { Bilan, LigneDeBilan } from "./bilan";
 import type { Cumuls } from "./niveaux";
-import type { SaveGame } from "./protocol";
+import type { SaveGame, SolALArrivee } from "./protocol";
 import type { EtatVu, LigneDeSuivi, MemoireDesSuivis } from "./suivis";
 
 /**
@@ -95,6 +95,11 @@ export interface AnnexesDeReprise {
   oiseauxDePassage?: readonly FrequentationDeGuilde[];
   /** la soif de chaque arbre au dernier tick, par identifiant (#372) */
   satisfactionEau?: ReadonlyMap<number, number>;
+  /**
+   * le sol tel que le joueur l'a trouvé (#509). Seul le rejeu savait le refaire,
+   * en repassant par l'arrivée : une partie reprise du bloc l'aurait perdu.
+   */
+  solALArrivee?: SolALArrivee;
 }
 
 /** Les grilles du dernier tick, rangées en binaire : en JSON, un flottant en coûterait cinq. */
@@ -109,6 +114,20 @@ const GRILLES = ["debordement", "lumiereAuSol", "pollinisateurs"] as const;
  */
 const SATISFACTION_IDS = "satisfactionEauIds";
 const SATISFACTION_VALEURS = "satisfactionEau";
+
+/**
+ * Le sol à l'arrivée (#509) : ses trois grilles en binaire, ses deux moyennes
+ * dans l'en-tête. Même règle que la soif : un bloc écrit avant ce champ n'a ni
+ * ces sections ni cette entrée d'en-tête, il se relit sans lui, et le conteneur
+ * garde sa version.
+ */
+const ARRIVEE = { ph: "arriveePh", azote: "arriveeAzote", potassium: "arriveePotassium" } as const;
+
+/** Une section de flottants simples, recopiée : rien ne garantit l'alignement du tampon reçu. */
+function simples(m: Uint8Array | undefined): Float32Array | undefined {
+  if (!m || m.length % 4 !== 0) return undefined;
+  return new Float32Array(m.slice().buffer);
+}
 
 function doubles(m: Uint8Array | undefined): Float64Array | undefined {
   if (!m || m.length % 8 !== 0) return undefined;
@@ -130,6 +149,8 @@ interface Entete {
   memoire: [number, EtatVu][];
   fluxes?: TickFluxes;
   oiseaux?: readonly FrequentationDeGuilde[];
+  /** les deux moyennes du sol à l'arrivée ; ses grilles sont dans les sections (#509) */
+  arrivee?: { humusTHa: number; phosphoreMoyenGM2: number };
   /** les morceaux binaires qui suivent l'en-tête, dans l'ordre, en octets */
   sections: { nom: string; n: number }[];
 }
@@ -272,6 +293,16 @@ export function ecrireReprise(
     sections.push({ nom: SATISFACTION_IDS, octets: new Uint8Array(ids.buffer) });
     sections.push({ nom: SATISFACTION_VALEURS, octets: new Uint8Array(valeurs.buffer) });
   }
+  const arrivee = annexes.solALArrivee;
+  if (arrivee) {
+    for (const cle of ["ph", "azote", "potassium"] as const) {
+      const grille = arrivee[cle];
+      sections.push({
+        nom: ARRIVEE[cle],
+        octets: new Uint8Array(grille.buffer, grille.byteOffset, grille.byteLength),
+      });
+    }
+  }
   const entete: Entete = {
     v: VERSION_REPRISE,
     semaine: etat.week,
@@ -283,6 +314,9 @@ export function ecrireReprise(
     memoire: [...annexes.memoire],
     ...(annexes.fluxes ? { fluxes: annexes.fluxes } : {}),
     ...(annexes.oiseauxDePassage ? { oiseaux: annexes.oiseauxDePassage } : {}),
+    ...(arrivee
+      ? { arrivee: { humusTHa: arrivee.humusTHa, phosphoreMoyenGM2: arrivee.phosphoreMoyenGM2 } }
+      : {}),
     sections: sections.map(({ nom, octets }) => ({ nom, n: octets.length })),
   };
   const enteteOctets = new TextEncoder().encode(JSON.stringify(entete));
@@ -303,6 +337,37 @@ export function ecrireReprise(
     k += aligne(octets.length);
   }
   return bloc;
+}
+
+/**
+ * Le sol à l'arrivée que le bloc emporte (#509) : `undefined` s'il n'en a pas —
+ * un bloc écrit avant ce champ —, `null` s'il en a un morceau sans les autres
+ * ou d'une autre taille que la parcelle, ce qui est un bloc abîmé et non un
+ * bloc ancien.
+ */
+function solDuBloc(
+  entete: Entete,
+  morceaux: ReadonlyMap<string, Uint8Array>,
+  cellules: number,
+): SolALArrivee | undefined | null {
+  const ph = simples(morceaux.get(ARRIVEE.ph));
+  const azote = simples(morceaux.get(ARRIVEE.azote));
+  const potassium = simples(morceaux.get(ARRIVEE.potassium));
+  const moyennes = entete.arrivee;
+  const morceauxLus = [moyennes, ph, azote, potassium].filter((m) => m !== undefined).length;
+  if (morceauxLus === 0) return undefined;
+  if (!moyennes || !ph || !azote || !potassium) return null;
+  if (ph.length !== cellules || azote.length !== cellules || potassium.length !== cellules)
+    return null;
+  if (!Number.isFinite(moyennes.humusTHa) || !Number.isFinite(moyennes.phosphoreMoyenGM2))
+    return null;
+  return {
+    ph,
+    azote,
+    potassium,
+    humusTHa: moyennes.humusTHa,
+    phosphoreMoyenGM2: moyennes.phosphoreMoyenGM2,
+  };
 }
 
 /**
@@ -363,6 +428,8 @@ export function lireReprise(
     const valeurs = doubles(morceaux.get(SATISFACTION_VALEURS));
     if ((ids === undefined) !== (valeurs === undefined)) return undefined;
     if (ids && valeurs && ids.length !== valeurs.length) return undefined;
+    const solALArrivee = solDuBloc(entete, morceaux, etat.soil.ph.length);
+    if (solALArrivee === null) return undefined;
     const histoires = desserrerLesHistoires(entete.histoires);
     if (
       typeof entete.cumuls !== "object" ||
@@ -383,6 +450,7 @@ export function lireReprise(
         ...(ids && valeurs
           ? { satisfactionEau: new Map(Array.from(ids, (id, k) => [id, valeurs[k] ?? 1])) }
           : {}),
+        ...(solALArrivee ? { solALArrivee } : {}),
         ...grilles,
       },
     };

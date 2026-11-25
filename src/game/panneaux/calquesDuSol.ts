@@ -29,7 +29,8 @@ export type Calque =
   | "nappe"
   | "engorgement"
   | "ravageurs"
-  | "erosion";
+  | "erosion"
+  | "ecartPh";
 
 /** Une teinte HSL, telle que le canvas et le CSS l'attendent. */
 export type Teinte = readonly [hue: number, saturation: number, luminosite: number];
@@ -53,6 +54,13 @@ export interface FicheDeCalque {
   bornes: (station: StationInfo) => readonly [number, number];
   /** La grandeur d'une cellule, telle que le moteur la donne. */
   lire: (snapshot: Snapshot, station: StationInfo, i: number) => number;
+  /**
+   * La **même** grandeur dans la même cellule, telle que le joueur l'a trouvée
+   * en arrivant (#509) : le relevé de `StationInfo.solALArrivee`, dans l'unité
+   * brute de `lire`. Absente des calques dont le relevé n'a pas de grille ;
+   * rend `undefined` quand la partie n'a pas de relevé (bloc d'avant #509).
+   */
+  aLArrivee?: (station: StationInfo, i: number) => number | undefined;
   /**
    * La **courbe** du dégradé, quand une échelle droite ne montre rien.
    *
@@ -204,6 +212,7 @@ export const CALQUES: readonly FicheDeCalque[] = [
     unite: "",
     bornes: () => [4, 8.5],
     lire: (snapshot, _station, i) => snapshot.soilPh[i] ?? 7,
+    aLArrivee: (station, i) => station.solALArrivee?.ph[i],
     // Acide = orangé, calcaire = bleuté.
     teinte: (part) => [20 + part * 200, 35, 70],
     format: (v) => v.toFixed(1),
@@ -227,6 +236,7 @@ export const CALQUES: readonly FicheDeCalque[] = [
     bornes: () => [0, 8],
     courbe: { vers: Math.sqrt, depuis: (t) => t * t },
     lire: (snapshot, _station, i) => snapshot.soilN[i] ?? 0,
+    aLArrivee: (station, i) => station.solALArrivee?.azote[i],
     teinte: (part) => [55, 30, 90 - 50 * part],
     // Une décimale sous 10 kg/ha : sur une lande, tout le calque vit là, et
     // arrondir à l'entier rendait « 0 » partout.
@@ -252,6 +262,7 @@ export const CALQUES: readonly FicheDeCalque[] = [
     // carrée les met au tiers du dégradé, le limon aux sept dixièmes.
     courbe: { vers: Math.sqrt, depuis: (t) => t * t },
     lire: (snapshot, _station, i) => snapshot.soilPotassiumMgKg[i] ?? 0,
+    aLArrivee: (station, i) => station.solALArrivee?.potassium[i],
     // Du gris rosé au lie-de-vin : la teinte du chlorure de potassium tel qu'on
     // l'épand, et aucun autre calque ne l'occupe — le violet de l'engorgement
     // est plus bleu, le rouge des ravageurs plus orangé.
@@ -392,8 +403,89 @@ export const CALQUES: readonly FicheDeCalque[] = [
   },
 ];
 
+/**
+ * La courbe d'une échelle divergente **en racine** : même miroir que
+ * `LOG_SIGNE`, avec un étalement plus doux. Un dixième de pH tombe au tiers du
+ * chemin vers le bout, au lieu du vingtième qu'une échelle droite lui laissait.
+ */
+const RACINE_SIGNEE = {
+  vers: (t: number) => {
+    const ecart = t * 2 - 1;
+    return (Math.sign(ecart) * Math.sqrt(Math.abs(ecart)) + 1) / 2;
+  },
+  depuis: (t: number) => {
+    const ecart = t * 2 - 1;
+    return (Math.sign(ecart) * ecart * ecart + 1) / 2;
+  },
+};
+
+/**
+ * Un écart signé : « +0.12 », « −0.35 », et « 0.00 » sans signe quand il
+ * s'arrondit à zéro. Le vrai signe moins, et le point décimal du reste du volet.
+ */
+export function ecartSigne(v: number, decimales: number): string {
+  const texte = Math.abs(v).toFixed(decimales);
+  if (Number(texte) === 0) return texte;
+  return `${v > 0 ? "+" : "−"}${texte}`;
+}
+
+/**
+ * **Ce que le pH a fait depuis l'arrivée**, cellule par cellule (#509).
+ *
+ * La moyenne de la parcelle ne le dit pas, et c'est mesuré : sur la friche
+ * vieillie de vingt ans, vingt ans de plus laissent le pH moyen à 6,70 — celui
+ * de l'arrivée — pendant que la cellule la plus acidifiée passe de 6,24 à 5,53.
+ * La litière acidifie sous les arbres (#495) et nulle part ailleurs ; seule une
+ * carte peut dire où.
+ *
+ * Il n'est **pas** dans `CALQUES` : il n'existe que si la partie a son relevé
+ * d'arrivée, ce qui n'est pas le cas d'une partie reprise d'un bloc écrit avant
+ * lui. `calquesDeLaCarte` l'ajoute quand il a de quoi se dessiner.
+ */
+export const CALQUE_ECART_PH: FicheDeCalque = {
+  id: "ecartPh",
+  libelle: "Écart de pH",
+  titre: "pH gagné ou perdu depuis votre arrivée",
+  unite: "pH",
+  // **Un pH entier de chaque côté**, et ce sont des seuils : c'est un peu plus
+  // que ce que le moteur fait perdre en cinquante ans sous peuplement sur un
+  // limon acide (0,4 à 0,8, #495), deux chaulages de ce que le geste annonce
+  // (+0,5). Au-delà, la teinte s'arrête et le curseur donne le chiffre.
+  bornes: () => [-1, 1],
+  // La racine, parce que l'écart commence petit : les premières années d'une
+  // plantation déplacent le pH de quelques centièmes, et une échelle droite
+  // les laisserait dans le blanc du milieu jusqu'à ce qu'il soit trop tard
+  // pour les voir venir — tout l'objet de ce calque.
+  courbe: RACINE_SIGNEE,
+  lire: (snapshot, station, i) => {
+    const arrivee = station.solALArrivee?.ph[i];
+    return arrivee === undefined ? Number.NaN : (snapshot.soilPh[i] ?? 7) - arrivee;
+  },
+  // Orangé du côté acide, bleuté du côté calcaire, comme le calque du pH ;
+  // pâle au milieu, où rien n'a bougé.
+  teinte: (part) => {
+    const cote = part * 2 - 1;
+    const force = Math.abs(cote);
+    return [cote < 0 ? 20 : 215, 6 + 54 * force, 93 - 43 * force];
+  },
+  format: (v) => ecartSigne(v, 2),
+  sens: "du sol acidifié (−) au sol remonté (+)",
+  borneHauteOuverte: true,
+  borneBasseOuverte: true,
+};
+
+/**
+ * Les calques que la carte propose pour **cette** partie : les neuf de toujours,
+ * et l'écart de pH juste après le pH quand la partie a son relevé d'arrivée.
+ */
+export function calquesDeLaCarte(station: StationInfo): readonly FicheDeCalque[] {
+  if (!station.solALArrivee) return CALQUES;
+  const apresLePh = CALQUES.findIndex((c) => c.id === "ph") + 1;
+  return [...CALQUES.slice(0, apresLePh), CALQUE_ECART_PH, ...CALQUES.slice(apresLePh)];
+}
+
 export function ficheDuCalque(id: Calque): FicheDeCalque {
-  const fiche = CALQUES.find((c) => c.id === id);
+  const fiche = id === CALQUE_ECART_PH.id ? CALQUE_ECART_PH : CALQUES.find((c) => c.id === id);
   if (!fiche) throw new Error(`calque inconnu : ${id}`);
   return fiche;
 }
@@ -426,6 +518,36 @@ export function etendueDuCalque(
     if (station.enEau?.[i]) continue;
     const v = fiche.lire(snapshot, station, i);
     if (!Number.isFinite(v)) continue;
+    if (v < bas) bas = v;
+    if (v > haut) haut = v;
+    somme += v;
+    comptees++;
+  }
+  if (comptees === 0) return undefined;
+  return { bas, haut, moyenne: somme / comptees };
+}
+
+/**
+ * Ce que le calque valait sur toute la parcelle **à l'arrivée du joueur**
+ * (#509), compté comme `etendueDuCalque` compte le présent — mêmes cellules,
+ * même eau libre écartée —, pour que les deux moyennes se comparent. `undefined`
+ * si le calque n'a pas de relevé ou si la partie n'en a pas.
+ */
+export function etendueALArrivee(
+  fiche: FicheDeCalque,
+  station: StationInfo,
+  cellules: number,
+): { bas: number; haut: number; moyenne: number } | undefined {
+  const lire = fiche.aLArrivee;
+  if (!lire) return undefined;
+  let bas = Number.POSITIVE_INFINITY;
+  let haut = Number.NEGATIVE_INFINITY;
+  let somme = 0;
+  let comptees = 0;
+  for (let i = 0; i < cellules; i++) {
+    if (station.enEau?.[i]) continue;
+    const v = lire(station, i);
+    if (v === undefined || !Number.isFinite(v)) continue;
     if (v < bas) bas = v;
     if (v > haut) haut = v;
     somme += v;

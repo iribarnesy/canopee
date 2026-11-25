@@ -79,10 +79,23 @@ action et mener à la faillite. La sauvegarde garde huit parties dans
 `localStorage` (autosave toutes les 30 s) et leur bloc de reprise dans IndexedDB
 (`blocs.ts`, #338) ; sans bloc, la partie se rejoue depuis son journal.
 
+**Le sol se compare à l'arrivée (#509).** Le worker relève le sol à l'instant
+où le joueur prend la main, vieillissement compris (`arriverSurLaParcelle`,
+`releverLeSol` dans `snapshot.ts`) : pH, azote minéral et potassium par cellule,
+humus et phosphore en moyenne. Le relevé part avec la station
+(`StationInfo.solALArrivee`) et dans le bloc de reprise ; le rejeu le retrouve en
+repassant par l'arrivée, et un bloc écrit avant lui se relit sans lui. Le volet
+du sol met chaque grandeur en regard de sa valeur d'arrivée, et le calque
+« Écart de pH » montre **où** le pH a bougé : la moyenne ne le dit pas, la
+litière acidifie sous les arbres et nulle part ailleurs. L'avis qui préviendrait
+quand le sol sort du plateau des arbres plantés attend que le moteur publie le
+pH que chaque arbre lit sous ses racines (#530).
+
 **Ce qui manque pour qu'un joueur apprenne seul**, d'après le même relevé : le
 coût d'un geste avant le clic (seuls planter, le manchon et l'embauche le
-disent), un sol qui s'appauvrit et qui se voit avant l'irréversible, des plants
-qu'on voit à l'échelle de la parcelle, des commandes de caméra hors du menu. La
+disent), l'avis quand le sol sous ses arbres sort de leur plateau de pH (#530),
+des plants qu'on voit à l'échelle de la parcelle, des commandes de caméra hors
+du menu. La
 liste des lots de la v0.6 est dans [`README.md`](README.md), « Où en est le
 projet ».
 
