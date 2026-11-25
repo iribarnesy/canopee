@@ -46,6 +46,19 @@ export interface Paysage {
   /** part urbanisée ∈ [0,1] */
   partUrbaine: number;
   /**
+   * Longueur de rugosité du paysage, m : la classe de Davenport et Wieringa que
+   * le guide de l'OMM donne en annexe de son chapitre 5 (OMM n° 8, éd. 2018) —
+   * 3, terrain ouvert, 0,03 ; 4, cultures basses et obstacles épars, 0,10 ;
+   * 5, cultures hautes et obstacles dispersés, 0,25 ; 6, parc et obstacles
+   * nombreux, 0,5 ; 7, couverture régulière de grands obstacles (banlieue,
+   * forêt), 1,0.
+   *
+   * C'est elle qui décide de la rafale qu'une cime reçoit dans une tempête
+   * (`rafaleRecue`, tempete.ts, chaîne de l'OMM, #483). `ventExposition`, plus
+   * bas, reste au feu, à l'évaporation et au rendu.
+   */
+  rugositeM: number;
+  /**
    * Ce qui sème depuis l'entourage, espèce par espèce. Explicite plutôt que
    * déduit du taux boisé : la lande a peu de gibier et beaucoup de pins, une
    * banlieue a du passage et presque pas de semenciers. Lier les deux aurait
@@ -163,6 +176,9 @@ export const PAYSAGES: readonly Paysage[] = [
     partBoisee: 0.9,
     partCultivee: 0.05,
     partUrbaine: 0,
+    // Classe 7, couverture régulière de grands obstacles : 1,0 m. Au-delà des
+    // 0,5 m où l'OMM borne sa correction d'exposition (§ 5.9.4) *(à confirmer)*.
+    rugositeM: 1,
     semenciers: [
       { especeId: "fagus_sylvatica", semisParAn: 5 },
       { especeId: "quercus_pubescens", semisParAn: 4 },
@@ -195,6 +211,9 @@ export const PAYSAGES: readonly Paysage[] = [
     partBoisee: 0.35,
     partCultivee: 0.6,
     partUrbaine: 0.05,
+    // Classe 5, cultures hautes et obstacles dispersés : 0,25 m (décision du
+    // 18 novembre sur #483 ; la classe 6, 0,5 m, est l'autre lecture).
+    rugositeM: 0.25,
     semenciers: [
       { especeId: "fraxinus_excelsior", semisParAn: 4 },
       { especeId: "quercus_pubescens", semisParAn: 2 },
@@ -231,6 +250,8 @@ export const PAYSAGES: readonly Paysage[] = [
     partBoisee: 0.03,
     partCultivee: 0.95,
     partUrbaine: 0.02,
+    // Classe 4, cultures basses et obstacles épars : 0,10 m.
+    rugositeM: 0.1,
     // Presque rien — c'est tout l'enjeu de ce paysage. Seule la ronce arrive
     // quand même : les oiseaux la sèment jusqu'au milieu des champs.
     semenciers: [{ especeId: "rubus_fruticosus", semisParAn: 1 }],
@@ -244,6 +265,8 @@ export const PAYSAGES: readonly Paysage[] = [
     partBoisee: 0.2,
     partCultivee: 0.15,
     partUrbaine: 0.65,
+    // Classe 6, parc et obstacles nombreux : 0,5 m.
+    rugositeM: 0.5,
     // Friches urbaines : le sureau nitrophile y prospère sur les remblais, et
     // la ronce tient tous les délaissés.
     semenciers: [
@@ -261,6 +284,8 @@ export const PAYSAGES: readonly Paysage[] = [
     partBoisee: 0.25,
     partCultivee: 0.05,
     partUrbaine: 0.05,
+    // Classe 4, végétation basse et obstacles épars : 0,10 m.
+    rugositeM: 0.1,
     semenciers: [
       { especeId: "pinus_sylvestris", semisParAn: 4 },
       { especeId: "betula_pendula", semisParAn: 3 },
@@ -276,6 +301,8 @@ export const PAYSAGES: readonly Paysage[] = [
     partBoisee: 0.5,
     partCultivee: 0.35,
     partUrbaine: 0.05,
+    // Classe 6, obstacles nombreux : 0,5 m.
+    rugositeM: 0.5,
     semenciers: [
       { especeId: "betula_pendula", semisParAn: 6 },
       { especeId: "pinus_sylvestris", semisParAn: 3 },
@@ -373,6 +400,22 @@ export function frequentationDesBordures(b: Bordures): number {
 /** Un seul côté ouvert suffit à laisser passer le vent. */
 export function ventDesBordures(b: Bordures): number {
   return Math.max(...cotes(b).map(ventExposition));
+}
+
+/**
+ * La rugosité du côté qui fait l'exposition de la station, m (#483).
+ *
+ * C'est le côté le plus ouvert, celui que `ventDesBordures` retient : le vent
+ * de tempête entre par là. Si aucun côté ne donne l'exposition que la station
+ * porte, elle a été posée à la main (un essai, une expérience du labo) : la
+ * fonction rend `undefined`, et la tempête lit alors cette exposition comme un
+ * facteur de site sur le terrain ouvert de la station météo (`rafaleRecue`,
+ * tempete.ts).
+ */
+export function rugositeDuVent(b: Bordures | undefined, exposition: number): number | undefined {
+  if (!b) return undefined;
+  const cote = cotes(b).find((p) => Math.abs(ventExposition(p) - exposition) < 1e-9);
+  return cote?.rugositeM;
 }
 
 export function getPaysage(id: string): Paysage {

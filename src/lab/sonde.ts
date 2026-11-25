@@ -30,6 +30,7 @@ import {
   type WeekWeather,
 } from "../engine";
 import { carbonInventory } from "../engine/carbon";
+import { CLASSE_SOL_PAR_DEFAUT, candidatAuChablis, domaineDuRenversement } from "../engine/tempete";
 
 export const YEARS = 20;
 export const TREES_PER_SPECIES = 30;
@@ -171,4 +172,35 @@ export type BilanCarbone = ReturnType<typeof carbonInventory>;
  */
 export function bilanDeLaSonde(finalState: GameState): BilanCarbone {
   return carbonInventory(finalState);
+}
+
+/**
+ * Le **diagnostic hors domaine** du renversement (#483, décision du
+ * 25 novembre) : combien des arbres que la tempête regarde sont plus lourds que
+ * les arbres tirés dont leur résistance vient.
+ *
+ * C'est un diagnostic du labo du moteur, pas un message de jeu : il lit l'état
+ * et ne change rien à la simulation. Comme `fgr` (`max_stem_weight_warning`),
+ * le moteur signale ces arbres et ne les affaiblit pas.
+ */
+export interface HorsDomaineDuVent {
+  /** arbres vivants candidats au chablis (plus de cinq mètres, `candidatAuChablis`) */
+  candidats: number;
+  /** dont la tige verte pèse plus que le plus lourd des pins tirés de leur classe */
+  auDelaDesPins: number;
+  /** dont elle pèse plus que le plus lourd des arbres tirés de la base (2068 kg) */
+  auDelaDeLaBase: number;
+}
+
+export function horsDomaineDuVent(state: GameState): HorsDomaineDuVent {
+  const classe = state.station.classeSolForestGales ?? CLASSE_SOL_PAR_DEFAUT;
+  const bilan: HorsDomaineDuVent = { candidats: 0, auDelaDesPins: 0, auDelaDeLaBase: 0 };
+  for (const arbre of state.trees) {
+    if (!candidatAuChablis(arbre)) continue;
+    bilan.candidats++;
+    const domaine = domaineDuRenversement(arbre, classe);
+    if (domaine !== "dans") bilan.auDelaDesPins++;
+    if (domaine === "au-dela-de-la-base") bilan.auDelaDeLaBase++;
+  }
+  return bilan;
 }

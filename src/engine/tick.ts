@@ -173,7 +173,7 @@ import {
   nitrogenAvailabilityFactor,
 } from "./nitrogen";
 import { type FrequentationDeGuilde, frequentationOiseaux } from "./oiseaux";
-import { frequentationDesBordures } from "./paysage";
+import { frequentationDesBordures, rugositeDuVent } from "./paysage";
 import {
   contextePhenologique,
   partFloraison,
@@ -4322,6 +4322,9 @@ export function tick(state: GameState, weather: WeekWeather, essai?: ReglagesDEs
   // partie, le renversement de l'identité de l'arbre (tempete.ts).
   let tempete: TickResult["tempete"];
   if (rafaleMs >= RAFALE_MINIMALE_MS && station.ventExposition > 0) {
+    // Le paysage qui fait l'exposition décide de la rugosité que la rafale
+    // traverse jusqu'aux cimes (chaîne de l'OMM, tempete.ts, #483).
+    const rugositeM = rugositeDuVent(station.bordures, station.ventExposition);
     const verses: TreeState[] = [];
     /** Ceux dont le **fût** a cassé : ils ne sont pas par terre (F17). */
     const casses: TreeState[] = [];
@@ -4334,6 +4337,9 @@ export function tick(state: GameState, weather: WeekWeather, essai?: ReglagesDEs
       const exposition = {
         rafaleMs,
         ventExposition: station.ventExposition,
+        rugositeM,
+        // La classe de sol de ForestGALES : ce que le sol oppose au renversement.
+        classeSol: station.classeSolForestGales,
         // L'abri qui compte pour une **cime**, celui que les voisins **plus hauts**
         // donnent — et non l'abri de haie de `windShelterAt`, qui sature à 1
         // dans n'importe quel peuplement (tempete.ts).
@@ -4348,9 +4354,13 @@ export function tick(state: GameState, weather: WeekWeather, essai?: ReglagesDEs
         // l'arbre debout, et c'est un sol saturé qui les lâche.
         engorgement: waterlogging[cellule * nH] ?? 0,
         toleranceEngorgement: espece.eau.toleranceEngorgement,
-        partFoliaire: partFoliaireOmbrageanteDans(espece, pheno) * feuillageRevenu(tree),
+        // Le feuillage **vivant** : la marcescence est juvénile, et les feuilles
+        // mortes ne tiennent pas l'hiver à la hauteur d'un houppier de chablis
+        // (Svendsen 2001 ; décision du 18 novembre sur #483).
+        partFoliaire: partFoliaireActiveDans(espece, pheno) * feuillageRevenu(tree),
         // La profondeur que **cet** arbre a explorée, pas celle que sa fiche vise :
-        // un sujet jamais assoiffé garde un chevelu superficiel (trees.ts).
+        // un sujet jamais assoiffé garde un chevelu superficiel (trees.ts), et il
+        // passe dans la classe superficielle de ForestGALES (tempete.ts).
         profondeurEffectiveCm: tree.rootDepthCm,
       };
       if (!verse(tree, exposition, semaineDuTemps, espece.bois.densite)) {

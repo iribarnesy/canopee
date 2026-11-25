@@ -32,6 +32,29 @@
  *    lit sur la part foliaire (`phenologie.ts`) et que les tempêtes atlantiques
  *    arrivent quand les feuillus sont dénudés.
  *
+ * ## La résistance de ForestGALES (#483)
+ *
+ * Le renversement ne part plus d'une constante. Il suit la méthode TMC de
+ * ForestGALES, dans le paquet `fgr` (Locatelli, Hale, Nicoll et Gardiner) : la
+ * motte cède quand le moment du vent, `T_C · u²`, dépasse le moment critique
+ * `C_reg · SW`, le poids de tige vert multiplié par le coefficient des arbres
+ * tirés. Trois traits le portent, et chacun a sa source :
+ *
+ *  - **le C_reg du pin sylvestre** pour toutes les essences (137 pins tirés par
+ *    la Forestry Commission, Nicoll et al. 2006), lu par classe de sol et
+ *    d'enracinement : la classe est un trait de station
+ *    (`Station.classeSolForestGales`), l'enracinement se lit sur l'arbre ;
+ *  - **la densité verte** de 850 kg/m³, celle de `fgr` pour le pin ;
+ *  - **le volume de tige** du moteur (`volumeTigeM3`, facteur de forme 0,5
+ *    *(à confirmer)*).
+ *
+ * La rafale de la semaine arrive à la cime par la **chaîne de l'OMM** (guide
+ * n° 8, éq. 5.3) : moyenne horaire de la station, montée à 60 m, redescendue
+ * sur la rugosité du paysage. La rampe d'élancement et le facteur d'ancrage du
+ * premier lot sont sortis du calcul : le premier n'avait pas de source, le
+ * second est remplacé par la classe d'enracinement de ForestGALES. Ce qui reste
+ * *(à calibrer)* est dit sur chaque terme.
+ *
  * ## Aucun tirage dans le flux principal
  *
  * Ni la rafale ni le renversement ne puisent dans le flux séquentiel : la
@@ -70,16 +93,18 @@
  *    mois de troncs par terre sont donc invisibles au feu. C'est déjà vrai des
  *    arbres tués par le feu lui-même, et le corriger touche `feu.ts` plus que
  *    ce fichier.
- *  - **Le tri par l'élancement était faible**, et pour une raison mesurée
- *    ailleurs : le moteur ne produisait que des H/D de 35 à 49, quand la
- *    sylviculture en mesure de 25 à 100. Deux causes ont été éliminées par la
- *    mesure (#65, #79) ; la troisième était l'étiolement — une tige à l'ombre
- *    stagnait au lieu de filer. Levée par #97 : la rampe d'élancement sert
- *    maintenant en entier (`facteurElancement`).
+ *  - **L'élancement ne trie plus le renversement**, et c'est la forme de
+ *    ForestGALES qui le dit : le poids de tige et le coefficient de moment
+ *    vont tous deux comme `d² · h`, si bien que la vitesse critique de la motte
+ *    ne dépend plus de la taille de l'arbre (seule la souplesse des jeunes
+ *    tiges la relève). L'élancement trie le **volis**, en racine carrée
+ *    (`facteurGeometrieFut`). La rampe d'élancement du premier lot
+ *    (`facteurElancement`, #97) n'entre plus dans aucune vitesse.
  */
 
 import { rngFloat, rngStateFromSeed } from "./rng";
-import type { Carie, TreeState } from "./trees";
+import type { ClasseSolForestGales } from "./state";
+import { type Carie, type TreeState, volumeTigeM3 } from "./trees";
 
 /**
  * Rapport entre la rafale maximale d'une semaine et la vitesse **moyenne** du vent
@@ -158,52 +183,202 @@ export function rafaleDeLaSemaine(
  * plus fragile des cas possibles : « en dessous, aucun arbre du moteur
  * n'atteint sa vitesse critique ».
  *
- * **C'est faux pour une tige élancée** (#483). Un hêtre de 15 m à H/D 97
- * (densité 0,55) casse à 10,6 m/s de rafale à sa cime en feuilles, et à 15,2
- * l'hiver, avec ses feuilles mortes (`vitesseCritiqueVolisMs`). À pleine
- * exposition, ce sont des rafales de 9,7 et 14,0 m/s à 10 m, et encore 11,7 et
- * 16,8 sous l'abri de peuplement le plus fort. L'ébranchage, qui commence aux
- * six dixièmes de la vitesse critique (`PART_CASSE_BRANCHES`), passe aussi sous
- * le filtre pour un arbre ordinaire : un pin isolé de 20 m à H/D 50 perd ses
- * premières branches à 12,7 m/s à 10 m. Pour ces arbres-là, le filtre tient
- * lieu de seuil de dégât, et rien ne le fonde. La valeur n'a pas bougé : la
- * changer changerait toutes les parties exposées *(à calibrer)*.
+ * **C'est faux pour une tige élancée de bois tendre** (#483). Sous la forme de
+ * ForestGALES, un saule de 15 m à H/D 100 (densité 0,28) casse à 14,4 m/s de
+ * vent moyen à sa cime en feuilles (`vitesseCritiqueVolisMs`), soit une rafale
+ * de 20,5 m/s à 10 m à pleine exposition. L'ébranchage, qui commence aux six
+ * dixièmes de la vitesse critique (`PART_CASSE_BRANCHES`), passe aussi sous le
+ * filtre pour un arbre ordinaire : un pin isolé de 20 m à H/D 50 perd ses
+ * premières branches vers 17 m/s de rafale à 10 m (16,6 enraciné en surface,
+ * 17,9 en profondeur). Pour ces arbres-là, le filtre tient lieu de seuil de
+ * dégât, et rien ne le fonde. La valeur n'a pas bougé : la changer changerait
+ * toutes les parties exposées *(à calibrer)*.
  */
 export const RAFALE_MINIMALE_MS = 25;
 
 /**
- * Longueur de rugosité du couvert, m : ce que vaut `z₀` dans le profil
- * logarithmique du vent. 0,1 m est l'ordre de grandeur d'une prairie rase ou
- * d'une lande basse ; un couvert forestier serait dix fois plus rugueux, et ce
- * fichier ne le distingue pas *(à calibrer)*.
+ * Longueur de rugosité de la station météo, m : la classe 3 de Davenport et
+ * Wieringa, le terrain ouvert où l'OMM place l'anémomètre (« 10 m over open
+ * terrain », guide n° 8, éd. 2018, § 5.9.4). La rafale de la semaine est une
+ * mesure de station : c'est sur ce terrain-là qu'elle est tirée.
  */
-export const RUGOSITE_M = 0.1;
+export const RUGOSITE_STATION_M = 0.03;
 /** Hauteur de référence des mesures de vent, m (convention météorologique). */
 export const HAUTEUR_ANEMOMETRE_M = 10;
+/**
+ * Hauteur où la couche limite oublie la rugosité du lieu, m : la correction
+ * d'exposition de l'OMM y monte le profil avec la rugosité de la station, puis
+ * l'en redescend avec celle du lieu (guide n° 8, éq. 5.3 ; 60 m d'après
+ * Wieringa 1986, de 40 à 80 m acceptables).
+ */
+export const HAUTEUR_DE_MELANGE_M = 60;
 
 /**
- * Part de la rafale de référence qu'un houppier reçoit à sa hauteur : le profil
- * logarithmique du vent, la loi de base de la couche limite.
+ * Part du vent de la hauteur de référence qu'on trouve à une autre hauteur : le
+ * profil logarithmique, la loi de base de la couche limite, sur une rugosité
+ * donnée. À la hauteur de référence, elle vaut 1 par construction.
  *
- * Un semis de cinquante centimètres en reçoit le tiers, un fût de vingt mètres
- * un sixième de plus que l'anémomètre. C'est ce qui fait qu'une tempête couche
- * les grands et épargne le sous-étage, sans qu'on ait à l'écrire.
+ * Un semis de cinquante centimètres est dans l'air lent, un fût de vingt mètres
+ * dans l'air rapide. C'est ce qui fait qu'une tempête couche les grands et
+ * épargne le sous-étage, sans qu'on ait à l'écrire. Sous deux fois la rugosité,
+ * le profil n'a plus de sens : la hauteur y est plafonnée par en bas.
  */
-export function partDeRafaleAHauteur(hauteurM: number): number {
-  const z = Math.max(RUGOSITE_M * 2, hauteurM);
-  return Math.log(z / RUGOSITE_M) / Math.log(HAUTEUR_ANEMOMETRE_M / RUGOSITE_M);
+export function partDeRafaleAHauteur(
+  hauteurM: number,
+  rugositeM = RUGOSITE_STATION_M,
+  referenceM = HAUTEUR_ANEMOMETRE_M,
+): number {
+  const z = Math.max(rugositeM * 2, hauteurM);
+  return Math.log(z / rugositeM) / Math.log(referenceM / rugositeM);
 }
 
 /**
- * Vitesse critique d'un arbre bien ancré, trapu et dénudé, m/s.
- *
- * Les modèles de risque de chablis (famille ForestGALES) donnent des vitesses
- * critiques de 15 à 45 m/s selon l'essence, le sol et la conduite *(à
- * confirmer : cette bande ne porte aucune référence, #483)*. Cette borne haute
- * est celle d'un cas favorable ; tous les facteurs ci-dessous la rabotent
- * *(à calibrer)*.
+ * Facteur de rafale d'une station : la pointe de trois secondes sur la moyenne
+ * horaire, à 10 m, sur une rugosité donnée. `G = 1 + 3,00 / ln(10 / z₀)`
+ * (Harper, Kepert et Ginger 2010, OMM/TD n° 1555, éq. 11 et 14). Sur le
+ * terrain ouvert de la station, il vaut 1,52 : c'est la « lecture OM » décidée
+ * le 18 novembre sur #483.
  */
-export const VITESSE_CRITIQUE_BASE_MS = 46;
+export function facteurDeRafale(rugositeM: number): number {
+  return 1 + 3 / Math.log(HAUTEUR_ANEMOMETRE_M / rugositeM);
+}
+
+/**
+ * Le C_reg du pin sylvestre dans `fgr`, N·m/kg : le moment qui déracine un
+ * arbre, par kilogramme de tige verte (`species_parameters`, colonnes
+ * `c_reg_soil_{1,2}_rd_{1,2}`). En sol A, ce sont **137 pins tirés** par la
+ * Forestry Commission (Nicoll et al. 2006, *Can. J. For. Res.* 36 : 1871) ; en
+ * sol B, `fgr` reprend la matrice sol × enracinement de l'épicéa de Sitka.
+ *
+ * Il vaut **pour toutes les essences** (décision du 25 novembre sur #483) : les
+ * valeurs de `fgr` pour le hêtre et le chêne (pin × 1,417) sont une estimation
+ * sans arbre tiré, et le moteur n'en a aucune pour ses autres feuillus.
+ */
+export const C_REG_PIN_NM_KG: Readonly<
+  Record<ClasseSolForestGales, { readonly superficiel: number; readonly profond: number }>
+> = {
+  A: { superficiel: 140.1, profond: 162.9 },
+  B: { superficiel: 124.2, profond: 144.4 },
+};
+
+/**
+ * Profondeur d'enracinement sous laquelle ForestGALES classe un arbre
+ * superficiel, cm : « shallow (< 80cm) and deep (> 80cm) » (manuel de `fgr`).
+ */
+export const ENRACINEMENT_PROFOND_CM = 80;
+
+/**
+ * Le C_reg de cet arbre, N·m/kg : la classe de sol de la station et la
+ * profondeur que **cet** arbre a réellement explorée (`TreeState.rootDepthCm`).
+ *
+ * Elle porte ce que le facteur d'ancrage du premier lot portait : l'espèce (un
+ * pivot vise plus bas qu'un traçant), la taille du sujet, ce que le sol laisse
+ * pénétrer, et la plasticité — un arbre qui n'a jamais eu soif garde un chevelu
+ * superficiel (`nouvelleProfondeurRacines`, trees.ts), il passe donc dans la
+ * classe superficielle et verse plus tôt.
+ */
+export function cRegNmKg(classe: ClasseSolForestGales, profondeurEffectiveCm: number): number {
+  const c = C_REG_PIN_NM_KG[classe];
+  return profondeurEffectiveCm < ENRACINEMENT_PROFOND_CM ? c.superficiel : c.profond;
+}
+
+/** La classe de sol d'une station qui n'en déclare pas : A, comme `fgr` (`fg_tmc`). */
+export const CLASSE_SOL_PAR_DEFAUT: ClasseSolForestGales = "A";
+
+/**
+ * Densité du bois vert de la tige, kg/m³ : celle du pin sylvestre dans `fgr`
+ * (`stem_density`), pour toutes les essences (décision du 24 novembre sur
+ * #483), en cohérence avec le C_reg du pin retenu pour toutes.
+ */
+export const DENSITE_VERTE_KG_M3 = 850;
+
+/** Poids de la tige verte, kg : `SW = ρ_vert · V_tige` (`fg_tmc`, étape 7). */
+export function poidsDeTigeVertKg(diametreCm: number, heightM: number): number {
+  return DENSITE_VERTE_KG_M3 * volumeTigeM3(diametreCm, heightM);
+}
+
+/**
+ * Coefficient du moment de renversement, `T_C = 111,604 · dbh² · h` (dbh en
+ * mètres) : la régression sans ordonnée à l'origine et sans indice de
+ * concurrence que `fgr` emploie pour le renversement
+ * (`tc_zero_intercept_fun_balBA`, appelée par `uh_overturning_tmc`). Le moment
+ * appliqué par un vent moyen `u` au sommet du couvert est `T_C · u²`.
+ */
+export const COEFFICIENT_MOMENT_TMC = 111.604;
+
+/** `T_C` de cet arbre, en N·m par (m/s)². */
+export function coefficientDeMoment(diametreCm: number, heightM: number): number {
+  const d = Math.max(0, diametreCm) / 100;
+  return COEFFICIENT_MOMENT_TMC * d * d * Math.max(0, heightM);
+}
+
+/**
+ * Vitesse moyenne au sommet du couvert qui déracine cet arbre **en pleine
+ * feuille**, m/s : `u = √(C_reg · SW / T_C)` (`uh_overturning_tmc`, sans le
+ * facteur de lisière ni la flèche, que le moteur ne connaît pas).
+ *
+ * Le poids de tige et le coefficient de moment vont tous deux comme `d² · h` :
+ * avec un facteur de forme constant, la vitesse ne dépend plus de la taille.
+ * Elle vaut 20,5 m/s sur un enracinement superficiel en sol A, 22,1 sur un
+ * enracinement profond. C'est la vitesse d'un arbre **en feuille** : les
+ * coefficients de traînée de ForestGALES sont pris sur des arbres feuillés
+ * (Mayhead et al. 1975), si bien que l'arbre nu en tient davantage
+ * (`facteurPriseAuVent`). Un arbre sans diamètre n'offre aucun bras de levier :
+ * sa vitesse est infinie (le tick ne le regarde pas, `candidatAuChablis`).
+ */
+export function vitesseCritiqueTmcMs(
+  arbre: TreeState,
+  classe: ClasseSolForestGales,
+  profondeurEffectiveCm: number,
+): number {
+  const tc = coefficientDeMoment(arbre.diametreCm, arbre.heightM);
+  if (tc <= 0) return Number.POSITIVE_INFINITY;
+  const momentCritique =
+    cRegNmKg(classe, profondeurEffectiveCm) * poidsDeTigeVertKg(arbre.diametreCm, arbre.heightM);
+  return Math.sqrt(momentCritique / tc);
+}
+
+/**
+ * Le poids de tige vert du plus lourd des pins tirés de `fgr`, kg, par classe
+ * de sol et d'enracinement (`msw_soil_{1,2}_rd_{1,2}` du pin sylvestre). En
+ * sol B, `fgr` n'a aucun pin tiré et y écrit zéro : tout arbre y est hors du
+ * domaine des données.
+ */
+export const POIDS_DE_TIGE_MAX_PIN_KG: Readonly<
+  Record<ClasseSolForestGales, { readonly superficiel: number; readonly profond: number }>
+> = {
+  A: { superficiel: 469, profond: 576 },
+  B: { superficiel: 0, profond: 0 },
+};
+
+/**
+ * Le plus lourd des arbres tirés de la base britannique de `fgr`, kg : un
+ * épicéa de Sitka sur sol à gley (`msw_soil_2_rd_1` = 2068). Le pin radiata de
+ * Nouvelle-Zélande va plus loin (3386 kg), sur une autre base.
+ */
+export const POIDS_DE_TIGE_MAX_BASE_KG = 2068;
+
+/** Où le poids de tige d'un arbre se place par rapport aux arbres tirés. */
+export type DomaineDuRenversement = "dans" | "au-dela-des-pins" | "au-dela-de-la-base";
+
+/**
+ * Le diagnostic hors domaine (#483, décision du 25 novembre) : cet arbre
+ * est-il plus lourd que les arbres dont sa résistance est tirée ?
+ *
+ * Comme `fgr` (`fg_tmc`, `max_stem_weight_warning`), le moteur **signale** et
+ * n'affaiblit pas : le diagnostic ne touche à aucune vitesse, et il ne sort
+ * que dans le labo du moteur (`src/lab`), jamais dans un message de jeu.
+ */
+export function domaineDuRenversement(
+  arbre: Pick<TreeState, "diametreCm" | "heightM" | "rootDepthCm">,
+  classe: ClasseSolForestGales,
+): DomaineDuRenversement {
+  const poids = poidsDeTigeVertKg(arbre.diametreCm, arbre.heightM);
+  if (poids > POIDS_DE_TIGE_MAX_BASE_KG) return "au-dela-de-la-base";
+  const max = POIDS_DE_TIGE_MAX_PIN_KG[classe];
+  const borne = arbre.rootDepthCm < ENRACINEMENT_PROFOND_CM ? max.superficiel : max.profond;
+  return poids > borne ? "au-dela-des-pins" : "dans";
+}
 
 /** H/D en dessous duquel l'élancement ne coûte plus rien : un arbre de plein vent. */
 export const ELANCEMENT_STABLE = 40;
@@ -214,6 +389,12 @@ export const PERTE_ELANCEMENT = 0.55;
 
 /**
  * Ce que l'élancement laisse de la résistance ∈ [0,45 ; 1].
+ *
+ * **Elle n'entre plus dans aucune vitesse critique depuis #483** : la rampe
+ * n'avait pas de source, et la forme de ForestGALES (`vitesseCritiqueTmcMs`)
+ * la remplace. Elle reste la règle sylvicole de l'élancement que
+ * `elancement.test.ts` lit pour dire qu'une perche est élancée, et le sort de
+ * la fonction est une décision à prendre avec les essais qui la décrivent.
  *
  * Le rapport hauteur/diamètre est L'indicateur du risque de chablis en
  * sylviculture française : au-delà de 80 on parle de peuplement instable, en
@@ -298,6 +479,11 @@ export const ANCRAGE_MINIMAL = 0.8;
 /**
  * Ce que l'ancrage laisse de la résistance ∈ [0,8 ; 1].
  *
+ * **Retiré du calcul depuis #483** (décision du 25 novembre) : la classe
+ * d'enracinement de ForestGALES le remplace (`cRegNmKg`), qui lit la même
+ * profondeur. La fonction n'est plus appelée par le moteur ; elle reste le
+ * temps de décider du sort des essais qui la décrivent (`tempete.test.ts`).
+ *
  * Aucun trait nouveau, et pas même une lecture de fiche : c'est
  * `TreeState.rootDepthCm`, la profondeur que **cet** arbre-là a réellement
  * explorée. Elle porte déjà tout ce qu'il faut — l'espèce (un pivot vise plus
@@ -316,11 +502,22 @@ export function facteurAncrage(profondeurEffectiveCm: number, hauteurM: number):
   return ANCRAGE_MINIMAL + (1 - ANCRAGE_MINIMAL) * part;
 }
 
-/** Ce qu'un sol saturé **au-delà de ce que l'espèce supporte** retire à la tenue. */
-export const PERTE_ENGORGEMENT = 0.45;
+/**
+ * Ce qu'un sol saturé **au-delà de ce que l'espèce supporte** retire à la tenue,
+ * en part de la vitesse critique.
+ *
+ * Défossez et al. 2021 (*For. Ecol. Manage.* 480 : 118614) : douze pins
+ * maritimes de quatorze ans tirés sur un podzol sableux dans deux états
+ * hydriques, et un modèle de la motte. Le moment de renversement varie peu
+ * hors saturation et perd jusqu'à 40 % à saturation complète ; sur la vitesse,
+ * qui va comme sa racine, c'est `1 − √0,6` = 0,225. Il remplace 0,45, qui
+ * n'avait pas de source (#483). Mesuré sur du sable ; sur un limon, la valeur
+ * est *(à confirmer)*.
+ */
+export const PERTE_ENGORGEMENT = 0.225;
 
 /**
- * Ce que l'état du sol laisse de la résistance ∈ [0,55 ; 1].
+ * Ce que l'état du sol laisse de la résistance ∈ [0,775 ; 1].
  *
  * C'est **le** facteur des grandes tempêtes, et il était déjà dans l'état du
  * moteur : les dégâts de Lothar et de Klaus se sont concentrés là où le sol
@@ -343,17 +540,34 @@ export function facteurSolGorge(engorgement: number, toleranceEngorgement: numbe
   return 1 - PERTE_ENGORGEMENT * exces;
 }
 
-/** Ce qu'un houppier en pleine feuille retire à la résistance, en part. */
-export const PERTE_PRISE_AU_VENT = 0.35;
+/**
+ * Ce qu'un houppier en pleine feuille retire à la résistance de l'arbre nu, en
+ * part *(à confirmer)*.
+ *
+ * Koizumi et al. 2010 (*J. Wood Sci.* 56 : 189) ont mesuré sur le terrain trois
+ * peupliers d'Italie de 12 à 13 m, en feuilles et défeuillés : à 10 m/s, le
+ * coefficient de traînée de l'arbre nu vaut 0,553 à 0,770 fois celui de
+ * l'arbre feuillé, soit 0,12 à 0,26 sur la vitesse. 0,20 est dans cette
+ * fourchette (décision du 19 novembre sur #483) ; rien ne la mesure à vitesse
+ * de tempête, et Angelou et al. 2019 et 2021, qui le feraient, sont payants.
+ * Il remplace 0,35, qui n'avait pas de source.
+ *
+ * **L'ancre est l'arbre en feuille** : les vitesses de ForestGALES sont celles
+ * d'arbres feuillés, et c'est l'arbre nu qui s'en déduit, en divisant par
+ * `1 − PERTE_PRISE_AU_VENT` (`vitesseCritiqueMs`, `vitesseCritiqueVolisMs`).
+ */
+export const PERTE_PRISE_AU_VENT = 0.2;
 
 /**
- * Ce que la prise au vent laisse de la résistance ∈ [0,65 ; 1].
+ * Ce que la prise au vent laisse de la résistance de l'arbre nu ∈ [0,8 ; 1].
  *
- * La part foliaire **ombrageante** est la bonne grandeur : c'est celle qui
- * intercepte, feuilles mortes des marcescents comprises (`phenologie.ts`), et
- * une feuille morte accrochée prend le vent aussi bien qu'une verte. De là
- * sort, sans qu'on l'écrive, le fait de terrain le plus massif des tempêtes
- * françaises : en décembre le chêne est nu et l'épicéa non.
+ * La part foliaire **active** est la bonne grandeur, et c'est une décision du
+ * 18 novembre sur #483 : la marcescence est un trait juvénile, les feuilles
+ * mortes ne restant tout l'hiver que jusqu'à 3 m environ (Svendsen 2001,
+ * *Alces* 37 : 475, d'après Schaffalitzky de Muckadell 1962), et les candidats
+ * au chablis ont leur houppier au-dessus. De là sort, sans qu'on l'écrive, le
+ * fait de terrain le plus massif des tempêtes françaises : en décembre le
+ * chêne est nu et l'épicéa non.
  */
 export function facteurPriseAuVent(partFoliaire: number): number {
   return 1 - PERTE_PRISE_AU_VENT * Math.min(1, Math.max(0, partFoliaire));
@@ -400,17 +614,25 @@ export function facteurSouplesse(hauteurM: number): number {
 
 /** Ce que voit un arbre au moment du coup de vent. */
 export interface ExpositionAuVent {
-  /** rafale de référence de la semaine, m/s (à 10 m) */
+  /** rafale de référence de la semaine, m/s (à 10 m, sur le terrain de la station) */
   rafaleMs: number;
   /** exposition de la station ∈ [0,1] */
   ventExposition: number;
+  /**
+   * Rugosité du paysage qui fait l'exposition, m (`rugositeDuVent`, paysage.ts).
+   * Absente, l'exposition a été posée à la main : elle sert alors de facteur de
+   * site sur le terrain ouvert de la station (`rafaleRecue`).
+   */
+  rugositeM?: number;
+  /** classe de sol de ForestGALES de la station ; absente, A (`fgr`) */
+  classeSol?: ClasseSolForestGales;
   /** abri apporté par les voisins ∈ [0,1] (`light.ts:windShelterAt`) */
   abriVent: number;
   /** engorgement de l'horizon de surface ∈ [0,1] */
   engorgement: number;
   /** ce que l'espèce tolère d'engorgement ∈ [0,1] (`especes.ts:eau`) */
   toleranceEngorgement: number;
-  /** part foliaire ombrageante de l'arbre cette semaine ∈ [0,1] */
+  /** part foliaire **active** de l'arbre cette semaine ∈ [0,1] (`facteurPriseAuVent`) */
   partFoliaire: number;
   /** profondeur réellement explorée par les racines, cm (`TreeState.rootDepthCm`) */
   profondeurEffectiveCm: number;
@@ -622,23 +844,54 @@ export function facteurNaivete(naivete: number): number {
   return 1 - PERTE_NAIVETE * Math.min(1, Math.max(0, naivete));
 }
 
-/** Rafale que l'arbre reçoit vraiment à la cime, m/s. */
+/**
+ * Vent que l'arbre reçoit vraiment à la cime, m/s : une **moyenne horaire** au
+ * sommet du couvert, la grandeur que les vitesses de ForestGALES attendent.
+ *
+ * La chaîne de l'OMM (guide n° 8, éq. 5.3 ; décision du 18 novembre sur #483,
+ * « W-a ») : la rafale de la semaine, mesurée sur le terrain ouvert de la
+ * station, y est ramenée à sa moyenne horaire (`facteurDeRafale`), montée à
+ * 60 m sur cette rugosité-là, puis redescendue jusqu'à la cime sur la
+ * rugosité du paysage (`Paysage.rugositeM`). L'abri des voisins plus hauts la
+ * rabote ensuite (`abriAuVent`).
+ *
+ * Une exposition posée à la main, qu'aucun côté du paysage ne donne, reste un
+ * facteur de site sur le terrain de la station : c'est ce que font les essais
+ * qui coupent ou atténuent le vent par `ventExposition`.
+ */
 export function rafaleRecue(arbre: TreeState, exposition: ExpositionAuVent): number {
   const abri = 1 - ABRI_MAX * Math.min(1, Math.max(0, exposition.abriVent));
+  const rugosite = exposition.rugositeM ?? RUGOSITE_STATION_M;
+  const site =
+    exposition.rugositeM === undefined ? Math.min(1, Math.max(0, exposition.ventExposition)) : 1;
+  const monte = partDeRafaleAHauteur(
+    HAUTEUR_DE_MELANGE_M,
+    RUGOSITE_STATION_M,
+    HAUTEUR_ANEMOMETRE_M,
+  );
+  const descend = partDeRafaleAHauteur(arbre.heightM, rugosite, HAUTEUR_DE_MELANGE_M);
   return (
-    exposition.rafaleMs *
-    Math.min(1, Math.max(0, exposition.ventExposition)) *
-    abri *
-    partDeRafaleAHauteur(arbre.heightM)
+    ((exposition.rafaleMs * site * abri) / facteurDeRafale(RUGOSITE_STATION_M)) * monte * descend
   );
 }
 
-/** Vitesse de rafale à laquelle cet arbre-là verse, m/s. */
+/**
+ * Vent moyen à la cime auquel cet arbre-là verse, m/s.
+ *
+ * La vitesse de ForestGALES est celle de l'arbre en feuille
+ * (`vitesseCritiqueTmcMs`) ; l'arbre nu en tient `1 / (1 − PERTE_PRISE_AU_VENT)`
+ * fois plus, et `facteurPriseAuVent` rend à chaque semaine sa part de feuilles.
+ */
 export function vitesseCritiqueMs(arbre: TreeState, exposition: ExpositionAuVent): number {
+  const nu =
+    vitesseCritiqueTmcMs(
+      arbre,
+      exposition.classeSol ?? CLASSE_SOL_PAR_DEFAUT,
+      exposition.profondeurEffectiveCm,
+    ) /
+    (1 - PERTE_PRISE_AU_VENT);
   return (
-    (VITESSE_CRITIQUE_BASE_MS / facteurSouplesse(arbre.heightM)) *
-    facteurElancement(arbre.heightM, arbre.diametreCm) *
-    facteurAncrage(exposition.profondeurEffectiveCm, arbre.heightM) *
+    (nu / facteurSouplesse(arbre.heightM)) *
     facteurSolGorge(exposition.engorgement, exposition.toleranceEngorgement) *
     facteurPriseAuVent(exposition.partFoliaire) *
     facteurNaivete(naiveteAuVent(arbre.abriHabituel, exposition.abriVent)) *
@@ -656,20 +909,20 @@ export const DENSITE_BOIS_REFERENCE = 0.5;
 export const ELANCEMENT_REFERENCE = 50;
 
 /**
- * Vitesse à laquelle le **fût** casse, pour l'arbre de référence en pleine feuille,
- * m/s.
+ * Vent moyen à la cime auquel le **fût** casse, pour l'arbre de référence en
+ * pleine feuille, m/s.
  *
- * L'ancre n'est pas un nombre isolé, c'est un **rapport** : les modèles de la
- * famille ForestGALES calculent deux vitesses critiques — renversement et
- * rupture — et les publient dans la même bande de 15 à 45 m/s *(à confirmer :
- * la bande n'a pas de référence, voir `VITESSE_CRITIQUE_BASE_MS`)*. Aucune des
- * deux ne domine par construction ; ce qui décide est le sol et le bois. La
- * valeur ci-dessous est donc posée pour que l'arbre de référence ait, sur sol
- * ferme et bien ancré, une vitesse de rupture du même ordre que sa vitesse de
- * renversement (27 m/s). Ce qui trie ensuite, c'est tout le reste
- * *(à calibrer : l'égalité au point de référence est une convention)*.
+ * L'ancre n'est pas un nombre isolé, c'est un **rapport** : ForestGALES calcule
+ * deux vitesses critiques, renversement et rupture, et aucune ne domine par
+ * construction ; ce qui décide est le sol et le bois. La valeur est celle que
+ * le moteur donnait à cet arbre avant #483 (42 × 0,65), du même ordre que sa
+ * vitesse de renversement d'alors. La décision du 19 novembre ancre la prise au
+ * vent sur l'arbre en feuille : c'est cette vitesse-ci qui reste, et l'arbre
+ * nu en tient `1 / (1 − PERTE_PRISE_AU_VENT)` fois plus *(à calibrer :
+ * l'égalité au point de référence est une convention, et ForestGALES calcule
+ * la rupture par le module de rupture du bois, que le moteur n'a pas)*.
  */
-export const VITESSE_CRITIQUE_VOLIS_MS = 42;
+export const VITESSE_CRITIQUE_VOLIS_FEUILLE_MS = 27.3;
 
 /**
  * Ce que la densité du bois laisse de résistance à la rupture.
@@ -689,31 +942,36 @@ export function facteurDensiteBois(densite: number): number {
 }
 
 /**
+ * Exposant de l'élancement dans la vitesse de rupture : 1/2, la forme de
+ * ForestGALES (méthode TMC ; décision du 18 novembre sur #483).
+ *
+ * Un fût résiste par son **module de section**, `MOR · π · d³ / 32`, et le
+ * moment que le vent lui applique est `T_C · u²`, avec `T_C ∝ d² · h`
+ * (`coefficientDeMoment`). D'où `u ∝ √(d / h)`, l'élancement à la puissance
+ * −1/2. Le premier lot supposait un houppier homothétique, un moment en `h³`
+ * et une puissance −3/2, sans source.
+ */
+export const EXPOSANT_ELANCEMENT_VOLIS = 0.5;
+
+/**
  * Ce que la **géométrie** du fût laisse de résistance à la rupture.
  *
- * C'est ici que le volis se sépare vraiment du renversement, et pas seulement
- * par les facteurs qu'on lui retire. Une motte résiste par un bras de levier
- * qui est sa profondeur ; un fût résiste par son **module de section**, qui varie
- * comme le **cube** du diamètre. Le moment appliqué, lui, croît avec la hauteur et
- * la surface du houppier — qu'on suppose homothétique, donc en h².
- *
- * D'où `u ∝ √(d³ / h³)`, soit l'élancement à la puissance −3/2 : la rupture est
- * bien plus sensible à l'élancement que le renversement, qui n'en dépend que
- * par une rampe linéaire. Une perche de H/D 100 casse à un tiers de la vitesse
- * qui casserait un arbre de plein vent *(à calibrer : l'homothétie du houppier
- * est une convention, le moteur sait calculer un rayon de houppier réel)*.
+ * C'est ici que le volis se sépare vraiment du renversement : la vitesse de la
+ * motte ne dépend pas de l'élancement (`vitesseCritiqueTmcMs`), celle du fût
+ * en dépend en racine carrée (`EXPOSANT_ELANCEMENT_VOLIS`). Une perche de
+ * H/D 100 casse à 0,71 fois la vitesse qui casserait l'arbre de référence.
  */
 export function facteurGeometrieFut(hauteurM: number, diametreCm: number): number {
   if (diametreCm <= 0 || hauteurM <= 0) return 0;
   const hd = (hauteurM * 100) / diametreCm;
-  return (ELANCEMENT_REFERENCE / hd) ** 1.5;
+  return (ELANCEMENT_REFERENCE / hd) ** EXPOSANT_ELANCEMENT_VOLIS;
 }
 
 /**
- * Vitesse de rafale à laquelle le **fût** de cet arbre-là casse, m/s (critère F17).
+ * Vent moyen à la cime auquel le **fût** de cet arbre-là casse, m/s (critère F17).
  *
- * **Ce qui n'entre pas dans ce calcul est ce qui fait tout le lot.** Ni
- * `facteurAncrage`, ni `facteurSolGorge` : un fût casse aussi bien sur un sol
+ * **Ce qui n'entre pas dans ce calcul est ce qui fait tout le lot.** Ni la
+ * classe de sol, ni `facteurSolGorge` : un fût casse aussi bien sur un sol
  * gelé que sur un sol gorgé, parce que la rupture se joue dans le bois et non
  * dans la terre. De cette absence sort, sans qu'on l'écrive, le fait de terrain
  * que les tempêtes françaises montrent partout :
@@ -729,8 +987,9 @@ export function vitesseCritiqueVolisMs(
   densiteBois: number,
   exposition: ExpositionAuVent,
 ): number {
+  const nu = VITESSE_CRITIQUE_VOLIS_FEUILLE_MS / (1 - PERTE_PRISE_AU_VENT);
   return (
-    (VITESSE_CRITIQUE_VOLIS_MS / facteurSouplesse(arbre.heightM)) *
+    (nu / facteurSouplesse(arbre.heightM)) *
     facteurDensiteBois(densiteBois) *
     facteurGeometrieFut(arbre.heightM, arbre.diametreCm) *
     facteurPriseAuVent(exposition.partFoliaire) *

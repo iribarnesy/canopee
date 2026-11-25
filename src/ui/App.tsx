@@ -18,6 +18,7 @@ import { crownRadiusM, ESPECES_V0, type GameState, getEspece, STATIONS_V0 } from
 import { type Horizon, ruHorizonMm } from "../engine/soil";
 import {
   type BilanCarbone,
+  horsDomaineDuVent,
   isSuccessionStation,
   PLANTED_MAX_ID,
   type SimResult,
@@ -502,6 +503,20 @@ export function App() {
               </strong>{" "}
               (NPP cumulée {inv.nppCumTHa.toFixed(1)}, émis {inv.emisCumTHa.toFixed(1)}, exporté{" "}
               {inv.exporteCumTHa.toFixed(1)})
+            </>
+          );
+        })()}
+      </p>
+      <p style={{ color: "#6b6250" }}>
+        {(() => {
+          // Le diagnostic hors domaine du renversement (#483) : il ne change rien à
+          // la simulation, il dit où la résistance au vent sort des arbres tirés.
+          const h = horsDomaineDuVent(finalState);
+          return (
+            <>
+              Renversement hors domaine (fgr) — sur {h.candidats} arbres de plus de 5 m,{" "}
+              {h.auDelaDesPins} plus lourds que les pins tirés, {h.auDelaDeLaBase} au-delà du plus
+              lourd des arbres tirés (2068 kg)
             </>
           );
         })()}
