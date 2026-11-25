@@ -203,10 +203,128 @@ describe("agreger", () => {
   });
 
   it("accorde le PARTICIPE et pas la fin de la phrase", () => {
-    // Vu en jouant : « 27 279 tiges broutée par le gibiers ».
-    const gestes: GesteVisible[] = [{ type: "brouter", ids: [1, 2, 3] }];
+    // Vu en jouant : « 27 279 tiges broutée par le gibiers ». Le broutage se
+    // compte désormais en fois (#502) ; la règle se tient sur un autre geste à
+    // complément.
+    const gestes: GesteVisible[] = [{ type: "eclaircir", ids: [1, 2, 3] }];
     const b = agreger(BILAN_VIDE, { gestes }, 0, COTE_M, (id) => ({ x: id, y: id }));
-    expect(lignesDuBilan(b)[0]?.texte).toBe("3 tiges broutées par le gibier");
+    expect(lignesDuBilan(b)[0]?.texte).toBe("3 tiges abattues en éclaircie");
+  });
+
+  it("compte douze plants une fois, et pas leur terre remuée (#502)", () => {
+    // Vu sur l'écran de fin du verger : « 24 tiges plantées » pour douze
+    // pommiers. Le moteur rend la plantation en deux gestes du même nom (#124) :
+    // les tiges, et la cellule de chacune.
+    const ids = Array.from({ length: 12 }, (_, i) => i + 1);
+    const gestes: GesteVisible[] = [
+      { type: "planter", ids },
+      { type: "planter", cellules: ids.map((i) => i * 7) },
+      { type: "leverEcorce", ids: [40, 41], masseKg: [12, 9] },
+      { type: "leverEcorce", cellules: [400, 401] },
+    ];
+    const b = agreger(BILAN_VIDE, { gestes }, 0, COTE_M, (id) => ({ x: id, y: id }));
+    const textes = lignesDuBilan(b).map((l) => l.texte);
+    expect(textes).toEqual(["12 tiges plantées", "2 tiges démasclées"]);
+  });
+
+  it("dit des cueillettes, des broutages et des frottis, pas des tiges (#502)", () => {
+    // « 36 tiges récoltées » pour douze pommiers cueillis trois automnes, et
+    // « 31025 tiges broutées » sur une parcelle de 322 tiges : le moteur
+    // rapporte un geste par arbre et par semaine, qui revient sur les mêmes.
+    const pommiers = Array.from({ length: 12 }, (_, i) => i + 1);
+    let b = BILAN_VIDE;
+    for (const automne of [300, 352, 404]) {
+      b = agreger(
+        b,
+        { gestes: [{ type: "recolter", ids: pommiers, masseKg: pommiers.map(() => 10) }] },
+        automne,
+        COTE_M,
+      );
+    }
+    for (let semaine = 0; semaine < 5; semaine++) {
+      b = agreger(b, { gestes: [{ type: "brouter", ids: [1, 2] }] }, semaine, COTE_M);
+    }
+    b = agreger(b, { gestes: [{ type: "frotter", ids: [3] }] }, 6, COTE_M);
+    const textes = lignesDuBilan(b).map((l) => l.texte);
+    expect(textes).toContain("36 cueillettes");
+    expect(textes).toContain("10 broutages par le gibier");
+    expect(textes).toContain("1 frottis de cervidé");
+    expect(textes.join(" ")).not.toMatch(/tiges? (récoltée|broutée|frottée)/);
+
+    const frottis = agreger(BILAN_VIDE, { gestes: [{ type: "frotter", ids: [3, 4] }] }, 0, COTE_M);
+    expect(lignesDuBilan(frottis)[0]?.texte).toBe("2 frottis de cervidés");
+  });
+
+  it("compte ce qu'une tempête a cassé et ébranché, et rien de couché s'il n'y en a pas (#503)", () => {
+    const b = agreger(
+      BILAN_VIDE,
+      {
+        tempete: {
+          rafaleMs: 30,
+          versRad: 0,
+          arbresVerses: 0,
+          arbresCasses: 2,
+          arbresEbranches: 40,
+          volumeM3: 0,
+          victimes: [],
+          casses: [
+            { id: 1, volumeM3: 0.4 },
+            { id: 3, volumeM3: 0.6 },
+          ],
+        },
+      },
+      0,
+      COTE_M,
+      (id) => ({ x: id * 10, y: 0 }),
+    );
+    const lignes = lignesDuBilan(b);
+    expect(lignes.map((l) => l.texte)).toEqual([
+      "2 tiges cassées net par la tempête",
+      // Le moteur ne nomme pas les ébranchés : le même arbre se recompte à
+      // chaque coup de vent, et la phrase le dit.
+      "40 tiges ébranchées, comptées à chaque tempête",
+    ]);
+    // Les cassés sont nommés, donc situés ; les ébranchés ne sont qu'un compte.
+    expect(lignes[0]?.ou).toEqual({ x: 20, y: 0 });
+    expect(lignes[1]?.ou).toBeUndefined();
+  });
+
+  it("range la tempête du plus grave au plus léger, et ne recompte pas ses morts", () => {
+    let b = agreger(
+      BILAN_VIDE,
+      {
+        tempete: {
+          rafaleMs: 35,
+          versRad: 0,
+          arbresVerses: 3,
+          arbresCasses: 1,
+          arbresEbranches: 25,
+          volumeM3: 4.2,
+          victimes: [
+            { id: 1, hauteurM: 20 },
+            { id: 2, hauteurM: 18 },
+            { id: 3, hauteurM: 22 },
+          ],
+          casses: [{ id: 4, volumeM3: 1.1 }],
+        },
+      },
+      0,
+      COTE_M,
+    );
+    // Le moteur rend le volis la semaine suivante, et les chablis un an plus
+    // tard, dans `morts` : ce sont les mêmes arbres.
+    b = agreger(b, { morts: [mort(4, 4, "pinus_sylvestris", "volis")] }, 1, COTE_M);
+    b = agreger(
+      b,
+      { morts: [1, 2, 3].map((i) => mort(i, i, "fagus_sylvatica", "chablis")) },
+      52,
+      COTE_M,
+    );
+    expect(lignesDuBilan(b).map((l) => l.texte)).toEqual([
+      "3 tiges couchées par la tempête",
+      "1 tige cassée net par la tempête",
+      "25 tiges ébranchées, comptées à chaque tempête",
+    ]);
   });
 
   it("dit une grande surface en hectares, au singulier", () => {
