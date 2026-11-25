@@ -320,6 +320,10 @@ export function CarteDuSol({
       ? { bas: espece.ph[0], haut: espece.ph[1], libelle: espece.nom }
       : undefined;
 
+  // Les flux de la dernière semaine simulée. Absents au premier instantané
+  // d'une parcelle neuve : la ligne dit alors « — », pas zéro (#505).
+  const flux = snapshot.fluxes;
+
   const iSurvolee = survol ? survol.y * station.coteM + survol.x : undefined;
   const surEau = iSurvolee !== undefined && station.enEau?.[iSurvolee] === true;
   const valeurSurvolee =
@@ -462,8 +466,9 @@ export function CarteDuSol({
       <dl className="stats" style={{ marginTop: 12 }}>
         <dt>Sol</dt>
         <dd>
-          P {(snapshot.fluxes.phosphoreMoyenGM2 * 10).toFixed(1)} kg/ha assimilables · mycorhizes{" "}
-          {(snapshot.fluxes.mycorhizesMoyen * 100).toFixed(0)} %
+          P {flux ? `${(flux.phosphoreMoyenGM2 * 10).toFixed(1)} kg/ha` : "—"} assimilables ·
+          mycorhizes {flux ? `${(flux.mycorhizesMoyen * 100).toFixed(0)} %` : "—"}
+          {!flux && <span className="detail"> · mesurés à la première semaine jouée</span>}
         </dd>
         {/*
           LE POTASSIUM, COMME UNE ANALYSE DE TERRE (#435). Il se lisait en
@@ -491,42 +496,37 @@ export function CarteDuSol({
         )}
         <dt>Nappe</dt>
         <dd>
-          à {(snapshot.fluxes.nappeProfondeurCm / 100).toFixed(2)} m sous la surface
+          {flux ? `à ${(flux.nappeProfondeurCm / 100).toFixed(2)} m sous la surface` : "—"}
           <span className="detail">
             {" "}
             · équilibre régional {(station.nappeEquilibreCm / 100).toFixed(1)} m — la forêt la fait
             descendre en transpirant, un incendie la fait remonter
           </span>
         </dd>
-        {snapshot.fluxes.erosionArracheeKgM2 > 0 && (
+        {flux && flux.erosionArracheeKgM2 > 0 && (
           <>
             <dt>Érosion</dt>
             <dd>
-              {(snapshot.fluxes.erosionArracheeKgM2 * 520).toFixed(1)} t/ha/an arrachées ·{" "}
-              <strong>{(snapshot.fluxes.erosionSortieKgM2 * 520).toFixed(1)}</strong> sorties de la
-              parcelle
+              {(flux.erosionArracheeKgM2 * 520).toFixed(1)} t/ha/an arrachées ·{" "}
+              <strong>{(flux.erosionSortieKgM2 * 520).toFixed(1)}</strong> sorties de la parcelle
               <span className="detail">
                 {" "}
-                · avec {(snapshot.fluxes.erosionNKgHa * 52).toFixed(1)} N ·{" "}
-                {(snapshot.fluxes.erosionPKgHa * 52).toFixed(2)} P ·{" "}
-                {(snapshot.fluxes.erosionKKgHa * 52).toFixed(1)} K kg/ha/an
+                · avec {(flux.erosionNKgHa * 52).toFixed(1)} N ·{" "}
+                {(flux.erosionPKgHa * 52).toFixed(2)} P · {(flux.erosionKKgHa * 52).toFixed(1)} K
+                kg/ha/an
               </span>
             </dd>
           </>
         )}
-        {(snapshot.fluxes.boisSedimentPiegeKgM2 > 0 || snapshot.fluxes.boisRetenueMm > 0) && (
+        {flux && (flux.boisSedimentPiegeKgM2 > 0 || flux.boisRetenueMm > 0) && (
           <>
             <dt>Bois en travers</dt>
             <dd>
-              retient <strong>{(snapshot.fluxes.boisRetenueMm * 52).toFixed(0)} mm/an</strong> d'eau
-              et{" "}
+              retient <strong>{(flux.boisRetenueMm * 52).toFixed(0)} mm/an</strong> d'eau et{" "}
               {/* En kg et non en tonnes : le bois mort NATUREL barre peu (un
                       chablis repose sur ses branches), et « 0,0 t/ha » ne dirait
                       rien de ce qui se passe. */}
-              <strong>
-                {(snapshot.fluxes.boisSedimentPiegeKgM2 * 520_000).toFixed(0)} kg/ha/an
-              </strong>{" "}
-              de terre
+              <strong>{(flux.boisSedimentPiegeKgM2 * 520_000).toFixed(0)} kg/ha/an</strong> de terre
               <span className="detail">
                 {" "}
                 · un tronc couché en travers de la pente met l'eau en flaque, le temps qu'elle
@@ -535,13 +535,10 @@ export function CarteDuSol({
             </dd>
           </>
         )}
-        {snapshot.fluxes.partInondee > 0 && (
+        {flux && flux.partInondee > 0 && (
           <>
             <dt>Crue</dt>
-            <dd>
-              la nappe affleure sur {(snapshot.fluxes.partInondee * 100).toFixed(0)} % de la
-              parcelle
-            </dd>
+            <dd>la nappe affleure sur {(flux.partInondee * 100).toFixed(0)} % de la parcelle</dd>
           </>
         )}
       </dl>
