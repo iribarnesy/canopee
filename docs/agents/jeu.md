@@ -23,7 +23,8 @@ vérifie à chaque CI que `src/engine` ne connaît ni React, ni le DOM, ni `src/
 `39aec6f`), qui a joué le niveau livré et le bac à sable dans le navigateur. La
 version précédente de ce paragraphe disait que le jeu n'existait pas, que
 l'accueil était un banc d'essai et que la couche visuelle n'était pas branchée :
-c'était vrai en septembre, ça ne l'est plus depuis octobre.*
+c'était vrai quand elle a été écrite, et plus depuis l'automne (#188 et #189 sont
+fermées depuis le 23 et le 24 septembre 2026).*
 
 **Il y a un niveau jouable (#188).** `src/game/niveaux.ts` est le mécanisme : un
 niveau est une **fiche** — un énoncé, des paliers qui lisent l'instantané et les
