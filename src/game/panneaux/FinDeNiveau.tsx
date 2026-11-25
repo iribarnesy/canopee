@@ -14,6 +14,11 @@
  *
  * **L'échec est une fin comme une autre**, et il n'est pas un reproche : le même
  * écran, le même détail, et de quoi repartir.
+ *
+ * **Une réussite mène au niveau suivant (#506)**, quand il y en a un : sans ce
+ * bouton, on revenait chercher la suite à l'accueil. Le suivant est **donné**
+ * par l'appelant (`niveauSuivant`, `progression.ts`), qui ne le donne que si
+ * l'objectif est atteint ; cet écran ne décide pas de l'ordre des niveaux.
  */
 
 import type { LigneLue } from "../bilan";
@@ -29,6 +34,8 @@ export function FinDeNiveau({
   bilan,
   surRejouer,
   surQuitter,
+  suivant,
+  surSuivant,
 }: {
   niveau: Niveau;
   avancement: Avancement;
@@ -38,6 +45,9 @@ export function FinDeNiveau({
   bilan: readonly LigneLue[];
   surRejouer: () => void;
   surQuitter: () => void;
+  /** le niveau qui s'ouvre, si l'objectif est atteint et qu'il en reste un */
+  suivant?: Niveau;
+  surSuivant: (niveau: Niveau) => void;
 }) {
   const gagne = avancement.issue === "reussi";
   return (
@@ -118,8 +128,23 @@ export function FinDeNiveau({
           <PanneauBilan lignes={bilan} quandVide="La parcelle n'a pas bougé." />
         </div>
 
+        {gagne && !suivant && (
+          // Le dernier niveau réussi n'a pas de suite à proposer : le dire,
+          // plutôt que de laisser chercher un bouton qui n'existe pas.
+          <p style={{ margin: "12px 0 0", fontSize: "0.9em" }}>C'était le dernier niveau.</p>
+        )}
+
         <div style={{ marginTop: 14 }}>
-          <button type="button" style={btn(true)} onClick={surRejouer}>
+          {/*
+            LE GESTE ATTENDU EN PREMIER, et lui seul en couleur : la suite
+            après une réussite, le même niveau après un échec.
+          */}
+          {suivant && (
+            <button type="button" style={btn(true)} onClick={() => surSuivant(suivant)}>
+              Niveau suivant : {suivant.nom} →
+            </button>
+          )}
+          <button type="button" style={btn(!suivant)} onClick={surRejouer}>
             ↻ Rejouer le niveau
           </button>
           <button type="button" style={btn()} onClick={surQuitter}>

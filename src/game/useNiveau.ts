@@ -11,6 +11,11 @@
  *    dans l'état. Elle repart vers le worker, qui l'écrit dans la sauvegarde.
  * 3. **L'arrêt du temps à la fin**, parce que c'est l'écran qui commande la
  *    vitesse — le worker, lui, ne sait pas qu'il joue un niveau.
+ *
+ * S'y ajoute **la réussite retenue** (#506), pour la même raison que le 3 : le
+ * worker ne sait pas qu'il joue un niveau, donc pas davantage qu'il l'a gagné.
+ * Elle s'écrit dans le stockage du navigateur, hors de la partie
+ * (`progression.ts`).
  */
 
 import { useEffect, useMemo, useRef } from "react";
@@ -22,6 +27,7 @@ import {
   paliersFranchis,
 } from "./niveaux";
 import { niveauParId } from "./niveauxLivres";
+import { retenirLaReussite } from "./progression";
 import type { GameApi } from "./useGame";
 
 export interface NiveauEnCours {
@@ -95,6 +101,15 @@ export function useNiveau(game: GameApi): NiveauEnCours {
     if (franchis.length === acquis.size && franchis.every((id) => acquis.has(id))) return;
     ranger.current(niveauRange.id, franchis);
   }, [avancement, acquis, niveauRange.id]);
+
+  // **Un niveau réussi ouvre le suivant (#506)**, et ça se retient hors de la
+  // partie : la progression survit à la sauvegarde qu'on efface. Retenir deux
+  // fois ne coûte rien (`retenirLaReussite` est idempotent), donc une partie
+  // gagnée qu'on reprend repasse ici sans dommage.
+  const reussi = avancement?.issue === "reussi";
+  useEffect(() => {
+    if (reussi && niveau) retenirLaReussite(localStorage, niveau.id);
+  }, [reussi, niveau]);
 
   // **Le temps s'arrête quand le niveau est fini.** Sans ça, la parcelle
   // continuerait de vivre derrière l'écran de fin, et le bilan qu'on lit ne
