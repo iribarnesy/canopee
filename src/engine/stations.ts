@@ -102,6 +102,9 @@ export const LANDE_SECHE: StationClimat = {
     id: "lande-seche",
     relief: { altitudeM: 60, pentePct: 1, expositionDeg: 180, forme: "plan", bassinAmontHa: 0 },
     paysageId: "lande-ouverte",
+    // Podzol à alios, bien drainé au-dessus de la cuirasse : classe A de
+    // ForestGALES (« Ironpan (freely-draining) », manuel de `fgr`, Kennedy).
+    classeSolForestGales: "A",
     nom: "Lande sableuse sèche",
     latitudeDeg: 44.5,
     // Podzol landais : un horizon de surface acide, un sable lessivé épais où
@@ -163,6 +166,9 @@ export const VALLEE_ENGORGEE: StationClimat = {
     id: "vallee-engorgee",
     relief: { altitudeM: 80, pentePct: 2, expositionDeg: 180, forme: "vallon", bassinAmontHa: 6 },
     paysageId: "massif-forestier",
+    // Alluvions à nappe affleurante : un gley de nappe, classe B de ForestGALES
+    // (« Ground-water gley », manuel de `fgr`, Kennedy).
+    classeSolForestGales: "B",
     nom: "Fond de vallée engorgé",
     latitudeDeg: 47,
     // Alluvions limono-argileuses profondes : réserve énorme, mais l'argile
@@ -203,6 +209,8 @@ export const LIMON_RICHE: StationClimat = {
     id: "limon-riche",
     relief: { altitudeM: 110, pentePct: 4, expositionDeg: 180, forme: "plan", bassinAmontHa: 0.5 },
     paysageId: "bocage",
+    // Sol brun de limon, bien drainé : classe A de ForestGALES (manuel de `fgr`).
+    classeSolForestGales: "A",
     nom: "Limon profond riche",
     latitudeDeg: 49.5,
     // Limon éolien profond, le sol de référence des plateaux du Nord.
@@ -240,6 +248,8 @@ export const LIMON_PAUVRE_N: StationClimat = {
     id: "limon-pauvre-n",
     relief: { altitudeM: 95, pentePct: 3, expositionDeg: 0, forme: "plan", bassinAmontHa: 0.3 },
     paysageId: "plaine-cerealiere",
+    // Sol brun de limon, bien drainé : classe A de ForestGALES (manuel de `fgr`).
+    classeSolForestGales: "A",
     nom: "Limon profond pauvre en azote",
     // Même limon, mais matière organique effondrée par des décennies de
     // grande culture (§2.2) : il retient moins l'eau et minéralise peu.
@@ -277,6 +287,9 @@ export const LIMON_ACIDE: StationClimat = {
     id: "limon-acide",
     relief: { altitudeM: 110, pentePct: 2, expositionDeg: 180, forme: "plan", bassinAmontHa: 0.4 },
     paysageId: "bocage",
+    // Limon sableux bien drainé (drainage externe illimité) : classe A de
+    // ForestGALES (manuel de `fgr`).
+    classeSolForestGales: "A",
     nom: "Limon sableux acide (Sologne)",
     latitudeDeg: 47.5,
     profil: [
@@ -315,6 +328,8 @@ export const FRICHE_LIMON: StationClimat = {
     id: "friche-limon",
     relief: { altitudeM: 130, pentePct: 6, expositionDeg: 180, forme: "plan", bassinAmontHa: 0.4 },
     paysageId: "lisiere-forestiere",
+    // Sol brun de limon, bien drainé : classe A de ForestGALES (manuel de `fgr`).
+    classeSolForestGales: "A",
     nom: "Friche sur limon (succession)",
     latitudeDeg: 47.5,
     profil: [
@@ -425,6 +440,9 @@ export const SUBERAIE_MAURES: StationClimat = {
     // essences tempérées. Le moteur décide ensuite qui survit à l'été, et c'est
     // mesuré plus bas (`stations-mediterraneennes.test.ts`).
     paysageId: "massif-forestier",
+    // Sable d'arène sur roche cristalline, drainé : classe A de ForestGALES
+    // (sols bruns, rankers ; manuel de `fgr`).
+    classeSolForestGales: "A",
     nom: "Suberaie des Maures",
     latitudeDeg: 43.4,
     profil: [
@@ -646,6 +664,9 @@ export const SABLE_PROFOND: StationClimat = {
     // C'est aussi celui de la lande landaise, et pour la même raison — un sable
     // pauvre ne porte pas de bocage.
     paysageId: "lande-ouverte",
+    // Podzol sableux sans alios, bien drainé : classe A de ForestGALES
+    // (« Podzol (freely-draining) », manuel de `fgr`).
+    classeSolForestGales: "A",
     nom: "Sable acide profond (sans alios)",
     latitudeDeg: 50.1,
     profil: [

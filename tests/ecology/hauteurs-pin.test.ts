@@ -37,7 +37,7 @@ describe("hauteurs absolues contre les tables de production (pin)", () => {
   const ref = TABLE.pinus_sylvestris;
   if (!ref) throw new Error("table du pin manquante");
   it(`${ref.nom} : 20 et 40 ans dans la bande de la table, sur sept graines`, () => {
-    const sim = hauteurs("pinus_sylvestris", 40, ref.sc, 60, GRAINES_PIN);
+    const sim = hauteurs("pinus_sylvestris", 40, ref.sc, 60, GRAINES_PIN, true);
     const jalons: [string, number, number, number][] = [
       ["40 ans", ref.h40, a(sim, 40), TOLERANCE_CALAGE],
     ];

@@ -158,6 +158,11 @@ const CACHE = new Map<string, Record<number, number>>();
  *
  * `graines` vaut les deux graines du banc ; le pin en demande davantage
  * (`hauteurs-pin.test.ts`).
+ *
+ * `sansTempete` coupe la rafale à la source, par le facteur de rafale de la
+ * météo (`WeekWeather.facteurRafale`, F19) mis à zéro : aucune tempête, aucun
+ * ébranchage, et rien d'autre ne change — l'évaporation lit le vent moyen, pas
+ * la rafale. C'est le banc du pin qui le demande (#483).
  */
 export function hauteurs(
   especeId: string,
@@ -165,8 +170,9 @@ export function hauteurs(
   sc = LIMON_RICHE,
   coteM = 60,
   graines: readonly number[] = GRAINES,
+  sansTempete = false,
 ): Record<number, number> {
-  const cle = `${especeId}|${anMax}|${sc.station.id}|${coteM}|${graines.join(",")}`;
+  const cle = `${especeId}|${anMax}|${sc.station.id}|${coteM}|${graines.join(",")}|${sansTempete}`;
   const enCache = CACHE.get(cle);
   if (enCache) return enCache;
   // 2 et 4 ans sont là pour des **mesures de terrain** qui tombent à ces âges-là
@@ -174,7 +180,9 @@ export function hauteurs(
   // Buckley 1992 à quatre. Les relever ne coûte rien : la course est la même,
   // on note un jalon de plus au passage.
   const jalons = [2, 3, 4, 5, 8, 10, 12, 20, 40].filter((an) => an <= anMax);
-  const weather = syntheticYear(sc.climat);
+  const weather = syntheticYear(sc.climat).map((w) =>
+    sansTempete ? { ...w, facteurRafale: 0 } : w,
+  );
   // Parcelle réduite (60 × 60 m) : mêmes dynamiques, essai plus rapide.
   const station = { ...sc.station, coteM, gibierParHa: 0, voisinage: [] };
   const cumul: Record<number, number> = {};

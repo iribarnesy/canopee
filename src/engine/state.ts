@@ -40,6 +40,13 @@ import {
   tirerVigueurIndividuelle,
 } from "./trees";
 
+/**
+ * Les classes de sol de ForestGALES dont le moteur a l'usage : A, minéral bien
+ * drainé ; B, minéral à gley. Les classes C (minéral tourbeux) et D (tourbes
+ * profondes) existent dans `fgr` ; aucune station du moteur ne les porte.
+ */
+export type ClasseSolForestGales = "A" | "B";
+
 /** Paramètres immuables de la station (extrait V0 de docs/regles.md §2). */
 export interface Station {
   id: string;
@@ -83,6 +90,17 @@ export interface Station {
    * produit des deux (`ventRecuParLeSite`, feu.ts).
    */
   ventExposition: number;
+  /**
+   * La classe de sol de ForestGALES (#483) : ce que le sol oppose au
+   * renversement, par le C_reg des arbres tirés (`tempete.ts`). La
+   * classification est celle du manuel de `fgr`, d'après Kennedy (2002 dans le
+   * texte, 2000 dans sa bibliographie) : A, sols minéraux bien drainés (sols
+   * bruns, podzols, sols calcaires, rankers) ; B, sols minéraux à gley.
+   *
+   * Absente, elle vaut A, comme dans `fgr` (`fg_tmc`, `soil_group` = 1 par
+   * défaut). Les stations du moteur la déclarent toutes (stations.ts).
+   */
+  classeSolForestGales?: ClasseSolForestGales;
   /** relief de la parcelle : altitude, pente, exposition, forme (relief.ts) */
   relief: Relief;
   /** eau libre permanente : ruisseau longeant un côté, mare (eau_surface.ts) */
