@@ -39,7 +39,7 @@ import type { ArbreAPoser } from "../render/couches/arbres";
 import type { CoteDecor, DecorBordures } from "../render/couches/decor";
 import { composerLeTapis } from "../render/couches/tapis";
 import type { DonneesSol } from "../render/couches/terrain";
-import { feuillageRevenu } from "./pousses";
+import { feuillageRevenuDe } from "./pousses";
 
 /**
  * Ce qu'il faut d'un instantané pour poser le **sol**.
@@ -175,6 +175,8 @@ export interface ArbreSource {
   caviteTeteL?: number;
   /** présent = ses jeunes pousses ont gelé cette semaine-là (#371, #425) */
   gelPousseSemaine?: number;
+  /** présent = la soif lui a fait tomber ses feuilles cette semaine-là (#391, #446) */
+  defeuillaisonSemaine?: number;
 }
 
 /** Ce que la parcelle sait, et que l'arbre seul ne dit pas. */
@@ -226,12 +228,15 @@ export function arbresAPoser(arbres: readonly ArbreSource[], ctx: ContexteDePose
     const espece = getEspece(t.especeId);
     const torche = ctx.seTorche?.(t.id) ?? false;
     // Le feuillage de l'essence à la saison, moins ce que le gel des pousses a
-    // grillé et qui n'a pas encore repoussé (#425) : la même part que le tick
-    // donne à l'ombre de cet arbre. Sans elle, un frêne aux pousses grillées
-    // restait vert les cinq semaines où il est nu.
+    // grillé (#425) ou ce que la soif a fait tomber (#446) et qui n'a pas encore
+    // repoussé : la même part que le tick donne à l'ombre de cet arbre. Sans
+    // elle, un frêne aux pousses grillées restait vert les cinq semaines où il
+    // est nu, et un hêtre défeuillé en août gardait tout son feuillage. Les
+    // feuilles tombent vertes : la sénescence, plus bas, reste celle de la
+    // saison, et l'arbre est nu, pas jauni.
     const part =
       (espece && ctx.pheno ? partFoliaireOmbrageanteDans(espece, ctx.pheno) : 1) *
-      feuillageRevenu(t.gelPousseSemaine, ctx.week);
+      feuillageRevenuDe(t, ctx.week);
     poses.push({
       id: t.id,
       especeId: t.especeId,

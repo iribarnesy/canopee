@@ -20,14 +20,19 @@
 import { getEspece } from "../../engine/especes";
 import { especeFaune, type IndividuFaune } from "../../engine/faune";
 import {
+  REFEUILLAISON_ATTENTE_SEMAINES,
+  REFEUILLAISON_DUREE_SEMAINES,
+} from "../../engine/gelPousses";
+import {
   type ContextePhenologique,
   partFoliaireOmbrageanteDans,
   senescenceDans,
 } from "../../engine/phenologie";
+import { RESERVES_ENTAMEES_SEMAINES } from "../../engine/reserves";
 import { stadeDe } from "../../engine/stades";
 import { elancement, elancementLimite, hauteurStableM } from "../../engine/trees";
 import { causeDite, ilOuElle, laFaune } from "../mots";
-import { feuillageRevenu } from "../pousses";
+import { feuillageRevenu, feuillageRevenuDe } from "../pousses";
 import type { SnapshotTree } from "../protocol";
 
 /**
@@ -349,10 +354,10 @@ export function ficheDeLArbre(
     });
   }
 
-  // Moins ce que le gel des pousses a grillé et qui n'a pas repoussé (#425).
+  // Moins ce que le gel des pousses a grillé (#425) ou ce que la soif a fait
+  // tomber (#446), et qui n'a pas repoussé.
   const feuillage =
-    partFoliaireOmbrageanteDans(espece, ctx.pheno) *
-    feuillageRevenu(arbre.gelPousseSemaine, ctx.semaine);
+    partFoliaireOmbrageanteDans(espece, ctx.pheno) * feuillageRevenuDe(arbre, ctx.semaine);
   const jaunit = senescenceDans(espece, ctx.pheno);
   dire(
     "🍃",
@@ -407,6 +412,24 @@ export function ficheDeLArbre(
     feuillageRevenu(arbre.gelPousseSemaine, ctx.semaine) < 1
   ) {
     dire("❄️", "Pousses", `grillées par le gel ${ilYA(ctx.semaine - arbre.gelPousseSemaine)}`);
+  }
+  // **Pourquoi ce feuillu est nu en plein été** (#446) : la soif lui a fait
+  // lâcher ses feuilles. C'est le moteur qui l'a décidé et daté
+  // (`defeuillaisonSemaine`) ; la fiche le dit le temps que le feuillage
+  // revienne, la courbe du moteur à l'appui, comme pour le gel des pousses.
+  if (
+    !arbre.chandelle &&
+    arbre.defeuillaisonSemaine !== undefined &&
+    feuillageRevenu(arbre.defeuillaisonSemaine, ctx.semaine) < 1
+  ) {
+    dire(
+      "🍂",
+      "Feuilles",
+      `tombées vertes sous la soif ${ilYA(ctx.semaine - arbre.defeuillaisonSemaine)}`,
+      {
+        aide: `Un feuillu installé qui manque d'eau lâche ses feuilles encore vertes plutôt que de laisser casser son bois : ce n'est pas l'automne. Il reste nu ${REFEUILLAISON_ATTENTE_SEMAINES} semaines, puis refait son feuillage en ${REFEUILLAISON_DUREE_SEMAINES} sur ses réserves, qu'il met ${duree(RESERVES_ENTAMEES_SEMAINES)} à reconstituer : une seconde défeuillaison dans ce délai le trouve affaibli.`,
+      },
+    );
   }
   // Un mort garde ses fruits jusqu'au 1er janvier, mais le moteur refuse de
   // les cueillir : la fiche ne les annonce pas, comme le volet (#416).

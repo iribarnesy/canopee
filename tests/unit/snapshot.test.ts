@@ -132,6 +132,13 @@ describe("les arbres de l'instantané", () => {
     expect(t.gelPousseSemaine).toBe(66);
   });
 
+  it("dit quand la soif l'a défeuillé, et rien pour un arbre qui ne l'a jamais été (#446)", () => {
+    // La date seule : la règle (embolie, saison, essence, âge) reste au moteur.
+    const defeuille = { ...vivant, defeuillaisonSemaine: 70 } as TreeState;
+    expect(arbreDuSnapshot(defeuille, 0).defeuillaisonSemaine).toBe(70);
+    expect(arbreDuSnapshot(vivant, 0).defeuillaisonSemaine).toBeUndefined();
+  });
+
   it("dit quels arbres sont EN FLEUR — ce que fruitProgress ne dit pas", () => {
     // `floraisonDJ` du pommier vaut 200, la fenêtre 100 °C·j de plus.
     const pommier = { ...vivant, especeId: "malus_domestica", ageWeeks: 520 } as TreeState;
@@ -208,6 +215,23 @@ describe("les grilles de l'instantané", () => {
     const abattu = { ...pin, trees: [] };
     const apres = construireSnapshot({ ...entrees(pin), state: abattu });
     expect(apres.soilCouvertAuDessus[aLAplomb]).toBe(0);
+  });
+
+  it("un feuillu que la soif a défeuillé ne couvre plus, comme le tick le compte (#446)", () => {
+    // En juin, un charme de huit mètres couvre la cellule de son tronc.
+    const charme = plantAt(etatNeuf(), "carpinus_betulus", 6.5, 3.5, 8);
+    const juin = { ...charme, week: 24, ddYearBase5: 1400, semainesDeFroid: 12 };
+    const aLAplomb = 3 * STATION.coteM + 6;
+    const feuillu = construireSnapshot({ ...entrees(charme), state: juin });
+    expect(feuillu.soilCouvertAuDessus[aLAplomb] ?? 0).toBeGreaterThan(0.3);
+    // La soif l'a défeuillé la semaine d'avant : plus rien au-dessus du sol.
+    const defeuille = {
+      ...juin,
+      trees: juin.trees.map((t) => ({ ...t, defeuillaisonSemaine: 23 })),
+    };
+    const nu = construireSnapshot({ ...entrees(charme), state: defeuille });
+    expect(nu.soilCouvertAuDessus[aLAplomb]).toBe(0);
+    expect(nu.trees[0]?.defeuillaisonSemaine).toBe(23);
   });
 
   it("porte l'herbe sur pied, les ravageurs et l'érosion, cellule par cellule", () => {

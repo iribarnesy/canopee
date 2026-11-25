@@ -9,7 +9,11 @@ import {
   REFEUILLAISON_DUREE_SEMAINES,
   refeuillaison,
 } from "../../src/engine/gelPousses";
-import { feuillageRevenu, poussesGeleesALaSemaine } from "../../src/game/pousses";
+import {
+  feuillageRevenu,
+  feuillageRevenuDe,
+  poussesGeleesALaSemaine,
+} from "../../src/game/pousses";
 import { phraseDuGel } from "../../src/game/useAvisDuGel";
 
 describe("le feuillage revenu après le gel des pousses (#425)", () => {
@@ -87,5 +91,49 @@ describe("le dessin et la fiche suivent (#425)", () => {
     expect(arbresAPoser([frene], ctx(18))[0]?.partFoliaire).toBe(0);
     const plein = REFEUILLAISON_ATTENTE_SEMAINES + REFEUILLAISON_DUREE_SEMAINES;
     expect(arbresAPoser([frene], ctx(17 + plein))[0]?.partFoliaire).toBe(1);
+  });
+});
+
+describe("la défeuillaison par la soif (#446)", () => {
+  it("revient sur la même courbe que le gel, et la plus basse des deux pertes l'emporte", () => {
+    // Comme le tick (`feuillageRevenu`, tick.ts) : le minimum des deux.
+    expect(feuillageRevenuDe({}, 30)).toBe(1);
+    expect(feuillageRevenuDe({ defeuillaisonSemaine: 30 }, 31)).toBe(0);
+    for (let semaines = 1; semaines <= 10; semaines++) {
+      expect(feuillageRevenuDe({ defeuillaisonSemaine: 30 }, 30 + semaines)).toBe(
+        refeuillaison(semaines),
+      );
+    }
+    // Un gel de mai bien refait ne rend pas ses feuilles à l'arbre défeuillé en août.
+    expect(feuillageRevenuDe({ gelPousseSemaine: 18, defeuillaisonSemaine: 32 }, 33)).toBe(0);
+    // Et dans l'autre sens, la soif refaite ne cache pas un gel récent.
+    expect(feuillageRevenuDe({ gelPousseSemaine: 70, defeuillaisonSemaine: 32 }, 72)).toBe(0);
+  });
+
+  it("un feuillu que la soif a défeuillé se pose nu, puis refeuille", async () => {
+    const { arbresAPoser } = await import("../../src/game/parcelle");
+    const cote = 40;
+    const hetre = {
+      id: 1,
+      especeId: "fagus_sylvatica",
+      x: 20,
+      y: 20,
+      heightM: 14,
+      chandelle: false,
+      defeuillaisonSemaine: 32,
+    };
+    const ctx = (week: number) => ({
+      coteM: cote,
+      week,
+      altitudesM: new Array(cote * cote).fill(0),
+    });
+    // La semaine qui suit la chute : nu, en plein été.
+    expect(arbresAPoser([hetre], ctx(33))[0]?.partFoliaire).toBe(0);
+    // À mi-reverdissement : éclairci.
+    const mi = arbresAPoser([hetre], ctx(32 + REFEUILLAISON_ATTENTE_SEMAINES + 1))[0];
+    expect(mi?.partFoliaire).toBeGreaterThan(0);
+    expect(mi?.partFoliaire).toBeLessThan(1);
+    const plein = REFEUILLAISON_ATTENTE_SEMAINES + REFEUILLAISON_DUREE_SEMAINES;
+    expect(arbresAPoser([hetre], ctx(32 + plein))[0]?.partFoliaire).toBe(1);
   });
 });

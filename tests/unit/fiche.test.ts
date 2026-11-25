@@ -330,6 +330,27 @@ describe("les pousses grillées par le gel (#425)", () => {
   });
 });
 
+describe("les feuilles tombées sous la soif (#446)", () => {
+  it("la fiche dit pourquoi le feuillu est nu en plein été, et son feuillage tombe à zéro", () => {
+    const l = fiche({ defeuillaisonSemaine: 52 * 31 - 2 });
+    expect(valeur(l, "Feuilles")).toBe("tombées vertes sous la soif il y a 2 semaines");
+    // Le même chêne sans défeuillaison est déployé en juin (essai plus haut) :
+    // c'est la date du moteur qui le met à nu, pas la saison.
+    expect(valeur(l, "Feuillage")).toBe("0 % déployé");
+    expect(l.find((x) => x.quoi === "Feuilles")?.aide).toContain("ce n'est pas l'automne");
+  });
+
+  it("se tait une fois le feuillage refait, et ne dit rien d'un arbre jamais défeuillé", () => {
+    expect(valeur(fiche({ defeuillaisonSemaine: 52 * 31 - 20 }), "Feuilles")).toBeUndefined();
+    expect(valeur(fiche(), "Feuilles")).toBeUndefined();
+  });
+
+  it("une chandelle n'en parle plus : elle n'a plus de feuillage à refaire", () => {
+    const l = fiche({ defeuillaisonSemaine: 52 * 31 - 2, alive: false, causeMort: "secheresse" });
+    expect(valeur(l, "Feuilles")).toBeUndefined();
+  });
+});
+
 describe("la soif d'un arbre (#429)", () => {
   // La soif voyage à côté de l'état, mesurée par le dernier tick (#372).
   const assoiffe = (satisfactionEau: number) =>
