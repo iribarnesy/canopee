@@ -417,6 +417,15 @@ changé entre deux images et aucun **moment** où jouer l'acte — d'autant que 
 d'un chablis n'est rapportée qu'un an plus tard, une semaine où `tempete` vaut
 `undefined`.
 
+Elle porte aussi, depuis #487, les **fûts cassés** (`casses`, chacun avec son
+volume, et leur compte `arbresCasses`) et le compte des **ébranchés**
+(`arbresEbranches`), et le moteur la rapporte dès qu'il y a l'un des trois
+dégâts, même sans un seul couché. Le journal, l'avis qui arrête le temps et le
+bilan disent les trois (#503) ; le bilan situe les cassés par leurs identifiants
+et ne recompte pas en mort, un an plus tard, un chablis qu'il a compté la
+semaine de la tempête. Le volis d'une essence qui rejette n'a pas encore
+d'animation : le fût raccourcit d'une image à l'autre.
+
 Côté arbre, `renverseSemaine` et `chuteRad` l'accompagnent, et le second est
 **le cap partagé par tous les arbres d'une même rafale** : un bouquet de troncs
 couchés dans le même sens est la signature d'une tempête, et elle se lit d'un
