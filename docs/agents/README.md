@@ -115,8 +115,7 @@ Le **moteur** est largement en avance sur ce que le jeu sait montrer : 134
 critères de réalisme sur 162 sont acquis et 27 partiels (le score fait foi dans
 `docs/realisme.md`, recompté par `npm run check:realisme` ; revérifié le
 25 novembre 2026 au lot du renversement de ForestGALES, #483, qui n'en déplace
-aucun), et
-les issues ouvertes portent des mécanismes de plus en plus fins.
+aucun), et les issues ouvertes portent des mécanismes de plus en plus fins.
 
 Le **jeu** a un niveau jouable de bout en bout, « Le verger » (#188), un accueil
 dont les niveaux sont la porte et le bac à sable un mode à part (#189), et la
