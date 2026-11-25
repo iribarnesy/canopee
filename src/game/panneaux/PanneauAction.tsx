@@ -17,6 +17,7 @@ import {
 } from "../cultures";
 import { DOSE_MIN, ENGRAIS, FORMES_ENGRAIS } from "../fertilisation";
 import { auFilDuTexte, capitale, de } from "../mots";
+import { type Geste, type GestesOuverts, gesteOuvert } from "../niveaux";
 import type { Snapshot } from "../protocol";
 import type { GameApi } from "../useGame";
 import { essencesPresentes } from "./recensement";
@@ -344,12 +345,19 @@ export function PanneauAction({
   surChoisirEssence,
   zoneVisee,
   preavis,
+  gestes,
 }: {
   game: GameApi;
   snapshot: Snapshot;
   geste: ReglagesDeGeste;
   /** Ouvre le volet de choix des essences. */
   surChoisirEssence: () => void;
+  /**
+   * Les gestes que le niveau montre (#507) ; absent = tous, comme dans le bac à
+   * sable. La sélection, elle, a toujours son bouton : ce n'est pas un geste,
+   * c'est la façon de désigner un arbre.
+   */
+  gestes?: GestesOuverts;
   /**
    * La cellule sous le curseur, s'il y en a une : le recensement des essences
    * porte sur le disque visé plutôt que sur toute la parcelle (#156).
@@ -418,64 +426,83 @@ export function PanneauAction({
   const visee = presentes.find((e) => e.especeId === especeEclaircie);
   const tigesVisees = visee?.tiges;
   const nomVise = visee?.nom ?? "";
+  /**
+   * Le bouton de ce geste paraît-il (#507) ? Un niveau ne montre que ce qu'il
+   * enseigne ; le bac à sable, tout.
+   */
+  const montre = (g: Geste) => gesteOuvert(gestes, g);
 
   return (
     <>
       <button type="button" style={btn(mode === "selection")} onClick={() => setMode("selection")}>
         Sélection
       </button>
-      <button type="button" style={btn(mode === "planter")} onClick={() => setMode("planter")}>
-        Planter
-      </button>
-      <button type="button" style={btn(mode === "chauler")} onClick={() => setMode("chauler")}>
-        Chauler
-      </button>
-      <button
-        type="button"
-        style={btn(mode === "fertiliser")}
-        onClick={() => setMode("fertiliser")}
-        title="Épandre de l'ammonitrate, du fumier ou de la potasse sur une zone"
-      >
-        🧪 Fertiliser
-      </button>
+      {montre("planter") && (
+        <button type="button" style={btn(mode === "planter")} onClick={() => setMode("planter")}>
+          Planter
+        </button>
+      )}
+      {montre("chauler") && (
+        <button type="button" style={btn(mode === "chauler")} onClick={() => setMode("chauler")}>
+          Chauler
+        </button>
+      )}
+      {montre("fertiliser") && (
+        <button
+          type="button"
+          style={btn(mode === "fertiliser")}
+          onClick={() => setMode("fertiliser")}
+          title="Épandre de l'ammonitrate, du fumier ou de la potasse sur une zone"
+        >
+          🧪 Fertiliser
+        </button>
+      )}
       {/*
         **Les gestes du champ** (#451), dans l'ordre où on les fait : préparer le
         lit, semer, récolter. Rangés après la fertilisation, avec laquelle ils
         font les dispositifs des essais du blé.
       */}
-      <button
-        type="button"
-        style={btn(mode === "labourer")}
-        onClick={() => setMode("labourer")}
-        title="Retourner le sol d'une zone : un lit de semence, au prix de l'humus et des mycorhizes"
-      >
-        🚜 Labourer
-      </button>
-      <button
-        type="button"
-        style={btn(mode === "semer")}
-        onClick={() => setMode("semer")}
-        title="Semer une culture sur la place libre d'une zone, dans sa fenêtre de semis"
-      >
-        🌱 Semer
-      </button>
-      <button
-        type="button"
-        style={btn(mode === "moissonner")}
-        onClick={() => setMode("moissonner")}
-        title="Moissonner une zone : le grain sur pied part en vente, la paille reste au champ"
-      >
-        🌾 Moissonner
-      </button>
-      <button
-        type="button"
-        style={btn(mode === "eclaircir")}
-        onClick={() => setMode("eclaircir")}
-        title="Abattre des tiges entières pour ramener une zone à la densité choisie. Rien à voir avec l'élagage, qui laisse l'arbre debout."
-      >
-        🪚 Éclaircir (abattre)
-      </button>
-      {snapshot.stockBrfKg > 1 && (
+      {montre("labourer") && (
+        <button
+          type="button"
+          style={btn(mode === "labourer")}
+          onClick={() => setMode("labourer")}
+          title="Retourner le sol d'une zone : un lit de semence, au prix de l'humus et des mycorhizes"
+        >
+          🚜 Labourer
+        </button>
+      )}
+      {montre("semer") && (
+        <button
+          type="button"
+          style={btn(mode === "semer")}
+          onClick={() => setMode("semer")}
+          title="Semer une culture sur la place libre d'une zone, dans sa fenêtre de semis"
+        >
+          🌱 Semer
+        </button>
+      )}
+      {montre("moissonner") && (
+        <button
+          type="button"
+          style={btn(mode === "moissonner")}
+          onClick={() => setMode("moissonner")}
+          title="Moissonner une zone : le grain sur pied part en vente, la paille reste au champ"
+        >
+          🌾 Moissonner
+        </button>
+      )}
+      {montre("eclaircir") && (
+        <button
+          type="button"
+          style={btn(mode === "eclaircir")}
+          onClick={() => setMode("eclaircir")}
+          title="Abattre des tiges entières pour ramener une zone à la densité choisie. Rien à voir avec l'élagage, qui laisse l'arbre debout."
+        >
+          🪚 Éclaircir (abattre)
+        </button>
+      )}
+      {montre("brf") && snapshot.stockBrfKg > 1 && (
         <button
           type="button"
           style={btn(mode === "brf")}
@@ -485,47 +512,57 @@ export function PanneauAction({
           🍂 Épandre le BRF ({snapshot.stockBrfKg.toFixed(0)} kg)
         </button>
       )}
-      <button
-        type="button"
-        style={btn(mode === "cloturer")}
-        onClick={() => setMode("cloturer")}
-        title="Enclore une zone : cher au mètre de périmètre, mais le gibier n'y entre plus"
-      >
-        🚧 Clôturer
-      </button>
-      <button
-        type="button"
-        style={btn()}
-        onClick={() => game.dispatch({ type: "chasser" })}
-        title="Une journée de chasse : la pression recule, puis les voisins comblent le vide"
-      >
-        🎯 Chasser
-      </button>
-      <button
-        type="button"
-        style={btn(mode === "faucher")}
-        onClick={() => setMode("faucher")}
-        title="Dégager la strate herbacée autour des jeunes plants — l'entretien qui sauve une plantation sur sol pauvre"
-      >
-        🌾 Faucher
-      </button>
-      <button
-        type="button"
-        style={btn(mode === "boisMort")}
-        onClick={() => setMode("boisMort")}
-        title="Ramasser les troncs tombés pour le chauffage — moins de combustible, mais moins d'humus, d'abris et de terre retenue"
-      >
-        🪵 Bois mort
-      </button>
-      <button
-        type="button"
-        style={btn(mainOuvertePanneau)}
-        onClick={() => setMainOuvertePanneau(!mainOuvertePanneau)}
-        title="Embaucher de la main-d'œuvre"
-      >
-        👷 Main-d'œuvre
-      </button>
-      {mainOuvertePanneau && (
+      {montre("cloturer") && (
+        <button
+          type="button"
+          style={btn(mode === "cloturer")}
+          onClick={() => setMode("cloturer")}
+          title="Enclore une zone : cher au mètre de périmètre, mais le gibier n'y entre plus"
+        >
+          🚧 Clôturer
+        </button>
+      )}
+      {montre("chasser") && (
+        <button
+          type="button"
+          style={btn()}
+          onClick={() => game.dispatch({ type: "chasser" })}
+          title="Une journée de chasse : la pression recule, puis les voisins comblent le vide"
+        >
+          🎯 Chasser
+        </button>
+      )}
+      {montre("faucher") && (
+        <button
+          type="button"
+          style={btn(mode === "faucher")}
+          onClick={() => setMode("faucher")}
+          title="Dégager la strate herbacée autour des jeunes plants — l'entretien qui sauve une plantation sur sol pauvre"
+        >
+          🌾 Faucher
+        </button>
+      )}
+      {montre("boisMort") && (
+        <button
+          type="button"
+          style={btn(mode === "boisMort")}
+          onClick={() => setMode("boisMort")}
+          title="Ramasser les troncs tombés pour le chauffage — moins de combustible, mais moins d'humus, d'abris et de terre retenue"
+        >
+          🪵 Bois mort
+        </button>
+      )}
+      {montre("embaucher") && (
+        <button
+          type="button"
+          style={btn(mainOuvertePanneau)}
+          onClick={() => setMainOuvertePanneau(!mainOuvertePanneau)}
+          title="Embaucher de la main-d'œuvre"
+        >
+          👷 Main-d'œuvre
+        </button>
+      )}
+      {montre("embaucher") && mainOuvertePanneau && (
         <div style={{ marginTop: 6 }}>
           <button
             type="button"

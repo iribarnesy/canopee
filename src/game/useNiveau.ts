@@ -14,7 +14,13 @@
  */
 
 import { useEffect, useMemo, useRef } from "react";
-import { type Avancement, avancementDuNiveau, paliersFranchis } from "./niveaux";
+import {
+  type Avancement,
+  avancementDuNiveau,
+  type GestesOuverts,
+  gestesOuverts,
+  paliersFranchis,
+} from "./niveaux";
 import { niveauParId } from "./niveauxLivres";
 import type { GameApi } from "./useGame";
 
@@ -24,6 +30,11 @@ export interface NiveauEnCours {
   avancement?: Avancement;
   /** le niveau est fini : l'écran de fin s'affiche */
   fini: boolean;
+  /**
+   * Les gestes que le niveau montre à cet instant (#507) ; `undefined` = tous,
+   * comme dans le bac à sable.
+   */
+  gestes: GestesOuverts;
 }
 
 export function useNiveau(game: GameApi): NiveauEnCours {
@@ -95,5 +106,10 @@ export function useNiveau(game: GameApi): NiveauEnCours {
     if (fini) arreter.current(0);
   }, [fini]);
 
-  return { niveau, avancement, fini };
+  // **Les gestes suivent l'avancement** : un palier atteint ouvre ceux du
+  // suivant (#507). Gelés avec lui pendant une relecture, ils ne se referment
+  // pas quand on remonte le temps.
+  const gestes = useMemo(() => gestesOuverts(niveau, avancement), [niveau, avancement]);
+
+  return { niveau, avancement, fini, gestes };
 }

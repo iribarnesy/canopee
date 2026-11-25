@@ -29,8 +29,48 @@
  */
 
 import { estGesteSurArbres, type GesteVisible } from "../engine/actions";
+import type { Mode } from "./panneaux/reglages";
 import type { ProfilDepart } from "./profils";
 import type { Snapshot } from "./protocol";
+
+/**
+ * **Un geste**, tel que le joueur le voit : un bouton (#507).
+ *
+ * `v1.md` veut des premiers niveaux « courts et faciles : planter, voir pousser,
+ * découvrir quelques gestes », et le propriétaire a tranché le 25 novembre
+ * 2026 : **chaque niveau ne montre que les gestes qu'il enseigne**. Le premier
+ * niveau en ouvrait treize, labourer et moissonner compris, et proposait de
+ * lever l'écorce d'un pommier.
+ *
+ * Le vocabulaire est celui des **boutons**, pas celui des actions du moteur :
+ * les gestes de zone sont les `Mode` du panneau des gestes, les gestes sur
+ * arbres ceux du volet de sélection. La sélection elle-même n'en est pas un —
+ * c'est la façon de désigner des arbres, et de les regarder — et suivre un
+ * arbre non plus. Les quatre manières de couper (broyer, vendre, épandre,
+ * coucher) sont un seul geste, de même qu'embaucher, prendre un CDI et
+ * licencier, qui sont le bouton « Main-d'œuvre ».
+ */
+export type Geste =
+  | Exclude<Mode, "selection">
+  | "chasser"
+  | "embaucher"
+  | "recolter"
+  | "proteger"
+  | "leverEcorce"
+  | "elaguer"
+  | "receper"
+  | "couper";
+
+/**
+ * Les gestes qu'on montre. **`undefined` veut dire tous** : c'est le bac à
+ * sable, et un niveau qui n'en déclare aucun.
+ */
+export type GestesOuverts = ReadonlySet<Geste> | undefined;
+
+/** Ce geste a-t-il son bouton ? */
+export function gesteOuvert(ouverts: GestesOuverts, geste: Geste): boolean {
+  return ouverts === undefined || ouverts.has(geste);
+}
 
 /**
  * Ce qui s'est **accumulé** depuis le début du niveau.
@@ -180,6 +220,11 @@ export interface Palier {
   acquis?: boolean;
   /** un mot pour savoir par où commencer, si ce n'est pas évident */
   aide?: string;
+  /**
+   * Les gestes que ce palier **enseigne** : leurs boutons paraissent quand on
+   * arrive sur lui, et restent ensuite (#507, `gestesOuverts`).
+   */
+  gestes?: readonly Geste[];
 }
 
 /** Une fiche de niveau. */
@@ -211,6 +256,18 @@ export interface Niveau {
    */
   semainesImparties: number;
   paliers: readonly Palier[];
+  /**
+   * **Les gestes que le niveau montre d'entrée** (#507). Ceux d'un palier
+   * s'y ajoutent quand on arrive sur lui (`Palier.gestes`).
+   *
+   * Absent, et sans geste déclaré sur aucun palier, **tous** sont montrés,
+   * comme dans le bac à sable.
+   *
+   * Ce qu'on n'y met pas disparaît de l'écran, pas du moteur : il accepterait
+   * toujours l'action. Un niveau enseigne en choisissant ce qu'il propose, il
+   * n'invente pas d'interdiction.
+   */
+  gestes?: readonly Geste[];
 }
 
 /** Où en est un palier. */
@@ -278,6 +335,36 @@ export function avancementDuNiveau(
 const RAISON_REUSSI = "Tous les objectifs sont atteints.";
 const RAISON_FAILLITE = "La trésorerie est à sec : la parcelle ne se tient plus.";
 const RAISON_TEMPS = "Le temps imparti est écoulé.";
+
+/**
+ * **Les gestes qu'un niveau montre à cet instant** (#507) ; `undefined` = tous.
+ *
+ * Ceux de la fiche sont ouverts d'entrée. Ceux d'un palier s'ouvrent **quand on
+ * arrive sur lui** — quand tous les paliers d'avant sont atteints — et restent
+ * ouverts ensuite. C'est le tour de tutoriel que le propriétaire a demandé le
+ * 25 novembre 2026 (« on apprend petit à petit à se servir des boutons »), et
+ * il ne demande rien que l'avancement ne sache déjà : le contenu, lui, est
+ * celui de chaque fiche (#514 pour le verger).
+ *
+ * L'ordre est celui des paliers, comme le palier courant que le panneau
+ * annonce : un palier franchi en avance n'ouvre rien tant que celui d'avant
+ * manque. Sans avancement encore — le premier instantané n'est pas arrivé —,
+ * rien n'est atteint, et seul le premier palier ouvre les siens.
+ *
+ * Un palier `acquis: false` qui se reperd referme ce qui le suit. C'est un
+ * objectif qui doit tenir à la fin : il n'a pas sa place au milieu d'un
+ * tutoriel.
+ */
+export function gestesOuverts(niveau: Niveau | undefined, avancement?: Avancement): GestesOuverts {
+  if (!niveau) return undefined;
+  if (!niveau.gestes && !niveau.paliers.some((p) => p.gestes)) return undefined;
+  const ouverts = new Set<Geste>(niveau.gestes);
+  for (const [i, palier] of niveau.paliers.entries()) {
+    for (const geste of palier.gestes ?? []) ouverts.add(geste);
+    if (!avancement?.paliers[i]?.atteint) break;
+  }
+  return ouverts;
+}
 
 /** Les paliers franchis à cet instant, pour nourrir la mémoire. */
 export function paliersFranchis(avancement: Avancement): string[] {

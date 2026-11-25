@@ -9,6 +9,7 @@
 import { useState } from "react";
 import { getEspece } from "../../engine/especes";
 import { de, nomEspece, piedsDe, s } from "../mots";
+import { type Geste, type GestesOuverts, gesteOuvert } from "../niveaux";
 import type { SnapshotTree } from "../protocol";
 import type { LigneDeSuivi } from "../suivis";
 import type { GameApi } from "../useGame";
@@ -62,6 +63,7 @@ export function PanneauSelection({
   basculerSuivi,
   histoire,
   voirDansLesSuivis,
+  gestes,
 }: {
   game: GameApi;
   vivants: readonly SnapshotTree[];
@@ -87,8 +89,16 @@ export function PanneauSelection({
   histoire?: readonly LigneDeSuivi[] | undefined;
   /** Ouvrir le volet des suivis sur cet arbre — présent s'il est suivi. */
   voirDansLesSuivis?: (() => void) | undefined;
+  /**
+   * Les gestes que le niveau montre (#507) ; absent = tous, comme dans le bac à
+   * sable. Suivre un arbre et étendre la sélection restent : ce sont des façons
+   * de regarder, pas des gestes sur la parcelle.
+   */
+  gestes?: GestesOuverts;
 }) {
   const [histoireEntiere, setHistoireEntiere] = useState(false);
+  /** Le bouton de ce geste paraît-il (#507) ? */
+  const montre = (g: Geste) => gesteOuvert(gestes, g);
   /**
    * Les essences de la sélection, les plus nombreuses d'abord.
    *
@@ -232,7 +242,7 @@ export function PanneauSelection({
         {tousSuivis ? "🚫 Ne plus suivre" : "👁 Suivre"}
         {selectedTrees.length > 1 ? ` (${selectedTrees.length})` : ""}
       </button>
-      {selFruitsKg > 0.5 && (
+      {montre("recolter") && selFruitsKg > 0.5 && (
         <button
           type="button"
           style={btn(true)}
@@ -249,84 +259,99 @@ export function PanneauSelection({
         protège, n'élague, n'écorce ni ne recèpe un mort. Les laisser visibles
         revenait à proposer cinq gestes dont aucun ne passe, et à répondre par
         cinq refus.
+
+        **Et ce que le niveau n'enseigne pas disparaît aussi (#507)** : le
+        premier niveau proposait de lever l'écorce d'un pommier.
       */}
       {!queDuBoisMort && (
         <>
-          <button
-            type="button"
-            style={btn()}
-            onClick={() =>
-              game.dispatch({
-                type: "couper",
-                treeIds: selectedTrees.map((t) => t.id),
-                devenir: "broyer",
-              })
-            }
-            title="Broyer et charger : le bois rejoint le tas, à épandre où vous voudrez"
-          >
-            🍂 Couper & broyer (en tas)
-          </button>
-          <button
-            type="button"
-            style={btn()}
-            onClick={() =>
-              game.dispatch({ type: "proteger", treeIds: selectedTrees.map((t) => t.id) })
-            }
-            title="Poser un manchon : le plant échappe aux dents jusqu'à ce qu'il ait sa flèche hors d'atteinte"
-          >
-            🛡️ Protéger
-          </button>
-          <button
-            type="button"
-            style={btn()}
-            onClick={() =>
-              game.dispatch({ type: "leverEcorce", treeIds: selectedTrees.map((t) => t.id) })
-            }
-            title="Lever le liège : une récolte qui ne tue pas l'arbre et revient tous les dix ans"
-          >
-            🟤 Lever l'écorce
-          </button>
-          <button
-            type="button"
-            style={btn()}
-            onClick={() =>
-              game.dispatch({
-                type: "elaguer",
-                treeIds: selectedTrees.map((t) => t.id),
-                hauteurM: 6,
-              })
-            }
-            title="Couper les branches basses des arbres sélectionnés, qui restent debout : la bille montée fera du bois d'œuvre au lieu du chauffage. Le houppier remonte, on le voit sur la carte — et un houppier haut ne s'enflamme plus d'un feu rampant, ce qui fait de l'élagage une mesure de prévention."
-          >
-            ✂️ Élaguer à 6 m
-          </button>
-          <button
-            type="button"
-            style={btn()}
-            onClick={() =>
-              game.dispatch({ type: "receper", treeIds: selectedTrees.map((t) => t.id) })
-            }
-            title="Couper au ras : la souche repart en cépée (taillis). Seules les espèces qui rejettent le supportent."
-          >
-            🪵 Recéper
-          </button>
+          {montre("couper") && (
+            <button
+              type="button"
+              style={btn()}
+              onClick={() =>
+                game.dispatch({
+                  type: "couper",
+                  treeIds: selectedTrees.map((t) => t.id),
+                  devenir: "broyer",
+                })
+              }
+              title="Broyer et charger : le bois rejoint le tas, à épandre où vous voudrez"
+            >
+              🍂 Couper & broyer (en tas)
+            </button>
+          )}
+          {montre("proteger") && (
+            <button
+              type="button"
+              style={btn()}
+              onClick={() =>
+                game.dispatch({ type: "proteger", treeIds: selectedTrees.map((t) => t.id) })
+              }
+              title="Poser un manchon : le plant échappe aux dents jusqu'à ce qu'il ait sa flèche hors d'atteinte"
+            >
+              🛡️ Protéger
+            </button>
+          )}
+          {montre("leverEcorce") && (
+            <button
+              type="button"
+              style={btn()}
+              onClick={() =>
+                game.dispatch({ type: "leverEcorce", treeIds: selectedTrees.map((t) => t.id) })
+              }
+              title="Lever le liège : une récolte qui ne tue pas l'arbre et revient tous les dix ans"
+            >
+              🟤 Lever l'écorce
+            </button>
+          )}
+          {montre("elaguer") && (
+            <button
+              type="button"
+              style={btn()}
+              onClick={() =>
+                game.dispatch({
+                  type: "elaguer",
+                  treeIds: selectedTrees.map((t) => t.id),
+                  hauteurM: 6,
+                })
+              }
+              title="Couper les branches basses des arbres sélectionnés, qui restent debout : la bille montée fera du bois d'œuvre au lieu du chauffage. Le houppier remonte, on le voit sur la carte — et un houppier haut ne s'enflamme plus d'un feu rampant, ce qui fait de l'élagage une mesure de prévention."
+            >
+              ✂️ Élaguer à 6 m
+            </button>
+          )}
+          {montre("receper") && (
+            <button
+              type="button"
+              style={btn()}
+              onClick={() =>
+                game.dispatch({ type: "receper", treeIds: selectedTrees.map((t) => t.id) })
+              }
+              title="Couper au ras : la souche repart en cépée (taillis). Seules les espèces qui rejettent le supportent."
+            >
+              🪵 Recéper
+            </button>
+          )}
         </>
       )}
-      <button
-        type="button"
-        style={btn()}
-        onClick={() => {
-          game.dispatch({
-            type: "couper",
-            treeIds: selectedTrees.map((t) => t.id),
-            devenir: "vendre",
-          });
-          setSelectedIds(new Set());
-        }}
-      >
-        🪓 Couper &amp; vendre
-      </button>
-      {!queDuBoisMort && (
+      {montre("couper") && (
+        <button
+          type="button"
+          style={btn()}
+          onClick={() => {
+            game.dispatch({
+              type: "couper",
+              treeIds: selectedTrees.map((t) => t.id),
+              devenir: "vendre",
+            });
+            setSelectedIds(new Set());
+          }}
+        >
+          🪓 Couper &amp; vendre
+        </button>
+      )}
+      {montre("couper") && !queDuBoisMort && (
         <button
           type="button"
           style={btn()}
@@ -342,22 +367,28 @@ export function PanneauSelection({
           🪓 Couper &amp; épandre (BRF)
         </button>
       )}
-      <button
-        type="button"
-        style={btn()}
-        onClick={() => {
-          game.dispatch({
-            type: "couper",
-            treeIds: selectedTrees.map((t) => t.id),
-            devenir: "laisser",
-          });
-          setSelectedIds(new Set());
-        }}
-        title="Abattre et coucher le fût en travers de la pente : rien ne rentre en caisse, mais l'eau ralentit et la terre se dépose derrière le tronc"
-      >
-        🪵 Couper &amp; coucher en travers
-      </button>
-      {queDuBoisMort && (
+      {montre("couper") && (
+        <button
+          type="button"
+          style={btn()}
+          onClick={() => {
+            game.dispatch({
+              type: "couper",
+              treeIds: selectedTrees.map((t) => t.id),
+              devenir: "laisser",
+            });
+            setSelectedIds(new Set());
+          }}
+          title="Abattre et coucher le fût en travers de la pente : rien ne rentre en caisse, mais l'eau ralentit et la terre se dépose derrière le tronc"
+        >
+          🪵 Couper &amp; coucher en travers
+        </button>
+      )}
+      {/*
+        Ces deux phrases expliquent ce que deviendrait le bois coupé : sans le
+        geste de couper, elles parleraient d'un bouton qui n'est pas là.
+      */}
+      {montre("couper") && queDuBoisMort && (
         <div style={{ color: "var(--encre-douce)", fontSize: 13, marginTop: 4 }}>
           Du bois mort sur pied : il se vend en chauffage ou se couche au sol. Pas de BRF — il faut
           du bois frais — et rien à protéger, élaguer ni recéper. <strong>Maj+clic</strong> pour en
@@ -365,7 +396,7 @@ export function PanneauSelection({
           biodiversité récompense.
         </div>
       )}
-      {!queDuBoisMort && selBoisMort.length > 0 && (
+      {montre("couper") && !queDuBoisMort && selBoisMort.length > 0 && (
         <div style={{ color: "var(--encre-douce)", fontSize: 13, marginTop: 4 }}>
           {selBoisMort.length} chandelle{selBoisMort.length > 1 ? "s" : ""} dans la sélection : le
           BRF les refusera (il faut du bois frais), le reste passera.

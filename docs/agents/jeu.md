@@ -34,10 +34,16 @@ un, « Le verger » : douze pommiers en terre, à l'abri du gibier, puis deux ce
 kilos de pommes, en vingt ans. `useNiveau.ts` le suit pendant la partie,
 `panneaux/PanneauNiveau.tsx` annonce les paliers avec une aide sous le palier
 courant, et `panneaux/FinDeNiveau.tsx` dit si l'objectif est atteint et ce qui
-s'est passé. Le niveau se joue de bout en bout et se gagne. Ce qui manque : les
-trois autres niveaux, l'enchaînement de l'un à l'autre, et des gestes limités à
-ce que le niveau enseigne (les décisions du propriétaire du 25 novembre sont
-dans `v1.md`).
+s'est passé. Le niveau se joue de bout en bout et se gagne.
+
+**Un niveau ne montre que les gestes qu'il enseigne (#507).** La fiche les
+déclare (`gestes`), et un palier peut en ouvrir d'autres quand on arrive sur lui
+(`Palier.gestes`) : c'est la prise du tour de tutoriel. `gestesOuverts` en tire
+ce que montrent le panneau des gestes, le volet de sélection, la case du manchon
+et l'avis des fruits mûrs ; une fiche qui ne déclare rien, comme le bac à sable,
+les montre tous. Le verger ouvre planter, protéger et récolter. Ce qui manque :
+les trois autres niveaux et l'enchaînement de l'un à l'autre (les décisions du
+propriétaire du 25 novembre sont dans `v1.md`).
 
 **L'accueil n'est plus un banc d'essai (#189).** Les niveaux sont la porte. Les
 quatorze réglages — station, graine, scénario climatique, entourage des quatre
