@@ -17,32 +17,57 @@ dessus. Le projet a déjà payé ce prix — quatre lots écrits deux fois.
 La frontière avec le moteur, elle, reste stricte : `scripts/check-boundaries.sh`
 vérifie à chaque CI que `src/engine` ne connaît ni React, ni le DOM, ni `src/ui`.
 
-## L'état des lieux, au moment où cette note est écrite
+## L'état des lieux, au 25 novembre 2026
 
-**Le bac à sable est mûr.** `GameView.tsx` porte une vingtaine de gestes
-jouables — planter, couper, récolter, éclaircir, élaguer, recéper, étêter,
-trogner, chauler, labourer, épandre du BRF, faucher, clôturer, chasser,
-protéger, ramasser le bois mort, embaucher — un HUD, un journal d'événements, la
-sauvegarde (`localStorage`, autosave 30 s) et une économie qui peut refuser une
-action et mener à la faillite. Six stations, un éditeur de terrain, des profils
-de départ exportables.
+*Relevé par l'état des lieux du jeu du 25 novembre 2026 (base `main` à
+`39aec6f`), qui a joué le niveau livré et le bac à sable dans le navigateur. La
+version précédente de ce paragraphe disait que le jeu n'existait pas, que
+l'accueil était un banc d'essai et que la couche visuelle n'était pas branchée :
+c'était vrai quand elle a été écrite, et plus depuis l'automne (#188 et #189 sont
+fermées depuis le 23 et le 24 septembre 2026).*
 
-**Le jeu, lui, n'existe pas.** Cherchés dans tout `src/` : *objectif*, *niveau*,
-*tutoriel*, *score*, *victoire*, *fin de partie*, *progression* — zéro
-occurrence. Le `§13` de `regles.md` prévoit cinq scénarios avec objectifs ;
-aucun n'est implémenté.
+**Il y a un niveau jouable (#188).** `src/game/niveaux.ts` est le mécanisme : un
+niveau est une **fiche** — un énoncé, des paliers qui lisent l'instantané et les
+cumuls de gestes rapportés, un temps imparti, la faillite, la mémoire des
+paliers acquis — et un seul code les joue toutes. `niveauxLivres.ts` en livre
+un, « Le verger » : douze pommiers en terre, à l'abri du gibier, puis deux cents
+kilos de pommes, en vingt ans. `useNiveau.ts` le suit pendant la partie,
+`panneaux/PanneauNiveau.tsx` annonce les paliers avec une aide sous le palier
+courant, et `panneaux/FinDeNiveau.tsx` dit si l'objectif est atteint et ce qui
+s'est passé. Le niveau se joue de bout en bout et se gagne. Ce qui manque : les
+trois autres niveaux, l'enchaînement de l'un à l'autre, et des gestes limités à
+ce que le niveau enseigne (les décisions du propriétaire du 25 novembre sont
+dans `v1.md`).
 
-**L'écran de démarrage est un banc d'essai.** Quatorze réglages : station,
-graine du hasard, scénario climatique, entourage des quatre bordures, relief,
-eau de surface, nappe, part du bassin, années de vieillissement, année de
-départ, économie. Excellent pour un chercheur, infranchissable pour un joueur.
-Il ne disparaît pas — il devient un mode à part (voir `v1.md`).
+**L'accueil n'est plus un banc d'essai (#189).** Les niveaux sont la porte. Les
+quatorze réglages — station, graine, scénario climatique, entourage des quatre
+bordures, relief, eau, nappe, bassin, vieillissement, année, économie — sont
+passés derrière « Régler une partie », dans la carte « Bac à sable » : le mode
+à part que `v1.md` demande, intact, avec ses huit stations, son éditeur de
+terrain et ses profils de départ exportables. Un niveau pose ces réglages
+lui-même (`lancerLeNiveau`, `GameView.tsx`).
 
-**La couche visuelle n'est pas branchée.** `src/render` — caméra, lumière,
-palette, ombres, décor, tapis, terrain, eau — n'est importé que par
-`src/apercu/apercu.ts`, un harnais de revue. Le jeu tourne encore sur le canvas
-oblique écrit dans `GameView`, dont le commentaire annonce lui-même que
-« l'isométrique complète viendra comme couche visuelle ».
+**La couche visuelle est branchée.** `VueParcelle.tsx` monte `SceneParcelle`,
+la scène PixiJS de `src/render`, en isométrique dimétrique, en fond d'écran ;
+tout le reste se pose par-dessus. Le canvas oblique de `GameView` n'existe plus ;
+`src/apercu` reste le harnais de revue de `src/render`.
+
+**Le bac à sable reste mûr.** Une vingtaine de gestes jouables — planter,
+couper, récolter, éclaircir, élaguer, recéper, étêter, trogner, lever l'écorce,
+chauler, labourer, épandre du BRF, faucher, clôturer, chasser, protéger,
+ramasser le bois mort, embaucher —, un journal d'événements, des avis qui
+mettent le temps en pause, la fiche et l'histoire d'un arbre suivi avec la
+cause de sa mort, une carte du sol en calques, une économie qui peut refuser une
+action et mener à la faillite. La sauvegarde garde huit parties dans
+`localStorage` (autosave toutes les 30 s) et leur bloc de reprise dans IndexedDB
+(`blocs.ts`, #338) ; sans bloc, la partie se rejoue depuis son journal.
+
+**Ce qui manque pour qu'un joueur apprenne seul**, d'après le même relevé : le
+coût d'un geste avant le clic (seuls planter, le manchon et l'embauche le
+disent), un sol qui s'appauvrit et qui se voit avant l'irréversible, des plants
+qu'on voit à l'échelle de la parcelle, des commandes de caméra hors du menu. La
+liste des lots de la v0.6 est dans [`README.md`](README.md), « Où en est le
+projet ».
 
 ## La règle qui évite les pires bugs
 

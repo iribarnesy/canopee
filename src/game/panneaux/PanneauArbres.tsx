@@ -165,13 +165,16 @@ export function PanneauArbres({
   surSelectionnerEssence: (especeId: string) => void;
 }) {
   const chandelles = snapshot.trees.length - vivants.length;
+  // Les flux de la dernière semaine simulée. Absents au premier instantané
+  // d'une parcelle neuve : la ligne dit alors « — », pas zéro (#505).
+  const flux = snapshot.fluxes;
   return (
     <dl className="stats">
       <dt>Arbres</dt>
       <dd>
         {vivants.length}
         {chandelles > 0 ? ` + ${chandelles} chandelle${chandelles > 1 ? "s" : ""}` : ""} · herbe{" "}
-        {(snapshot.fluxes.herbeCouvertureMean * 100).toFixed(0)} % du sol
+        {flux ? `${(flux.herbeCouvertureMean * 100).toFixed(0)} % du sol` : "—"}
       </dd>
       {/*
         UNE SEULE LISTE D'ESSENCES, et pas deux. Ce volet portait au-dessus un
@@ -198,9 +201,9 @@ export function PanneauArbres({
       </dd>
       <dt>Pression</dt>
       <dd>
-        broutage {snapshot.fluxes.broutageKg.toFixed(2)} kg/sem · ravageurs{" "}
-        {(snapshot.fluxes.ravageurMoyen * 100).toFixed(0)} % · auxiliaires{" "}
-        {(snapshot.fluxes.auxiliairesMoyen * 100).toFixed(0)} %
+        broutage {flux ? `${flux.broutageKg.toFixed(2)} kg/sem` : "—"} · ravageurs{" "}
+        {flux ? `${(flux.ravageurMoyen * 100).toFixed(0)} %` : "—"} · auxiliaires{" "}
+        {flux ? `${(flux.auxiliairesMoyen * 100).toFixed(0)} %` : "—"}
       </dd>
     </dl>
   );
