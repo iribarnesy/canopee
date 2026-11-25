@@ -17,6 +17,7 @@ import { especeTenable } from "../../engine/paysage";
 import { SPECIES_COLORS } from "../../ui/couleurs";
 import { type GestesOuverts, gesteOuvert } from "../niveaux";
 import type { Snapshot, StationInfo } from "../protocol";
+import { LienAtlas } from "./LienAtlas";
 import { portraitDEspece } from "./portraits";
 
 /** Le pH moyen de la parcelle, pour demander au moteur ce qui y tiendrait. */
@@ -65,6 +66,7 @@ export function PanneauEssences({
   const liste = ESPECES_V0.map((e) => ({ e, tient: especeTenable(e, ph, station.ruMm) }));
   const montrees = seulementTenables ? liste.filter((x) => x.tient) : liste;
   const ecartees = liste.length - montrees.length;
+  const essenceChoisie = ESPECES_V0.find((e) => e.id === especeId);
 
   return (
     <>
@@ -82,6 +84,26 @@ export function PanneauEssences({
           — pH {ph.toFixed(1)}, réserve utile {station.ruMm.toFixed(0)} mm
           {seulementTenables && ecartees > 0 ? ` · ${ecartees} écartées` : ""}
         </span>
+      </p>
+      {/*
+        **L'atlas, à un clic** (#513) : pour en savoir plus que la carte n'en
+        dit — l'écorce, le port, ce qu'on en tire —, on va lire la source dont
+        les essences du moteur sont tirées. En tête et non sous la grille : le
+        volet défile, et un lien sous vingt-six cartes ne se voit pas.
+      */}
+      <p style={{ margin: "0 0 8px", fontSize: 13 }}>
+        <LienAtlas
+          especeId={essenceChoisie?.id}
+          titre={
+            essenceChoisie
+              ? `${essenceChoisie.nom} dans l'atlas des espèces`
+              : "L'atlas des espèces, en ligne"
+          }
+        >
+          {essenceChoisie
+            ? `${essenceChoisie.nom} dans l'atlas des espèces`
+            : "L'atlas des espèces"}
+        </LienAtlas>
       </p>
 
       <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8 }}>

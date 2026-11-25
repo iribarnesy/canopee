@@ -13,6 +13,7 @@ import { type Geste, type GestesOuverts, gesteOuvert } from "../niveaux";
 import type { SnapshotTree } from "../protocol";
 import type { LigneDeSuivi } from "../suivis";
 import type { GameApi } from "../useGame";
+import { LienAtlas } from "./LienAtlas";
 import { HistoireDeLArbre } from "./PanneauSuivis";
 import { btn } from "./styles";
 
@@ -158,6 +159,24 @@ export function PanneauSelection({
         </>
       )}
       {selFruitsKg > 0.5 && <> · 🍎 {selFruitsKg.toFixed(0)} kg mûrs</>}
+      {/*
+        **L'atlas, à un clic** (#513), quand la sélection n'a qu'une essence :
+        avec plusieurs, on ne saurait pas laquelle chercher. Un seul arbre a
+        déjà son nom juste devant ; une sélection de douze pommiers, non.
+      */}
+      {selEspeces.length === 1 && selEspeces[0] && (
+        <>
+          {" · "}
+          <LienAtlas
+            especeId={selEspeces[0]}
+            titre={`${getEspece(selEspeces[0]).nom} dans l'atlas des espèces`}
+          >
+            {selectedTrees.length === 1
+              ? "dans l'atlas"
+              : `${nomEspece(selEspeces[0])} dans l'atlas`}
+          </LienAtlas>
+        </>
+      )}
       <br />
       {essencesMontrees.map((id) => {
         const vivantsDeLEssence = vivants.filter((t) => t.especeId === id);
