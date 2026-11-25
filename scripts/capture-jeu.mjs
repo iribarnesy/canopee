@@ -169,14 +169,17 @@ try {
       const continuer = page.getByRole("button", { name: /Continuer/ });
       if (await continuer.count()) await continuer.first().click();
       else await page.getByRole("button", { name: /\+1 mois/ }).click();
-      // L'arrivée : le bandeau a changé de mois, et la bascule dit « Reprendre »
-      // parce que le temps s'est arrêté.
+      // L'arrivée : la bascule dit « Reprendre » parce que le temps s'est
+      // arrêté, et l'avis dit « un mois plus tard » (ou un autre avis a coupé la
+      // traversée). On n'attend **pas** que le bandeau change de mois : un
+      // « +1 mois » fait quatre semaines, et le premier d'une partie la laisse
+      // en janvier (semaine 4 sur 4,33).
       await page
         .waitForFunction(
-          (moisAvant) =>
-            document.querySelector(".bandeau strong")?.textContent?.trim().split(/\s/)[0] !==
-              moisAvant && document.querySelector('button[aria-label="Reprendre"]') !== null,
-          avant.split(/\s/)[0],
+          () =>
+            document.querySelector('button[aria-label="Reprendre"]') !== null &&
+            /⏸/.test(document.body.innerText),
+          undefined,
           { polling: 500, timeout: SAUT_MS },
         )
         .catch(() => {});
