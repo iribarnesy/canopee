@@ -77,7 +77,10 @@ mettent le temps en pause, la fiche et l'histoire d'un arbre suivi avec la
 cause de sa mort, une carte du sol en calques, une économie qui peut refuser une
 action et mener à la faillite. La sauvegarde garde huit parties dans
 `localStorage` (autosave toutes les 30 s) et leur bloc de reprise dans IndexedDB
-(`blocs.ts`, #338) ; sans bloc, la partie se rejoue depuis son journal.
+(`blocs.ts`, #338) ; sans bloc, la partie se rejoue depuis son journal. Une
+partie de niveau s'y nomme par son niveau et ses paliers franchis (« Le verger
+· an 9 · 2 objectifs sur 3 ») et sa fiche montre ses paliers, les réglages
+passant derrière « Détails » (#512).
 
 **Ce qui manque pour qu'un joueur apprenne seul**, d'après le même relevé : le
 coût d'un geste avant le clic (seuls planter, le manchon et l'embauche le

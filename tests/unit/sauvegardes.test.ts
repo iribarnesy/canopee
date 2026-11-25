@@ -12,6 +12,7 @@
  */
 
 import { beforeEach, describe, expect, it } from "vitest";
+import { niveauParId } from "../../src/game/niveauxLivres";
 import type { SaveGame } from "../../src/game/protocol";
 import {
   CLE_ANCIENNE,
@@ -22,8 +23,10 @@ import {
   essencesPlantees,
   libelleDeLaPartie,
   listerSauvegardes,
+  niveauDeLaPartie,
   nomParDefaut,
   PARTIES_GARDEES,
+  paliersDeLaPartie,
   reglagesDeLaPartie,
   supprimerSauvegarde,
 } from "../../src/game/sauvegardes";
@@ -222,5 +225,122 @@ describe("la fiche d'une partie", () => {
       ],
     });
     expect(essencesPlantees(save)).toEqual(["Chêne pubescent"]);
+  });
+});
+
+/** Les semaines écoulées au début de l'an `n` d'une partie. */
+function an(n: number): number {
+  return (n - 1) * 52;
+}
+
+/**
+ * **Une partie de niveau se reconnaît dans la liste** (#512).
+ *
+ * La partie du verger s'appelait « Limon profond riche · an 9 » : le nom d'un
+ * réglage que `v1.md` veut cacher au joueur, et rien qui dise « le verger ».
+ * Les essais lisent la fiche livrée plutôt que d'en recopier le nom et le
+ * nombre de paliers : le verger s'allonge (#514), et l'essai doit suivre la
+ * fiche, pas la figer.
+ */
+describe("une partie de niveau", () => {
+  const verger = niveauParId("verger");
+  if (!verger) throw new Error("le verger n'est plus livré");
+  const [premier, deuxieme] = verger.paliers;
+  if (!premier || !deuxieme) throw new Error("le verger a moins de deux paliers");
+  const total = verger.paliers.length;
+
+  it("se nomme par son niveau, son an et ses objectifs franchis", () => {
+    const save = partie({
+      stationId: "limon-riche",
+      niveauId: "verger",
+      paliersAcquis: [premier.id, deuxieme.id],
+      weeks: an(9) + 10,
+    });
+    expect(nomParDefaut(save)).toBe(`${verger.nom} · an 9 · 2 objectifs sur ${total}`);
+    // Plus le nom du réglage : c'est ce que le niveau cache au joueur.
+    expect(nomParDefaut(save)).not.toContain("Limon");
+  });
+
+  it("accorde « objectif » au singulier sous deux", () => {
+    expect(nomParDefaut(partie({ niveauId: "verger", weeks: 0 }))).toBe(
+      `${verger.nom} · an 1 · 0 objectif sur ${total}`,
+    );
+    expect(nomParDefaut(partie({ niveauId: "verger", paliersAcquis: [premier.id] }))).toBe(
+      `${verger.nom} · an 3 · 1 objectif sur ${total}`,
+    );
+  });
+
+  it("ne compte pas un palier rangé que la fiche ne porte plus", () => {
+    const save = partie({ niveauId: "verger", paliersAcquis: [premier.id, "palier-retire"] });
+    expect(nomParDefaut(save)).toBe(`${verger.nom} · an 3 · 1 objectif sur ${total}`);
+  });
+
+  it("donne ses paliers dans l'ordre de la fiche, franchis ou non", () => {
+    const paliers = paliersDeLaPartie(partie({ niveauId: "verger", paliersAcquis: [deuxieme.id] }));
+    expect(paliers?.map((p) => p.quoi)).toEqual(verger.paliers.map((p) => p.quoi));
+    expect(paliers?.map((p) => p.franchi)).toEqual(verger.paliers.map((p) => p.id === deuxieme.id));
+    expect(niveauDeLaPartie(partie({ niveauId: "verger" }))?.nom).toBe(verger.nom);
+  });
+
+  it("le libellé de la liste suit le niveau, autosave après autosave", () => {
+    ecrireSauvegarde(stock, "v", partie({ niveauId: "verger", weeks: 0 }));
+    expect(libelleDeLaPartie(premiere(stock))).toBe(
+      `${verger.nom} · an 1 · 0 objectif sur ${total}`,
+    );
+    ecrireSauvegarde(
+      stock,
+      "v",
+      partie({ niveauId: "verger", paliersAcquis: [premier.id, deuxieme.id], weeks: an(9) }),
+    );
+    expect(libelleDeLaPartie(premiere(stock))).toBe(
+      `${verger.nom} · an 9 · 2 objectifs sur ${total}`,
+    );
+  });
+});
+
+/**
+ * **Les sauvegardes d'avant se chargent et s'affichent sans erreur** (#512) :
+ * une partie du bac à sable, une partie de niveau rangée avant que la liste ne
+ * la nomme par son niveau — avec le nom par défaut gelé de l'époque —, et une
+ * partie d'un niveau qui n'est plus livré.
+ */
+describe("les sauvegardes d'avant", () => {
+  it("une partie sans niveau garde sa station, et n'a pas de paliers", () => {
+    const save = partie({ weeks: an(9) });
+    expect(nomParDefaut(save)).toBe("Limon profond riche · an 9");
+    expect(paliersDeLaPartie(save)).toBeUndefined();
+    expect(niveauDeLaPartie(save)).toBeUndefined();
+  });
+
+  it("une partie du verger rangée sous l'ancien nom se relit par son niveau", () => {
+    stock.setItem(
+      CLE_LISTE,
+      JSON.stringify([
+        {
+          id: "verger-ancien",
+          nom: "Limon profond riche · an 9",
+          quand: 1,
+          save: partie({ niveauId: "verger", paliersAcquis: ["planter"], weeks: an(9) }),
+        },
+        { id: "bac", quand: 0, save: partie({ weeks: an(4) }) },
+      ]),
+    );
+    const [verger, bac] = listerSauvegardes(stock);
+    if (!verger || !bac) throw new Error("une partie s'est perdue à la relecture");
+    // Le nom gelé de l'époque tombe, et le libellé suit le niveau.
+    expect(verger.nom).toBeUndefined();
+    expect(libelleDeLaPartie(verger)).toMatch(/ · an 9 · 1 objectif sur \d+$/);
+    expect(libelleDeLaPartie(verger)).not.toContain("Limon");
+    expect(libelleDeLaPartie(bac)).toBe("Limon profond riche · an 4");
+    // Sa fiche d'expert se relit toujours entière.
+    expect(reglagesDeLaPartie(verger.save).find((l) => l.quoi === "Station")?.valeur).toBe(
+      "Limon profond riche",
+    );
+  });
+
+  it("une partie d'un niveau qui n'est plus livré se nomme par sa station", () => {
+    const save = partie({ niveauId: "niveau-retire", paliersAcquis: ["x"], weeks: an(2) });
+    expect(nomParDefaut(save)).toBe("Limon profond riche · an 2");
+    expect(paliersDeLaPartie(save)).toBeUndefined();
   });
 });

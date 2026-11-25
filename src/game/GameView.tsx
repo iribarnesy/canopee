@@ -88,10 +88,13 @@ import {
 import { niveauSuivant, niveauxReussis } from "./progression";
 import type { SaveGame } from "./protocol";
 import {
+  anneeDeLaPartie,
   type EntreeSauvegarde,
   essencesPlantees,
   libelleDeLaPartie,
   listerSauvegardes,
+  niveauDeLaPartie,
+  paliersDeLaPartie,
   reglagesDeLaPartie,
   supprimerSauvegarde,
 } from "./sauvegardes";
@@ -111,6 +114,41 @@ import { usePollinisateurs } from "./usePollinisateurs";
 import { useResidents } from "./useResidents";
 import { useSuivis } from "./useSuivis";
 import { VueParcelle } from "./VueParcelle";
+
+/**
+ * Les réglages d'une partie sauvegardée, en clair, et les essences qu'on y a
+ * plantées (#147). Toute la fiche d'une partie du bac à sable ; derrière
+ * « Détails » pour une partie de niveau (#512).
+ */
+function TableDesReglages({ save }: { save: SaveGame }) {
+  const plantees = essencesPlantees(save);
+  return (
+    <table style={{ borderCollapse: "collapse", marginBottom: 8 }}>
+      <tbody>
+        {reglagesDeLaPartie(save).map((l) => (
+          <tr key={l.quoi}>
+            <td style={{ paddingRight: 12, color: "var(--encre-douce)" }}>{l.quoi}</td>
+            <td>{l.valeur}</td>
+          </tr>
+        ))}
+        {plantees.length > 0 && (
+          <tr>
+            <td style={{ paddingRight: 12, color: "var(--encre-douce)" }}>Plantations</td>
+            <td>{plantees.join(", ")}</td>
+          </tr>
+        )}
+      </tbody>
+    </table>
+  );
+}
+
+function BoutonRepartir({ surClic }: { surClic: () => void }) {
+  return (
+    <button type="button" style={btn()} onClick={surClic}>
+      ⚙ Repartir de ces réglages
+    </button>
+  );
+}
 
 function StartScreen({
   onStart,
@@ -209,6 +247,25 @@ function StartScreen({
   const [parties, setParties] = useState<EntreeSauvegarde[]>(() => listerSauvegardes(localStorage));
   const [partieChoisie, setPartieChoisie] = useState<string>();
   const choisieEntree = parties.find((e) => e.id === partieChoisie);
+  // Une partie de niveau se relit par son niveau et ses paliers (#512) ; ses
+  // réglages passent derrière « Détails », pour les experts.
+  const niveauChoisi = choisieEntree ? niveauDeLaPartie(choisieEntree.save) : undefined;
+  const paliersChoisis = choisieEntree ? paliersDeLaPartie(choisieEntree.save) : undefined;
+  /** Le premier palier non franchi, marqué « ▸ » comme dans le panneau du niveau. */
+  const palierCourant = paliersChoisis?.find((p) => !p.franchi);
+  /**
+   * **Repartir des réglages d'une partie, graine libre.** C'est la porte du mode
+   * expert : contester un résultat suppose de pouvoir rejouer exactement les
+   * mêmes conditions — sauf le hasard, qu'on change justement pour voir si le
+   * résultat tient.
+   */
+  const repartirDe = (entree: EntreeSauvegarde): void => {
+    appliquerLesReglages(entree.save);
+    setPartieChoisie(undefined);
+    setMessageProfil(
+      `Réglages de « ${libelleDeLaPartie(entree)} » chargés, avec une graine neuve.`,
+    );
+  };
   /**
    * **les niveaux réussis** (#506), lus au montage comme les parties : c'est la
    * fin d'un niveau qui les écrit, et cet écran revient à chaque sortie de partie.
@@ -460,7 +517,7 @@ function StartScreen({
         <section className="carte">
           <h3>Parties sauvegardées</h3>
           <p className="sous">
-            Cliquez une partie pour relire ses réglages : la reprendre, ou repartir des mêmes
+            Cliquez une partie pour voir où elle en est : la reprendre, ou repartir des mêmes
             conditions avec une autre graine.
           </p>
           <div className="seg">
@@ -478,44 +535,51 @@ function StartScreen({
           </div>
           {choisieEntree && (
             <div style={{ marginTop: 8 }}>
-              <table style={{ borderCollapse: "collapse", marginBottom: 8 }}>
-                <tbody>
-                  {reglagesDeLaPartie(choisieEntree.save).map((l) => (
-                    <tr key={l.quoi}>
-                      <td style={{ paddingRight: 12, color: "var(--encre-douce)" }}>{l.quoi}</td>
-                      <td>{l.valeur}</td>
-                    </tr>
-                  ))}
-                  {essencesPlantees(choisieEntree.save).length > 0 && (
-                    <tr>
-                      <td style={{ paddingRight: 12, color: "var(--encre-douce)" }}>Plantations</td>
-                      <td>{essencesPlantees(choisieEntree.save).join(", ")}</td>
-                    </tr>
-                  )}
-                </tbody>
-              </table>
+              {niveauChoisi && paliersChoisis ? (
+                <>
+                  {/*
+                    **Une partie de niveau se relit par son niveau** (#512) : son
+                    énoncé, ses paliers cochés comme dans le panneau du niveau, et
+                    l'année où elle en est. Station, graine, scénario et nappe sont
+                    les réglages que le niveau a posés pour le joueur (#189) : ils
+                    passent derrière « Détails », avec la porte du mode expert.
+                  */}
+                  <p style={{ margin: "0 0 4px" }}>
+                    <strong>{niveauChoisi.nom}</strong> — {niveauChoisi.enonce}
+                  </p>
+                  <ul style={{ listStyle: "none", padding: 0, margin: "0 0 6px" }}>
+                    {paliersChoisis.map((p) => (
+                      <li
+                        key={p.id}
+                        style={{ color: p.franchi ? "var(--encre-douce)" : "var(--encre)" }}
+                      >
+                        <span aria-hidden="true">
+                          {p.franchi ? "✔" : p.id === palierCourant?.id ? "▸" : "·"}
+                        </span>{" "}
+                        {p.quoi}
+                      </li>
+                    ))}
+                  </ul>
+                  <p className="glose" style={{ margin: "0 0 8px" }}>
+                    An {anneeDeLaPartie(choisieEntree.save)}
+                    {essencesPlantees(choisieEntree.save).length > 0 &&
+                      ` · plantations : ${essencesPlantees(choisieEntree.save).join(", ")}`}
+                  </p>
+                  <details style={{ marginBottom: 8 }}>
+                    <summary style={{ cursor: "pointer", color: "var(--encre-douce)" }}>
+                      Détails des réglages
+                    </summary>
+                    <TableDesReglages save={choisieEntree.save} />
+                    <BoutonRepartir surClic={() => repartirDe(choisieEntree)} />
+                  </details>
+                </>
+              ) : (
+                <TableDesReglages save={choisieEntree.save} />
+              )}
               <button type="button" style={btn(true)} onClick={() => onResume(choisieEntree)}>
                 ▶ Reprendre cette partie
               </button>
-              {/*
-                **Repartir de ces réglages, graine libre.** C'est la porte du
-                mode expert : contester un résultat suppose de pouvoir rejouer
-                exactement les mêmes conditions — sauf le hasard, qu'on change
-                justement pour voir si le résultat tient.
-              */}
-              <button
-                type="button"
-                style={btn()}
-                onClick={() => {
-                  appliquerLesReglages(choisieEntree.save);
-                  setPartieChoisie(undefined);
-                  setMessageProfil(
-                    `Réglages de « ${libelleDeLaPartie(choisieEntree)} » chargés, avec une graine neuve.`,
-                  );
-                }}
-              >
-                ⚙ Repartir de ces réglages
-              </button>
+              {!niveauChoisi && <BoutonRepartir surClic={() => repartirDe(choisieEntree)} />}
               <button
                 type="button"
                 style={btn()}
