@@ -60,6 +60,7 @@ import { Bandeau } from "./panneaux/Bandeau";
 import { CarteDuSol } from "./panneaux/CarteDuSol";
 import { Confirmation } from "./panneaux/Confirmation";
 import { FinDeNiveau } from "./panneaux/FinDeNiveau";
+import { ListeDesNiveaux } from "./panneaux/ListeDesNiveaux";
 import { PanneauAction } from "./panneaux/PanneauAction";
 import { PanneauArbres } from "./panneaux/PanneauArbres";
 import { PanneauBilan } from "./panneaux/PanneauBilan";
@@ -84,6 +85,7 @@ import {
   type ProfilDepart,
   supprimerProfil,
 } from "./profils";
+import { niveauSuivant, niveauxReussis } from "./progression";
 import type { SaveGame } from "./protocol";
 import {
   type EntreeSauvegarde,
@@ -207,6 +209,11 @@ function StartScreen({
   const [parties, setParties] = useState<EntreeSauvegarde[]>(() => listerSauvegardes(localStorage));
   const [partieChoisie, setPartieChoisie] = useState<string>();
   const choisieEntree = parties.find((e) => e.id === partieChoisie);
+  /**
+   * **les niveaux réussis** (#506), lus au montage comme les parties : c'est la
+   * fin d'un niveau qui les écrit, et cet écran revient à chaque sortie de partie.
+   */
+  const [reussis] = useState(() => niveauxReussis(localStorage));
 
   /**
    * **pré-remplir l'écran** avec les réglages d'une partie (#147).
@@ -413,31 +420,11 @@ function StartScreen({
           <p className="sous">
             Un objectif, des étapes, et une fin. Les réglages du terrain sont posés par le niveau.
           </p>
-          {NIVEAUX_LIVRES.map((n) => (
-            <button
-              key={n.id}
-              type="button"
-              onClick={() => onNiveau(n)}
-              style={{
-                display: "block",
-                width: "100%",
-                textAlign: "left",
-                marginTop: 8,
-                padding: "10px 12px",
-                border: "1px solid var(--trait)",
-                borderLeft: "6px solid var(--foret)",
-                borderRadius: 8,
-                background: "var(--carte)",
-                cursor: "pointer",
-                font: "inherit",
-              }}
-            >
-              <strong>▶ {n.nom}</strong>
-              <div className="sous" style={{ marginTop: 2 }}>
-                {n.enonce}
-              </div>
-            </button>
-          ))}
+          {/*
+            Dans l'ordre, et verrouillés dans l'ordre (#506) : un niveau ne
+            s'ouvre qu'une fois le précédent réussi.
+          */}
+          <ListeDesNiveaux niveaux={NIVEAUX_LIVRES} reussis={reussis} surNiveau={onNiveau} />
         </section>
       )}
 
@@ -2145,6 +2132,8 @@ export function GameView({ surPartie }: { surPartie?: (enPartie: boolean) => voi
           surRejouer={() => {
             if (enNiveau.niveau) lancerLeNiveau(enNiveau.niveau);
           }}
+          suivant={niveauSuivant(NIVEAUX_LIVRES, enNiveau.niveau.id, enNiveau.avancement.issue)}
+          surSuivant={lancerLeNiveau}
           // `quitterLaPartie` et non `game.quit` : la sortie doit **consommer**
           // l'entrée d'historique poussée à l'entrée en partie (#148), sinon
           // le bouton retour du navigateur ramènerait à une partie finie.

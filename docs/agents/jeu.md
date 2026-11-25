@@ -47,6 +47,17 @@ passés derrière « Régler une partie », dans la carte « Bac à sable » : l
 terrain et ses profils de départ exportables. Un niveau pose ces réglages
 lui-même (`lancerLeNiveau`, `GameView.tsx`).
 
+**Les niveaux s'enchaînent et se verrouillent dans l'ordre (#506).**
+`src/game/progression.ts` retient les niveaux réussis dans le stockage du
+navigateur (stockage donné, comme `sauvegardes.ts`) et dit lesquels sont
+ouverts : le premier toujours, chacun des suivants une fois le précédent
+réussi, dans l'ordre de `NIVEAUX_LIVRES`. `useNiveau.ts` retient la réussite ;
+l'écran de fin propose « Niveau suivant » quand l'objectif est atteint et qu'il
+en reste un ; l'accueil (`panneaux/ListeDesNiveaux.tsx`) coche les niveaux
+faits, met en avant le prochain et grise les niveaux verrouillés en disant quoi
+réussir pour les ouvrir. Le bac à sable reste ouvert. Il n'y a pas de
+déverrouillage caché.
+
 **La couche visuelle est branchée.** `VueParcelle.tsx` monte `SceneParcelle`,
 la scène PixiJS de `src/render`, en isométrique dimétrique, en fond d'écran ;
 tout le reste se pose par-dessus. Le canvas oblique de `GameView` n'existe plus ;
