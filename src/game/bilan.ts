@@ -71,7 +71,14 @@ export interface LigneDeBilan {
   geste?: GesteType;
   /** le stade **atteint**, pour les montées */
   stade?: StadeDeDeveloppement;
-  /** combien : des tiges, ou des m² pour le feu */
+  /**
+   * Pour la tempête, ce qu'elle a fait aux tiges qu'elle n'a **pas** couchées :
+   * cassé leur fût, ou arraché des branches (#503). Absent = couchées, et c'est
+   * exprès : la ligne des couchés garde la clé qu'elle avait avant, et un bilan
+   * relu d'une sauvegarde ne se coupe pas en deux lignes.
+   */
+  degat?: "casse" | "ebranche";
+  /** combien : des tiges, des m² pour le feu, des fois pour ce qui se répète */
   combien: number;
   /** sommes des positions des membres situés, m */
   sx: number;
@@ -92,7 +99,11 @@ export const BILAN_VIDE: Bilan = new Map();
 function cleDe(
   l: Omit<LigneDeBilan, "combien" | "sx" | "sy" | "places" | "premiereSemaine" | "derniereSemaine">,
 ): string {
-  return [l.sorte, l.especeId ?? "", l.cause ?? "", l.geste ?? "", l.stade ?? ""].join("|");
+  const parts = [l.sorte, l.especeId ?? "", l.cause ?? "", l.geste ?? "", l.stade ?? ""];
+  // Le dégât n'entre dans la clé que s'il est là : celle des autres lignes ne
+  // bouge pas, et un bilan sauvegardé avant lui se relit tel quel.
+  if (l.degat) parts.push(l.degat);
+  return parts.join("|");
 }
 
 /**
@@ -175,6 +186,13 @@ export function agreger(
   };
 
   for (const m of journal.morts ?? []) {
+    // **Les morts de la tempête sont déjà comptés, la semaine de la tempête.** Le
+    // moteur rapporte un chablis dans `tempete` le jour où il tombe, puis dans
+    // `morts` un an plus tard, quand son bois cesse d'être récupérable ; un volis
+    // qui ne rejette pas y entre la semaine suivante (tick.ts). Les deux sont le
+    // même arbre : le compter aux deux endroits, c'était « 12 tiges couchées par
+    // la tempête » et « 12 hêtres couchés par la tempête » sur le même écran.
+    if (m.cause === "chablis" || m.cause === "volis") continue;
     ajouter({ sorte: "mort", especeId: m.especeId, cause: m.cause }, 1, m);
   }
   for (const c of journal.chutes ?? []) {
@@ -200,6 +218,13 @@ export function agreger(
       );
       continue;
     }
+    // **La moitié de sol d'un geste qui touche les deux mailles ne se compte pas**
+    // (#124, #502). Planter et démascler rendent deux gestes sous le même nom :
+    // les tiges, et la terre remuée à leur pied. Rangés sous la même clé, douze
+    // plants faisaient « 24 tiges plantées » sur l'écran de fin. Ces cellules ne
+    // sont pas des tiges, et la moitié sur arbres a déjà compté le geste ; c'est
+    // la table des phrases qui dit lequel des deux compte.
+    if (GESTE_DIT[geste.type].quoi !== "surface") continue;
     // Un geste de **zone** se compte en cellules, c'est-à-dire en m² : « labouré
     // 340 m² » dit ce qu'on a fait, « 1 labour » ne dit rien.
     ajouter(
@@ -214,9 +239,14 @@ export function agreger(
   }
   const tempete = journal.tempete;
   if (tempete) {
-    // Les arbres **versés** seulement : un arbre ébranché est debout, et compter
-    // les trois catégories ensemble dirait une catastrophe là où il y a du
-    // ménage à faire. Les victimes portent un identifiant, donc une position.
+    // **Les trois dégâts, chacun sa ligne** (#503). Le moteur rapporte la tempête
+    // dès qu'elle a couché, cassé **ou** ébranché un arbre, et le bilan ne lisait
+    // que les couchés : une tempête qui ne faisait que casser des fûts n'y
+    // laissait rien. Additionnés, ils diraient une catastrophe là où il y a
+    // surtout des branches à ramasser ; séparés, chacun dit ce qu'il est. Les
+    // couchés et les cassés portent un identifiant, donc une position ; les
+    // ébranchés ne sont qu'un compte, et leur ligne n'a pas d'endroit. Les
+    // cassés se lisent dans `casses`, la liste des fûts (#487).
     ajouter(
       { sorte: "tempete" },
       tempete.arbresVerses,
@@ -225,6 +255,15 @@ export function agreger(
         positionDe,
       ),
     );
+    ajouter(
+      { sorte: "tempete", degat: "casse" },
+      tempete.casses.length,
+      centreDesArbres(
+        tempete.casses.map((c) => c.id),
+        positionDe,
+      ),
+    );
+    ajouter({ sorte: "tempete", degat: "ebranche" }, tempete.arbresEbranches);
   }
   return suite;
 }
@@ -284,11 +323,15 @@ export interface LigneLue {
 /**
  * L'ordre des sortes, et il n'est pas celui des comptes.
  *
- * **Un feu de quarante cellules compte plus qu'un millier de tiges broutées**,
+ * **Un feu de quarante cellules compte plus qu'un millier de broutages**,
  * et le nombre ne le dit pas : le broutage est le bruit de fond d'une friche,
  * l'incendie est l'événement d'une partie. Les catastrophes d'abord, puis ce
  * qui a disparu, puis ce qu'on a fait, puis ce qui est arrivé — et à sorte
  * égale, le plus gros compte d'abord.
+ *
+ * **Sauf dans la tempête**, qui se lit du plus grave au plus léger : couchées,
+ * cassées, ébranchées (`RANG_DU_DEGAT`). Rangées au compte, quarante tiges
+ * ébranchées passaient devant douze arbres par terre.
  */
 const RANG: Record<SorteDeBilan, number> = {
   feu: 0,
@@ -299,6 +342,13 @@ const RANG: Record<SorteDeBilan, number> = {
   naissance: 5,
   montee: 6,
 };
+
+/** Le rang d'un dégât de tempête dans sa sorte : une fraction, qui reste sous la suivante. */
+const RANG_DU_DEGAT = { casse: 0.1, ebranche: 0.2 } as const;
+
+function rangDe(l: LigneDeBilan): number {
+  return RANG[l.sorte] + (l.degat ? RANG_DU_DEGAT[l.degat] : 0);
+}
 
 const ICONE: Record<SorteDeBilan, string> = {
   feu: "🔥",
@@ -316,21 +366,32 @@ const ICONE: Record<SorteDeBilan, string> = {
  * `quoi` est l'objet compté : des **tiges** pour les gestes sur arbres, des mètres
  * carrés pour les gestes de zone. Le `Record` complet fait le reste — un geste
  * ajouté au moteur ne compile plus tant qu'on ne lui a pas donné sa phrase.
+ *
+ * **Et des fois, pour ce qui revient sur les mêmes arbres** (#502). Le bilan
+ * additionne les gestes que le moteur rapporte, et ce qu'il rapporte est une
+ * semaine de broutage, un frottis, une cueillette — pas une tige distincte. Le
+ * même pommier est cueilli chaque automne, la même ronce broutée chaque
+ * semaine : sur l'écran de fin du verger, cela faisait « 36 tiges récoltées »
+ * pour douze pommiers et « 31025 tiges broutées » sur une parcelle de 322 tiges.
+ * Ces trois-là se disent donc par ce qu'ils comptent. Les autres restent comptés
+ * en tiges : couper ne se fait qu'une fois, et les gestes de conduite (élaguer,
+ * étêter, recéper, démascler) ne reviennent sur un arbre qu'à des années d'écart.
  */
-const GESTE_DIT: Record<
-  GesteType,
-  { quoi: "tiges" | "surface"; participe: string; complement?: string }
-> = {
+type GesteDit =
+  | { quoi: "tiges" | "surface"; participe: string; complement?: string }
+  | { quoi: "fois"; un: string; plusieurs: string };
+
+const GESTE_DIT: Record<GesteType, GesteDit> = {
   planter: { quoi: "tiges", participe: "plantée" },
   couper: { quoi: "tiges", participe: "abattue" },
   eclaircir: { quoi: "tiges", participe: "abattue", complement: " en éclaircie" },
   elaguer: { quoi: "tiges", participe: "élaguée" },
   trogner: { quoi: "tiges", participe: "étêtée", complement: " en trogne" },
   receper: { quoi: "tiges", participe: "recépée" },
-  recolter: { quoi: "tiges", participe: "récoltée" },
+  recolter: { quoi: "fois", un: "cueillette", plusieurs: "cueillettes" },
   leverEcorce: { quoi: "tiges", participe: "démasclée" },
-  brouter: { quoi: "tiges", participe: "broutée", complement: " par le gibier" },
-  frotter: { quoi: "tiges", participe: "frottée", complement: " par un cervidé" },
+  brouter: { quoi: "fois", un: "broutage par le gibier", plusieurs: "broutages par le gibier" },
+  frotter: { quoi: "fois", un: "frottis de cervidé", plusieurs: "frottis de cervidés" },
   chauler: { quoi: "surface", participe: "chaulé" },
   faucher: { quoi: "surface", participe: "fauché" },
   epandreBrf: { quoi: "surface", participe: "couvert", complement: " de broyat" },
@@ -375,7 +436,20 @@ function texteDe(l: LigneDeBilan): string {
     case "feu":
       return `${surface(n)} brûlé${accordDeSurface(n)}`;
     case "tempete":
-      return `${n} tige${s(n)} couchée${s(n)} par la tempête`;
+      // **Les ébranchés se recomptent à chaque tempête**, et la phrase le dit. Le
+      // moteur ne les nomme pas, il en donne le compte, et le même arbre exposé
+      // perd des branches à plusieurs coups de vent d'un même hiver : la sonde
+      // de #503 en relève quatre en six semaines sur la friche découverte. Un
+      // couché est mort, un cassé repart d'une souche basse ; eux ne se
+      // comptent qu'une fois.
+      if (l.degat === "ebranche") {
+        return n >= 2
+          ? `${n} tiges ébranchées, comptées à chaque tempête`
+          : "1 tige ébranchée par la tempête";
+      }
+      return l.degat === "casse"
+        ? `${n} tige${s(n)} cassée${s(n)} net par la tempête`
+        : `${n} tige${s(n)} couchée${s(n)} par la tempête`;
     case "mort": {
       // **Accordé à l'essence, en genre et en nombre.** La partie jouée l'a
       // pris en faute sur l'écran de fin : « 90 ronces morts étouffés par
@@ -391,6 +465,7 @@ function texteDe(l: LigneDeBilan): string {
       return `${n} tige${s(n)} passée${s(n)} au stade ${l.stade}`;
     case "geste": {
       const dit = GESTE_DIT[l.geste ?? "couper"];
+      if (dit.quoi === "fois") return `${n} ${n >= 2 ? dit.plusieurs : dit.un}`;
       // **L'accord porte sur le participe, pas sur la phrase.** Le premier jet
       // collait le « s » à la fin, et la partie jouée l'a pris en faute :
       // « 27 279 tiges broutée par le gibiers ».
@@ -417,7 +492,7 @@ export function lignesDuBilan(bilan: Bilan): LigneLue[] {
       ou: l.places > 0 ? { x: l.sx / l.places, y: l.sy / l.places } : undefined,
       premiereSemaine: l.premiereSemaine,
       derniereSemaine: l.derniereSemaine,
-      rang: RANG[l.sorte],
+      rang: rangDe(l),
     }))
     .sort((a, b) => a.rang - b.rang || b.combien - a.combien)
     .map(({ rang: _rang, ...ligne }) => ligne);

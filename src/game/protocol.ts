@@ -625,7 +625,10 @@ export interface Snapshot {
   incendie?: IncendieResult;
   /**
    * La tempête de la semaine, s'il y en a eu une (tempete.ts) — la rafale, le
-   * cap du vent, et les tiges qu'elle a couchées avec leur hauteur.
+   * cap du vent, les tiges qu'elle a couchées avec leur hauteur, les fûts
+   * qu'elle a cassés avec leur volume, et le compte des arbres ébranchés. Le
+   * moteur la rapporte dès qu'il y a l'un des trois dégâts, pas seulement un
+   * couché : le journal, l'avis et le bilan disent les trois (#503).
    *
    * Elle voyage pour la même raison que l'incendie : sans l'événement, le rendu
    * ne voit qu'un état changé entre deux images et n'a pas de **moment** où jouer
