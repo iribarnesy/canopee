@@ -19,6 +19,8 @@
 import { getEspece, STATIONS_V0 } from "../engine";
 import { SCENARIOS } from "../engine/climat";
 import { PAYSAGES } from "../engine/paysage";
+import type { Niveau } from "./niveaux";
+import { niveauParId } from "./niveauxLivres";
 import type { SaveGame } from "./protocol";
 import { especesSemees } from "./recolteAuto";
 
@@ -60,10 +62,63 @@ export function anneeDeLaPartie(save: SaveGame): number {
   return Math.floor(save.weeks / 52) + 1;
 }
 
-/** Le nom qu'on donne à une partie qu'on n'a pas nommée. */
+/**
+ * Le niveau d'une partie, s'il en a un que le jeu connaît encore (#512).
+ *
+ * La sauvegarde ne range que l'identifiant (`SaveGame.niveauId`) : la fiche est
+ * relue dans les niveaux livrés, la même que celle que la reprise jouera. Un
+ * identifiant qu'aucun niveau ne porte plus rend `undefined`, et la partie se
+ * nomme alors par sa station, comme une partie du bac à sable.
+ */
+export function niveauDeLaPartie(save: SaveGame): Niveau | undefined {
+  return save.niveauId ? niveauParId(save.niveauId) : undefined;
+}
+
+/** Un palier d'un niveau, tel que la sauvegarde l'a laissé. */
+export interface PalierSauvegarde {
+  id: string;
+  /** ce qu'il faut faire, avec les mots du panneau du niveau */
+  quoi: string;
+  franchi: boolean;
+}
+
+/**
+ * Où en était le niveau quand la partie a été rangée : chacun de ses paliers,
+ * franchi ou non (#512). `undefined` pour une partie sans niveau.
+ *
+ * **Rien n'est recalculé ici** : « franchi » est la liste que le niveau a
+ * lui-même rangée dans la sauvegarde (`paliersAcquis`), et qui sert déjà à la
+ * reprise. Les chiffres de chaque palier, eux, ne se relisent pas sans
+ * l'instantané — d'où une coche, pas « 7 / 12 ». Un identifiant rangé qu'aucun
+ * palier de la fiche ne porte plus — une fiche corrigée depuis — ne compte pas.
+ */
+export function paliersDeLaPartie(save: SaveGame): PalierSauvegarde[] | undefined {
+  const niveau = niveauDeLaPartie(save);
+  if (!niveau) return undefined;
+  const franchis = new Set(save.paliersAcquis ?? []);
+  return niveau.paliers.map((p) => ({ id: p.id, quoi: p.quoi, franchi: franchis.has(p.id) }));
+}
+
+/**
+ * Le nom qu'on donne à une partie qu'on n'a pas nommée.
+ *
+ * **Une partie de niveau se nomme par son niveau** (#512) : « Le verger · an 9 ·
+ * 2 objectifs sur 3 ». Elle s'appelait « Limon profond riche · an 9 », le nom
+ * d'un réglage que `v1.md` veut justement cacher au joueur, et rien ne disait
+ * qu'il s'agissait du verger. Une partie du bac à sable garde sa station.
+ */
 export function nomParDefaut(save: SaveGame): string {
+  const an = `an ${anneeDeLaPartie(save)}`;
+  const niveau = niveauDeLaPartie(save);
+  const paliers = paliersDeLaPartie(save);
+  if (niveau && paliers) {
+    const franchis = paliers.filter((p) => p.franchi).length;
+    // « 0 objectif », « 1 objectif », « 2 objectifs » : le pluriel à partir de deux.
+    const objectifs = franchis > 1 ? "objectifs" : "objectif";
+    return `${niveau.nom} · ${an} · ${franchis} ${objectifs} sur ${paliers.length}`;
+  }
   const station = STATIONS_V0.find((s) => s.station.id === save.stationId);
-  return `${station?.station.nom ?? save.stationId} · an ${anneeDeLaPartie(save)}`;
+  return `${station?.station.nom ?? save.stationId} · ${an}`;
 }
 
 /** Ce que le joueur lit dans la liste : son nom, ou l'état de la partie. */
