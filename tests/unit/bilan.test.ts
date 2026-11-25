@@ -280,7 +280,9 @@ describe("agreger", () => {
     const lignes = lignesDuBilan(b);
     expect(lignes.map((l) => l.texte)).toEqual([
       "2 tiges cassées net par la tempête",
-      "40 tiges ébranchées par la tempête",
+      // Le moteur ne nomme pas les ébranchés : le même arbre se recompte à
+      // chaque coup de vent, et la phrase le dit.
+      "40 tiges ébranchées, comptées à chaque tempête",
     ]);
     // Les cassés sont nommés, donc situés ; les ébranchés ne sont qu'un compte.
     expect(lignes[0]?.ou).toEqual({ x: 20, y: 0 });
@@ -321,7 +323,7 @@ describe("agreger", () => {
     expect(lignesDuBilan(b).map((l) => l.texte)).toEqual([
       "3 tiges couchées par la tempête",
       "1 tige cassée net par la tempête",
-      "25 tiges ébranchées par la tempête",
+      "25 tiges ébranchées, comptées à chaque tempête",
     ]);
   });
 

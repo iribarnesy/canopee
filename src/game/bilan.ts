@@ -245,7 +245,8 @@ export function agreger(
     // laissait rien. Additionnés, ils diraient une catastrophe là où il y a
     // surtout des branches à ramasser ; séparés, chacun dit ce qu'il est. Les
     // couchés et les cassés portent un identifiant, donc une position ; les
-    // ébranchés ne sont qu'un compte, et leur ligne n'a pas d'endroit.
+    // ébranchés ne sont qu'un compte, et leur ligne n'a pas d'endroit. Les
+    // cassés se lisent dans `casses`, la liste des fûts (#487).
     ajouter(
       { sorte: "tempete" },
       tempete.arbresVerses,
@@ -434,12 +435,21 @@ function texteDe(l: LigneDeBilan): string {
   switch (l.sorte) {
     case "feu":
       return `${surface(n)} brûlé${accordDeSurface(n)}`;
-    case "tempete": {
-      const fait = l.degat === "casse" ? " net" : "";
-      const participe =
-        l.degat === "casse" ? "cassée" : l.degat === "ebranche" ? "ébranchée" : "couchée";
-      return `${n} tige${s(n)} ${participe}${s(n)}${fait} par la tempête`;
-    }
+    case "tempete":
+      // **Les ébranchés se recomptent à chaque tempête**, et la phrase le dit. Le
+      // moteur ne les nomme pas, il en donne le compte, et le même arbre exposé
+      // perd des branches à plusieurs coups de vent d'un même hiver : la sonde
+      // de #503 en relève quatre en six semaines sur la friche découverte. Un
+      // couché est mort, un cassé repart d'une souche basse ; eux ne se
+      // comptent qu'une fois.
+      if (l.degat === "ebranche") {
+        return n >= 2
+          ? `${n} tiges ébranchées, comptées à chaque tempête`
+          : "1 tige ébranchée par la tempête";
+      }
+      return l.degat === "casse"
+        ? `${n} tige${s(n)} cassée${s(n)} net par la tempête`
+        : `${n} tige${s(n)} couchée${s(n)} par la tempête`;
     case "mort": {
       // **Accordé à l'essence, en genre et en nombre.** La partie jouée l'a
       // pris en faute sur l'écran de fin : « 90 ronces morts étouffés par
